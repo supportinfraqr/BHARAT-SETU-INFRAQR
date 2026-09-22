@@ -18,6 +18,7 @@ def _template_row(t):
         "act": t.act,
         "frequency": t.frequency,
         "sourceFormat": t.source_format,
+        "outputFormat": t.resolved_output_format(),
         "columns": list(t.columns or []),
         "fields": list(t.fields or []),
         "meta": t.meta or {},
@@ -58,7 +59,7 @@ def _clean_fields(value):
         return []
     DATA_TYPES = {"text", "number", "date", "currency", "boolean", "select", "textarea"}
     DATA_SOURCES = {"", "worker", "attendance", "payroll", "payment", "site",
-                    "contractor", "employer", "manual"}
+                    "contractor", "employer", "manual", "master", "backend"}
     out = []
     for i, f in enumerate(value):
         if not isinstance(f, dict) or not str(f.get("label") or "").strip():
@@ -184,9 +185,24 @@ def _create_template(request, body):
     frequency = str(body.get("frequency") or "")[:60]
     criticality = str(body.get("criticality") or "")[:20]
     is_mandatory = bool(body.get("isMandatory", False))
+    output_format = str(body.get("outputFormat") or "").strip().lower()
+    if output_format not in ("pdf", "xlsx"):
+        output_format = "xlsx" if template_type == "register" else "pdf"
+    source_format = str(body.get("sourceFormat") or "html")[:10]
+    if source_format not in ("html", "xlsx", "xls", "docx"):
+        source_format = "html"
     columns = _clean_columns(body.get("columns"))
     fields = _clean_fields(body.get("fields"))
     html = str(body.get("html") or "")
+    # Flow guard: an Excel register needs columns; a Doc form needs fields or a
+    # directly-authored HTML layout (the live Doc editor).
+    if template_type == "register" and not columns:
+        return Response({"error": "An Excel register needs at least one column. "
+                                  "Add columns, then map each to a master-file field or backend value."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if template_type != "register" and not fields and not html.strip():
+        return Response({"error": "A Doc form needs content. Edit it in the Doc editor (or add a field)."},
+                        status=status.HTTP_400_BAD_REQUEST)
     if not html.strip() and fields:
         html = _auto_form_html(title, form_code, state, template_type, fields, columns)
 
@@ -194,10 +210,29 @@ def _create_template(request, body):
         state=state, form_code=form_code, title=title,
         template_type=template_type, status=status_value,
         act=act, frequency=frequency, criticality=criticality, is_mandatory=is_mandatory,
-        source_format="html", columns=columns, fields=fields, html=html,
+        source_format=source_format, output_format=output_format,
+        columns=columns, fields=fields, html=html,
         is_active=body.get("active", True), format_available=True,
         meta={"authored": True, "author": str(request.user)},
     )
+    # Persist the builder's field mappings + calculation rules (the New-form flow
+    # used to drop these — they were only saved on edit).
+    from bss_core.models import RegisterCalculationRule, RegisterFieldMapping
+    if isinstance(body.get("fieldMappings"), list):
+        for order, m in enumerate(body["fieldMappings"]):
+            if not isinstance(m, dict) or not str(m.get("column") or "").strip():
+                continue
+            RegisterFieldMapping.objects.create(
+                template=template, column=str(m["column"])[:200],
+                field_key=str(m.get("fieldKey") or "")[:60], sort_order=order)
+    if isinstance(body.get("calculationRules"), list):
+        for order, r in enumerate(body["calculationRules"]):
+            if not isinstance(r, dict) or not str(r.get("formula") or "").strip():
+                continue
+            RegisterCalculationRule.objects.create(
+                template=template, target_field=str(r.get("targetField") or "")[:80],
+                label=str(r.get("label") or "")[:120], formula=str(r["formula"])[:255],
+                sort_order=order)
     log_audit(request.user, "CREATE", "register_template", template.id,
               after={"summary": f"Created register template {state} {form_code}"})
     return Response({"data": _template_row(template)}, status=status.HTTP_201_CREATED)
@@ -217,18 +252,16 @@ def applicable_form_codes(state):
 
 
 def applicable_templates(state):
-    """Register templates for a state, filtered by the applicability matrix.
+    """Every active register/form template for a state — the full state library.
 
-    Returns ``(templates, forms)`` — ``forms`` is the mapped set (empty when the
-    state has no matrix rows, in which case every folder template is returned)."""
+    The applicability matrix is no longer used to narrow the list, so all forms
+    for the state are available and adoptable. ``forms`` (the matrix set) is
+    still returned for callers that display applicability."""
     from bss_core.models import RegisterTemplate
     qs = (RegisterTemplate.objects
           .filter(state__iexact=state, is_active=True)
-          .exclude(columns=[]).order_by("form_code"))
-    forms = applicable_form_codes(state)
-    if not forms:
-        return list(qs), forms
-    return [t for t in qs if t.form_code.strip().upper() in forms], forms
+          .order_by("form_code"))
+    return list(qs), applicable_form_codes(state)
 
 
 def state_strength(state):
@@ -258,30 +291,47 @@ def employer_adopted_ids(employer, state):
                .values_list("template_id", flat=True))
 
 
+def mandatory_template_ids(state):
+    """Template ids marked Mandatory for a state — these must always be adopted."""
+    from bss_core.models import RegisterTemplate
+    if not state:
+        return set()
+    return set(RegisterTemplate.objects
+               .filter(state__iexact=state, is_active=True, is_mandatory=True)
+               .values_list("id", flat=True))
+
+
 def gate_templates_by_adoption(templates, employer, state):
     """Hard-gate templates to the employer's adopted forms for a state.
 
     Once the employer has adopted at least one form for the state, only those
-    forms are available; with no adoption rows the full list is returned."""
+    forms (plus every Mandatory form of the state) are available; with no
+    adoption rows the full list is returned."""
     adopted = employer_adopted_ids(employer, state)
     if not adopted:
         return templates
-    return [t for t in templates if t.id in adopted]
+    mandatory = {t.id for t in templates if t.is_mandatory}
+    return [t for t in templates if t.id in adopted or t.id in mandatory]
 
 
-@api_view(["GET", "POST"])
+@api_view(["GET", "POST", "DELETE"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def register_templates(request):
-    """Admin: list (GET) or author a new State + Form template (POST).
-
-    Filters: ?state= &q= &active=. POST body: state (required), formCode
-    (required), title, templateType, status, act, frequency, columns[], fields[]
-    (field-dictionary sections), html (optional — auto-generated from fields when
-    blank). BSS Admin only."""
+    """Admin: list (GET), author a new State + Form template (POST), or delete all templates for a state (DELETE ?state=). BSS Admin only."""
     from bss_core.models import RegisterTemplate
+    from .admin_console import log_audit
     if request.user.role != "bss_admin":
         return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+
+    if request.method == "DELETE":
+        state_to_delete = (request.query_params.get("state") or "").strip()
+        if not state_to_delete:
+            return Response({"error": "State parameter is required to delete state templates."}, status=status.HTTP_400_BAD_REQUEST)
+        count, _ = RegisterTemplate.objects.filter(state__iexact=state_to_delete).delete()
+        log_audit(request.user, "DELETE", "register_template_state", 0,
+                  after={"summary": f"Deleted {count} register templates for state {state_to_delete}"})
+        return Response({"ok": True, "count": count, "message": f"Deleted {count} templates for state {state_to_delete}."}, status=status.HTTP_200_OK)
 
     if request.method == "POST":
         return _create_template(request, request.data if isinstance(request.data, dict) else {})
@@ -300,7 +350,10 @@ def register_templates(request):
     rows = [_template_row(t) for t in qs.order_by("state", "form_code")[:2000]]
     states = list(RegisterTemplate.objects.values_list("state", flat=True)
                   .distinct().order_by("state"))
-    return Response({"rows": rows, "states": states}, status=status.HTTP_200_OK)
+    from api.master_sheet import BACKEND_FIELD_KEYS, MASTER_FIELD_KEYS
+    return Response({"rows": rows, "states": states,
+                     "fieldKeys": MASTER_FIELD_KEYS, "backendKeys": BACKEND_FIELD_KEYS},
+                    status=status.HTTP_200_OK)
 
 
 @api_view(["GET", "PATCH", "DELETE"])
@@ -340,6 +393,13 @@ def register_template_detail(request, template_id):
         template.criticality = str(body.get("criticality") or "")[:20]
     if body.get("isMandatory") is not None:
         template.is_mandatory = bool(body.get("isMandatory"))
+    if body.get("outputFormat") is not None:
+        value = str(body.get("outputFormat") or "").strip().lower()
+        template.output_format = value if value in ("pdf", "xlsx") else ("xlsx" if template.template_type == "register" else "pdf")
+    if body.get("sourceFormat") is not None:
+        value = str(body.get("sourceFormat") or "")
+        if value in ("html", "xlsx", "xls", "docx"):
+            template.source_format = value
     if body.get("active") is not None:
         template.is_active = bool(body.get("active"))
     if "columns" in body:
@@ -420,6 +480,7 @@ def contractor_register_templates(request):
 
     rows = []
     seen = set()
+    adoption = {}
     for site_state in states:
         base = applicable_templates(site_state)[0]
         allowed, gated = set(), False
@@ -428,11 +489,22 @@ def contractor_register_templates(request):
             if adopted:
                 gated = True
                 allowed |= adopted
-        for template in (base if not gated else [t for t in base if t.id in allowed]):
+        mandatory = {t.id for t in base if t.is_mandatory}
+        effective = (allowed | mandatory) if gated else set()
+        adoption[site_state] = {
+            "adopted": gated,
+            "adoptedCount": len([t for t in base if t.id in effective]),
+            "mandatoryCount": len([t for t in base if t.is_mandatory]),
+            "total": len(base),
+        }
+        # Contractors only see forms the employer adopted (mandatory always
+        # included). Until the employer adopts for the state, nothing is usable.
+        visible = [t for t in base if t.id in effective] if gated else []
+        for template in visible:
             if template.id not in seen:
                 seen.add(template.id)
                 rows.append(_template_row(template))
-    return Response({"rows": rows, "states": states,
+    return Response({"rows": rows, "states": states, "adoption": adoption,
                      "strength": state_strength(state) if state else {}},
                     status=status.HTTP_200_OK)
 
@@ -464,10 +536,17 @@ def employer_register_templates(request):
         if state.lower() not in {s.lower() for s in site_states}:
             return Response({"error": f"No registered site in {state}."},
                             status=status.HTTP_400_BAD_REQUEST)
-        if "templateIds" in body:
+        if body.get("revoke") or body.get("clear"):
+            # Remove the whole state's adoption (including mandatory) so
+            # contractors with sites in this state can no longer upload.
+            EmployerRegisterTemplateAdoption.objects.filter(
+                employer=user, state__iexact=state).update(is_active=False)
+        elif "templateIds" in body:
             wanted = {int(i) for i in (body.get("templateIds") or []) if str(i).strip().isdigit()}
             valid = set(RegisterTemplate.objects.filter(id__in=wanted, state__iexact=state)
                         .values_list("id", flat=True))
+            # Mandatory forms of the state can never be un-adopted.
+            valid |= mandatory_template_ids(state)
             existing = set(EmployerRegisterTemplateAdoption.objects
                            .filter(employer=user, state__iexact=state)
                            .values_list("template_id", flat=True))
@@ -484,9 +563,11 @@ def employer_register_templates(request):
             if template is None:
                 return Response({"error": "Template not found for that state."},
                                 status=status.HTTP_404_NOT_FOUND)
+            # A Mandatory form stays adopted regardless of the requested toggle.
+            adopted_flag = True if template.is_mandatory else bool(body.get("adopted", True))
             EmployerRegisterTemplateAdoption.objects.update_or_create(
                 employer=user, template=template,
-                defaults={"state": state, "is_active": bool(body.get("adopted", True))})
+                defaults={"state": state, "is_active": adopted_flag})
         else:
             return Response({"error": "Provide templateIds or templateId."},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -497,13 +578,16 @@ def employer_register_templates(request):
     for site_state in site_states:
         templates_list = applicable_templates(site_state)[0]
         adopted = employer_adopted_ids(user, site_state)
+        mandatory = {t.id for t in templates_list if t.is_mandatory}
+        effective = adopted | mandatory
         states_payload.append({
             "state": site_state,
             "siteCount": Site.objects.filter(employer=user, state__iexact=site_state).count(),
-            "adoptedCount": len([t for t in templates_list if t.id in adopted]),
+            "adoptedCount": len([t for t in templates_list if t.id in effective]),
             "total": len(templates_list),
             "gated": bool(adopted),
-            "forms": [{**_template_row(t), "adopted": t.id in adopted} for t in templates_list],
+            "forms": [{**_template_row(t), "adopted": t.id in effective, "mandatory": t.is_mandatory}
+                      for t in templates_list],
         })
     return Response({"states": states_payload}, status=status.HTTP_200_OK)
 

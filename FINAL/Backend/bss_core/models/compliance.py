@@ -53,6 +53,7 @@ class RegisterTemplate(models.Model):
                       ("form", "Form"), ("checklist", "Checklist"), ("report", "Report")]
     STATUS = [("draft", "Draft"), ("approved", "Approved"),
               ("published", "Published"), ("retired", "Retired")]
+    OUTPUT_FORMATS = [("pdf", "PDF"), ("xlsx", "Excel (XLSX)")]
 
     state = models.CharField(max_length=60, db_index=True)
     form_code = models.CharField(max_length=60)
@@ -65,6 +66,9 @@ class RegisterTemplate(models.Model):
     criticality = models.CharField(max_length=20, blank=True)
     is_mandatory = models.BooleanField(default=False)
     source_format = models.CharField(max_length=10, blank=True)  # xlsx / xls / docx
+    # Per-template output: registers export XLSX, forms export PDF. Blank =
+    # derive from template_type (register -> xlsx, otherwise -> pdf).
+    output_format = models.CharField(max_length=10, choices=OUTPUT_FORMATS, blank=True)
     document = models.ForeignKey(RegisterDocumentMaster, on_delete=models.SET_NULL,
                                  null=True, blank=True, related_name="templates")
     columns = models.JSONField(default=list, blank=True)
@@ -91,6 +95,12 @@ class RegisterTemplate(models.Model):
 
     def __str__(self):
         return f"{self.state} {self.form_code}"
+
+    def resolved_output_format(self):
+        """Explicit output format, else register -> XLSX / form -> PDF."""
+        if self.output_format in ("pdf", "xlsx"):
+            return self.output_format
+        return "xlsx" if self.template_type == "register" else "pdf"
 
 
 class RegisterFieldMapping(models.Model):
@@ -512,6 +522,14 @@ class MinimumWage(models.Model):
         indexes = [
             models.Index(fields=["state", "industry"], name="idx_min_wage_state_industry"),
             models.Index(fields=["effective_from"], name="idx_min_wage_eff"),
+        ]
+        # One minimum wage per worker group (state + zone + grade + employment
+        # category) per effective period. The amounts are data, not identity.
+        constraints = [
+            models.UniqueConstraint(
+                fields=["state", "wage_zone", "grade", "employment_category",
+                        "effective_from"],
+                name="uq_minimum_wage_key"),
         ]
 
     def __str__(self):

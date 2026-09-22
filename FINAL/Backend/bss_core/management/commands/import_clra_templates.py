@@ -353,6 +353,7 @@ class Command(BaseCommand):
 
             defaults = {
                 "title": title, "source_format": classified["source_format"],
+                "output_format": "pdf" if classified["source_format"] == "docx" else "xlsx",
                 "columns": columns, "fields": fields,
                 "meta": {"lines": meta, "file": filename},
                 "is_active": True,

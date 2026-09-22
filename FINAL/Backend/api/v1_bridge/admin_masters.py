@@ -9,6 +9,8 @@ lost between the form and the database.
 # ruff: noqa: F401,F403
 import uuid
 
+from django.db import IntegrityError
+
 from .common import *
 
 
@@ -162,6 +164,10 @@ def _specs():
     min_wage = {
         "model": MinimumWage, "order": "id",
         "defaults": {"industry": "All Industries"},
+        "unique": ("state", "wage_zone", "grade", "employment_category", "effective_from"),
+        "unique_message": ("A minimum wage for this State + Wage Zone + Grade + Employment "
+                           "Category + Effective From already exists. Edit that record instead "
+                           "— a duplicate cannot be added."),
         "fields": {
             "state": ("state", "text"), "zone": ("wage_zone", "text"),
             "grade": ("grade", "text"), "employmentCategory": ("employment_category", "text"),
@@ -418,6 +424,26 @@ def _queryset(spec):
     return qs
 
 
+def _unique_conflict(spec, obj, exclude_pk=None):
+    """An existing record that shares the spec's declared unique key, if any.
+
+    Masters opt in by setting ``unique`` to a tuple of model attributes; most
+    masters leave it unset and are unrestricted."""
+    fields = spec.get("unique")
+    if not fields:
+        return None
+    qs = _queryset(spec)
+    if exclude_pk is not None:
+        qs = qs.exclude(pk=exclude_pk)
+    return qs.filter(**{attr: getattr(obj, attr, None) for attr in fields}).first()
+
+
+def _reject_duplicate(spec, obj, exclude_pk=None):
+    message = spec.get("unique_message") or "A record with the same key already exists."
+    if _unique_conflict(spec, obj, exclude_pk) is not None:
+        raise PortalMutationError(message, 409)
+
+
 def _counts():
     """Record counts per master key (drives the admin overview KPIs)."""
     return {key: _queryset(spec).count() for key, spec in _specs().items()}
@@ -446,7 +472,12 @@ def _masters(request, key):
         obj.code = f"{spec['code_prefix']}-{uuid.uuid4().hex[:6].upper()}"
     if hasattr(obj, "industry") and not (getattr(obj, "industry", "") or "").strip():
         obj.industry = "All Industries"
-    obj.save()
+    _reject_duplicate(spec, obj)
+    try:
+        obj.save()
+    except IntegrityError:
+        raise PortalMutationError(
+            spec.get("unique_message") or "A record with the same key already exists.", 409)
     _apply_user_contacts(spec, obj, body)
     return {"row": _row(spec, obj)}
 
@@ -463,7 +494,12 @@ def _master_detail(request, key, pk):
     if request.method in ("PATCH", "POST"):
         body = request.data if isinstance(request.data, dict) else {}
         _apply(spec, obj, body)
-        obj.save()
+        _reject_duplicate(spec, obj, exclude_pk=obj.pk)
+        try:
+            obj.save()
+        except IntegrityError:
+            raise PortalMutationError(
+                spec.get("unique_message") or "A record with the same key already exists.", 409)
         _apply_user_contacts(spec, obj, body)
         return {"row": _row(spec, obj)}
     if request.method == "DELETE":

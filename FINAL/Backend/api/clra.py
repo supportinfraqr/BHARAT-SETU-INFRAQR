@@ -12,11 +12,15 @@ reported as unsupported if it is not installed.
 import csv
 import io
 import re
+from html import unescape
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
-# Master-file header → canonical key.
+from .master_sheet import MASTER_COLUMNS, MASTER_FIELD_KEYS, MASTER_HEADER_KEYS
+
+# Master-file header → canonical key. Extra human aliases plus every audited
+# master-sheet column (ContractorMasterSheet_Audit (28).xlsx → master_sheet.py).
 HEADER_ALIASES = {
     "bssid": "bssId", "bss id": "bssId", "bss worker id": "bssId",
     "worker id": "bssId",
@@ -28,6 +32,7 @@ HEADER_ALIASES = {
     "mobile": "mobile", "mobile number": "mobile",
     "doj": "doj", "date of joining": "doj",
 }
+HEADER_ALIASES.update({header.lower(): key for header, key in MASTER_HEADER_KEYS.items()})
 
 # Columns written for every register sheet (a generic statutory register layout).
 REGISTER_COLUMNS = [
@@ -127,6 +132,23 @@ _COLUMN_RULES = (
     (("site",), "site"),
     (("location",), "location"),
     (("bss",), "bssId"),
+    # Attendance / wage / overtime / deduction columns → master-file keys.
+    (("overtime", "hour"), "otHours"),
+    (("overtime", "rate"), "otRate"),
+    (("overtime", "wage"), "otEarnings"),
+    (("overtime", "amount"), "otEarnings"),
+    (("overtime", "earning"), "otEarnings"),
+    (("days", "worked"), "daysWorked"),
+    (("days", "present"), "daysWorked"),
+    (("daily", "rate"), "dailyRate"),
+    (("rate", "wage"), "dailyRate"),
+    (("basic", "wage"), "basicWages"),
+    (("basic",), "basicWages"),
+    (("gross", "wage"), "grossWages"),
+    (("wages earned",), "grossWages"),
+    (("amount of wages",), "grossWages"),
+    (("deduction",), "totalDeductions"),
+    (("net",), "netSalary"),
 )
 
 
@@ -141,8 +163,7 @@ def match_column(label):
     return ""
 
 
-MASTER_TEMPLATE_COLUMNS = ["BSS ID", "Name", "Site", "Location", "Designation",
-                           "Department", "Mobile", "Date of Joining"]
+MASTER_TEMPLATE_COLUMNS = MASTER_COLUMNS
 
 
 # ── admin-configured field mapping + calculation rules ──────────────────────
@@ -187,6 +208,36 @@ def apply_calculation_rules(rows, rules):
                 values[rule["targetField"]] = result
         out.append(enriched)
     return out
+
+
+# ── cell resolution (master-file field vs backend context) ───────────────────
+# A mapping key is either a master-file field key (read from the parsed row),
+# "sl" (row serial), or "backend:<key>" (a value from the render context).
+_BACKEND_CONTEXT_KEYS = {
+    "contractor": "contractor", "employer": "employer",
+    "site": "site", "siteCode": "site_code", "state": "state",
+    "month": "month", "year": "year", "financialYear": "financial_year",
+    "recordCount": "record_count", "generatedOn": "generated_on",
+}
+
+
+def backend_context(**kwargs):
+    """Normalise the render context used to resolve ``backend:`` mapping keys."""
+    return {key: kwargs.get(source, "") for key, source in _BACKEND_CONTEXT_KEYS.items()}
+
+
+def resolve_cell(key, row, context=None, index=None):
+    """Resolve one mapped column/field to a value.
+
+    ``sl`` -> row serial; ``backend:<key>`` -> backend context value; otherwise
+    the master-file field value from the row. Returns ``None`` only for blanks."""
+    if key == "sl":
+        return index
+    if key and key.startswith("backend:"):
+        return (context or {}).get(key.split(":", 1)[1], "")
+    if key:
+        return row.get(key, "")
+    return ""
 
 
 # ── master-file validation ───────────────────────────────────────────────────
@@ -281,7 +332,39 @@ def build_master_template():
     return out.getvalue()
 
 
-def _write_template_sheet(wb, template, rows, header_fill, header_font):
+_DOC_P_RE = re.compile(r"<p\b[^>]*>(.*?)</p>", re.S | re.I)
+_TAG_RE = re.compile(r"<[^>]+>")
+_META_TOKEN_SOURCES = {
+    "CONTRACTOR_NAME": "contractor", "EMPLOYER_NAME": "employer",
+    "SITE_NAME": "site", "SITE_CODE": "siteCode", "STATE": "state",
+    "MONTH": "month", "YEAR": "year", "FINANCIAL_YEAR": "financialYear",
+    "GENERATED_ON": "generatedOn", "RECORD_COUNT": "recordCount",
+}
+
+
+def _header_lines_from_html(html_text, template, rows, context):
+    """Authored header ``<p>`` lines (before the first table) as plain text, with
+    data placeholders resolved — so the custom header Key:value lines also appear
+    in the generated Excel register, not just the HTML/PDF view."""
+    if not html_text:
+        return []
+    text = str(html_text)
+    table_idx = text.lower().find("<table")
+    head = text[:table_idx] if table_idx != -1 else text
+    lines = []
+    for match in _DOC_P_RE.finditer(head):
+        inner = render_doc_body(match.group(1), rows, context)
+        for token, source in _META_TOKEN_SOURCES.items():
+            inner = inner.replace("{{" + token + "}}", str((context or {}).get(source, "")))
+        inner = inner.replace("{{ACT}}", str(template.get("act", "")))
+        plain = _TAG_RE.sub("", inner)
+        plain = re.sub(r"\s+", " ", unescape(plain).replace("\xa0", " ")).strip()
+        if plain:
+            lines.append(plain)
+    return lines
+
+
+def _write_template_sheet(wb, template, rows, header_fill, header_font, context=None):
     columns = [str(c) for c in (template.get("columns") or [])]
     if not columns:
         columns = [label for label, _ in REGISTER_COLUMNS]
@@ -294,28 +377,38 @@ def _write_template_sheet(wb, template, rows, header_fill, header_font):
     field_mappings = template.get("fieldMappings") or {}
     mapping = [(field_mappings.get(col) or match_column(col)) for col in columns]
     rows = apply_calculation_rules(rows, template.get("calculationRules"))
+
+    header_lines = _header_lines_from_html(template.get("html"), template, rows, context)
+    row_cursor = 3
+    for line in header_lines:
+        ws.cell(row=row_cursor, column=1, value=line).font = Font(size=10)
+        if len(columns) > 1:
+            ws.merge_cells(start_row=row_cursor, start_column=1,
+                           end_row=row_cursor, end_column=len(columns))
+        row_cursor += 1
+    table_row = (row_cursor + 1) if header_lines else 4
+
     for col, label in enumerate(columns, start=1):
-        cell = ws.cell(row=4, column=col, value=label)
+        cell = ws.cell(row=table_row, column=col, value=label)
         cell.fill = header_fill
         cell.font = header_font
         cell.alignment = Alignment(horizontal="center", wrap_text=True)
     for i, row in enumerate(rows, start=1):
         for col, key in enumerate(mapping, start=1):
-            if key == "sl":
-                ws.cell(row=4 + i, column=col, value=i)
-            elif key:
-                ws.cell(row=4 + i, column=col, value=row.get(key, ""))
+            value = resolve_cell(key, row, context, index=i)
+            if value is not None:
+                ws.cell(row=table_row + i, column=col, value=value)
     return ws
 
 
-def build_register_workbook(template, rows):
+def build_register_workbook(template, rows, context=None):
     """Return the bytes of a single-register XLSX (honours admin field mapping
     and calculation rules)."""
     wb = Workbook()
     wb.remove(wb.active)
     header_fill = PatternFill("solid", fgColor="0A192F")
     header_font = Font(bold=True, color="FFFFFF")
-    _write_template_sheet(wb, template, rows, header_fill, header_font)
+    _write_template_sheet(wb, template, rows, header_fill, header_font, context)
     out = io.BytesIO()
     wb.save(out)
     return out.getvalue()
@@ -356,8 +449,16 @@ def build_workbook(rows, *, contractor="", site="", site_code="", state="",
     header_fill = PatternFill("solid", fgColor="0A192F")
     header_font = Font(bold=True, color="FFFFFF")
     if templates:
+        context = backend_context(
+            contractor=contractor, site=site, site_code=site_code, state=state,
+            month=month, year=year, financial_year=financial_year,
+            record_count=len(rows), generated_on=generated_on)
         for template in templates:
-            _write_template_sheet(wb, template, rows, header_fill, header_font)
+            # Register-style templates (with parsed columns) become sheets;
+            # form-style templates (no columns) render to PDF, not Excel.
+            if not template.get("columns"):
+                continue
+            _write_template_sheet(wb, template, rows, header_fill, header_font, context)
         out = io.BytesIO()
         wb.save(out)
         return out.getvalue()
@@ -389,6 +490,45 @@ def _esc(value):
             .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
+_DOC_BLOCK_RE = re.compile(r"\{\{#\s*rows\s*\}\}(.*?)\{\{\s*/\s*rows\s*\}\}", re.S | re.I)
+_DOC_FIELD_RE = re.compile(r"\{\{\s*(sys\.[A-Za-z0-9_]+|[A-Za-z_][A-Za-z0-9_]*)\s*\}\}")
+
+
+def render_doc_body(body, rows, context):
+    """Resolve a free-form Doc / Google-Docs layout.
+
+    * ``{{#rows}} … {{/rows}}`` repeats the block once per master-file row; inside
+      it ``{{fieldKey}}`` reads that row (master-file parser data).
+    * ``{{sys.key}}`` reads the system/backend context (contractor, site, month…).
+    * a bare ``{{fieldKey}}`` outside a block reads the first row.
+    * UPPERCASE ``{{TOKENS}}`` are left untouched for the header-token pass."""
+    rows = list(rows or [])
+
+    def resolve(key, row):
+        if key.startswith("sys."):
+            return _esc(str((context or {}).get(key[4:], "")))
+        return _esc(str((row or {}).get(key, "")))
+
+    def block(match):
+        inner = match.group(1)
+        if not rows:
+            return _DOC_FIELD_RE.sub("", inner)
+        return "".join(
+            _DOC_FIELD_RE.sub(lambda f: resolve(f.group(1), row), inner)
+            for row in rows)
+
+    out = _DOC_BLOCK_RE.sub(block, body)
+    first = rows[0] if rows else {}
+
+    def field(match):
+        key = match.group(1)
+        if key.isupper():
+            return match.group(0)
+        return resolve(key, first)
+
+    return _DOC_FIELD_RE.sub(field, out)
+
+
 def render_register_html(template, rows, *, contractor="", employer="", site="", site_code="",
                          state="", month="", year="", financial_year="", generated_on=""):
     """Render one State+Form register.
@@ -402,17 +542,16 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
     rows = apply_calculation_rules(rows, template.get("calculationRules"))
     title = template.get("title") or template.get("formCode") or "Register"
     head = "".join(f"<th>{_esc(col)}</th>" for col in columns)
+    context = backend_context(
+        contractor=contractor, employer=employer, site=site, site_code=site_code,
+        state=state, month=month, year=year, financial_year=financial_year,
+        record_count=len(rows), generated_on=generated_on)
     body = []
     for index, row in enumerate(rows, start=1):
         cells = []
         for key in mapping:
-            if key == "sl":
-                value = index
-            elif key:
-                value = row.get(key, "")
-            else:
-                value = ""
-            cells.append(f"<td>{_esc(value)}</td>")
+            value = resolve_cell(key, row, context, index=index)
+            cells.append(f"<td>{_esc('' if value is None else value)}</td>")
         body.append("<tr>" + "".join(cells) + "</tr>")
 
     admin_html = (template.get("html") or "").strip()
@@ -426,7 +565,7 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
             "ACT": _esc(template.get("act", "")),
             "HEAD": head, "ROWS": "".join(body),
         }
-        out = admin_html
+        out = render_doc_body(admin_html, rows, context)
         for key, value in tokens.items():
             out = out.replace("{{" + key + "}}", value).replace("{{ " + key + " }}", value)
         return out

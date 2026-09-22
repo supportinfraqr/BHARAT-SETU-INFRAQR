@@ -21,7 +21,7 @@ const wageCostGroup = { key: 'Wages & Statutory Cost', icon: Banknote, items: [
   ['License Management', '/admin/masters/license'],
 ] as const };
 const clraGroup = { key: 'CLRA Registers', icon: BookOpenCheck, items: [
-  ['Statutory Registers & Forms', '/admin/masters/register-template'],
+  ['CLRA Templates', '/admin/masters/register-template'],
   ['State Applicability', '/admin/masters/state-applicability'],
   ['Compliance Master', '/admin/masters/compliance'],
   ['Document Master', '/admin/masters/document'],

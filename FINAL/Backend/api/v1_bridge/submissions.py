@@ -324,19 +324,6 @@ def contractor_compliance_batches(request):
     if master is None:
         return Response({"error": "Choose a master file."}, status=status.HTTP_400_BAD_REQUEST)
 
-    site_label = (request.data.get("site") or "").strip()
-    site = None
-    if site_label:
-        site = (Site.objects.filter(site_name=site_label).first()
-                or Site.objects.filter(site_code=site_label).first())
-    if site is None:
-        site = Site.objects.filter(id__in=_contractor_site_ids(user)).order_by("id").first()
-
-    state = (request.data.get("state") or "").strip()
-    fy = (request.data.get("financialYear") or "").strip()
-    month = (request.data.get("month") or "").strip()
-    year = (request.data.get("year") or "").strip()
-
     try:
         rows = clra.parse_master(master)
     except clra.MasterFileError as exc:
@@ -345,19 +332,67 @@ def contractor_compliance_batches(request):
         return Response({"error": "No worker rows found in the master file."},
                         status=status.HTTP_400_BAD_REQUEST)
 
+    # State / Site are derived from the uploaded master file when not supplied
+    # (the CLRA generation form only asks for Year + Month).
+    state = (request.data.get("state") or "").strip()
+    if not state:
+        from collections import Counter
+        states = [str(r.get("state") or "").strip() for r in rows]
+        states = [s for s in states if s]
+        if states:
+            state = Counter(states).most_common(1)[0][0]
+
+    site_label = (request.data.get("site") or "").strip()
+    if not site_label:
+        for r in rows:
+            candidate = str(r.get("site") or r.get("location") or "").strip()
+            if candidate:
+                site_label = candidate
+                break
+
+    site_ids = _contractor_site_ids(user)
+    site = None
+    if site_label:
+        site = (Site.objects.filter(site_name=site_label).first()
+                or Site.objects.filter(site_code=site_label).first())
+    if site is None:
+        row_sites = {str(r.get("site") or "").strip() for r in rows} - {""}
+        if row_sites:
+            site = (Site.objects.filter(id__in=site_ids, site_code__in=row_sites).first()
+                    or Site.objects.filter(id__in=site_ids, site_name__in=row_sites).first())
+    if site is None:
+        site = Site.objects.filter(id__in=site_ids).order_by("id").first()
+
+    month = (request.data.get("month") or "").strip()
+    year = (request.data.get("year") or "").strip()
+    fy = (request.data.get("financialYear") or "").strip()
+    if not fy and year.isdigit():
+        fy = f"{year}-{str((int(year) + 1) % 100).zfill(2)}"
+
     registers = [
         {"name": m.document_name, "formNo": m.form_number, "frequency": m.frequency}
         for m in RegisterDocumentMaster.objects.filter(kind="register", is_active=True)
         .order_by("sort_order")
     ]
-    # Prefer the PAN-India State+Form register templates (parsed column schema),
-    # filtered by the applicability matrix; fall back to the generic layout.
-    from .register_templates import applicable_templates, gate_templates_by_adoption
+    # Only allow upload/generation for a state where the principal employer has
+    # adopted CLRA register forms for its sites in that state.
+    from .register_templates import (applicable_templates, employer_adopted_ids,
+                                     gate_templates_by_adoption)
+    adopted_ids = employer_adopted_ids(site.employer, state) if (site and site.employer_id and state) else set()
+    if state and not adopted_ids:
+        return Response(
+            {"error": f"The principal employer has not adopted CLRA register forms for {state}. "
+                      f"Upload/generation is disabled for sites in {state} until the employer adopts the forms."},
+            status=status.HTTP_400_BAD_REQUEST)
     site_templates = gate_templates_by_adoption(
         applicable_templates(state)[0], site.employer if site else None, state) if state else []
     templates = [
         {"formCode": t.form_code, "title": t.title, "state": t.state,
-         "columns": list(t.columns or [])}
+         "columns": list(t.columns or []), "html": t.html or "",
+         "act": t.act, "calculationRules": [
+             {"targetField": r.target_field, "formula": r.formula}
+             for r in t.calculation_rules.all()],
+         "fieldMappings": {m.column: m.field_key for m in t.field_mappings.all()}}
         for t in site_templates
     ]
     generated_on = timezone.localdate()
@@ -528,10 +563,12 @@ def compliance_batch_site_documents(request, batch_id):
             "templateId": template.id if template else None,
             "mandatory": mapped_docs.get(label, False),
             "frequency": (template.title if template else ""),
+            "outputFormat": template.resolved_output_format() if template else "",
         })
     templates = [{
         "id": t.id, "formCode": t.form_code, "title": t.title,
         "columns": len(t.columns or []), "hasFile": bool(t.source_file),
+        "outputFormat": t.resolved_output_format(),
     } for t in templates_list]
     return Response({"data": {
         "site": site.site_name if site else site_name, "siteCode": site.site_code if site else "",
@@ -590,14 +627,25 @@ def compliance_batch_register_export(request, batch_id, template_id):
     template = RegisterTemplate.objects.filter(pk=template_id).first()
     if template is None:
         return Response({"error": "template not found"}, status=status.HTTP_404_NOT_FOUND)
+    if template.resolved_output_format() != "xlsx":
+        return Response({"error": "This template outputs PDF — open the register view to print/save it as PDF."},
+                        status=status.HTTP_400_BAD_REQUEST)
     rows = _batch_master_rows(batch)
+    employer_name = payloads._org_name(batch.site.employer) if (batch.site and batch.site.employer) else ""
+    context = clra.backend_context(
+        contractor=payloads._party_name(request.user), employer=employer_name,
+        site=(batch.site.site_name if batch.site else ""),
+        site_code=(batch.site.site_code if batch.site else ""), state=batch.state,
+        month=batch.month, year=batch.year, financial_year=batch.financial_year,
+        record_count=len(rows), generated_on=payloads._dts(timezone.now())[:10])
     data = clra.build_register_workbook(
         {"formCode": template.form_code, "title": template.title, "state": template.state,
-         "columns": list(template.columns or []),
+         "columns": list(template.columns or []), "html": template.html or "",
+         "act": template.act,
          "fieldMappings": {m.column: m.field_key for m in template.field_mappings.all()},
          "calculationRules": [{"targetField": r.target_field, "formula": r.formula}
                               for r in template.calculation_rules.all()]},
-        rows)
+        rows, context=context)
     filename = f"{template.state}-{template.form_code}.xlsx".replace(" ", "_")
     return FileResponse(io.BytesIO(data), as_attachment=True, filename=filename)
 

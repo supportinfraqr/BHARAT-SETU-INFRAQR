@@ -14,7 +14,7 @@ const emptyRow = (site = ''): RowDraft => ({ item:'', category:'', reference:'',
 type Tab = 'records' | 'registers' | 'master' | 'report';
 type ValidationIssue = { row:number; field:string; message:string };
 type ValidationReport = { errors:ValidationIssue[]; warnings:ValidationIssue[]; rowCount:number; validRows:number; siteCount:number; locationCount:number; sites:string[] };
-const FYS = ['FY 2026-27', 'FY 2025-26', 'FY 2024-25'];
+const YEARS = ['2026', '2025', '2024'];
 const MONTHS = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
 const STATES = INDIA_STATES;
 
@@ -41,37 +41,52 @@ const batchColumns: DataColumn<ContractorPortalData['complianceBatches'][number]
 
 export default function ContractorCompliancePage() {
   const { contractor, replaceContractor, refresh, mutate, employerScope, scoped } = useContractor();
-  const [tab, setTab] = useState<Tab>('records');
+  const [tab, setTab] = useState<Tab>('master');
   const [modal, setModal] = useState<'single' | 'bulk' | null>(null);
   const [rows, setRows] = useState<RowDraft[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   // Master file & CLRA generation state
-  const [fy, setFy] = useState(FYS[0]);
+  const [year, setYear] = useState(YEARS[0]);
   const [month, setMonth] = useState(MONTHS[6]);
   const [state, setState] = useState(STATES[0]);
   const [masterFile, setMasterFile] = useState<File | null>(null);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
-  const [regSite, setRegSite] = useState('');
   // PAN-India register template library for the selected state.
   const [templates, setTemplates] = useState<Array<{ id:number; state:string; formCode:string; title:string; columns:string[]; fileName:string; hasFile:boolean }>>([]);
   const [strength, setStrength] = useState<{ rcPe?:string; licence?:string; lwf?:string; hra?:string; nhFh?:string; ptFrequency?:string }>({});
+  const [adoption, setAdoption] = useState<Record<string, { adopted:boolean; adoptedCount:number; mandatoryCount:number; total:number }>>({});
   const [report, setReport] = useState<ValidationReport | null>(null);
   const [batchView, setBatchView] = useState<string | null>(null);
 
+  // States the contractor is allowed to register for — derived from allotted sites.
+  const allowedStates = Array.from(new Set(
+    contractor.sites.map(s => (s.state || '').trim()).filter((v): v is string => !!v),
+  )).sort();
+  const sitesByState = contractor.sites.reduce<Record<string, typeof contractor.sites>>((acc, s) => {
+    const key = (s.state || '').trim();
+    if (key) (acc[key] ||= []).push(s);
+    return acc;
+  }, {});
+  // Keep the template-library state within the allowed set (without an effect).
+  const activeState = allowedStates.length && !allowedStates.includes(state) ? allowedStates[0] : state;
+  const activeAdoption = adoption[activeState];
+  const activeAdopted = !!activeAdoption?.adopted;
+
   useEffect(() => {
     let active = true;
-    void fetch(`/api/contractor/clra/templates?state=${encodeURIComponent(state)}`, { cache:'no-store' })
+    void fetch(`/api/contractor/clra/templates?state=${encodeURIComponent(activeState)}`, { cache:'no-store' })
       .then(response => (response.ok ? response.json() : null))
-      .then((body: { rows?: typeof templates; strength?: typeof strength } | null) => {
+      .then((body: { rows?: typeof templates; strength?: typeof strength; adoption?: typeof adoption } | null) => {
         if (!active || !body) return;
         if (body.rows) setTemplates(body.rows);
         if (body.strength) setStrength(body.strength);
+        if (body.adoption) setAdoption(body.adoption);
       })
       .catch(() => {});
     return () => { active = false; };
-  }, [state]);
+  }, [activeState]);
 
   const rowsData = scoped(contractor.compliances, c => c.employer);
   const active = rowsData.filter(r => r.status === 'Active').length;
@@ -133,7 +148,7 @@ export default function ContractorCompliancePage() {
     try {
       const form = new FormData();
       form.set('master', masterFile);
-      form.set('state', state); form.set('month', month); form.set('year', '2026');
+      form.set('month', month); form.set('year', year);
       const response = await fetch('/api/contractor/clra/validate', { method: 'POST', body: form });
       const result = await response.json().catch(() => ({})) as { data?: ValidationReport; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error ?? 'The file could not be validated.');
@@ -167,13 +182,12 @@ export default function ContractorCompliancePage() {
       const form = new FormData();
       form.set('master', masterFile);
       if (signatureFile) form.set('signature', signatureFile);
-      form.set('site', regSite); form.set('financialYear', fy);
-      form.set('month', month); form.set('year', '2026'); form.set('state', state);
+      form.set('month', month); form.set('year', year);
       const response = await fetch('/api/portal/compliance-batches', { method: 'POST', body: form });
       const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['complianceBatches'][number]; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error ?? 'Registers could not be generated.');
       replaceContractor({ ...contractor, complianceBatches: [result.data, ...contractor.complianceBatches] });
-      setNotice(`Generated CLRA registers for ${fy} · ${month} 2026 · ${state} from ${masterFile.name}${signatureFile ? ' with digital signature' : ''}. Download from the batch list.`);
+      setNotice(`Generated CLRA registers for ${month} ${year} from ${masterFile.name}${signatureFile ? ' with digital signature' : ''}. Download from the batch list.`);
       setMasterFile(null); setSignatureFile(null);
       void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Registers could not be generated.'); }
@@ -222,8 +236,30 @@ export default function ContractorCompliancePage() {
       <Metric label="Pending verification" value={pending} icon={FileClock} tone="text-blue-700 bg-blue-50"/>
     </div>
 
+    {/* Registration eligibility — the states the contractor's sites are in */}
+    <section className="bg-white border border-gray-200 rounded-2xl p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Registration eligibility</p>
+          <h2 className="text-sm font-semibold text-gray-950 mt-0.5">States you can register for</h2>
+          <p className="text-xs text-gray-500 mt-0.5">Derived from the sites allotted to you — CLRA registers can only be generated for these states.</p>
+        </div>
+        {allowedStates.length > 0 && <span className="text-xs font-semibold text-gray-500">{allowedStates.length} state{allowedStates.length === 1 ? '' : 's'}</span>}
+      </div>
+      {allowedStates.length
+        ? <div className="flex flex-wrap gap-2 mt-3">
+            {allowedStates.map(st => (
+              <span key={st} className="inline-flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800">
+                {st}
+                <span className="text-blue-400 font-normal">{sitesByState[st].length} site{sitesByState[st].length === 1 ? '' : 's'}</span>
+              </span>
+            ))}
+          </div>
+        : <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">None of your allotted sites have a state set — add/adopt a site with a state to enable CLRA register generation.</p>}
+    </section>
+
     <div className="flex border-b overflow-x-auto">
-      {([['records', 'Compliance Records'], ['registers', 'Register-wise Listing'], ['master', 'Master File & CLRA Generation'], ['report', 'Contractor Report']] as Array<[Tab, string]>).map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${tab === id ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>{label}</button>)}
+      {([['master', 'Master File & CLRA Generation'], ['records', 'Compliance Records'], ['registers', 'Register-wise Listing'], ['report', 'Contractor Report']] as Array<[Tab, string]>).map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${tab === id ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>{label}</button>)}
     </div>
 
     {tab === 'records' && <>
@@ -237,25 +273,48 @@ export default function ContractorCompliancePage() {
     </section>}
 
     {tab === 'master' && <div className="space-y-5">
+      {/* Allowed Site States Banner */}
+      <div className="bg-gradient-to-r from-slate-900 to-[#073B67] rounded-2xl p-4 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-500/30 text-blue-200 px-2 py-0.5 rounded border border-blue-400/30">Site Jurisdiction &amp; Compliance Scope</span>
+          </div>
+          <h3 className="text-sm font-bold">State Register Scope: {allowedStates.length ? allowedStates.join(', ') : 'No Allotted Sites'}</h3>
+          <p className="text-xs text-slate-300">
+            You are authorized to generate and register CLRA templates for sites located in <strong>{allowedStates.length ? allowedStates.join(', ') : 'your allotted site states'}</strong> ({contractor.sites.length} site{contractor.sites.length === 1 ? '' : 's'} assigned).
+          </p>
+        </div>
+        {allowedStates.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 shrink-0">
+            {allowedStates.map(s => (
+              <span key={s} className="px-2.5 py-1 bg-white/10 backdrop-blur-md rounded-lg text-xs font-semibold text-emerald-300 border border-emerald-400/30 flex items-center gap-1">
+                <CheckCircle2 size={12}/> {s} ({sitesByState[s]?.length ?? 0} site{(sitesByState[s]?.length ?? 0) === 1 ? '' : 's'})
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="grid lg:grid-cols-2 gap-5">
       <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
         <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">CLRA Register Generation</h2><p className="text-xs text-gray-400 mt-0.5">Upload master data and generate statutory registers based on State / Site / Location.</p></header>
         <div className="p-5 space-y-4">
           <div className="grid sm:grid-cols-2 gap-3">
-            <label className="text-xs font-semibold">Financial Year<select value={fy} onChange={e => setFy(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{FYS.map(f => <option key={f}>{f}</option>)}</select></label>
+            <label className="text-xs font-semibold">Year<select value={year} onChange={e => setYear(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{YEARS.map(y => <option key={y}>{y}</option>)}</select></label>
             <label className="text-xs font-semibold">Month<select value={month} onChange={e => setMonth(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{MONTHS.map(m => <option key={m}>{m}</option>)}</select></label>
-            <label className="text-xs font-semibold">State<select value={state} onChange={e => setState(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{STATES.map(s => <option key={s}>{s}</option>)}</select></label>
-            <label className="text-xs font-semibold">Site<select value={regSite} onChange={e => setRegSite(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white"><option value="">Select site</option>{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name} — {s.employer}</option>)}</select></label>
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
             <label className="text-xs font-semibold text-gray-600 flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 py-2.5 cursor-pointer"><FileSpreadsheet size={16}/>{masterFile ? masterFile.name : 'Choose Master File (CSV/XLSX)'}<input type="file" accept=".xlsx,.csv" className="hidden" onChange={e => { setMasterFile(e.target.files?.[0] ?? null); setError(''); }}/></label>
             <label className="text-xs font-semibold text-gray-600 flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 py-2.5 cursor-pointer"><FileText size={16}/>{signatureFile ? signatureFile.name : 'Choose Signature Upload (optional)'}<input type="file" accept=".png,.jpg,.jpeg,.pdf" className="hidden" onChange={e => setSignatureFile(e.target.files?.[0] ?? null)}/></label>
           </div>
+          {!activeAdopted
+            ? <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-800"><strong>{activeState}</strong>: the principal employer has not adopted CLRA register forms yet — uploading/generating is disabled for sites in {activeState} until the employer adopts the forms on their CLRA Registers page.</div>
+            : activeAdoption && <p className="text-[11px] text-emerald-700">{activeState}: employer adopted <strong>{activeAdoption.adoptedCount}</strong> of {activeAdoption.total} form(s), incl. {activeAdoption.mandatoryCount} mandatory.</p>}
           {error && tab === 'master' && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
           <div className="flex flex-wrap gap-2">
             <button onClick={downloadMasterTemplate} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5"><Download size={14}/>Download Master Template</button>
-            <button onClick={validateMaster} disabled={busy || !masterFile} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"><CheckCircle2 size={14}/>Validate File</button>
-            <button onClick={generateRegisters} disabled={busy} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"><Landmark size={14}/>{busy ? 'Generating registers…' : 'Generate CLRA Registers'}</button>
+            <button onClick={validateMaster} disabled={busy || !masterFile || !activeAdopted} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"><CheckCircle2 size={14}/>Validate File</button>
+            <button onClick={generateRegisters} disabled={busy || !activeAdopted} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"><Landmark size={14}/>{busy ? 'Generating registers…' : 'Generate CLRA Registers'}</button>
           </div>
           {report && <div className="rounded-xl border border-gray-100 overflow-hidden">
             <div className={`px-4 py-2.5 text-xs font-bold flex items-center gap-2 ${report.errors.length ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
@@ -279,8 +338,16 @@ export default function ContractorCompliancePage() {
       {/* PAN-India register template library for the selected state */}
       <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
         <header className="px-5 py-4 border-b border-gray-100 flex flex-wrap justify-between gap-2 items-center">
-          <div><h2 className="text-sm font-semibold text-gray-950">Register Template Library — {state}</h2><p className="text-xs text-gray-400 mt-0.5">State-wise statutory register templates used to render your registers (one sheet per form).</p></div>
-          <span className="text-xs font-semibold text-gray-500">{templates.length} template{templates.length === 1 ? '' : 's'}</span>
+          <div><h2 className="text-sm font-semibold text-gray-950">Register Template Library — {activeState}</h2><p className="text-xs text-gray-400 mt-0.5">State-wise statutory register templates used to render your registers (one sheet per form).</p></div>
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-semibold text-gray-600">State
+              <select value={activeState} onChange={e => setState(e.target.value)} className="ml-2 h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white">{(allowedStates.length ? allowedStates : STATES).map(s => <option key={s}>{s}</option>)}</select>
+            </label>
+            <span className="text-xs font-semibold text-gray-500">{templates.length} template{templates.length === 1 ? '' : 's'}</span>
+            {activeAdopted
+              ? <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">Adopted</span>
+              : <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700">Not adopted</span>}
+          </div>
         </header>
         {(strength.rcPe || strength.licence || strength.ptFrequency || strength.lwf || strength.nhFh) && <div className="px-5 py-3 border-b border-gray-100 flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-gray-600 bg-blue-50/40">
           {strength.rcPe && <span>CLRA RC / PE required at <strong>{strength.rcPe}</strong> workers</span>}
@@ -290,9 +357,9 @@ export default function ContractorCompliancePage() {
           {strength.nhFh && <span>NH / FH: <strong>{strength.nhFh}</strong></span>}
         </div>}
         {templates.length
-          ? <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-50 text-xs text-gray-500 font-semibold border-b border-gray-100"><tr><th className="px-5 py-3">Form</th><th className="px-5 py-3">Title</th><th className="px-5 py-3">Columns</th><th className="px-5 py-3">Source</th></tr></thead>
-            <tbody className="divide-y divide-gray-100">{templates.map(t => <tr key={t.id} className="hover:bg-gray-50"><td className="px-5 py-3 font-mono font-semibold text-[#073B67]">{t.formCode}</td><td className="px-5 py-3 text-gray-700">{t.title || '—'}</td><td className="px-5 py-3 text-gray-500">{t.columns.length} field{t.columns.length === 1 ? '' : 's'}</td><td className="px-5 py-3">{t.hasFile ? <a href={`/api/register-templates/${t.id}/file`} download className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:underline"><Download size={12}/>Download</a> : <span className="text-gray-400 text-xs">—</span>}</td></tr>)}</tbody></table></div>
-          : <p className="p-5 text-xs text-gray-400">No register templates configured for {state} yet. Choose another state or ask the administrator to add them.</p>}
+          ? <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-50 text-xs text-gray-500 font-semibold border-b border-gray-100"><tr><th className="px-5 py-3">Form</th><th className="px-5 py-3">Title</th><th className="px-5 py-3">Columns</th></tr></thead>
+            <tbody className="divide-y divide-gray-100">{templates.map(t => <tr key={t.id} className="hover:bg-gray-50"><td className="px-5 py-3 font-mono font-semibold text-[#073B67]">{t.formCode}</td><td className="px-5 py-3 text-gray-700">{t.title || '—'}</td><td className="px-5 py-3 text-gray-500">{t.columns.length} field{t.columns.length === 1 ? '' : 's'}</td></tr>)}</tbody></table></div>
+          : <p className="p-5 text-xs text-gray-400">{activeAdopted ? `No register templates configured for ${activeState} yet.` : `${activeState}: the principal employer hasn't adopted CLRA forms — nothing is available until they adopt on their CLRA Registers page.`}</p>}
       </section>
     </div>}
 
@@ -348,7 +415,7 @@ function parseCsv(line: string): string[] { const out: string[] = []; let cur = 
 function Metric({ label, value, icon:Icon, tone }: { label:string; value:number; icon:typeof ShieldCheck; tone:string }) { return <div className="bg-white border rounded-xl p-4 flex justify-between"><div><p className="text-sm text-gray-500">{label}</p><strong className="text-2xl">{value}</strong></div><span className={'w-10 h-10 grid place-items-center rounded-full ' + tone}><Icon size={20}/></span></div>; }
 
 type BatchSummary = { state:string; month:string; year:string; employees:number; sites:Array<{ site:string; location:string; employees:number }> };
-type SiteDocs = { site:string; siteCode:string; state:string; documents:Array<{ purpose:string; form:string; frequency:string; mandatory:boolean; templateId:number | null }>; templates:Array<{ id:number; formCode:string; title:string; columns:number; hasFile:boolean }>; strength?:{ rcPe?:string; licence?:string; lwf?:string; hra?:string; nhFh?:string; ptFrequency?:string } };
+type SiteDocs = { site:string; siteCode:string; state:string; documents:Array<{ purpose:string; form:string; frequency:string; mandatory:boolean; templateId:number | null; outputFormat?:string }>; templates:Array<{ id:number; formCode:string; title:string; columns:number; hasFile:boolean; outputFormat?:string }>; strength?:{ rcPe?:string; licence?:string; lwf?:string; hra?:string; nhFh?:string; ptFrequency?:string } };
 
 function BatchDrilldown({ batchId, onClose }: { batchId:string; onClose:() => void }) {
   const [summary, setSummary] = useState<BatchSummary | null>(null);
@@ -405,13 +472,13 @@ function BatchDrilldown({ batchId, onClose }: { batchId:string; onClose:() => vo
         <div className="rounded-xl border border-gray-100 p-4">
           <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Applicable documents — {site.site}{site.siteCode ? ` (${site.siteCode})` : ''} · {site.state}</p>
           {site.documents.length
-            ? <ul className="space-y-1.5">{site.documents.map((doc, i) => <li key={i} className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2 text-xs"><span className="text-gray-700">{doc.purpose}</span><span className="flex items-center gap-2 text-gray-400">{doc.form}{doc.mandatory ? ' · mandatory' : ''}{doc.templateId ? <><button disabled={busy} onClick={() => void openRegister(doc.templateId as number, doc.purpose)} className="text-blue-700 font-semibold hover:underline disabled:opacity-50">View register</button><a href={`/api/contractor/compliance-batches/${batchId}/register/${doc.templateId}/xlsx`} className="text-gray-500 font-semibold hover:underline">Excel</a></> : <span className="text-gray-300">no template</span>}</span></li>)}</ul>
+            ? <ul className="space-y-1.5">{site.documents.map((doc, i) => <li key={i} className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2 text-xs"><span className="text-gray-700">{doc.purpose}</span><span className="flex items-center gap-2 text-gray-400">{doc.form}{doc.mandatory ? ' · mandatory' : ''}{doc.templateId ? <><button disabled={busy} onClick={() => void openRegister(doc.templateId as number, doc.purpose)} className="text-blue-700 font-semibold hover:underline disabled:opacity-50">View register</button>{doc.outputFormat === 'xlsx' ? <a href={`/api/contractor/compliance-batches/${batchId}/register/${doc.templateId}/xlsx`} className="text-gray-500 font-semibold hover:underline">Excel</a> : <span className="text-gray-400">PDF</span>}</> : <span className="text-gray-300">no template</span>}</span></li>)}</ul>
             : <p className="text-xs text-gray-400">The applicability matrix has no form rows for {site.state}.</p>}
         </div>
         <div className="rounded-xl border border-gray-100 p-4">
           <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Register templates ({site.templates.length})</p>
           {site.templates.length
-            ? <div className="flex flex-wrap gap-2">{site.templates.map(t => <span key={t.id} className="inline-flex items-center gap-2 rounded-lg border border-gray-100 px-3 py-1.5 text-xs"><strong className="font-mono text-[#073B67]">{t.formCode}</strong><span className="text-gray-400">{t.columns} field(s)</span><button disabled={busy} onClick={() => void openRegister(t.id, t.formCode)} className="text-blue-700 font-semibold hover:underline disabled:opacity-50">View register</button><a href={`/api/contractor/compliance-batches/${batchId}/register/${t.id}/xlsx`} className="text-gray-500 font-semibold hover:underline">Excel</a>{t.hasFile && <a href={`/api/register-templates/${t.id}/file`} download className="text-gray-500 hover:underline">source</a>}</span>)}</div>
+            ? <div className="flex flex-wrap gap-2">{site.templates.map(t => <span key={t.id} className="inline-flex items-center gap-2 rounded-lg border border-gray-100 px-3 py-1.5 text-xs"><strong className="font-mono text-[#073B67]">{t.formCode}</strong><span className="text-gray-400">{t.columns} field(s)</span><button disabled={busy} onClick={() => void openRegister(t.id, t.formCode)} className="text-blue-700 font-semibold hover:underline disabled:opacity-50">View register</button>{t.outputFormat === 'xlsx' ? <a href={`/api/contractor/compliance-batches/${batchId}/register/${t.id}/xlsx`} className="text-gray-500 font-semibold hover:underline">Excel</a> : <span className="text-gray-400">PDF</span>}</span>)}</div>
             : <p className="text-xs text-gray-400">No templates configured for {site.state}.</p>}
         </div>
       </div>}
