@@ -380,7 +380,7 @@ function renderPreview(mode: 'doc' | 'register', body: string, b: BuilderDraft):
     if (k.startsWith('sys.')) val = SYS_SAMPLE[k.slice(4)] ?? `[${k.slice(4)}]`;
     else if (ROW_SAMPLE[k]) val = ROW_SAMPLE[k];
     else if (SAMPLE_TOKENS[k]) val = SAMPLE_TOKENS[k];
-    return `<span style="background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-family:monospace;font-size:11px;font-weight:600;border:1px solid #bae6fd;display:inline-block;">${val}</span>`;
+    return `<span style="background:#e0f2fe;color:#0369a1;padding:1px 5px;border-radius:4px;font-family:monospace;font-size:11px;font-weight:600;border:1px solid #bae6fd;display:inline;vertical-align:baseline;">${val}</span>`;
   };
 
   out = out.replace(/\{\{#\s*rows\s*\}\}([\s\S]*?)\{\{\s*\/\s*rows\s*\}\}/gi,
@@ -390,6 +390,27 @@ function renderPreview(mode: 'doc' | 'register', body: string, b: BuilderDraft):
   out = out.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (m: string, k: string) => fieldVal(k));
 
   return htmlShell(out);
+}
+
+// Searchable variable picker: a search box filters the dropdown's options.
+type PickerOption = { value: string; label: string };
+
+function SearchableSelect({ value, options, onSelect, placeholder = 'Search…', width = 'w-40' }: {
+  value?: string; options: PickerOption[]; onSelect: (value: string) => void; placeholder?: string; width?: string;
+}) {
+  const [q, setQ] = useState('');
+  const term = q.toLowerCase().trim();
+  const matches = term ? options.filter(o => o.label.toLowerCase().includes(term)) : options;
+  return <div className="flex items-center gap-1.5">
+    <div className="relative">
+      <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400"/>
+      <input value={q} onChange={e => setQ(e.target.value)} placeholder={placeholder} className={`h-8 border border-slate-300 rounded-lg pl-7 pr-2 text-xs bg-white focus:outline-none focus:border-blue-500 ${width}`}/>
+    </div>
+    <select value={value ?? ''} onChange={e => onSelect(e.target.value)} className="h-8 border border-slate-300 rounded-lg px-2 text-xs font-mono bg-white max-w-[260px]">
+      <option value="">— Select —</option>
+      {matches.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  </div>;
 }
 
 // Advanced Interactive Document & Spreadsheet Studio Suite
@@ -552,15 +573,7 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
 
               <div className="md:col-span-5 flex gap-1">
                 <input type="text" value={kvValInput} onChange={e => setKvValInput(e.target.value)} placeholder="Token / Value (e.g., {{CONTRACTOR_NAME}})" className="flex-1 h-8 px-2.5 text-xs font-mono bg-white border border-slate-300 rounded focus:outline-none focus:border-blue-600" />
-                <select value="" onChange={e => {
-                  const val = e.target.value;
-                  if (val) {
-                    setKvValInput(val);
-                  }
-                }} className="h-8 border border-slate-300 rounded px-1.5 text-xs bg-white font-mono text-blue-700 cursor-pointer max-w-[140px]">
-                  <option value="">Insert Token…</option>
-                  {fieldKeys.map(k => <option key={k} value={`{{${k}}}`}>{`{{${k}}}`}</option>)}
-                </select>
+                <SearchableSelect options={fieldKeys.map(k => ({ value: `{{${k}}}`, label: `{{${k}}}` }))} onSelect={val => { if (val) setKvValInput(val); }} placeholder="Search token…" width="w-36"/>
               </div>
 
               <button type="button" disabled={!kvKeyInput.trim()} onClick={() => {
@@ -694,20 +707,19 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
             </div>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-slate-600">Map to Master/Backend Field:</span>
-              <select value={draft.fieldMappings.find(m => m.column === draft.columns[selectedCol])?.fieldKey ?? ''} onChange={e => {
-                const val = e.target.value;
-                const colName = draft.columns[selectedCol];
-                const others = draft.fieldMappings.filter(m => m.column !== colName);
-                onPatchDraft('fieldMappings', val ? [...others, { column: colName, fieldKey: val }] : others);
-              }} className="h-8 border border-blue-300 rounded px-2 font-mono bg-white font-medium text-slate-800">
-                <option value="">— Select Master/Backend Field —</option>
-                <optgroup label="Master File Fields">
-                  {fieldKeys.map(k => <option key={k} value={k}>{k}</option>)}
-                </optgroup>
-                <optgroup label="Backend Auto Fields">
-                  {backendKeys.map(k => <option key={`backend:${k}`} value={`backend:${k}`}>backend · {k}</option>)}
-                </optgroup>
-              </select>
+              <SearchableSelect
+                value={draft.fieldMappings.find(m => m.column === draft.columns[selectedCol])?.fieldKey ?? ''}
+                options={[
+                  ...fieldKeys.map(k => ({ value: k, label: k })),
+                  ...backendKeys.map(k => ({ value: `backend:${k}`, label: `backend · ${k}` })),
+                ]}
+                onSelect={val => {
+                  const colName = draft.columns[selectedCol];
+                  const others = draft.fieldMappings.filter(m => m.column !== colName);
+                  onPatchDraft('fieldMappings', val ? [...others, { column: colName, fieldKey: val }] : others);
+                }}
+                placeholder="Search field…"
+              />
             </div>
           </div>
         )}
@@ -743,12 +755,7 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
           <button type="button" className={toolBtn} onClick={() => cmd('insertHTML', '<table style="width:100%;border-collapse:collapse;margin:10px 0;text-align:left;" border="1"><thead><tr style="background:#f1f5f9;"><th style="padding:6px;border:1px solid #999;">Sl. No.</th><th style="padding:6px;border:1px solid #999;">Header / Designation</th><th style="padding:6px;border:1px solid #999;">Wages / Rate</th></tr></thead><tbody><tr><td style="padding:6px;border:1px solid #999;">{{sl}}</td><td style="padding:6px;border:1px solid #999;">{{Designation}}</td><td style="padding:6px;border:1px solid #999;">{{Fixed_Basic_Wages}}</td></tr></tbody></table><p><br></p>')}>+ Table</button>
           <button type="button" className={toolBtn} onClick={() => cmd('insertHTML', '<div style="display:flex;justify-content:space-between;margin-top:40px;padding-top:10px;border-top:1px border #ccc;"><div><b>Authorised Signatory</b><br><small>Seal & Signature</small></div><div><b>Date:</b> ____________</div></div><p><br></p>')}>+ Signature Block</button>
           <div className="h-4 w-px bg-slate-300 mx-1"/>
-          <select value="" onChange={e => { if (e.target.value) { insertToken(e.target.value); e.target.value = ''; } }} className="h-7 border border-blue-300 rounded px-2 text-xs font-mono font-bold bg-blue-50 text-blue-800 cursor-pointer">
-            <option value="">+ Insert Master Table Token…</option>
-            <optgroup label="Master Table Tokens (Excel Sheet)">
-              {fieldKeys.map(k => <option key={k} value={`{{${k}}}`}>{`{{${k}}}`}</option>)}
-            </optgroup>
-          </select>
+          <SearchableSelect options={fieldKeys.map(k => ({ value: `{{${k}}}`, label: `{{${k}}}` }))} onSelect={val => { if (val) insertToken(val); }} placeholder="Search master field…" width="w-44"/>
         </div>
 
         {/* Paper Canvas Container */}

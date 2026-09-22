@@ -110,6 +110,8 @@ from .compliance import (
     RegisterFieldMapping,
     RegisterCalculationRule,
     EmployerRegisterTemplateAdoption,
+    EmployerSapConfig,
+    SapSyncLog,
     StateCode,
     StateFormApplicability,
     StateFeeMaster,

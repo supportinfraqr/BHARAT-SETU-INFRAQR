@@ -165,9 +165,7 @@ def _specs():
         "model": MinimumWage, "order": "id",
         "defaults": {"industry": "All Industries"},
         "unique": ("state", "wage_zone", "grade", "employment_category", "effective_from"),
-        "unique_message": ("A minimum wage for this State + Wage Zone + Grade + Employment "
-                           "Category + Effective From already exists. Edit that record instead "
-                           "— a duplicate cannot be added."),
+        "unique_message": "This record already exists — duplicate cannot be added",
         "fields": {
             "state": ("state", "text"), "zone": ("wage_zone", "text"),
             "grade": ("grade", "text"), "employmentCategory": ("employment_category", "text"),

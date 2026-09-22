@@ -93,7 +93,12 @@ export default function MasterCrudPage({ configKey }: { configKey: string }) {
       setRows(current => isEdit ? current.map(r => r.id === editing!.id ? body.row! : r) : [body.row!, ...current]);
       setNotice(`${config.title}: record ${isEdit ? 'updated' : 'created'}.`);
       setModal(null); setEditing(null);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The record could not be saved.'); }
+    } catch (reason) {
+      // A rejected save (e.g. a duplicate) closes the form and surfaces the
+      // message on the page instead of keeping the modal open.
+      setError(reason instanceof Error ? reason.message : 'The record could not be saved.');
+      setModal(null); setEditing(null);
+    }
     finally { setBusy(false); }
   }
 
@@ -149,7 +154,7 @@ function Field({ field, value, isEdit }: { field: AdminField; value: unknown; is
   // A blank password field on edit means "keep the current password".
   const placeholder = isPassword && isEdit ? 'Leave blank to keep the current password' : field.placeholder;
   if (field.type === 'select') {
-    return <label className="text-xs font-semibold text-gray-700">{field.label}<select name={field.name} required={field.required} defaultValue={String(value ?? '')} className={base + ' bg-white'}><option value="">Select</option>{field.options!.map(option => <option key={option}>{option}</option>)}</select></label>;
+    return <label className="text-xs font-semibold text-gray-700">{field.label}<select name={field.name} required={field.required} defaultValue={String(value ?? '')} className={base + ' bg-white'}>{!field.noPlaceholder && <option value="">Select</option>}{field.options!.map(option => <option key={option}>{option}</option>)}</select></label>;
   }
   if (field.type === 'textarea') {
     return <label className="text-xs font-semibold text-gray-700">{field.label}<textarea name={field.name} required={field.required} defaultValue={String(value ?? '')} rows={3} className={base} placeholder={placeholder}/></label>;

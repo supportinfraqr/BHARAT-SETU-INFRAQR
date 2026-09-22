@@ -12,3 +12,5 @@ xlrd==2.0.2
 # Self-hosted OCR (RapidOCR over ONNX + pypdfium2 PDF rasterization).
 rapidocr-onnxruntime==1.4.4
 pypdfium2==5.13.0
+
+cryptography

@@ -22,4 +22,5 @@ from .mutations import *  # noqa: F401,F403
 from .portals import *  # noqa: F401,F403
 from .letter_templates import *  # noqa: F401,F403
 from .register_templates import *  # noqa: F401,F403
+from .sap import *  # noqa: F401,F403
 from .cost_sheets import *  # noqa: F401,F403

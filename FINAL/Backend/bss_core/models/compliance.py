@@ -622,3 +622,59 @@ class StatutoryMaster(models.Model):
 
     def __str__(self):
         return f"{self.component} {self.rate}"
+
+
+class EmployerSapConfig(models.Model):
+    """Per-employer SAP API connection (Business One Service Layer / Gateway OData).
+
+    Secrets (password/token) are stored encrypted (see ``api.crypto``).
+    ``mode`` picks the API shape, ``auth_type`` the auth method.
+    """
+
+    MODES = [("b1", "SAP Business One (Service Layer)"),
+             ("odata", "SAP Gateway OData")]
+    AUTH_TYPES = [("session", "Login session (B1SESSION/CompanyDB)"),
+                  ("bearer", "Bearer token"),
+                  ("basic", "Basic auth")]
+
+    employer = models.OneToOneField(User, on_delete=models.CASCADE, related_name="sap_config")
+    mode = models.CharField(max_length=10, choices=MODES, default="b1")
+    auth_type = models.CharField(max_length=10, choices=AUTH_TYPES, default="session")
+    base_url = models.CharField(max_length=255, blank=True)
+    company_db = models.CharField(max_length=80, blank=True)
+    username = models.CharField(max_length=120, blank=True)
+    password_enc = models.TextField(blank=True)
+    token_enc = models.TextField(blank=True)
+    extra_login = models.JSONField(default=dict, blank=True)
+    entity = models.CharField(max_length=80, blank=True, default="A_BusinessPartner")
+    id_field = models.CharField(max_length=80, blank=True, default="CardCode")
+    bp_filter = models.CharField(max_length=255, blank=True)
+    verify_tls = models.BooleanField(default=True)
+    field_mapping = models.JSONField(default=dict, blank=True)
+    allowlist_ips = models.CharField(max_length=255, blank=True)
+    is_active = models.BooleanField(default=True)
+    last_tested_at = models.DateTimeField(null=True, blank=True)
+    last_status = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "employer_sap_config"
+
+    def __str__(self):
+        return f"SAP config · employer {self.employer_id} ({self.mode})"
+
+
+class SapSyncLog(models.Model):
+    """Audit trail of SAP→BSS contractor pulls."""
+
+    employer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sap_sync_logs")
+    contractor_id = models.IntegerField(null=True, blank=True)
+    source = models.CharField(max_length=80, blank=True)
+    status = models.CharField(max_length=20, blank=True)
+    mapped = models.JSONField(default=dict, blank=True)
+    message = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "employer_sap_sync_log"

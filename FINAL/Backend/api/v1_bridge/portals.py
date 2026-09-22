@@ -263,7 +263,11 @@ def admin_masters(request, key):
     try:
         result = _masters(request, key)
     except PortalMutationError as exc:
-        return Response({"error": exc.message}, status=exc.status_code)
+        # A duplicate is an expected user error, not a server failure: return it
+        # with HTTP 200 so the browser console isn't polluted by a failed
+        # request. The UI keys off the missing "row" and shows the message.
+        code = 200 if exc.status_code == 409 else exc.status_code
+        return Response({"error": exc.message}, status=code)
     if result is None:
         return Response({"error": "Unknown master."}, status=status.HTTP_404_NOT_FOUND)
     if request.method == "POST":
@@ -283,7 +287,9 @@ def admin_master_detail(request, key, pk):
     try:
         result = _master_detail(request, key, pk)
     except PortalMutationError as exc:
-        return Response({"error": exc.message}, status=exc.status_code)
+        # Duplicates return 200 (see admin_masters) so the console stays clean.
+        code = 200 if exc.status_code == 409 else exc.status_code
+        return Response({"error": exc.message}, status=code)
     if result is None:
         return Response({"error": "Unknown master."}, status=status.HTTP_404_NOT_FOUND)
     log_audit(request.user, "DELETE" if request.method == "DELETE" else "UPDATE",

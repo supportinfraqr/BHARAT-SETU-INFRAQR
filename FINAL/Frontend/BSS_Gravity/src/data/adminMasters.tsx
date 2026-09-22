@@ -4,7 +4,7 @@
 import { INDIA_STATES } from '@/data/indiaStates';
 
 export type AdminFieldType = 'text' | 'number' | 'select' | 'date' | 'textarea' | 'checkbox' | 'multi';
-export type AdminField = { name: string; label: string; type: AdminFieldType; options?: string[]; required?: boolean; placeholder?: string };
+export type AdminField = { name: string; label: string; type: AdminFieldType; options?: string[]; required?: boolean; placeholder?: string; noPlaceholder?: boolean };
 export type AdminRow = Record<string, string | number | boolean | string[]>;
 
 export type MasterConfig = {
@@ -135,7 +135,7 @@ export const MINIMUM_WAGE_MASTER: MasterConfig = {
   fields: [
     { name: 'state', label: 'State', type: 'select', options: STATES, required: true },
     { name: 'zone', label: 'Wage Zone', type: 'text', required: true, placeholder: 'Zone 1' },
-    { name: 'grade', label: 'Grade', type: 'text', required: true, placeholder: 'Grade A' },
+    { name: 'grade', label: 'Grade', type: 'select', options: ['Grade A', 'Grade B', 'Grade C'], required: true, noPlaceholder: true },
     { name: 'employmentCategory', label: 'Employment Category', type: 'select', options: ['Skilled', 'Semi-skilled', 'Unskilled'], required: true },
     { name: 'basicPerMonth', label: 'Basic Per Month (₹)', type: 'number', required: true },
     { name: 'vdaPerMonth', label: 'VDA Per Month (₹)', type: 'number', required: true },
