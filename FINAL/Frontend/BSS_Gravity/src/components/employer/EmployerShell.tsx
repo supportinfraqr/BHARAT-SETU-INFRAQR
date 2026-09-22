@@ -32,6 +32,7 @@ const complianceGroup = { key:'nav.compliance', icon:ClipboardCheck, items:[
 const qrGroup = { key:'nav.qrSystem', icon:Network, items:[
   ['nav.myWorkers','/employer/workers'],
   ['nav.myContractors','/employer/qr/contractors'],
+  ['SAP Settings','/employer/sap-settings'],
   ['nav.bindingRequests','/employer/qr/requests'],
   ['nav.idCard','/employer/idcard'],
   ['nav.scanQr','/employer/scan'],

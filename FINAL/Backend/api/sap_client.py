@@ -245,25 +245,26 @@ def resolve_config(employer=None) -> dict:
         "verifyTls": bool(row.verify_tls),
         "bpFilter": row.bp_filter or "",
         "fieldMapping": row.field_mapping or {},
+        "allowlistIps": row.allowlist_ips or "",
         "configured": bool(row.base_url or base["baseUrl"]),
     }
 
 
-def fetch_business_partner(identifier: str) -> dict:
+def fetch_business_partner(identifier: str, cfg: dict | None = None) -> dict:
     """Fetch one Business Partner from SAP OData by ``identifier``. Raises
     ``RuntimeError`` when SAP isn't configured or the request fails."""
-    cfg = sap_config()
+    cfg = cfg or sap_config()
     if not cfg["baseUrl"]:
         raise RuntimeError("SAP is not configured (set BSS_SAP_BASE_URL).")
     query = urllib.parse.urlencode({"$filter": f"{cfg['idField']} eq '{identifier}'", "$top": 1, "$format": "json"})
     url = f"{cfg['baseUrl']}/{cfg['entity']}?{query}"
     request = urllib.request.Request(url)
     request.add_header("Accept", "application/json")
-    if cfg["token"]:
+    if cfg.get("token"):
         request.add_header("Authorization", f"Bearer {cfg['token']}")
-    elif cfg["username"]:
+    elif cfg.get("username"):
         import base64
-        password = os.environ.get("BSS_SAP_PASSWORD") or ""
+        password = cfg.get("password") or ""
         token = base64.b64encode(f"{cfg['username']}:{password}".encode()).decode()
         request.add_header("Authorization", f"Basic {token}")
     import ssl
@@ -287,15 +288,20 @@ def _ssl_context(verify: bool):
 
 def b1_login(cfg: dict | None = None) -> dict:
     """Log in to the B1 Service Layer and return the session cookies
-    (``B1SESSION``, ``RouteID``)."""
+    (``B1SESSION``, ``RouteID``). With ``authType=bearer`` + a token, returns a
+    sentinel ``{"__bearer__": token}`` instead of logging in."""
     cfg = cfg or sap_config()
     if not cfg["baseUrl"]:
         raise RuntimeError("SAP is not configured (set BSS_SAP_BASE_URL).")
-    body = json.dumps({
+    if (cfg.get("authType") or "session") == "bearer" and cfg.get("token"):
+        return {"__bearer__": cfg["token"]}
+    login_body = {
         "CompanyDB": cfg["companyDb"],
         "UserName": cfg["username"],
-        "Password": os.environ.get("BSS_SAP_PASSWORD") or "",
-    }).encode("utf-8")
+        "Password": cfg.get("password") or "",
+    }
+    login_body.update(cfg.get("extraLogin") or {})
+    body = json.dumps(login_body).encode("utf-8")
     request = urllib.request.Request(f"{cfg['baseUrl']}/Login", data=body, method="POST")
     request.add_header("Content-Type", "application/json")
     request.add_header("Accept", "application/json")
@@ -337,28 +343,34 @@ def _flatten_b1_bp(bp: dict) -> dict:
     return flat
 
 
-def b1_get_business_partner(card_code: str) -> dict:
+def b1_get_business_partner(card_code: str, cfg: dict | None = None) -> dict:
     """Fetch one Business Partner from the B1 Service Layer by ``CardCode``."""
-    cfg = sap_config()
+    cfg = cfg or sap_config()
     if not cfg["baseUrl"]:
         raise RuntimeError("SAP is not configured (set BSS_SAP_BASE_URL).")
     jar = b1_login(cfg)
-    cookie = "; ".join(f"{k}={v}" for k, v in jar.items())
+    cookie = ""
+    bearer = jar.get("__bearer__")
     url = f"{cfg['baseUrl']}/BusinessPartners('{urllib.parse.quote(card_code)}')"
     request = urllib.request.Request(url)
     request.add_header("Accept", "application/json")
-    request.add_header("Cookie", cookie)
+    if bearer:
+        request.add_header("Authorization", f"Bearer {bearer}")
+    else:
+        cookie = "; ".join(f"{k}={v}" for k, v in jar.items())
+        request.add_header("Cookie", cookie)
     try:
         with urllib.request.urlopen(request, timeout=30,
                                     context=_ssl_context(cfg["verifyTls"])) as resp:
             payload = json.loads(resp.read().decode("utf-8"))
-        # Best-effort logout.
-        try:
-            logout = urllib.request.Request(f"{cfg['baseUrl']}/Logout", data=b"{}", method="POST")
-            logout.add_header("Cookie", cookie)
-            urllib.request.urlopen(logout, timeout=10, context=_ssl_context(cfg["verifyTls"])).close()
-        except Exception:  # noqa: BLE001
-            pass
+        # Best-effort logout (session mode only).
+        if cookie:
+            try:
+                logout = urllib.request.Request(f"{cfg['baseUrl']}/Logout", data=b"{}", method="POST")
+                logout.add_header("Cookie", cookie)
+                urllib.request.urlopen(logout, timeout=10, context=_ssl_context(cfg["verifyTls"])).close()
+            except Exception:  # noqa: BLE001
+                pass
     except Exception as exc:  # noqa: BLE001
         raise RuntimeError(f"SAP B1 request failed: {exc}") from exc
     if not payload:
@@ -366,18 +378,22 @@ def b1_get_business_partner(card_code: str) -> dict:
     return _flatten_b1_bp(payload)
 
 
-def fetch_record(identifier: str) -> dict:
+def fetch_record(identifier: str, cfg: dict | None = None) -> dict:
     """Fetch a SAP record by identifier using the configured mode (b1|odata)."""
-    cfg = sap_config()
-    if cfg["mode"] == "b1":
-        return b1_get_business_partner(identifier)
-    return fetch_business_partner(identifier)
+    cfg = cfg or sap_config()
+    if cfg.get("mode") == "b1":
+        return b1_get_business_partner(identifier, cfg)
+    return fetch_business_partner(identifier, cfg)
 
 
-def allowlist_ips() -> list[str]:
+def allowlist_ips(cfg: dict | None = None) -> list[str]:
     """Outbound IP(s) the employer must allow-list in/at their SAP so the BSS
-    server can reach the SAP API. Configure with ``BSS_SAP_ALLOWLIST_IPS``;
-    otherwise the public IP is detected, falling back to the LAN IP."""
+    server can reach the SAP API. Prefers the employer's stored
+    ``allowlistIps``, else ``BSS_SAP_ALLOWLIST_IPS``, else detected."""
+    if cfg:
+        stored = cfg.get("allowlistIps")
+        if isinstance(stored, str) and stored.strip():
+            return [x.strip() for x in re.split(r"[,\s]+", stored) if x.strip()]
     raw = (os.environ.get("BSS_SAP_ALLOWLIST_IPS") or "").strip()
     ips = [x.strip() for x in re.split(r"[,\s]+", raw) if x.strip()]
     if ips:

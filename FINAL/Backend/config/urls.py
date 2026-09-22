@@ -116,6 +116,8 @@ _v1_patterns = _v1(
     ("register-templates/<int:template_id>/file", v1_bridge.register_template_file, "v1_register_template_file"),
     ("employer/register-templates", v1_bridge.employer_register_templates, "v1_employer_register_templates"),
     ("employer/sap/config", v1_bridge.employer_sap_config, "v1_employer_sap_config"),
+    ("employer/sap/settings", v1_bridge.employer_sap_settings, "v1_employer_sap_settings"),
+    ("employer/sap/test", v1_bridge.employer_sap_test, "v1_employer_sap_test"),
     ("employer/sap/setup-document", v1_bridge.employer_sap_setup_document, "v1_employer_sap_setup_document"),
     ("employer/contractors/<int:contractor_id>/sap-sync", v1_bridge.employer_contractor_sap_sync, "v1_employer_contractor_sap_sync"),
     ("contractor/clra/templates", v1_bridge.contractor_register_templates, "v1_contractor_register_templates"),

@@ -30,6 +30,116 @@ def _profile_payload(profile):
     }
 
 
+def _settings_payload(cfg, employer=None):
+    from api import sap_client
+    return {
+        "configured": bool(cfg.get("baseUrl")),
+        "mode": cfg.get("mode") or "b1",
+        "authType": cfg.get("authType") or "session",
+        "baseUrl": cfg.get("baseUrl") or "",
+        "companyDb": cfg.get("companyDb") or "",
+        "username": cfg.get("username") or "",
+        "entity": cfg.get("entity") or "",
+        "idField": cfg.get("idField") or "",
+        "bpFilter": cfg.get("bpFilter") or "",
+        "verifyTls": bool(cfg.get("verifyTls", True)),
+        "extraLogin": cfg.get("extraLogin") or {},
+        "fieldMapping": cfg.get("fieldMapping") or {},
+        "hasPassword": bool(cfg.get("password")),
+        "hasToken": bool(cfg.get("token")),
+        "allowlistIps": sap_client.allowlist_ips(cfg),
+        "fieldMap": sap_client.field_map_payload(),
+    }
+
+
+@api_view(["GET", "PUT"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def employer_sap_settings(request):
+    """Employer SAP connection settings (secrets encrypted; masked on read)."""
+    from api import sap_client
+    from api import crypto
+    from bss_core.models import EmployerSapConfig
+    user = request.user
+    if user.role != "employer":
+        return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
+
+    row = EmployerSapConfig.objects.filter(employer=user).first()
+    if request.method == "PUT":
+        body = request.data if isinstance(request.data, dict) else {}
+        if row is None:
+            row = EmployerSapConfig(employer=user)
+        row.mode = "b1" if str(body.get("mode") or row.mode) == "b1" else "odata"
+        row.auth_type = str(body.get("authType") or row.auth_type or "session")
+        if row.auth_type not in ("session", "bearer", "basic"):
+            row.auth_type = "session"
+        row.base_url = str(body.get("baseUrl") or "")[:255]
+        row.company_db = str(body.get("companyDb") or "")[:80]
+        row.username = str(body.get("username") or "")[:120]
+        row.entity = str(body.get("entity") or "A_BusinessPartner")[:80]
+        row.id_field = str(body.get("idField") or "CardCode")[:80]
+        row.bp_filter = str(body.get("bpFilter") or "")[:255]
+        row.verify_tls = bool(body.get("verifyTls", True))
+        row.allowlist_ips = str(body.get("allowlistIps") or "")[:255]
+        extra = body.get("extraLogin")
+        row.extra_login = extra if isinstance(extra, dict) else {}
+        fm = body.get("fieldMapping")
+        row.field_mapping = fm if isinstance(fm, dict) else {}
+        # Secrets: only overwrite when a non-empty new value is supplied.
+        if str(body.get("password") or "").strip():
+            row.password_enc = crypto.encrypt(str(body["password"]))
+        if str(body.get("token") or "").strip():
+            row.token_enc = crypto.encrypt(str(body["token"]))
+        if body.get("clearSecrets") is True:
+            row.password_enc = ""
+            row.token_enc = ""
+        row.is_active = bool(body.get("isActive", True))
+        row.save()
+        return Response({"data": _settings_payload(sap_client.resolve_config(user))},
+                        status=status.HTTP_200_OK)
+
+    return Response({"data": _settings_payload(sap_client.resolve_config(user), user)},
+                    status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def employer_sap_test(request):
+    """Test the employer's SAP connection: log in + fetch one Business Partner."""
+    from api import sap_client
+    from bss_core.models import EmployerSapConfig
+    from django.utils import timezone
+    user = request.user
+    if user.role != "employer":
+        return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
+    cfg = sap_client.resolve_config(user)
+    if not cfg.get("baseUrl"):
+        return Response({"error": "Save the SAP connection URL first."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    identifier = str((request.data or {}).get("identifier") or "").strip()
+    if not identifier:
+        return Response({"error": "Provide a Contractor code / CIN / Vendor no. to test."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    row = EmployerSapConfig.objects.filter(employer=user).first()
+    try:
+        record = sap_client.fetch_record(identifier, cfg=cfg)
+        mapped = sap_client.map_sap_record(record, cfg.get("fieldMapping"))
+        if row is not None:
+            row.last_tested_at = timezone.now()
+            row.last_status = f"OK · {len(mapped)} field(s)"
+            row.save(update_fields=["last_tested_at", "last_status"])
+        return Response({"data": {"ok": True, "mapped": sorted(mapped.keys()),
+                                  "mappedCount": len(mapped), "source": cfg.get("mode")}},
+                        status=status.HTTP_200_OK)
+    except RuntimeError as exc:
+        if row is not None:
+            row.last_tested_at = timezone.now()
+            row.last_status = f"FAILED · {str(exc)[:180]}"
+            row.save(update_fields=["last_tested_at", "last_status"])
+        return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -38,15 +148,8 @@ def employer_sap_config(request):
     from api import sap_client
     if request.user.role != "employer":
         return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
-    cfg = sap_client.sap_config()
-    return Response({"data": {
-        "configured": sap_client.is_configured(),
-        "mode": cfg["mode"],
-        "entity": cfg["entity"] if sap_client.is_configured() else "",
-        "companyDb": cfg["companyDb"],
-        "allowlistIps": sap_client.allowlist_ips(),
-        "fieldMap": sap_client.field_map_payload(),
-    }}, status=status.HTTP_200_OK)
+    return Response({"data": _settings_payload(sap_client.resolve_config(request.user))},
+                    status=status.HTTP_200_OK)
 
 
 def _setup_document_html(employer_name, cfg, ips, field_map):
@@ -115,8 +218,9 @@ def employer_sap_setup_document(request):
         return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
     emp_profile = getattr(user, "employer_profile", None)
     employer_name = (emp_profile.employer_name if emp_profile else "") or str(user)
-    html = _setup_document_html(employer_name, sap_client.sap_config(),
-                                sap_client.allowlist_ips(), sap_client.field_map_payload())
+    cfg = sap_client.resolve_config(user)
+    html = _setup_document_html(employer_name, cfg,
+                                sap_client.allowlist_ips(cfg), sap_client.field_map_payload())
     filename = f"bss-sap-setup-{re.sub(r'[^A-Za-z0-9]+', '-', employer_name).strip('-') or 'employer'}.html"
     response = HttpResponse(html, content_type="text/html; charset=utf-8")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
@@ -150,6 +254,7 @@ def employer_contractor_sap_sync(request, contractor_id):
                         status=status.HTTP_403_FORBIDDEN)
 
     profile, _ = ContractorProfile.objects.get_or_create(user=contractor)
+    cfg = sap_client.resolve_config(user)
     identifier = str(request.data.get("identifier") or profile.contractor_code
                      or getattr(contractor, "bss_id", "") or "").strip()
 
@@ -163,15 +268,19 @@ def employer_contractor_sap_sync(request, contractor_id):
             if not identifier:
                 return Response({"error": "No Contractor code / CIN to look up in SAP."},
                                 status=status.HTTP_400_BAD_REQUEST)
-            record = sap_client.fetch_record(identifier)
-            source = "sap-b1" if sap_client.sap_config()["mode"] == "b1" else "sap-odata"
+            if not cfg.get("baseUrl"):
+                return Response({"error": "SAP is not configured for your organisation yet — "
+                                          "set it up in SAP Settings."},
+                                status=status.HTTP_400_BAD_REQUEST)
+            record = sap_client.fetch_record(identifier, cfg=cfg)
+            source = "sap-b1" if cfg.get("mode") == "b1" else "sap-odata"
     except RuntimeError as exc:
         return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
     if not record:
         return Response({"error": "No SAP record found."}, status=status.HTTP_404_NOT_FOUND)
 
-    mapped = sap_client.map_sap_record(record)
+    mapped = sap_client.map_sap_record(record, cfg.get("fieldMapping"))
     if not mapped:
         return Response({"error": "The SAP record had no recognisable contractor fields."},
                         status=status.HTTP_400_BAD_REQUEST)
@@ -198,4 +307,5 @@ def employer_contractor_sap_sync(request, contractor_id):
     }}, status=status.HTTP_200_OK)
 
 
-__all__ = ["employer_sap_config", "employer_contractor_sap_sync", "employer_sap_setup_document"]
+__all__ = ["employer_sap_config", "employer_sap_settings", "employer_sap_test",
+           "employer_contractor_sap_sync", "employer_sap_setup_document"]
