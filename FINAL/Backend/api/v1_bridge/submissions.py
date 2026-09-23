@@ -94,6 +94,10 @@ def _submissions(request):
     document_type = (request.data.get("documentType") or request.data.get("document_type") or "").strip()
     frequency = (request.data.get("frequency") or "").strip()
     is_mandatory = str(request.data.get("mandatory") or "").strip().lower() in ("1", "true", "yes", "on")
+    # Additional / principal-employer forms are evidence records — OCR does not
+    # apply (the document has no expected statutory text), so the caller can ask
+    # to skip OCR and just store the file.
+    no_ocr = str(request.data.get("noOcr") or request.data.get("no_ocr") or "").strip().lower() in ("1", "true", "yes", "on")
     user = request.user
 
     checksum = ""
@@ -101,18 +105,19 @@ def _submissions(request):
     findings = []
     if file_obj:
         checksum = payloads.sha256_checksum(file_obj)
-        ocr_text = None
-        try:
-            file_obj.seek(0)
-            ocr_text = ocr_client.extract_text(file_obj.read(), file_obj.name, timeout=25)
-        except Exception:  # OCR service down/slow — fall back to integrity checks
+        if not no_ocr:
             ocr_text = None
-        finally:
             try:
                 file_obj.seek(0)
-            except (AttributeError, OSError):
-                pass
-        accuracy, findings = compliance.validate_evidence(file_obj, ftype, ocr_text=ocr_text)
+                ocr_text = ocr_client.extract_text(file_obj.read(), file_obj.name, timeout=25)
+            except Exception:  # OCR service down/slow — fall back to integrity checks
+                ocr_text = None
+            finally:
+                try:
+                    file_obj.seek(0)
+                except (AttributeError, OSError):
+                    pass
+            accuracy, findings = compliance.validate_evidence(file_obj, ftype, ocr_text=ocr_text)
 
     submission_id = (request.data.get("submissionId") or "").strip()
     if submission_id:
@@ -158,7 +163,8 @@ def _submissions(request):
             "submittedAt": payloads._dts(timezone.now()),
             "fileName": submission.original_name, "checksum": checksum,
             "accuracy": accuracy,
-            "validated": bool(accuracy is not None and accuracy >= 100),
+            "noOcr": no_ocr,
+            "validated": no_ocr or (accuracy is not None and accuracy >= 100),
             "findings": findings,
         }
     }, status=status.HTTP_201_CREATED)
