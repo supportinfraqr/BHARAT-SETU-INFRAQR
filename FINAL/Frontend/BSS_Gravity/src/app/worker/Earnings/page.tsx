@@ -70,7 +70,7 @@ export default function EarningsPage() {
     finally { setBusy(false); }
   };
 
-  return <ModuleShell title="Wage History & Earnings" description="Payment records reported by your employer or contractor." icon={IndianRupee} watermark="Under Development">
+  return <ModuleShell title="Wage History & Earnings" description="Payment records reported by your employer or contractor." icon={IndianRupee}>
     <DataBadge demo={portal.dataMode === 'demo'} source={wageData.source} syncedAt={wageData.syncedAt} />
     {notice && <p role="status" className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16} />{notice}</p>}
     {error && <p role="alert" className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm font-semibold">{error}</p>}
