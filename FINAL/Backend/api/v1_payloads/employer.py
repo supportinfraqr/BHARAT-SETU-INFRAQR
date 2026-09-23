@@ -506,10 +506,11 @@ def _employer_submissions(user):
     # leak its submissions for another employer's site.
     my_employer = _org_name(user)
     my_sites = set(Site.objects.filter(employer=user).values_list("site_name", flat=True))
-    uploaded = SubmissionEvidence.objects.filter(
-        Q(user__worker_bindings__site__employer=user) |
-        Q(user__contractor_bindings__site__employer=user)
-    ).distinct()[:100]
+    uploaded = (SubmissionEvidence.objects
+                .filter(Q(user__worker_bindings__site__employer=user)
+                        | Q(user__contractor_bindings__site__employer=user))
+                .order_by("user_id", "site", "doc_type", "period", "-created_at")
+                .distinct("user_id", "site", "doc_type", "period")[:100])
     for ev in uploaded:
         if (ev.site and my_sites and ev.site not in my_sites) or (ev.employer and my_employer and ev.employer != my_employer):
             continue

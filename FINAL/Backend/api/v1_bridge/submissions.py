@@ -127,27 +127,36 @@ def _submissions(request):
         if str(original.status).upper() in ("RETURNED", "REJECTED"):
             return Response({"error": "Rejected submissions cannot be re-uploaded. Please submit a new compliance document."},
                             status=status.HTTP_400_BAD_REQUEST)
-    submission = SubmissionEvidence(
-        user=user,
-        role="worker" if user.role == "worker" else "contractor",
-        doc_type=ftype,
-        site=site,
-        period=period,
-        employer=employer,
-        state=state[:60],
-        financial_year=financial_year[:12],
-        month=month[:20],
-        location=location[:120],
-        document_type=document_type[:40],
-        frequency=frequency[:40],
-        is_mandatory=is_mandatory,
-        original_name=file_obj.name if file_obj else "",
-        file_size=file_obj.size if file_obj else 0,
-        mime_type=file_obj.content_type if file_obj else "",
-        checksum_sha256=checksum,
-        ocr_accuracy=accuracy,
-        validation_findings=findings,
-    )
+    role_value = "worker" if user.role == "worker" else "contractor"
+    if submission_id:
+        submission = original
+    else:
+        # Re-uploading the same document type for the same site + period replaces
+        # the existing pending submission instead of creating a duplicate.
+        submission = (SubmissionEvidence.objects
+                      .filter(user=user, doc_type=ftype, site=site, period=period)
+                      .exclude(status__in=("RETURNED", "REJECTED"))
+                      .order_by("-created_at").first())
+        if submission is None:
+            submission = SubmissionEvidence(user=user, role=role_value, doc_type=ftype)
+    submission.role = role_value
+    submission.site = site
+    submission.period = period
+    submission.employer = employer
+    submission.state = state[:60]
+    submission.financial_year = financial_year[:12]
+    submission.month = month[:20]
+    submission.location = location[:120]
+    submission.document_type = document_type[:40]
+    submission.frequency = frequency[:40]
+    submission.is_mandatory = is_mandatory
+    submission.original_name = file_obj.name if file_obj else ""
+    submission.file_size = file_obj.size if file_obj else 0
+    submission.mime_type = file_obj.content_type if file_obj else ""
+    submission.checksum_sha256 = checksum
+    submission.ocr_accuracy = accuracy
+    submission.validation_findings = findings
+    submission.status = "PENDING"
     if file_obj:
         safe_name = os.path.basename(file_obj.name or "evidence")
         submission.file.save(safe_name, file_obj, save=False)
