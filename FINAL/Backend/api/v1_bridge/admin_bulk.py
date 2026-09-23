@@ -115,6 +115,30 @@ def _find_user_by_mobile(mobile):
     return cred.user if cred else None
 
 
+def _digits(value):
+    return "".join(ch for ch in str(value or "") if ch.isdigit())
+
+
+def _conflict(model, field, value, exclude_user_id=None, label=""):
+    """Return a human message if ``value`` is already used by another record."""
+    if not value:
+        return None
+    qs = model.objects.filter(**{field: value})
+    if exclude_user_id:
+        qs = qs.exclude(user_id=exclude_user_id)
+    obj = qs.first()
+    if obj is None:
+        return None
+    who = ""
+    for attr in ("bss_worker_id", "contractor_code", "employer_code"):
+        who = getattr(obj, attr, "") or ""
+        if who:
+            break
+    if not who:
+        who = getattr(obj, "name", "") or getattr(obj, "contractor_name", "") or getattr(obj, "employer_name", "") or ""
+    return f"{label} already registered{(' to ' + str(who)) if who else ''}."
+
+
 def _template_response(entity):
     from django.http import HttpResponse
     from openpyxl import Workbook
@@ -149,15 +173,34 @@ def _template_response(entity):
 # ── per-entity processors ────────────────────────────────────────────────────
 def _process_employers(rows):
     from bss_core.models import User, UserCredential, EmployerProfile
+    from api import bss_ids
+    import re
     results = []
+    seen_mobile = set()
     for r in rows:
         mobile = _mobile(r.get("mobile"))
         name = str(r.get("name") or "").strip()
+        cin = str(r.get("cin") or "").strip().upper()
+        gstin = str(r.get("gstin") or "").strip().upper()
+        pan = str(r.get("pan") or "").strip().upper()
         if not mobile:
             results.append({"row": name or "(no name)", "status": "failed", "detail": "Mobile is required."}); continue
+        if mobile in seen_mobile:
+            results.append({"row": name or mobile, "status": "failed", "detail": "Duplicate mobile within the file."}); continue
+        if gstin and not re.match(r"^\d{2}[A-Z]{5}\d{4}[A-Z]\d[Z][A-Z\d]$", gstin):
+            results.append({"row": name or mobile, "status": "failed", "detail": "GSTIN format is invalid."}); continue
+        if pan and not re.match(r"^[A-Z]{5}\d{4}[A-Z]$", pan):
+            results.append({"row": name or mobile, "status": "failed", "detail": "PAN format is invalid (AAAAA9999A)."}); continue
         user = _find_user_by_mobile(mobile)
         if user is not None and user.role != "employer":
             results.append({"row": mobile, "status": "failed", "detail": f"Mobile belongs to a {user.role}."}); continue
+        exclude = user.id if user else None
+        conflict = (_conflict(EmployerProfile, "cin", cin, exclude, "CIN")
+                    or _conflict(EmployerProfile, "gstin", gstin, exclude, "GSTIN")
+                    or _conflict(EmployerProfile, "pan_no", pan, exclude, "PAN"))
+        if conflict:
+            results.append({"row": name or mobile, "status": "failed", "detail": conflict}); continue
+        seen_mobile.add(mobile)
         if user is None:
             user = User.objects.create_user(username=f"employer_{mobile}", role="employer",
                                             account_active=True, is_verified=True, is_active=True)
@@ -175,7 +218,6 @@ def _process_employers(rows):
         if name:
             profile.employer_name = name[:200]
         if not profile.employer_code:
-            from api import bss_ids
             profile.employer_code = bss_ids.new_bss_employer_code()
         profile.save()
         results.append({"row": name or mobile, "status": "ok", "detail": f"employer_{mobile}"})
@@ -185,15 +227,35 @@ def _process_employers(rows):
 def _process_contractors(rows):
     from bss_core.models import User, UserCredential, ContractorProfile
     from api import bss_ids
+    import re
     results = []
+    seen_mobile = set()
     for r in rows:
         mobile = _mobile(r.get("mobile"))
         name = str(r.get("name") or "").strip()
+        cin = str(r.get("cin") or "").strip().upper()
+        gstin = str(r.get("gstin") or "").strip().upper()
+        pan = str(r.get("pan") or "").strip().upper()
+        clra = str(r.get("clra_licence_no") or "").strip().upper()
         if not mobile:
             results.append({"row": name or "(no name)", "status": "failed", "detail": "Mobile is required."}); continue
+        if mobile in seen_mobile:
+            results.append({"row": name or mobile, "status": "failed", "detail": "Duplicate mobile within the file."}); continue
+        if gstin and not re.match(r"^\d{2}[A-Z]{5}\d{4}[A-Z]\d[Z][A-Z\d]$", gstin):
+            results.append({"row": name or mobile, "status": "failed", "detail": "GSTIN format is invalid."}); continue
+        if pan and not re.match(r"^[A-Z]{5}\d{4}[A-Z]$", pan):
+            results.append({"row": name or mobile, "status": "failed", "detail": "PAN format is invalid (AAAAA9999A)."}); continue
         user = _find_user_by_mobile(mobile)
         if user is not None and user.role != "contractor":
             results.append({"row": mobile, "status": "failed", "detail": f"Mobile belongs to a {user.role}."}); continue
+        exclude = user.id if user else None
+        conflict = (_conflict(ContractorProfile, "cin", cin, exclude, "CIN")
+                    or _conflict(ContractorProfile, "gstin", gstin, exclude, "GSTIN")
+                    or _conflict(ContractorProfile, "pan_no", pan, exclude, "PAN")
+                    or _conflict(ContractorProfile, "clra_licence_no", clra, exclude, "CLRA licence"))
+        if conflict:
+            results.append({"row": name or mobile, "status": "failed", "detail": conflict}); continue
+        seen_mobile.add(mobile)
         if user is None:
             user = User.objects.create_user(username=f"contractor_{mobile}", role="contractor",
                                             account_active=True, is_verified=True, is_active=True)
@@ -224,16 +286,56 @@ def _process_contractors(rows):
 def _process_workers(rows):
     from bss_core.models import (User, UserCredential, WorkerIdentity, WorkerSocialSecurity, WorkerOther)
     from api import bss_ids
+    import re
     import uuid
     results = []
+    seen = {"mobile": set(), "aadhaar": set(), "pan": set(), "uan": set(), "esic": set()}
     for r in rows:
         mobile = _mobile(r.get("mobile"))
         name = str(r.get("name") or "").strip()
+        aadhaar = _digits(r.get("aadhaar"))
+        pan = str(r.get("pan") or "").strip().upper()
+        uan = _digits(r.get("uan"))
+        esic = str(r.get("esic") or "").strip().upper()
+        label = name or mobile or "(no name)"
         if not mobile:
-            results.append({"row": name or "(no name)", "status": "failed", "detail": "Mobile is required."}); continue
+            results.append({"row": label, "status": "failed", "detail": "Mobile is required."}); continue
+        if aadhaar and len(aadhaar) != 12:
+            results.append({"row": label, "status": "failed", "detail": "Aadhaar must be 12 digits."}); continue
+        if aadhaar and aadhaar in seen["aadhaar"]:
+            results.append({"row": label, "status": "failed", "detail": "Duplicate Aadhaar within the file."}); continue
+        if pan and not re.match(r"^[A-Z]{5}\d{4}[A-Z]$", pan):
+            results.append({"row": label, "status": "failed", "detail": "PAN format is invalid (AAAAA9999A)."}); continue
+        if pan and pan in seen["pan"]:
+            results.append({"row": label, "status": "failed", "detail": "Duplicate PAN within the file."}); continue
+        if uan and uan in seen["uan"]:
+            results.append({"row": label, "status": "failed", "detail": "Duplicate UAN within the file."}); continue
+        if esic and esic in seen["esic"]:
+            results.append({"row": label, "status": "failed", "detail": "Duplicate ESIC IP within the file."}); continue
+        if mobile in seen["mobile"]:
+            results.append({"row": label, "status": "failed", "detail": "Duplicate mobile within the file."}); continue
+
         user = _find_user_by_mobile(mobile)
         if user is not None and user.role != "worker":
             results.append({"row": mobile, "status": "failed", "detail": f"Mobile belongs to a {user.role}."}); continue
+        exclude = user.id if user else None
+        conflict = (_conflict(WorkerIdentity, "aadhaar", aadhaar, exclude, "Aadhaar")
+                    or _conflict(WorkerIdentity, "pan", pan, exclude, "PAN")
+                    or _conflict(WorkerSocialSecurity, "epfo_uan", uan, exclude, "UAN")
+                    or _conflict(WorkerSocialSecurity, "esic_ip_number", esic, exclude, "ESIC IP"))
+        if conflict:
+            results.append({"row": label, "status": "failed", "detail": conflict}); continue
+
+        seen["mobile"].add(mobile)
+        if aadhaar:
+            seen["aadhaar"].add(aadhaar)
+        if pan:
+            seen["pan"].add(pan)
+        if uan:
+            seen["uan"].add(uan)
+        if esic:
+            seen["esic"].add(esic)
+
         if user is None:
             user = User.objects.create_user(username=f"worker_{mobile}", role="worker",
                                             account_active=True, is_verified=True, is_active=True)
@@ -257,14 +359,13 @@ def _process_workers(rows):
             ident.date_of_birth = dob
         ident.save()
         ss, _ = WorkerSocialSecurity.objects.get_or_create(user=user)
-        uan = str(r.get("uan") or "").strip(); esic = str(r.get("esic") or "").strip()
         if uan:
             ss.epfo_uan = uan[:60]
         if esic:
             ss.esic_ip_number = esic[:60]
         ss.save()
         WorkerOther.objects.get_or_create(user=user)
-        results.append({"row": name or mobile, "status": "ok", "detail": ident.bss_worker_id})
+        results.append({"row": label, "status": "ok", "detail": ident.bss_worker_id})
     return results
 
 

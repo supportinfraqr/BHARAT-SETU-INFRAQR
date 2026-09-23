@@ -39,6 +39,11 @@ const accessGroup = { key: 'Users & Access', icon: Users, items: [
   ['User Registration', '/admin/users'],
   ['Permission Page', '/admin/permissions'],
 ] as const };
+const auditOpsGroup = { key: 'Audit & Reports', icon: BookOpenCheck, items: [
+  ['Activity Report', '/admin/activity'],
+  ['Audit Reports', '/admin/audit-reports'],
+  ['Bulk Register', '/admin/bulk-register'],
+] as const };
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -46,7 +51,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const [profile, setProfile] = useState(false);
   const pathname = usePathname();
   const { t } = useLanguage();
-  const groups = [wageCostGroup, clraGroup, partyGroup, mappingsGroup, accessGroup];
+  const groups = [wageCostGroup, clraGroup, partyGroup, mappingsGroup, accessGroup, auditOpsGroup];
   const flat = groups.reduce<Array<readonly [string, string]>>((acc, g) => acc.concat(g.items as unknown as readonly [string, string][]), []);
 
   const itemActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
@@ -58,15 +63,20 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         <nav aria-label="Admin navigation" className="bss-desktop-nav flex-1 items-center justify-center gap-0.5 xl:gap-1 px-1">
           <Link href="/admin" aria-current={pathname === '/admin' ? 'page' : undefined} className={`px-2 xl:px-2.5 py-1 rounded-full text-xs xl:text-[13px] font-medium whitespace-nowrap ${pathname === '/admin' ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>Overview</Link>
           <Link href="/admin/payroll" aria-current={itemActive('/admin/payroll') ? 'page' : undefined} className={`px-2 xl:px-2.5 py-1 rounded-full text-xs xl:text-[13px] font-medium whitespace-nowrap inline-flex items-center gap-1 ${itemActive('/admin/payroll') ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}><Banknote size={13}/>Payroll</Link>
-          {groups.map(group => (
+          {groups.map((group, idx) => (
             <div key={group.key} className="relative">
               <button type="button" aria-haspopup="menu" aria-expanded={openMenu === group.key} onClick={() => setOpenMenu(openMenu === group.key ? null : group.key)} className={`px-2 xl:px-2.5 py-1 rounded-full text-xs xl:text-[13px] font-medium flex items-center gap-0.5 whitespace-nowrap ${group.items.some(item => itemActive(item[1])) || openMenu === group.key ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>{t(group.key)}<ChevronDown size={11} className={`transition-transform ${openMenu === group.key ? 'rotate-180' : ''}`}/></button>
-              {openMenu === group.key && <div role="menu" className="absolute top-full left-0 pt-2 w-60 z-50"><div className="bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-900/5 p-1.5">{group.items.map(item => <Link key={`${item[0]}-${item[1]}`} href={item[1]} role="menuitem" onClick={() => setOpenMenu(null)} className={`block px-3 py-2.5 rounded-lg text-[13px] ${itemActive(item[1]) ? 'bg-[#073B67]/5 text-[#073B67] font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}>{item[0]}</Link>)}</div></div>}
+              {openMenu === group.key && (
+                <div role="menu" className={`absolute top-full pt-2 w-60 z-50 ${idx >= groups.length - 2 ? 'right-0' : 'left-0'}`}>
+                  <div className="bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-900/5 p-1.5">
+                    {group.items.map(item => (
+                      <Link key={`${item[0]}-${item[1]}`} href={item[1]} role="menuitem" onClick={() => setOpenMenu(null)} className={`block px-3 py-2.5 rounded-lg text-[13px] ${itemActive(item[1]) ? 'bg-[#073B67]/5 text-[#073B67] font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}>{item[0]}</Link>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
-          <Link href="/admin/audit-reports" aria-current={pathname.startsWith('/admin/audit-reports') ? 'page' : undefined} className={`px-2 xl:px-2.5 py-1 rounded-full text-xs xl:text-[13px] font-medium whitespace-nowrap ${pathname.startsWith('/admin/audit-reports') ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>Audit Reports</Link>
-          <Link href="/admin/bulk-register" aria-current={pathname.startsWith('/admin/bulk-register') ? 'page' : undefined} className={`px-2 xl:px-2.5 py-1 rounded-full text-xs xl:text-[13px] font-medium whitespace-nowrap ${pathname.startsWith('/admin/bulk-register') ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>Bulk Register</Link>
-          <Link href="/admin/activity" aria-current={pathname.startsWith('/admin/activity') ? 'page' : undefined} className={`px-2 xl:px-2.5 py-1 rounded-full text-xs xl:text-[13px] font-medium whitespace-nowrap ${pathname.startsWith('/admin/activity') ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>Activity Report</Link>
         </nav>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <div className="hidden sm:block shrink-0"><LanguageSelect compact/></div>
