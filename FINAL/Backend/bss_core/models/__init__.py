@@ -112,6 +112,7 @@ from .compliance import (
     EmployerRegisterTemplateAdoption,
     EmployerSapConfig,
     SapSyncLog,
+    EmployerSapContractorMap,
     CustomFormName,
     EmployerFormSelection,
     StateCode,

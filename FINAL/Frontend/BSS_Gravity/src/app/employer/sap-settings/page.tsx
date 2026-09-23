@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, Database, Download, KeyRound, Loader2, Plus, Save, X } from 'lucide-react';
+import { CheckCircle2, Database, Download, FileSpreadsheet, KeyRound, Loader2, Plus, RefreshCw, Save, Upload, X } from 'lucide-react';
 
 type FieldMapRow = { field: string; label: string; sapFields: string[] };
 type SapSettings = {
@@ -10,6 +10,13 @@ type SapSettings = {
   extraLogin: Record<string, string>; fieldMapping: Record<string, string[]>; hasPassword: boolean;
   hasToken: boolean; allowlistIps: string[]; fieldMap: FieldMapRow[];
 };
+type BulkRow = {
+  id: number; bssId: string; name: string; sites: string[]; sapId: string;
+  status: 'NOT_MAPPED' | 'PENDING' | 'SYNCED' | 'FAILED'; lastStatus: string; lastSyncedAt: string; mappedFields: string[];
+};
+type BulkCounts = { mapped: number; synced: number; pending: number; failed: number; notMapped: number };
+type BulkResultRow = { bssId: string; sapId: string; contractor: string; status: string; detail: string };
+const BULK_STATUS_LABEL: Record<string, string> = { NOT_MAPPED: 'Not mapped', PENDING: 'Pending pull', SYNCED: 'Synced', FAILED: 'Failed' };
 
 type KV = { key: string; value: string };
 
@@ -32,6 +39,44 @@ export default function SapSettingsPage() {
   const [testId, setTestId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [bulkRows, setBulkRows] = useState<BulkRow[]>([]);
+  const [bulkCounts, setBulkCounts] = useState<BulkCounts | null>(null);
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [bulkMode, setBulkMode] = useState('skip');
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkNotice, setBulkNotice] = useState('');
+  const [bulkError, setBulkError] = useState('');
+  const [bulkResults, setBulkResults] = useState<BulkResultRow[] | null>(null);
+  const [bulkSummary, setBulkSummary] = useState<Record<string, number> | null>(null);
+
+  const loadBulk = useCallback(async () => {
+    try {
+      const response = await fetch('/api/employer/sap/bulk-status', { cache: 'no-store' });
+      const body = await response.json().catch(() => ({})) as { data?: { rows: BulkRow[]; counts: BulkCounts } };
+      if (response.ok && body.data) { setBulkRows(body.data.rows); setBulkCounts(body.data.counts); }
+    } catch { /* leave as-is */ }
+  }, []);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial bulk-status load
+  useEffect(() => { void loadBulk(); }, [loadBulk]);
+
+  async function runBulk() {
+    if (!bulkFile) { setBulkError('Choose the filled mapping template (.xlsx).'); return; }
+    setBulkBusy(true); setBulkError(''); setBulkNotice(''); setBulkResults(null); setBulkSummary(null);
+    try {
+      const form = new FormData();
+      form.set('mapping', bulkFile);
+      form.set('mode', bulkMode);
+      const response = await fetch('/api/employer/sap/bulk-sync', { method: 'POST', body: form });
+      const body = await response.json().catch(() => ({})) as { data?: { results: BulkResultRow[]; summary: Record<string, number>; live: boolean }; error?: string };
+      if (!response.ok || !body.data) throw new Error(body.error ?? 'Bulk SAP pull failed.');
+      setBulkResults(body.data.results); setBulkSummary(body.data.summary);
+      setBulkNotice(`Bulk pull done — ${body.data.summary.synced} synced · ${body.data.summary.skipped} skipped · ${body.data.summary.failed} failed · ${body.data.summary.pending} pending.`);
+      setBulkFile(null);
+      await loadBulk();
+    } catch (reason) { setBulkError(reason instanceof Error ? reason.message : 'Bulk SAP pull failed.'); }
+    finally { setBulkBusy(false); }
+  }
 
   const apply = useCallback((data: SapSettings) => {
     setForm({
@@ -177,6 +222,54 @@ export default function SapSettingsPage() {
         </div>
         <button type="button" onClick={() => void save()} disabled={busy} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5"><Save size={14}/>{busy ? 'Saving…' : 'Save settings'}</button>
       </footer>
+    </section>
+
+    <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+      <header className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#073B67]"/><div><h2 className="text-sm font-semibold text-gray-950">Bulk contractor pull</h2><p className="text-xs text-gray-400">Map each contractor&apos;s BSS ID to its SAP ID, upload, and BSS pulls all of them from SAP.</p></div></div>
+        <div className="flex flex-wrap items-center gap-2">
+          <a href="/api/employer/sap/bulk-template" className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-gray-50"><Download size={14}/>Download template</a>
+          <a href="/api/employer/sap/bulk-setup-document" className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-gray-50"><Download size={14}/>Bulk setup guide</a>
+          <button type="button" onClick={() => void loadBulk()} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-gray-50"><RefreshCw size={14}/>Refresh</button>
+        </div>
+      </header>
+      <div className="p-5 space-y-4">
+        {bulkCounts && <div className="flex flex-wrap gap-2 text-[11px]">
+          <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 font-semibold">Mapped {bulkCounts.mapped}</span>
+          <span className="px-2 py-1 rounded bg-green-50 text-green-700 font-semibold">Synced {bulkCounts.synced}</span>
+          <span className="px-2 py-1 rounded bg-orange-50 text-orange-700 font-semibold">Pending {bulkCounts.pending}</span>
+          <span className="px-2 py-1 rounded bg-red-50 text-red-700 font-semibold">Failed {bulkCounts.failed}</span>
+          <span className="px-2 py-1 rounded bg-gray-100 text-gray-600 font-semibold">Not mapped {bulkCounts.notMapped}</span>
+        </div>}
+
+        <div className="grid sm:grid-cols-[1fr_auto_auto] gap-3 items-end">
+          <label className={label}>Mapping template (.xlsx)
+            <span className="mt-1 flex items-center justify-center gap-2 h-10 border border-dashed border-gray-300 rounded-lg text-xs font-semibold text-gray-600 cursor-pointer hover:bg-gray-50">{bulkFile ? <FileSpreadsheet size={14}/> : <Upload size={14}/>}{bulkFile ? bulkFile.name : 'Choose filled template'}<input type="file" accept=".xlsx" className="hidden" onChange={e => setBulkFile(e.target.files?.[0] ?? null)}/></span>
+          </label>
+          <label className={label}>Pull option
+            <select value={bulkMode} onChange={e => setBulkMode(e.target.value)} className={input + ' bg-white'}>
+              <option value="skip">Skip already mapped</option>
+              <option value="force">Force re-pull all</option>
+              <option value="failed">Retry failed only</option>
+              <option value="pending">Pull pending only</option>
+            </select>
+          </label>
+          <button type="button" onClick={() => void runBulk()} disabled={bulkBusy || !bulkFile} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5">{bulkBusy ? <Loader2 size={14} className="animate-spin"/> : <Upload size={14}/>}{bulkBusy ? 'Pulling…' : 'Upload & pull'}</button>
+        </div>
+
+        {bulkError && <p role="alert" className="text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{bulkError}</p>}
+        {bulkNotice && <p role="status" className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 flex items-center gap-2"><CheckCircle2 size={13}/>{bulkNotice}</p>}
+
+        {bulkResults && bulkSummary && <div className="rounded-xl border border-gray-100 overflow-hidden">
+          <div className="px-3 py-2 bg-gray-50 text-[11px] font-semibold text-gray-600">Last upload — {bulkSummary.total} row(s): {bulkSummary.synced} synced · {bulkSummary.skipped} skipped · {bulkSummary.failed} failed · {bulkSummary.pending} pending</div>
+          <div className="max-h-56 overflow-y-auto"><table className="w-full text-[11px] text-left"><thead className="bg-gray-50 text-gray-500"><tr><th className="px-3 py-1.5">BSS ID</th><th className="px-3 py-1.5">Contractor</th><th className="px-3 py-1.5">SAP ID</th><th className="px-3 py-1.5">Result</th><th className="px-3 py-1.5">Detail</th></tr></thead><tbody className="divide-y divide-gray-100">{bulkResults.map((r, i) => <tr key={i}><td className="px-3 py-1.5 font-mono">{r.bssId}</td><td className="px-3 py-1.5">{r.contractor || '—'}</td><td className="px-3 py-1.5 font-mono">{r.sapId || '—'}</td><td className="px-3 py-1.5"><span className={r.status === 'synced' ? 'text-green-700 font-semibold' : r.status === 'failed' ? 'text-red-700 font-semibold' : r.status === 'pending' ? 'text-orange-700 font-semibold' : 'text-gray-500'}>{r.status}</span></td><td className="px-3 py-1.5 text-gray-500">{r.detail}</td></tr>)}</tbody></table></div>
+        </div>}
+
+        <div className="rounded-xl border border-gray-100 overflow-hidden">
+          <div className="px-3 py-2 bg-gray-50 text-[11px] font-semibold text-gray-600">Contractor SAP status ({bulkRows.length})</div>
+          <div className="max-h-72 overflow-y-auto"><table className="w-full text-[11px] text-left"><thead className="bg-gray-50 text-gray-500"><tr><th className="px-3 py-1.5">BSS ID</th><th className="px-3 py-1.5">Contractor</th><th className="px-3 py-1.5">SAP ID</th><th className="px-3 py-1.5">Status</th><th className="px-3 py-1.5">Last synced</th><th className="px-3 py-1.5">Detail</th></tr></thead><tbody className="divide-y divide-gray-100">{bulkRows.map(r => <tr key={r.id}><td className="px-3 py-1.5 font-mono">{r.bssId}</td><td className="px-3 py-1.5">{r.name}</td><td className="px-3 py-1.5 font-mono">{r.sapId || '—'}</td><td className="px-3 py-1.5"><span className={r.status === 'SYNCED' ? 'text-green-700 font-semibold' : r.status === 'FAILED' ? 'text-red-700 font-semibold' : r.status === 'PENDING' ? 'text-orange-700 font-semibold' : 'text-gray-400'}>{BULK_STATUS_LABEL[r.status]}</span></td><td className="px-3 py-1.5 text-gray-500">{r.lastSyncedAt ? r.lastSyncedAt.slice(0, 10) : '—'}</td><td className="px-3 py-1.5 text-gray-400">{r.lastStatus || '—'}</td></tr>)}</tbody></table></div>
+        </div>
+      </div>
     </section>
   </div>;
 }

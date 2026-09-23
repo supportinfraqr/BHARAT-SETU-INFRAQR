@@ -774,3 +774,32 @@ class AuditReport(models.Model):
     def __str__(self):
         who = self.employer_id or self.contractor_id or "BSS"
         return f"{self.get_scope_type_display()} {who} Q{self.quarter} FY{self.financial_year}"
+
+
+class EmployerSapContractorMap(models.Model):
+    """Per-employer mapping of a bound contractor to its SAP Business Partner id,
+    plus the outcome of the last SAP→BSS pull (pending / synced / failed)."""
+
+    STATUS = [("PENDING", "Pending pull"), ("SYNCED", "Synced"), ("FAILED", "Failed")]
+
+    employer = models.ForeignKey(User, on_delete=models.CASCADE,
+                                 related_name="sap_contractor_maps")
+    contractor = models.ForeignKey(User, on_delete=models.CASCADE,
+                                   related_name="sap_employer_maps")
+    sap_id = models.CharField(max_length=120, blank=True)
+    status = models.CharField(max_length=12, choices=STATUS, default="PENDING")
+    last_source = models.CharField(max_length=80, blank=True)
+    last_status = models.CharField(max_length=255, blank=True)
+    mapped_fields = models.JSONField(default=list, blank=True)
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "employer_sap_contractor_map"
+        ordering = ["-updated_at", "-id"]
+        constraints = [models.UniqueConstraint(fields=["employer", "contractor"],
+                                               name="uq_sap_map_employer_contractor")]
+
+    def __str__(self):
+        return f"employer {self.employer_id} · contractor {self.contractor_id} → {self.sap_id} ({self.status})"
