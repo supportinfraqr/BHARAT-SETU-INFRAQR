@@ -537,28 +537,39 @@ def _employer_submissions(user):
             "source": "register",
         })
 
-    # Contractor CLRA register submissions for THIS employer's sites that are
-    # awaiting / have had employer review. Until now these never reached the
-    # employer's Compliance Submission page.
+    # Contractor CLRA register submissions for THIS employer's sites, grouped as
+    # ONE reviewable unit per contractor + period (however many register batches
+    # / sites it covers). Approve/Reject then applies to the whole submission.
     from bss_core.models import ComplianceBatch
-    batch_label = {"SUBMITTED": "Pending review", "VERIFIED": "Verified",
-                   "RETURNED": "Rejected", "REJECTED": "Rejected"}
+    grouped = {}
     for b in (ComplianceBatch.objects
-              .filter(site__employer=user, status__in=list(batch_label))
-              .select_related("contractor", "site").order_by("-generated_on", "-id")[:100]):
-        cp = getattr(b.contractor, "contractor_profile", None) if b.contractor_id else None
+              .filter(site__employer=user,
+                      status__in=["SUBMITTED", "VERIFIED", "RETURNED", "REJECTED"])
+              .select_related("contractor", "site").order_by("-generated_on", "-id")):
+        grouped.setdefault((b.contractor_id, b.year, b.month), []).append(b)
+    for (cid, year, month), batches in grouped.items():
+        statuses = [str(x.status).upper() for x in batches]
+        if any(s in ("RETURNED", "REJECTED") for s in statuses):
+            status = "Rejected"
+        elif all(s == "VERIFIED" for s in statuses):
+            status = "Verified"
+        else:
+            status = "Pending review"
+        cp = getattr(batches[0].contractor, "contractor_profile", None) if cid else None
+        sites = sorted({x.site.site_name for x in batches if x.site})
+        latest = max((x.generated_on for x in batches if x.generated_on), default=None)
         rows.append({
-            "id": f"batch-{b.id}",
-            "contractor": _d(cp.contractor_name if cp else (b.contractor.username if b.contractor_id else "")),
-            "contractorId": _bss_contractor_code(b.contractor_id) if b.contractor_id else "",
-            "site": b.site.site_name if b.site else "",
-            "type": f"CLRA Register Submission · {b.month} {b.year}".strip(),
-            "period": _d(f"{b.month} {b.year}".strip()),
-            "submittedAt": _dts(b.generated_on) if b.generated_on else "",
-            "status": batch_label.get(str(b.status).upper(), "Pending review"),
+            "id": f"grp-{cid}-{year}-{month}",
+            "contractor": _d(cp.contractor_name if cp else (batches[0].contractor.username if cid else "")),
+            "contractorId": _bss_contractor_code(cid) if cid else "",
+            "site": ", ".join(sites),
+            "type": f"CLRA Register Submission · {month} {year} ({len(batches)} register batch(es))",
+            "period": _d(f"{month} {year}".strip()),
+            "submittedAt": _dts(latest) if latest else "",
+            "status": status,
             "source": "submission",
-            "batchId": str(b.id),
-            "hasFile": bool(b.generated_file),
+            "batchId": str(batches[0].id),
+            "hasFile": any(bool(x.generated_file) for x in batches),
         })
     return rows
 

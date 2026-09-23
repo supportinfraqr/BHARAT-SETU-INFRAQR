@@ -312,6 +312,26 @@ def _handle_submission_review(user, body):
         batch.save(update_fields=["status", "updated_at"])
         return batch.id
 
+    if raw_id.startswith("grp-"):
+        # A grouped register submission: contractor + year + month across sites.
+        from bss_core.models import ComplianceBatch
+        parts = raw_id.split("-", 3)
+        if len(parts) != 4:
+            raise PortalMutationError("Submission not found.", 404)
+        _, cid, year, month = parts
+        batches = ComplianceBatch.objects.filter(
+            contractor_id=cid, year=year, month=month, site__employer=user)
+        if not batches.exists():
+            raise PortalMutationError("Submission not found.", 404)
+        if decision == "VERIFIED":
+            new_status = "VERIFIED"
+        elif decision in ("REJECTED", "RETURNED"):
+            new_status = "RETURNED"
+        else:
+            raise PortalMutationError("Select a valid submission decision.", 422)
+        batches.update(status=new_status, updated_at=timezone.now())
+        return raw_id
+
     submission = SubmissionEvidence.objects.filter(pk=raw_id).first()
     if submission is None:
         raise PortalMutationError("Submission not found.", 404)
