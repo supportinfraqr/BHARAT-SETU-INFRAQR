@@ -281,11 +281,29 @@ def submission_file_download(request, role_path, submission_id):
 
 
 def _handle_submission_review(user, body):
-    """Employer marks a connected contractor/worker evidence submission
-    Verified or Rejected."""
+    """Employer marks a connected contractor/worker evidence submission — or a
+    contractor CLRA register submission (ComplianceBatch) — Verified or Rejected."""
     if user.role != "employer":
         raise PortalMutationError("Only employers can review submissions.", 403)
-    submission = SubmissionEvidence.objects.filter(pk=str(body.get("id") or "").strip()).first()
+    raw_id = str(body.get("id") or "").strip()
+    decision = str(body.get("status") or "").strip().upper()
+
+    if raw_id.startswith("batch-"):
+        from bss_core.models import ComplianceBatch
+        batch = (ComplianceBatch.objects.filter(pk=raw_id.split("-", 1)[1],
+                                                site__employer=user).first())
+        if batch is None:
+            raise PortalMutationError("Submission not found.", 404)
+        if decision == "VERIFIED":
+            batch.status = "VERIFIED"
+        elif decision in ("REJECTED", "RETURNED"):
+            batch.status = "RETURNED"
+        else:
+            raise PortalMutationError("Select a valid submission decision.", 422)
+        batch.save(update_fields=["status", "updated_at"])
+        return batch.id
+
+    submission = SubmissionEvidence.objects.filter(pk=raw_id).first()
     if submission is None:
         raise PortalMutationError("Submission not found.", 404)
     connected = (

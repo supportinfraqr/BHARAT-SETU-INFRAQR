@@ -533,6 +533,30 @@ def _employer_submissions(user):
             "status": _submission_review_label(c.status),
             "source": "register",
         })
+
+    # Contractor CLRA register submissions for THIS employer's sites that are
+    # awaiting / have had employer review. Until now these never reached the
+    # employer's Compliance Submission page.
+    from bss_core.models import ComplianceBatch
+    batch_label = {"SUBMITTED": "Pending review", "VERIFIED": "Verified",
+                   "RETURNED": "Rejected", "REJECTED": "Rejected"}
+    for b in (ComplianceBatch.objects
+              .filter(site__employer=user, status__in=list(batch_label))
+              .select_related("contractor", "site").order_by("-generated_on", "-id")[:100]):
+        cp = getattr(b.contractor, "contractor_profile", None) if b.contractor_id else None
+        rows.append({
+            "id": f"batch-{b.id}",
+            "contractor": _d(cp.contractor_name if cp else (b.contractor.username if b.contractor_id else "")),
+            "contractorId": _bss_contractor_code(b.contractor_id) if b.contractor_id else "",
+            "site": b.site.site_name if b.site else "",
+            "type": f"CLRA Register Submission · {b.month} {b.year}".strip(),
+            "period": _d(f"{b.month} {b.year}".strip()),
+            "submittedAt": _dts(b.generated_on) if b.generated_on else "",
+            "status": batch_label.get(str(b.status).upper(), "Pending review"),
+            "source": "submission",
+            "batchId": str(b.id),
+            "hasFile": bool(b.generated_file),
+        })
     return rows
 
 

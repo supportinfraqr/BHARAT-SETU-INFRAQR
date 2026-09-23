@@ -455,7 +455,9 @@ export type EmployerSubmission = {
   period: string;
   submittedAt: string;
   status: 'Pending review' | 'Verified' | 'Rejected';
-  source?: 'evidence' | 'register';
+  source?: 'evidence' | 'register' | 'submission';
+  batchId?: string;
+  hasFile?: boolean;
 };
 
 export type EmployerUser = {
