@@ -39,7 +39,8 @@ class Attendance(models.Model):
     STATUS = [("PRESENT", "Present"), ("ABSENT", "Absent"), ("LEAVE", "Leave"),
               ("HOLIDAY", "Holiday"), ("EXPECTED", "Expected"), ("LATE", "Late"),
               ("HALF_DAY", "Half Day")]
-    CAPTURE = [("QR", "QR"), ("NFC", "NFC"), ("CAMERA", "Camera")]
+    CAPTURE = [("QR", "QR"), ("NFC", "NFC"), ("CAMERA", "Camera"),
+               ("SHEET", "Uploaded Sheet")]
     VERIFY = [("qr_worker", "QR Worker"), ("qr_site", "QR Site"), ("nfc_card", "NFC Card"),
               ("face_image", "Face Image"), ("badge_image", "Badge Image")]
 

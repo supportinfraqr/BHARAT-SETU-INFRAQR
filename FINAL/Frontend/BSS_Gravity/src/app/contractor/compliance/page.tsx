@@ -45,6 +45,28 @@ function periodInfo(month: string, year: string, frequency?: string): { label: s
 }
 const YEARS = ['2026', '2025', '2024'];
 const MONTHS = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
+
+const FREQUENCIES = ['Monthly', 'Quarterly', 'Half Yearly', 'Yearly'] as const;
+type Frequency = (typeof FREQUENCIES)[number];
+const QUARTER_PERIODS = ['Q1 (Apr–Jun)', 'Q2 (Jul–Sep)', 'Q3 (Oct–Dec)', 'Q4 (Jan–Mar)'];
+const HALF_PERIODS = ['H1 (Apr–Sep)', 'H2 (Oct–Mar)'];
+const FINANCIAL_PERIODS = ['Full Year (Apr–Mar)'];
+function periodsFor(freq: Frequency): string[] {
+  if (freq === 'Quarterly') return QUARTER_PERIODS;
+  if (freq === 'Half Yearly') return HALF_PERIODS;
+  if (freq === 'Yearly') return FINANCIAL_PERIODS;
+  return MONTHS;
+}
+// Representative calendar month for a period label (the period's end month).
+function periodMonth(period: string): string {
+  if (MONTHS.includes(period)) return period;
+  const qi = QUARTER_PERIODS.indexOf(period);
+  if (qi >= 0) return MONTHS[qi * 3 + 2];
+  const hi = HALF_PERIODS.indexOf(period);
+  if (hi >= 0) return MONTHS[hi * 6 + 5];
+  if (FINANCIAL_PERIODS.includes(period)) return 'March';
+  return period;
+}
 const STATES = INDIA_STATES;
 
 
@@ -71,7 +93,9 @@ export default function ContractorCompliancePage() {
   const [notice, setNotice] = useState('');
   // Master file & CLRA generation state
   const [year, setYear] = useState(YEARS[0]);
-  const [month, setMonth] = useState(MONTHS[6]);
+  const [freq, setFreq] = useState<Frequency>('Monthly');
+  const [period, setPeriod] = useState<string>(MONTHS[6]);
+  const month = periodMonth(period);
   const [state, setState] = useState(STATES[0]);
   const [masterFile, setMasterFile] = useState<File | null>(null);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
@@ -216,13 +240,15 @@ export default function ContractorCompliancePage() {
       const form = new FormData();
       form.set('master', masterFile);
       if (signatureFile) form.set('signature', signatureFile);
-      form.set('month', month); form.set('year', year);
-      if (includeNonDue) form.set('includeNonDue', '1');
+      // Months Jan–Mar belong to the FY that started in the previous calendar year.
+      const sendYear = ['January', 'February', 'March'].includes(month) ? String(Number(year) + 1) : year;
+      form.set('month', month); form.set('year', sendYear); form.set('frequency', freq);
+      if (includeNonDue || freq !== 'Monthly') form.set('includeNonDue', '1');
       const response = await fetch('/api/portal/compliance-batches', { method: 'POST', body: form });
       const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['complianceBatches'][number]; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error ?? 'Registers could not be generated.');
       replaceContractor({ ...contractor, complianceBatches: [result.data, ...contractor.complianceBatches] });
-      setNotice(`Generated CLRA registers for ${month} ${year} from ${masterFile.name}${signatureFile ? ' with digital signature' : ''}. Download from the batch list.`);
+      setNotice(`Generated CLRA registers for ${period} ${year} (${freq}) from ${masterFile.name}${signatureFile ? ' with digital signature' : ''}. Download from the batch list.`);
       setMasterFile(null); setSignatureFile(null);
       void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Registers could not be generated.'); }
@@ -356,9 +382,10 @@ export default function ContractorCompliancePage() {
       <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
         <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">CLRA Register Generation</h2><p className="text-xs text-gray-400 mt-0.5">Upload master data and generate statutory registers based on State / Site / Location.</p></header>
         <div className="p-5 space-y-4">
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className="grid sm:grid-cols-3 gap-3">
             <label className="text-xs font-semibold">Year<select value={year} onChange={e => setYear(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{YEARS.map(y => <option key={y}>{y}</option>)}</select></label>
-            <label className="text-xs font-semibold">Month<select value={month} onChange={e => setMonth(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{MONTHS.map(m => <option key={m}>{m}</option>)}</select></label>
+            <label className="text-xs font-semibold">Frequency<select value={freq} onChange={e => { const f = e.target.value as Frequency; setFreq(f); setPeriod(periodsFor(f)[0]); }} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select></label>
+            <label className="text-xs font-semibold">Period<select value={period} onChange={e => setPeriod(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{periodsFor(freq).map(p => <option key={p}>{p}</option>)}</select></label>
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
             <label className="text-xs font-semibold text-gray-600 flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 py-2.5 cursor-pointer"><FileSpreadsheet size={16}/>{masterFile ? masterFile.name : 'Choose Master File (CSV/XLSX)'}<input type="file" accept=".xlsx,.csv" className="hidden" onChange={e => { setMasterFile(e.target.files?.[0] ?? null); setError(''); }}/></label>
@@ -372,9 +399,9 @@ export default function ContractorCompliancePage() {
             <button onClick={downloadMasterTemplate} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5"><Download size={14}/>Download Master Template</button>
             <button onClick={validateMaster} disabled={busy || !masterFile || !activeAdopted} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"><CheckCircle2 size={14}/>Validate File</button>
             <button onClick={generateRegisters} disabled={busy || !activeAdopted} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"><Landmark size={14}/>{busy ? 'Generating registers…' : 'Generate CLRA Registers'}</button>
-            <label className="flex items-center gap-2 text-[11px] font-semibold text-gray-600 ml-1"><input type="checkbox" checked={includeNonDue} onChange={e => setIncludeNonDue(e.target.checked)} className="accent-[#073B67] w-4 h-4"/>Include forms not due this month</label>
+            <label className="flex items-center gap-2 text-[11px] font-semibold text-gray-600 ml-1"><input type="checkbox" checked={includeNonDue} onChange={e => setIncludeNonDue(e.target.checked)} className="accent-[#073B67] w-4 h-4"/>Include forms not due this period</label>
           </div>
-          <p className="text-[11px] text-gray-400">Monthly forms generate every month. Quarterly / Half-Yearly / Yearly forms generate automatically once their period has ended (decided by today&rsquo;s date; yearly after the FY closes in March) — they&rsquo;re skipped until then. Tick above to force them early.</p>
+          <p className="text-[11px] text-gray-400">Pick a <strong>Frequency</strong> and <strong>Period</strong>. Monthly generates every month; choosing Quarterly / Half-Yearly / Yearly generates only those forms for the selected period (a not-yet-due period is forced). Tick below to also include other forms not due this period.</p>
           {report && <div className="rounded-xl border border-gray-100 overflow-hidden">
             <div className={`px-4 py-2.5 text-xs font-bold flex items-center gap-2 ${report.errors.length ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
               {report.errors.length ? <TriangleAlert size={14}/> : <CheckCircle2 size={14}/>}

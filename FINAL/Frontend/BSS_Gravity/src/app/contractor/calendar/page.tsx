@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Calendar as CalendarIcon,
   CalendarDays,
@@ -8,17 +8,39 @@ import {
   Copy,
   ChevronLeft,
   ChevronRight,
+  Download,
+  FileSpreadsheet,
   Info,
   Plus,
   Sparkles,
   Trash2,
+  Upload,
   Zap,
   Building2,
   Clock,
   ShieldCheck
 } from 'lucide-react';
 import { useContractor } from '@/contexts/ContractorContext';
+import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import type { SiteCalendar } from '@/types/portal';
+
+type AttendanceRow = { id: string; date: string; worker: string; site: string; status: string; capture: string };
+type AttendanceUploadResult = { created: number; updated: number; holidays: number; workers: number; rows: number; unknown: string[]; site: string; start: string; end: string };
+const ATT_STATUS_LABEL: Record<string, string> = {
+  PRESENT: 'Present', ABSENT: 'Absent', LEAVE: 'Leave', HOLIDAY: 'Holiday',
+  HALF_DAY: 'Half Day', LATE: 'Late', EXPECTED: 'Expected',
+};
+function isoDate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function monthBounds() {
+  const now = new Date();
+  return { start: isoDate(new Date(now.getFullYear(), now.getMonth(), 1)), end: isoDate(new Date(now.getFullYear(), now.getMonth() + 1, 0)) };
+}
+function displayDate(iso: string) {
+  const [y, m, d] = String(iso || '').split('-');
+  return y && m && d ? `${d}/${m}/${y}` : iso;
+}
 
 const HOLIDAY_TYPES = [
   ['WEEKLY_OFF', 'Weekly Off', 'bg-emerald-50 text-emerald-700 border-emerald-200 ring-emerald-500/20'],
@@ -51,7 +73,61 @@ export default function ContractorCalendarPage() {
   const now = new Date();
   const [currentMonth, setCurrentMonth] = useState(now.getMonth());
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
-  const [activeTab, setActiveTab] = useState<'calendar' | 'holidays' | 'policy'>('calendar');
+  const [activeTab, setActiveTab] = useState<'calendar' | 'holidays' | 'policy' | 'attendance'>('calendar');
+
+  // Attendance sheet (CSV upload) tab state
+  const attBounds = monthBounds();
+  const [attStart, setAttStart] = useState(attBounds.start);
+  const [attEnd, setAttEnd] = useState(attBounds.end);
+  const [attBusy, setAttBusy] = useState(false);
+  const [attError, setAttError] = useState('');
+  const [attNotice, setAttNotice] = useState('');
+  const [attResult, setAttResult] = useState<AttendanceUploadResult | null>(null);
+  const [attRows, setAttRows] = useState<AttendanceRow[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    const query = new URLSearchParams({ start: attStart, end: attEnd });
+    void fetch(`/api/contractor/attendance?${query}`, { cache: 'no-store' })
+      .then(response => (response.ok ? response.json() : null))
+      .then((body: { data?: AttendanceRow[] } | null) => { if (active && body?.data) setAttRows(body.data); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [attStart, attEnd, attResult]);
+
+  const downloadAttendanceTemplate = () => {
+    setAttError(''); setAttNotice('');
+    const query = new URLSearchParams({ start: attStart, end: attEnd });
+    if (current?.siteName) query.set('site', current.siteName);
+    window.open(`/api/contractor/attendance/template?${query}`, '_blank');
+    setAttNotice(`Attendance CSV template for ${attStart} → ${attEnd} downloaded — fill P (Present) / A (Absent) / L (Leave) per date and upload it back.`);
+  };
+
+  async function uploadAttendanceSheet(file?: File) {
+    if (!file) return;
+    setAttBusy(true); setAttError(''); setAttNotice(''); setAttResult(null);
+    try {
+      const form = new FormData();
+      form.set('sheet', file);
+      form.set('start', attStart); form.set('end', attEnd);
+      if (current?.siteName) form.set('site', current.siteName);
+      const response = await fetch('/api/contractor/attendance/upload', { method: 'POST', body: form });
+      const body = await response.json().catch(() => ({})) as { data?: AttendanceUploadResult; error?: string };
+      if (!response.ok || !body.data) throw new Error(body.error ?? 'The attendance sheet could not be uploaded.');
+      setAttResult(body.data);
+      setAttNotice(`Attendance synced from ${file.name}: ${body.data.created} new + ${body.data.updated} updated for ${body.data.workers} worker(s)${body.data.holidays ? `, ${body.data.holidays} holiday/weekly-off row(s) auto-registered` : ''}.`);
+    } catch (reason) {
+      setAttError(reason instanceof Error ? reason.message : 'The attendance sheet could not be uploaded.');
+    } finally { setAttBusy(false); }
+  }
+
+  const attendanceColumns: DataColumn<AttendanceRow>[] = [
+    { id: 'date', header: 'Date', value: r => r.date, render: r => displayDate(r.date) },
+    { id: 'worker', header: 'Worker', value: r => r.worker },
+    { id: 'site', header: 'Site', value: r => r.site || '—', render: r => r.site || '—' },
+    { id: 'status', header: 'Status', value: r => ATT_STATUS_LABEL[r.status] ?? r.status, render: r => <span className={r.status === 'PRESENT' ? 'text-green-700' : r.status === 'ABSENT' ? 'text-red-700' : 'text-orange-700'}>{ATT_STATUS_LABEL[r.status] ?? r.status}</span> },
+    { id: 'source', header: 'Source', value: r => r.capture, render: r => <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">{r.capture}</span> },
+  ];
 
   // Form states
   const [hDate, setHDate] = useState('');
@@ -470,6 +546,16 @@ export default function ContractorCalendarPage() {
               >
                 <Clock size={16} /> Leave Policies ({sitePolicies.length})
               </button>
+              <button
+                onClick={() => setActiveTab('attendance')}
+                className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                  activeTab === 'attendance'
+                    ? 'bg-[#073B67] text-white shadow-md shadow-[#073B67]/20'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <FileSpreadsheet size={16} /> Attendance
+              </button>
             </div>
 
             <button
@@ -883,6 +969,39 @@ export default function ContractorCalendarPage() {
                     <Zap size={16} /> Save Leave Policy
                   </button>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: Attendance — uploaded sheet */}
+          {activeTab === 'attendance' && (
+            <div className="space-y-6">
+              <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-4">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 flex items-center gap-2"><FileSpreadsheet size={18} className="text-[#073B67]" /> Attendance — Uploaded Sheet</h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Download the BSS-ID / date-wise CSV for {current.siteName || 'your site'}, fill P/A/L, upload it, and it syncs into the attendance system marked as &ldquo;Uploaded sheet&rdquo;.
+                  </p>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <label className="space-y-1"><span className="text-xs font-bold text-gray-700">Start date</span><input type="date" value={attStart} onChange={(e) => setAttStart(e.target.value)} className={inputStyle} /></label>
+                  <label className="space-y-1"><span className="text-xs font-bold text-gray-700">End date</span><input type="date" value={attEnd} onChange={(e) => setAttEnd(e.target.value)} className={inputStyle} /></label>
+                </div>
+                <div className="flex flex-wrap gap-2 items-center">
+                  <button type="button" onClick={downloadAttendanceTemplate} className="h-10 px-4 rounded-xl border border-gray-200 text-xs font-bold flex items-center gap-2 hover:bg-gray-50"><Download size={15} /> Download Attendance CSV</button>
+                  <label className={`h-10 px-4 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer ${attBusy ? 'bg-[#073B67]/60 text-white' : 'bg-[#073B67] text-white hover:bg-[#062D4F]'}`}>
+                    <Upload size={15} /> {attBusy ? 'Uploading…' : 'Upload Filled Sheet (CSV/XLSX)'}
+                    <input type="file" accept=".csv,.xlsx" className="hidden" disabled={attBusy} onChange={(e) => { void uploadAttendanceSheet(e.target.files?.[0]); e.target.value = ''; }} />
+                  </label>
+                  <span className="text-[11px] text-gray-400">Codes: P = Present · A = Absent · L = Leave · H = Holiday</span>
+                </div>
+                {attNotice && <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl p-3">{attNotice}</p>}
+                {attError && <p className="text-xs text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">{attError}</p>}
+                {attResult && <div className="text-xs text-emerald-800 bg-emerald-50/50 border border-emerald-100 rounded-xl p-3">Synced {attResult.rows} row(s) → {attResult.created} new + {attResult.updated} updated{attResult.holidays ? `, ${attResult.holidays} holiday/weekly-off` : ''} for {attResult.workers} worker(s).{attResult.unknown.length ? ` ${attResult.unknown.length} BSS ID(s) not linked to you: ${attResult.unknown.slice(0, 5).join(', ')}.` : ''}</div>}
+                <p className="text-[11px] text-gray-400">The CSV is generated for the <strong>selected site</strong> and already marks that site&rsquo;s holidays and weekly offs (pre-filled <strong>H</strong>, labelled in the date header). Rows are validated by BSS ID (must be bound to you). Saved with capture method <strong>Uploaded sheet</strong> alongside QR/NFC/camera punches.</p>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm">
+                <EnterpriseDataTable title={`Uploaded attendance — ${attStart} → ${attEnd}`} rows={attRows} columns={attendanceColumns} rowKey={(r) => r.id} filename={`attendance-uploaded-${attStart}-to-${attEnd}`} />
               </div>
             </div>
           )}

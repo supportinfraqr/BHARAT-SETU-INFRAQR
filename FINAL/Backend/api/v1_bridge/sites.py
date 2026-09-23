@@ -172,6 +172,9 @@ def _handle_compliances(user, body, method):
     if kind in ("submit", "finalsubmit", "final-submit"):
         upload_ids = body.get("uploadIds") if isinstance(body.get("uploadIds"), list) else []
         submissions = SubmissionEvidence.objects.filter(user=user, id__in=upload_ids)
+        batch_ids = body.get("batchIds") if isinstance(body.get("batchIds"), list) else []
+        generated = ComplianceBatch.objects.filter(
+            contractor=user, id__in=batch_ids).count() if batch_ids else 0
         period = str(body.get("period") or "")
         report = compliance.build_audit_report(
             user,
@@ -179,10 +182,16 @@ def _handle_compliances(user, body, method):
             period=period,
             financial_year=str(body.get("financialYear") or ""),
             state=str(body.get("state") or ""), submissions=list(submissions),
+            generated_registers=generated,
         )
         # Stamp the submitted evidence rows with the package's Unique No. so the
         # listing can track them (Unique No. + Days Left) like the old app.
         submissions.update(unique_no=report.unique_no, status="PENDING")
+        # Mark the included generated register batches as submitted so they can
+        # no longer be re-submitted from the Create tab.
+        if batch_ids:
+            ComplianceBatch.objects.filter(
+                contractor=user, id__in=batch_ids).update(status="SUBMITTED")
         return payloads._contractor_audit_report_row(report)
 
     rows_in = body.get("bulk") if isinstance(body.get("bulk"), list) else [body]

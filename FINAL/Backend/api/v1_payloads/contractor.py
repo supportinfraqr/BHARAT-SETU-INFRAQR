@@ -966,6 +966,7 @@ def _contractor_compliance_batch_row(b):
         "hasFile": bool(b.generated_file),
         "notes": _d(b.notes),
         "status": {"GENERATED": "Generated", "PENDING": "Pending",
+                   "SUBMITTED": "Submitted",
                    "FAILED": "Failed"}.get(str(b.status).upper(), "Generated"),
     }
 

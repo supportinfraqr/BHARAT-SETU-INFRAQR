@@ -123,6 +123,7 @@ from .compliance import (
     ComplianceReport,
     ComplianceReportItem,
     ComplianceBatch,
+    AuditReport,
     EmployerDocumentMapping,
     EmployerRegisterMapping,
     EmployerActMapping,

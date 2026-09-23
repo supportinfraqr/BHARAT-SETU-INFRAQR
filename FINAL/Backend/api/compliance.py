@@ -104,15 +104,20 @@ def validate_evidence(file_obj, doc_type="", ocr_text=None):
 
 
 def build_audit_report(contractor, *, employer="", site="", period="",
-                       financial_year="", state="", submissions=None):
+                       financial_year="", state="", submissions=None,
+                       generated_registers=0):
     """Create a persisted :class:`ComplianceReport` scored against the compliance
     matrix. A matrix line scores its full weight when the contractor has at least
-    one fully-validated (100% accuracy) evidence upload for the package."""
+    one fully-validated (100% accuracy) evidence upload for the package, or a
+    system-generated CLRA register batch is included in the submission."""
     submissions = list(submissions or [])
     validated = [
         s for s in submissions
         if s.status != "RETURNED" and float(s.ocr_accuracy or 0) >= 100
     ]
+    # System-generated CLRA registers count as compliant evidence for the package.
+    if generated_registers:
+        validated = validated or [None]
 
     report = ComplianceReport.objects.create(
         employer=contractor,

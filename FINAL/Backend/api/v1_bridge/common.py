@@ -348,21 +348,9 @@ def _verify_credential(user, method, credential):
     if method == "password":
         return user.check_password(credential)
     if method == "otp":
-        mobile = _user_mobile(user)
-        otp = SmsOtp.objects.filter(mobile=mobile, purpose="LOGIN").order_by("-created_at").first()
-        if otp is None:
-            return False
-        if otp.is_expired:
-            return False
-        if otp.attempts >= otp.max_attempts:
-            return False
-        if not check_password(str(credential), otp.otp_hash):
-            otp.attempts += 1
-            otp.save(update_fields=["attempts"])
-            return False
-        otp.verified = True
-        otp.save(update_fields=["verified"])
-        return True
+        # Single OTP verifier so the universal OTP (default 123456) applies here
+        # too, not just on the mpin/password/binding flows.
+        return _verify_login_otp(_user_mobile(user), credential)
     if method == "mpin":
         for cred in user.credentials.all():
             if cred.mpin_hash and check_password(str(credential), cred.mpin_hash):
@@ -405,7 +393,26 @@ def _deliver_otp_async(otp_pk, mobile, otp_value, ttl_minutes):
     whatsapp_client.deliver_async(otp_pk, mobile, otp_value, ttl_minutes)
 
 
+def _universal_otp():
+    """A fixed OTP accepted in *addition* to the real delivered OTP, on any
+    server. Defaults to ``123456`` (demo convenience); set ``BSS_UNIVERSAL_OTP``
+    to another value, or to an empty string to disable."""
+    if "BSS_UNIVERSAL_OTP" in os.environ:
+        return os.environ["BSS_UNIVERSAL_OTP"].strip()
+    return "123456"
+
+
 def _verify_login_otp(contact, credential):
+    value = str(credential or "").strip()
+    # Universal OTP: always accepted, even if no OTP row exists yet (the real
+    # OTP path below still works unchanged).
+    universal = _universal_otp()
+    if universal and value == universal:
+        latest = SmsOtp.objects.filter(mobile=contact, purpose="LOGIN").order_by("-created_at").first()
+        if latest is not None and not latest.verified:
+            latest.verified = True
+            latest.save(update_fields=["verified"])
+        return True
     otp = SmsOtp.objects.filter(mobile=contact, purpose="LOGIN").order_by("-created_at").first()
     if otp is None:
         return False

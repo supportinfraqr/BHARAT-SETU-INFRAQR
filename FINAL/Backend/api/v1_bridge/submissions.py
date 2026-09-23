@@ -390,6 +390,27 @@ def contractor_compliance_batches(request):
     # Frequency-aware: only generate forms due in the chosen month (monthly always;
     # quarterly/half-yearly/yearly at their period end) unless the caller overrides.
     include_non_due = str(request.data.get("includeNonDue") or "").lower() in ("1", "true", "yes")
+
+    # Optional frequency filter: when the caller picks Quarterly / Half Yearly /
+    # Yearly, generate only forms of that frequency for the chosen period.
+    def _norm_freq(value):
+        text = str(value or "").strip().lower()
+        if text.startswith("quarter"):
+            return "quarterly"
+        if text.startswith("half"):
+            return "half"
+        if text.startswith(("year", "annual")):
+            return "yearly"
+        if text.startswith("month"):
+            return "monthly"
+        return ""
+
+    freq_filter = _norm_freq(request.data.get("frequency"))
+    if freq_filter:
+        site_templates = [
+            t for t in site_templates if (_norm_freq(t.frequency) or "monthly") == freq_filter
+        ]
+
     selected, skipped = [], []
     for template in site_templates:
         period = clra.reporting_period(month, year, template.frequency)
