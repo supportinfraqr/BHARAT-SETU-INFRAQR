@@ -6,7 +6,7 @@ a state template, else the all-India default. Templates contain ``{{token}}``
 placeholders (see ``_letter_tokens``).
 """
 
-# ruff: noqa: F401,F403
+from django.db import IntegrityError
 from .common import *
 from .admin_console import log_audit
 
@@ -19,6 +19,7 @@ def _row(t):
         "letterType": t.letter_type,
         "letterTypeLabel": t.get_letter_type_display(),
         "html": t.html or "",
+        "logoUrl": t.logo_url or "",
         "active": t.is_active,
         "updatedAt": payloads._dts(t.updated_at),
     }
@@ -38,18 +39,86 @@ def admin_letter_templates(request):
     body = request.data if isinstance(request.data, dict) else {}
     name = str(body.get("name") or "").strip()
     letter_type = str(body.get("letterType") or body.get("letter_type") or "").strip().upper()
+    state = str(body.get("state") or "").strip()[:60]
     if not name:
         return Response({"error": "Template name is required."}, status=status.HTTP_400_BAD_REQUEST)
     if letter_type not in ("APPOINTMENT", "EXPERIENCE"):
         return Response({"error": "Select Appointment or Experience."}, status=status.HTTP_400_BAD_REQUEST)
-    t = LetterTemplate.objects.create(
-        name=name[:120], letter_type=letter_type,
-        state=str(body.get("state") or "").strip()[:60],
-        html=str(body.get("html") or ""),
-        created_by=request.user)
+
+    _type_label = "Appointment Letter" if letter_type == "APPOINTMENT" else "Experience / Releasing Letter"
+
+    try:
+        with transaction.atomic():
+            # State rule: Only 1 Appointment Letter and 1 Releasing Letter allowed per state.
+            # (state="" covers the all-India default templates, which live at the same level.)
+            existing = (LetterTemplate.objects
+                        .filter(letter_type=letter_type, state__iexact=state)
+                        .first())
+            if existing:
+                return Response({
+                    "error": f"A template for {_type_label} in '{state}' already exists "
+                             f"(\"{existing.name}\"). Edit or delete it before adding a new one."
+                }, status=status.HTTP_400_BAD_REQUEST)
+            t = LetterTemplate.objects.create(
+                name=name[:120], letter_type=letter_type,
+                state=state,
+                html=str(body.get("html") or ""),
+                logo_url=str(body.get("logoUrl") or body.get("logo_url") or ""),
+                created_by=request.user)
+    except IntegrityError:
+        # Only reachable under a concurrent duplicate create — return a clean 400, never a 500.
+        return Response({
+            "error": f"A template for {_type_label} in '{state}' already exists. "
+                     f"Edit or delete it before adding a new one."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
     log_audit(request.user, "CREATE", "letter_template", t.id,
               after={"summary": f"Created letter template {t.name}"})
     return Response({"data": _row(t)}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+@transaction.atomic
+def admin_copy_template_to_all_states(request, template_id):
+    """Copy a template to all Indian states where that letter type is missing."""
+    if request.user.role != "bss_admin":
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    from bss_core.models import LetterTemplate
+    from bss_core.models.master import INDIA_STATES
+    t = LetterTemplate.objects.filter(pk=template_id).first()
+    if t is None:
+        return Response({"error": "Template not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    existing_states = set(
+        LetterTemplate.objects.filter(letter_type=t.letter_type)
+        .values_list("state", flat=True)
+    )
+
+    created_count = 0
+    type_label = "Appointment Letter" if t.letter_type == "APPOINTMENT" else "Experience / Releasing Letter"
+
+    for st in INDIA_STATES:
+        if st in existing_states:
+            continue
+        try:
+            LetterTemplate.objects.create(
+                name=f"{st} — {type_label}",
+                letter_type=t.letter_type,
+                state=st,
+                html=t.html,
+                logo_url=t.logo_url,
+                is_active=True,
+                created_by=request.user
+            )
+            created_count += 1
+        except IntegrityError:
+            pass
+
+    log_audit(request.user, "COPY_ALL_STATES", "letter_template", t.id,
+              after={"summary": f"Copied template {t.name} to {created_count} states"})
+    return Response({"success": True, "created_count": created_count}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET", "PATCH", "DELETE"])
@@ -68,18 +137,39 @@ def admin_letter_template_detail(request, template_id):
         t.delete()
         return Response({"success": True}, status=status.HTTP_200_OK)
     body = request.data if isinstance(request.data, dict) else {}
-    if body.get("name") is not None:
-        t.name = (str(body.get("name") or "").strip()[:120]) or t.name
-    if body.get("state") is not None:
-        t.state = str(body.get("state") or "").strip()[:60]
-    lt = str(body.get("letterType") or body.get("letter_type") or "").strip().upper()
-    if lt in ("APPOINTMENT", "EXPERIENCE"):
-        t.letter_type = lt
-    if body.get("html") is not None:
-        t.html = str(body.get("html") or "")
-    if body.get("active") is not None:
-        t.is_active = bool(body.get("active"))
-    t.save()
+    target_state = str(body.get("state") if body.get("state") is not None else t.state).strip()[:60]
+    lt = str(body.get("letterType") or body.get("letter_type") or t.letter_type).strip().upper()
+    is_active = bool(body.get("active")) if body.get("active") is not None else t.is_active
+
+    _type_label = "Appointment Letter" if lt == "APPOINTMENT" else "Experience / Releasing Letter"
+
+    try:
+        with transaction.atomic():
+            existing = (LetterTemplate.objects
+                        .filter(letter_type=lt, state__iexact=target_state)
+                        .exclude(pk=t.id)
+                        .first())
+            if existing:
+                return Response({
+                    "error": f"A template for {_type_label} in '{target_state}' already exists "
+                             f"(\"{existing.name}\"). Edit or delete it before saving."
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            if body.get("name") is not None:
+                t.name = (str(body.get("name") or "").strip()[:120]) or t.name
+            t.state = target_state
+            if lt in ("APPOINTMENT", "EXPERIENCE"):
+                t.letter_type = lt
+            if body.get("html") is not None:
+                t.html = str(body.get("html") or "")
+            if body.get("logoUrl") is not None or body.get("logo_url") is not None:
+                t.logo_url = str(body.get("logoUrl") or body.get("logo_url") or "")
+            t.is_active = is_active
+            t.save()
+    except IntegrityError:
+        return Response({
+            "error": f"A template for {_type_label} in '{target_state}' already exists."
+        }, status=status.HTTP_400_BAD_REQUEST)
     log_audit(request.user, "UPDATE", "letter_template", t.id,
               after={"summary": f"Updated letter template {t.name}"})
     return Response({"data": _row(t)}, status=status.HTTP_200_OK)
@@ -101,4 +191,4 @@ def letter_templates_catalog(request):
 
 
 __all__ = ["admin_letter_templates", "admin_letter_template_detail",
-           "letter_templates_catalog"]
+           "admin_copy_template_to_all_states", "letter_templates_catalog"]

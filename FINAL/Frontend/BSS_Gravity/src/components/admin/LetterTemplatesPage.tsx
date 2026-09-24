@@ -1,20 +1,104 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Copy, Loader2, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 import { INDIA_STATES } from "@/data/indiaStates";
+import DocumentStudioEditor, { type StudioToken } from "@/components/admin/DocumentStudioEditor";
 
 type LetterTemplate = {
   id: number; name: string; state: string;
   letterType: 'APPOINTMENT' | 'EXPERIENCE';
-  letterTypeLabel: string; html: string; active: boolean; updatedAt: string;
+  letterTypeLabel: string; html: string; logoUrl?: string; active: boolean; updatedAt: string;
 };
 
-const TOKENS = [
-  'letterTitle', 'refNo', 'issueDate', 'workerName', 'workerBssId', 'fatherName', 'dob',
-  'gender', 'mobile', 'address', 'designation', 'department', 'doj', 'wage',
-  'contractorName', 'contractorBssId', 'contractorAddress', 'employerName', 'siteName', 'siteAddress',
+const LETTER_TOKENS: StudioToken[] = [
+  { value: '{{letterTitle}}', label: 'Letter title', group: 'Document' },
+  { value: '{{refNo}}', label: 'Reference number', group: 'Document' },
+  { value: '{{issueDate}}', label: 'Issue date', group: 'Document' },
+  { value: '{{workerName}}', label: 'Worker name', group: 'Worker' },
+  { value: '{{workerBssId}}', label: 'Worker BSS ID', group: 'Worker' },
+  { value: '{{fatherName}}', label: 'Father / spouse name', group: 'Worker' },
+  { value: '{{dob}}', label: 'Date of birth', group: 'Worker' },
+  { value: '{{gender}}', label: 'Gender', group: 'Worker' },
+  { value: '{{mobile}}', label: 'Mobile', group: 'Worker' },
+  { value: '{{address}}', label: 'Address', group: 'Worker' },
+  { value: '{{designation}}', label: 'Designation', group: 'Employment' },
+  { value: '{{department}}', label: 'Department', group: 'Employment' },
+  { value: '{{doj}}', label: 'Date of joining', group: 'Employment' },
+  { value: '{{wage}}', label: 'Gross monthly wage', group: 'Employment' },
+  { value: '{{contractorName}}', label: 'Contractor name', group: 'Parties' },
+  { value: '{{contractorBssId}}', label: 'Contractor BSS ID', group: 'Parties' },
+  { value: '{{contractorAddress}}', label: 'Contractor address', group: 'Parties' },
+  { value: '{{employerName}}', label: 'Principal employer', group: 'Parties' },
+  { value: '{{employerBssId}}', label: 'Principal employer BSS ID', group: 'Parties' },
+  { value: '{{siteName}}', label: 'Site name', group: 'Parties' },
+  { value: '{{siteAddress}}', label: 'Site address', group: 'Parties' },
+  { value: '{{logoUrl}}', label: 'Logo (header)', group: 'Branding' },
 ];
+
+const LETTER_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><style>
+  * { box-sizing: border-box; }
+  body { margin:0; background:#fff; color:#111827; font-family: "Noto Sans", Arial, sans-serif; }
+  .page { width:794px; margin:0 auto; padding:32px 44px; }
+  .brand { display:flex; align-items:center; gap:12px; border-bottom:3px solid #073B67; padding-bottom:10px; margin-bottom:6px; }
+  .brand img { height:44px; }
+  .brand strong { color:#073B67; font-size:18px; display:block; }
+  .brand span { font-size:10px; color:#6b7280; letter-spacing:1.6px; text-transform:uppercase; }
+  h1 { text-align:center; color:#073B67; font-size:20px; letter-spacing:1.4px; margin:16px 0 4px; border-bottom:2px double #F47A32; padding-bottom:8px; text-transform:uppercase; }
+  .meta { display:flex; justify-content:space-between; font-size:12px; color:#374151; margin:10px 0 18px; }
+  h3 { color:#073B67; font-size:13px; margin:16px 0 6px; border-bottom:1px solid #d1d5db; padding-bottom:4px; }
+  p { font-size:12.5px; line-height:1.65; text-align:justify; }
+  .kv { width:100%; border-collapse:collapse; font-size:12.5px; margin:4px 0; }
+  .kv td { border:1px solid #9aa4b2; padding:5px 8px; vertical-align:top; }
+  .kv td:first-child { background:#F0F4FA; color:#073B67; width:34%; font-weight:600; }
+  .sign { display:flex; justify-content:space-between; gap:12px; margin:46px 0 6px; }
+  .sign > div { width:30%; text-align:center; font-size:11px; }
+  .sign .line { border-top:1px solid #4b5563; margin-top:36px; padding-top:5px; font-weight:600; }
+  .sign .id { font-size:10px; color:#6b7280; font-family:monospace; margin-top:2px; }
+  .foot { margin-top:18px; border-top:1px solid #e5e7eb; padding-top:6px; font-size:10px; color:#6b7280; text-align:center; }
+</style></head><body><div class="page">
+<div class="brand"><img src="{{logoUrl}}" alt="logo"/><div><strong>Bharat Shram Setu</strong><span>One Worker · One Identity · One Future</span></div></div>
+<h1>{{letterTitle}}</h1>
+<div class="meta"><span>Ref No.: {{refNo}}</span><span>Date: {{issueDate}}</span></div>
+<p>Dear {{workerName}},</p>
+<p>With reference to your engagement, we are pleased to appoint you on the terms set out below, at the project site of <strong>{{employerName}}</strong> through <strong>{{contractorName}}</strong>.</p>
+<h3>A. Employer &amp; Site</h3>
+<table class="kv"><tr><td>Contractor / Service Provider</td><td>{{contractorName}} ({{contractorBssId}})</td></tr><tr><td>Principal Employer</td><td>{{employerName}} ({{employerBssId}})</td></tr><tr><td>Site</td><td>{{siteName}}</td></tr></table>
+<h3>B. Worker Particulars</h3>
+<table class="kv"><tr><td>Name</td><td>{{workerName}}</td></tr><tr><td>BSS Worker ID</td><td>{{workerBssId}}</td></tr><tr><td>Date of Joining</td><td>{{doj}}</td></tr><tr><td>Designation</td><td>{{designation}}</td></tr><tr><td>Gross Monthly Wage</td><td>{{wage}}</td></tr></table>
+<div class="sign">
+  <div><div class="line">{{workerName}}</div><div>Worker Signature</div><div class="id">ID: {{workerBssId}}</div></div>
+  <div><div class="line">{{contractorName}}</div><div>Contractor Signatory</div><div class="id">ID: {{contractorBssId}}</div></div>
+  <div><div class="line">{{employerName}}</div><div>Principal Employer Signatory</div><div class="id">ID: {{employerBssId}}</div></div>
+</div>
+<div class="foot">Generated by Bharat Shram Setu · bharatshramsetu.com</div>
+</div></body></html>`;
+
+// Sample values used only for the live preview (not saved).
+const SAMPLE: Record<string, string> = {
+  letterTitle: 'Appointment Letter', refNo: 'BSS/APPT/00042', issueDate: '01 Sep 2026',
+  workerName: 'Ramesh Kumar', workerBssId: 'BSS-W9MQKMHMQYKU', fatherName: 'Suresh Kumar',
+  dob: '05 May 1995', gender: 'M', mobile: '9876543210', address: 'Village X, Pune, Maharashtra',
+  designation: 'Mason', department: 'Civil Works', doj: '12 Jun 2026', wage: '₹25,000',
+  contractorName: 'BuildWell Contractors Pvt Ltd', contractorBssId: 'BSS-C00000000004',
+  contractorAddress: 'Plot 4, MIDC, Pune', employerName: 'Adani Infra Pvt Ltd',
+  employerBssId: 'BSS-E00000000001',
+  siteName: 'Demo Metro Site', siteAddress: 'Sector 21, Navi Mumbai, Maharashtra',
+};
+
+function renderPreview(htmlText: string, logoUrl: string): string {
+  let out = htmlText || '';
+  const defaultLogo = '/bss-original-logo.png';
+  const effectiveLogo = logoUrl && logoUrl.trim() ? logoUrl : defaultLogo;
+  const values: Record<string, string> = { ...SAMPLE, logoUrl: effectiveLogo };
+  
+  // Replace tokens with flexibility for whitespace (e.g. {{ logoUrl }}, {{logoUrl}}, {{ workerName }})
+  for (const [key, value] of Object.entries(values)) {
+    const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'gi');
+    out = out.replace(regex, value);
+  }
+  return out;
+}
 
 const input = "mt-1 w-full h-9 rounded-lg border border-gray-200 px-3 text-xs";
 
@@ -26,6 +110,30 @@ export default function LetterTemplatesPage() {
   const [busy, setBusy] = useState(false);
   const [edit, setEdit] = useState<Partial<LetterTemplate> | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<LetterTemplate | null>(null);
+
+  function stateTypeTaken(state: string, letterType: string, excludeId?: number) {
+    return rows.some(r => r.id !== excludeId && r.letterType === letterType
+      && (r.state || "").toLowerCase() === (state || "").toLowerCase());
+  }
+
+  function firstFreeStateType(): { state: string; letterType: LetterTemplate['letterType'] } {
+    const appts = new Set(rows.filter(r => r.letterType === "APPOINTMENT").map(r => (r.state || "").toLowerCase()));
+    const rels = new Set(rows.filter(r => r.letterType === "EXPERIENCE").map(r => (r.state || "").toLowerCase()));
+    for (const st of INDIA_STATES) {
+      if (!appts.has(st.toLowerCase())) return { state: st, letterType: "APPOINTMENT" };
+      if (!rels.has(st.toLowerCase())) return { state: st, letterType: "EXPERIENCE" };
+    }
+    return { state: INDIA_STATES[0], letterType: "APPOINTMENT" };
+  }
+
+  function onLogo(file?: File) {
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { setError('Logo must be 10 MB or smaller.'); return; }
+    const reader = new FileReader();
+    reader.onload = () => setEdit(v => ({ ...v, logoUrl: String(reader.result || '') }));
+    reader.onerror = () => setError('The logo could not be read.');
+    reader.readAsDataURL(file);
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,11 +151,17 @@ export default function LetterTemplatesPage() {
   async function save() {
     if (!edit) return;
     if (!edit.name?.trim()) { setError("Template name is required."); return; }
+    const letterType = edit.letterType ?? "APPOINTMENT";
+    const typeLabel = letterType === "EXPERIENCE" ? "Experience / Releasing Letter" : "Appointment Letter";
+    if (stateTypeTaken(edit.state ?? "", letterType, edit.id)) {
+      setError(`A template for ${typeLabel} in "${edit.state || 'All India'}" already exists. Edit or delete the existing one instead of adding a duplicate.`);
+      return;
+    }
     setBusy(true); setError("");
     try {
       const payload = {
-        name: edit.name, state: edit.state ?? "", letterType: edit.letterType ?? "APPOINTMENT",
-        html: edit.html ?? "", active: edit.active ?? true,
+        name: edit.name, state: edit.state ?? "", letterType,
+        html: edit.html ?? "", logoUrl: edit.logoUrl ?? "", active: edit.active ?? true,
       };
       const res = await fetch(edit.id ? `/api/admin/letter-templates/${edit.id}` : "/api/admin/letter-templates", {
         method: edit.id ? "PATCH" : "POST",
@@ -72,53 +186,180 @@ export default function LetterTemplatesPage() {
     finally { setBusy(false); }
   }
 
+  async function copyToAllStates(t: LetterTemplate) {
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const res = await fetch(`/api/admin/letter-templates/${t.id}/copy-all-states`, { method: "POST" });
+      const body = await res.json().catch(() => ({})) as { created_count?: number; error?: string };
+      if (!res.ok) throw new Error(body.error ?? "Copy failed.");
+      setNotice(`Successfully copied "${t.name}" to ${body.created_count ?? 0} state(s) without templates!`);
+      void load();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Copy failed."); }
+    finally { setBusy(false); }
+  }
+
   return <div className="space-y-6 pb-10">
     <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Masters</p>
         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Letter Templates</h1>
-        <p className="text-sm text-gray-500 mt-1">State-wise HTML templates for Appointment and Experience (releasing) letters. Employers pick one per site; all workers of that site get letters in that format.</p>
+        <p className="text-sm text-gray-500 mt-1">State-wise HTML templates for Appointment and Experience (releasing) letters. Each state allows <strong>1 Appointment Letter</strong> and <strong>1 Releasing Letter</strong> max.</p>
       </div>
-      <button onClick={() => { setEdit({ letterType: "APPOINTMENT", state: "", active: true, html: "" }); setError(""); }} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black"><Plus size={16} />New template</button>
+      <div>
+        <button
+          onClick={() => {
+            const free = firstFreeStateType();
+            const typeLabel = free.letterType === "EXPERIENCE" ? "Experience / Releasing Letter" : "Appointment Letter";
+            setEdit({
+              letterType: free.letterType,
+              state: free.state,
+              active: true,
+              html: "",
+              logoUrl: "",
+              name: `${free.state} — ${typeLabel}`
+            });
+            setError("");
+          }}
+          className="h-10 px-4 rounded-xl bg-[#073B67] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm hover:bg-[#052d50] transition-colors"
+        >
+          <Plus size={15} /> Create State Template
+        </button>
+      </div>
     </header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
     {notice && <p role="status" className="bss-alert bss-alert-success">{notice}</p>}
 
     {loading ? <p className="flex items-center gap-2 text-sm text-gray-500 py-10"><Loader2 size={16} className="animate-spin" />Loading…</p>
-      : <section className="bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100">
-          {rows.map(t => <div key={t.id} className="px-5 py-4 flex items-center justify-between gap-3">
-            <div>
-              <strong className="text-sm text-gray-900">{t.name}</strong>
-              <p className="text-[11px] text-gray-400 mt-0.5">{t.letterTypeLabel} · {t.state || "All India"} · updated {t.updatedAt?.slice(0, 10)}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {t.active ? <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-700">Active</span>
-                : <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Inactive</span>}
-              <button onClick={() => setEdit({ ...t })} className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-gray-50"><Pencil size={12} />Edit</button>
-              <button onClick={() => setConfirmDelete(t)} className="h-8 px-3 rounded-lg border border-red-200 text-[11px] font-semibold text-red-600 inline-flex items-center gap-1 hover:bg-red-50"><Trash2 size={12} />Delete</button>
-            </div>
-          </div>)}
-          {!rows.length && <p className="py-12 text-center text-sm text-gray-400">No letter templates yet.</p>}
-        </section>}
+      : <div className="space-y-6">
+          {(() => {
+            // Display states that have at least one template created
+            const configuredStates = INDIA_STATES.filter(st => rows.some(r => (r.state || "").toLowerCase() === st.toLowerCase()));
+            
+            if (configuredStates.length === 0) {
+              return (
+                <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-8 text-center space-y-3">
+                  <p className="text-sm text-slate-600 font-medium">No state templates configured yet.</p>
+                  <p className="text-xs text-slate-400">Click &ldquo;Create State Template&rdquo; above or add templates for a state below.</p>
+                </div>
+              );
+            }
+
+            return configuredStates.map(stateGroup => {
+              const stateRows = rows.filter(r => (r.state || "").toLowerCase() === stateGroup.toLowerCase());
+              const appt = stateRows.find(r => r.letterType === "APPOINTMENT");
+              const rel = stateRows.find(r => r.letterType === "EXPERIENCE");
+
+              return (
+                <section key={stateGroup} className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                  <header className="px-5 py-3.5 bg-slate-50 border-b border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-sm text-slate-900">{stateGroup}</h3>
+                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${stateRows.length === 2 ? 'bg-amber-100 text-amber-800' : 'bg-slate-200/70 text-slate-700'}`}>
+                        {stateRows.length} / 2 Templates {stateRows.length === 2 ? '(Full)' : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!appt && (
+                        <button onClick={() => { setEdit({ letterType: "APPOINTMENT", state: stateGroup, active: true, html: "", logoUrl: "", name: `${stateGroup} — Appointment Letter` }); setError(""); }} className="h-7 px-2.5 rounded-lg border border-blue-200 text-blue-700 bg-blue-50 text-[11px] font-semibold flex items-center gap-1 hover:bg-blue-100">
+                          <Plus size={12} />Add Appointment
+                        </button>
+                      )}
+                      {!rel && (
+                        <button onClick={() => { setEdit({ letterType: "EXPERIENCE", state: stateGroup, active: true, html: "", logoUrl: "", name: `${stateGroup} — Experience Letter` }); setError(""); }} className="h-7 px-2.5 rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 text-[11px] font-semibold flex items-center gap-1 hover:bg-emerald-100">
+                          <Plus size={12} />Add Releasing
+                        </button>
+                      )}
+                    </div>
+                  </header>
+
+                  <div className="divide-y divide-gray-100">
+                    {stateRows.map(t => (
+                      <div key={t.id} className="px-5 py-4 flex items-center justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <strong className="text-sm text-gray-900">{t.name}</strong>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${t.letterType === "APPOINTMENT" ? "bg-blue-50 text-blue-700 border border-blue-100" : "bg-emerald-50 text-emerald-700 border border-emerald-100"}`}>
+                              {t.letterTypeLabel}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-400 mt-1">Updated {t.updatedAt?.slice(0, 10)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {t.active ? <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-700">Active</span>
+                            : <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Inactive</span>}
+                          <button disabled={busy} onClick={() => void copyToAllStates(t)} title="Copy this template to all states without a template" className="h-8 px-3 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-indigo-100 disabled:opacity-50"><Copy size={12} />Copy to All States</button>
+                          <button onClick={() => setEdit({ ...t })} className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-gray-50"><Pencil size={12} />Edit</button>
+                          <button onClick={() => setConfirmDelete(t)} className="h-8 px-3 rounded-lg border border-red-200 text-[11px] font-semibold text-red-600 inline-flex items-center gap-1 hover:bg-red-50"><Trash2 size={12} />Delete</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              );
+            });
+          })()}
+        </div>}
 
     {edit && <div className="fixed inset-0 z-[90] bg-black/50 grid place-items-center p-4">
-      <section role="dialog" aria-modal="true" className="w-full max-w-3xl bg-white rounded-2xl overflow-hidden max-h-[92vh] flex flex-col">
+      <section role="dialog" aria-modal="true" className="w-full max-w-5xl bg-white rounded-2xl overflow-hidden max-h-[92vh] flex flex-col">
         <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between"><h2 className="text-sm font-semibold">{edit.id ? "Edit letter template" : "New letter template"}</h2><button onClick={() => setEdit(null)} aria-label="Close"><X size={16} /></button></header>
         <div className="p-5 space-y-4 overflow-y-auto">
+          {error && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-semibold">{error}</div>}
           <div className="grid sm:grid-cols-3 gap-3">
-            <label className="text-[11px] font-semibold text-gray-600">Name<input value={edit.name ?? ""} onChange={e => setEdit(v => ({ ...v, name: e.target.value }))} placeholder="e.g. Maharashtra — Appointment" className={input} /></label>
-            <label className="text-[11px] font-semibold text-gray-600">Letter type<select value={edit.letterType ?? "APPOINTMENT"} onChange={e => setEdit(v => ({ ...v, letterType: e.target.value as LetterTemplate['letterType'] }))} className={input}><option value="APPOINTMENT">Appointment Letter</option><option value="EXPERIENCE">Experience / Releasing Letter</option></select></label>
-            <label className="text-[11px] font-semibold text-gray-600">State<select value={edit.state ?? ""} onChange={e => setEdit(v => ({ ...v, state: e.target.value }))} className={input}><option value="">All India (default)</option>{INDIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}</select></label>
+            <label className="text-[11px] font-semibold text-gray-600">Step 1: Select State<select value={edit.state ?? INDIA_STATES[0]} onChange={e => {
+              const newState = e.target.value;
+              const typeLabel = edit.letterType === "EXPERIENCE" ? "Experience / Releasing Letter" : "Appointment Letter";
+              setEdit(v => ({ ...v, state: newState, name: `${newState} — ${typeLabel}` }));
+            }} className={input}>{INDIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}</select></label>
+            <label className="text-[11px] font-semibold text-gray-600">Step 2: Select Letter Type<select value={edit.letterType ?? "APPOINTMENT"} onChange={e => {
+              const newType = e.target.value as LetterTemplate['letterType'];
+              const typeLabel = newType === "EXPERIENCE" ? "Experience / Releasing Letter" : "Appointment Letter";
+              const st = edit.state || INDIA_STATES[0];
+              setEdit(v => ({ ...v, letterType: newType, name: `${st} — ${typeLabel}` }));
+            }} className={input}><option value="APPOINTMENT">Appointment Letter</option><option value="EXPERIENCE">Experience / Releasing Letter</option></select></label>
+            <label className="text-[11px] font-semibold text-gray-600">Step 3: Template Name<input value={edit.name ?? ""} onChange={e => setEdit(v => ({ ...v, name: e.target.value }))} placeholder="e.g. Maharashtra — Appointment Letter" className={input} /></label>
           </div>
+
+          {(() => {
+            const taken = stateTypeTaken(edit.state ?? "", edit.letterType ?? "APPOINTMENT", edit.id);
+            if (!taken) return null;
+            const typeLabel = edit.letterType === "EXPERIENCE" ? "Experience / Releasing Letter" : "Appointment Letter";
+            return <p role="alert" className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 font-semibold">
+              <span>⚠</span><span>A template for {typeLabel} in &ldquo;{edit.state || 'All India'}&rdquo; already exists. Edit or delete the existing one instead — saving a duplicate is not allowed.</span>
+            </p>;
+          })()}
+
           <label className="flex items-center gap-2 text-xs text-gray-700"><input type="checkbox" checked={edit.active ?? true} onChange={e => setEdit(v => ({ ...v, active: e.target.checked }))} className="accent-[#073B67]" />Active</label>
-          <div>
-            <div className="flex items-center justify-between"><p className="text-[11px] font-semibold text-gray-600">HTML template</p><p className="text-[10px] text-gray-400">Click a token to insert it</p></div>
-            <textarea value={edit.html ?? ""} onChange={e => setEdit(v => ({ ...v, html: e.target.value }))} rows={16} spellCheck={false} className="mt-1 w-full rounded-lg border border-gray-200 p-3 font-mono text-[11px] leading-relaxed" />
-            <div className="mt-2 flex flex-wrap gap-1.5">{TOKENS.map(tok => <button key={tok} type="button" onClick={() => setEdit(v => ({ ...v, html: (v?.html ?? "") + `{{${tok}}}` }))} className="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-100 text-gray-600 hover:bg-gray-200">{`{{${tok}}}`}</button>)}</div>
+
+          {/* Logo */}
+          <div className="rounded-xl border border-gray-100 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold text-gray-600">Logo (letter header)</p>
+              {edit.logoUrl ? <button type="button" onClick={() => setEdit(v => ({ ...v, logoUrl: "" }))} className="text-[10px] text-red-600 font-semibold">Remove</button> : null}
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-16 h-16 rounded-lg border border-gray-200 grid place-items-center overflow-hidden bg-white flex-shrink-0">
+                {edit.logoUrl ? <img src={edit.logoUrl} alt="logo preview" className="max-w-full max-h-full object-contain" /> : <span className="text-[9px] text-gray-300">No logo</span>}
+              </div>
+              <div className="flex-1 space-y-2 min-w-0">
+                <input value={(edit.logoUrl ?? "").startsWith("data:") ? "" : (edit.logoUrl ?? "")} onChange={e => setEdit(v => ({ ...v, logoUrl: e.target.value }))} placeholder="Logo URL (https://…/logo.png) or upload" className={input} />
+                <label className="inline-flex h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold items-center gap-1 cursor-pointer hover:bg-gray-50"><Upload size={12} />Upload logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={e => { onLogo(e.target.files?.[0]); e.target.value = ""; }} /></label>
+              </div>
+            </div>
+            <p className="text-[10px] text-gray-400">Insert <code className="font-mono">{`{{logoUrl}}`}</code> where the logo should appear (e.g. inside the header).</p>
           </div>
+
+          <DocumentStudioEditor
+            key={edit.id ?? "new"}
+            value={edit.html ?? ""}
+            onChange={html => setEdit(v => ({ ...v, html }))}
+            tokens={LETTER_TOKENS}
+            renderPreview={html => renderPreview(html, edit.logoUrl ?? "")}
+            defaultHtml={LETTER_STARTER_HTML}
+          />
         </div>
-        <footer className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2"><button onClick={() => setEdit(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button><button disabled={busy || !edit.name?.trim()} onClick={() => void save()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? "Saving…" : "Save template"}</button></footer>
+        <footer className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2"><button onClick={() => setEdit(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button><button disabled={busy || !edit.name?.trim() || stateTypeTaken(edit.state ?? "", edit.letterType ?? "APPOINTMENT", edit.id)} onClick={() => void save()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? "Saving…" : "Save template"}</button></footer>
       </section>
     </div>}
 

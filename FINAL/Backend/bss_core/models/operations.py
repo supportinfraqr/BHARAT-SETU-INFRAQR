@@ -652,6 +652,8 @@ class LetterTemplate(models.Model):
     letter_type = models.CharField(max_length=20, choices=TYPES)
     name = models.CharField(max_length=120)
     html = models.TextField(blank=True)
+    # Optional logo shown in the letter header — a URL or a data: URI (uploaded).
+    logo_url = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                                    related_name="+")

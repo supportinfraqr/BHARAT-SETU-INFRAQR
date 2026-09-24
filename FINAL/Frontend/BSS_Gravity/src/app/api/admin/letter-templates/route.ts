@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { apiError, assertRateLimit, assertTrustedMutation, readJsonObject } from '@/server/api';
 import { requireApiSession } from '@/server/session';
 import { getRuntimeConfig } from '@/server/config';
-import { upstreamRequest } from '@/server/http';
+import { UpstreamError, upstreamRequest } from '@/server/http';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,5 +26,10 @@ export async function POST(request: Request) {
       method: 'POST', body: JSON.stringify(body),
     });
     return NextResponse.json(result, { status: 201, headers: { 'Cache-Control': 'private, no-store' } });
-  } catch (error) { return apiError(error, 'The letter template could not be saved.'); }
+  } catch (error) {
+    if (error instanceof UpstreamError) {
+      return NextResponse.json({ error: error.message }, { status: error.status || 400, headers: { 'Cache-Control': 'private, no-store' } });
+    }
+    return apiError(error, 'The letter template could not be saved.');
+  }
 }

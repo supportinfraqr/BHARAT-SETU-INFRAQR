@@ -127,7 +127,7 @@ def _shell(title: str, body: str) -> str:
     )
 
 
-def _letter_tokens(binding, letter_type: str) -> dict:
+def _letter_tokens(binding, letter_type: str, logo_url: str = "") -> dict:
     """Values injected into an admin-authored HTML template. Tokens are written
     as {{token}} (or {{ token }}) — values are HTML-escaped by the facts helpers."""
     w = _worker_facts(binding.worker)
@@ -148,6 +148,7 @@ def _letter_tokens(binding, letter_type: str) -> dict:
         "contractorAddress": p["contractorAddr"],
         "employerName": p["employer"],
         "siteName": p["site"], "siteAddress": p["siteAddr"],
+        "logoUrl": logo_url or "",
     }
 
 
@@ -184,7 +185,9 @@ def _render_template_html(html_text: str, tokens: dict) -> str:
 def render_letter(binding, letter_type: str) -> str:
     template = _resolve_letter_template(binding, letter_type)
     if template is not None:
-        return _render_template_html(template.html, _letter_tokens(binding, letter_type))
+        return _render_template_html(
+            template.html,
+            _letter_tokens(binding, letter_type, getattr(template, "logo_url", "") or ""))
     w = _worker_facts(binding.worker)
     p = _party_facts(binding)
     ref_prefix = {"appointment": "APPT"}.get(letter_type, "EXP")

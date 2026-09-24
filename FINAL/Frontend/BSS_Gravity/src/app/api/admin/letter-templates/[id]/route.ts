@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { apiError, assertTrustedMutation, readJsonObject } from '@/server/api';
 import { requireApiSession } from '@/server/session';
 import { getRuntimeConfig } from '@/server/config';
-import { upstreamRequest } from '@/server/http';
+import { UpstreamError, upstreamRequest } from '@/server/http';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +19,12 @@ export async function PATCH(request: Request, context: Context) {
       method: 'PATCH', body: JSON.stringify(body),
     });
     return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
-  } catch (error) { return apiError(error, 'The letter template could not be updated.'); }
+  } catch (error) {
+    if (error instanceof UpstreamError) {
+      return NextResponse.json({ error: error.message }, { status: error.status || 400, headers: { 'Cache-Control': 'private, no-store' } });
+    }
+    return apiError(error, 'The letter template could not be updated.');
+  }
 }
 
 export async function DELETE(request: Request, context: Context) {
