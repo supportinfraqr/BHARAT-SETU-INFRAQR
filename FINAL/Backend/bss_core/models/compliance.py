@@ -705,6 +705,11 @@ class CustomFormName(models.Model):
     requires_document = models.BooleanField(default=True)
     frequency = models.CharField(max_length=40, blank=True)
     description = models.CharField(max_length=255, blank=True)
+    # OCR verification checklist: a list of checkpoints the uploaded evidence
+    # must satisfy, e.g. [{"type":"signature","label":"Signature","required":true},
+    # {"type":"name","label":"Contractor name","value":"contractor"},
+    # {"type":"keyword","label":"Licence no","value":"LICENCE"}].
+    ocr_checkpoints = models.JSONField(default=list, blank=True)
     is_active = models.BooleanField(default=True)
     sort_order = models.SmallIntegerField(default=0)
     created_by = models.CharField(max_length=120, blank=True)

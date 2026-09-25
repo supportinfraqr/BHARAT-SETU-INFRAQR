@@ -38,6 +38,9 @@ class SubmissionEvidence(models.Model):
     checksum_sha256 = models.CharField(max_length=64, blank=True)
     ocr_accuracy = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     validation_findings = models.JSONField(default=list, blank=True)
+    # Per-checkpoint OCR results for additional forms, e.g.
+    # [{"key":"signature","label":"Signature","required":true,"passed":true,"detail":"..."}].
+    checkpoint_results = models.JSONField(default=list, blank=True)
     status = models.CharField(max_length=20, choices=STATUS, default="PENDING")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

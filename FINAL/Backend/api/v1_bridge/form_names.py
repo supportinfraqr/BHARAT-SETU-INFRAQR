@@ -8,6 +8,28 @@ mandatory), and can also add its own forms.
 from .common import *
 
 
+def _clean_checkpoints(value):
+    """Normalise an incoming OCR checkpoint list to {type,label,value,required}."""
+    out = []
+    if not isinstance(value, list):
+        return out
+    for entry in value:
+        if not isinstance(entry, dict):
+            continue
+        ctype = str(entry.get("type") or "").strip().lower()
+        if not ctype:
+            continue
+        item = {"type": ctype,
+                "label": str(entry.get("label") or ctype)[:120],
+                "required": bool(entry.get("required", True))}
+        if entry.get("value") is not None:
+            item["value"] = str(entry.get("value") or "")[:160]
+        if entry.get("key"):
+            item["key"] = str(entry.get("key"))[:60]
+        out.append(item)
+    return out
+
+
 def _row(obj):
     return {
         "id": obj.id,
@@ -17,6 +39,7 @@ def _row(obj):
         "requiresDocument": obj.requires_document,
         "frequency": obj.frequency,
         "description": obj.description,
+        "ocrCheckpoints": list(obj.ocr_checkpoints or []),
         "scope": "admin" if obj.employer_id is None else "employer",
         "active": obj.is_active,
     }
@@ -52,6 +75,7 @@ def _create(request, *, employer):
         "requires_document": bool(body.get("requiresDocument", True)),
         "frequency": str(body.get("frequency") or "")[:40],
         "description": str(body.get("description") or "")[:255],
+        "ocr_checkpoints": _clean_checkpoints(body.get("ocrCheckpoints")),
         "sort_order": int(body.get("sortOrder") or 0),
         "created_by": str(body.get("createdBy") or "")[:120],
     }
@@ -61,6 +85,8 @@ def _create(request, *, employer):
         obj.is_mandatory = mandatory
         if body.get("requiresDocument") is not None:
             obj.requires_document = bool(body.get("requiresDocument"))
+        if body.get("ocrCheckpoints") is not None:
+            obj.ocr_checkpoints = _clean_checkpoints(body.get("ocrCheckpoints"))
         if body.get("frequency") is not None:
             obj.frequency = str(body.get("frequency") or "")[:40]
         if body.get("description") is not None:
@@ -84,7 +110,8 @@ def admin_form_names(request):
     qs = CustomFormName.objects.filter(is_active=True, employer__isnull=True)
     if state:
         qs = qs.filter(state__iexact=state)
-    return Response({"data": [_row(o) for o in qs.order_by("sort_order", "name")]},
+    return Response({"data": [_row(o) for o in qs.order_by("sort_order", "name")],
+                     "checkpoints": ocr_client.catalog()},
                     status=status.HTTP_200_OK)
 
 

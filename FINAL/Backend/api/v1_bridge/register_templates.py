@@ -466,12 +466,26 @@ def contractor_register_templates(request):
     if request.user.role != "contractor":
         return Response({"error": "Contractors only."}, status=status.HTTP_403_FORBIDDEN)
 
+    # ``library=1`` returns the whole platform register library (every state's
+    # seeded registers) — used by the "Register-wise Listing" view so it shows
+    # the full state-wise catalogue rather than only the contractor's state.
+    if str(request.query_params.get("library") or "").lower() in ("1", "true", "yes"):
+        from bss_core.models import RegisterTemplate
+        qs = RegisterTemplate.objects.filter(is_active=True).order_by("state", "form_code")
+        rows = [_template_row(t) for t in qs]
+        return Response({"rows": rows, "states": sorted({t.state for t in qs}),
+                         "adoption": {}, "strength": {}}, status=status.HTTP_200_OK)
+
     # Templates are gated per site: a site sees only the forms its own employer
     # adopted for that site's state (site-wise). Sites whose employer has not
     # configured CLRA keep the full applicable library.
     sites = list(Site.objects.filter(id__in=_contractor_site_ids(request.user))
                  .exclude(state="").select_related("employer"))
     state = (request.query_params.get("state") or "").strip()
+    # ``all=1`` returns the full applicable library for the contractor's states
+    # (used by the "Register-wise Listing" view) instead of only the forms the
+    # employer has adopted for generation.
+    show_all = str(request.query_params.get("all") or "").lower() in ("1", "true", "yes")
     if state:
         states = [state]
         site_rows = [s for s in sites if s.state.lower() == state.lower()]
@@ -501,9 +515,13 @@ def contractor_register_templates(request):
             "mandatoryCount": len([t for t in base if t.is_mandatory]),
             "total": len(base),
         }
-        # Contractors only see forms the employer adopted (mandatory always
+        # Contractors see the full applicable library in the listing view; for
+        # generation they only see forms the employer adopted (mandatory always
         # included). Until the employer adopts for the state, nothing is usable.
-        visible = [t for t in base if t.id in effective] if gated else []
+        if show_all:
+            visible = list(base)
+        else:
+            visible = [t for t in base if t.id in effective] if gated else []
         for template in visible:
             if template.id not in seen:
                 seen.add(template.id)

@@ -7,7 +7,8 @@ import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorPortalData } from '@/types/portal';
 
 type DocumentRow = ContractorPortalData['submissions']['documents'][number] & { fileName?: string; checksum?: string };
-type EvidenceUpload = { id?: number; accuracy: number; status: 'Validating' | 'Validated' | 'Errors found'; findings?: string[]; noOcr?: boolean };
+type CheckpointResult = { key:string; label:string; type:string; required:boolean; passed:boolean; detail:string };
+type EvidenceUpload = { id?: number; accuracy: number; status: 'Validating' | 'Validated' | 'Errors found'; findings?: string[]; noOcr?: boolean; checkpoints?: CheckpointResult[] };
 type Tab = 'submissions' | 'create';
 
 const FYS = ['FY 2026-27', 'FY 2025-26'];
@@ -180,16 +181,14 @@ export default function ComplianceSubmissionPage() {
     form.set('documentType', doc.name); form.set('frequency', doc.frequency);
     form.set('mandatory', doc.mandatory ? 'true' : 'false');
     form.set('period', `${createPeriod} ${fy.replace('FY ', '')}`);
-    // Additional/principal-employer forms are stored as evidence — no OCR.
-    form.set('noOcr', '1');
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), 60_000);
     try {
       const response = await fetch('/api/portal/uploads', { method: 'POST', body: form, signal: controller.signal });
-      const result = await response.json().catch(() => ({})) as { data?: { id:number; accuracy:number | null; validated:boolean; noOcr?:boolean; findings:string[] }; error?:string };
+      const result = await response.json().catch(() => ({})) as { data?: { id:number; accuracy:number | null; validated:boolean; noOcr?:boolean; findings:string[]; checkpoints?:CheckpointResult[] }; error?:string };
       if (!response.ok || !result.data) throw new Error(result.error ?? 'Document could not be validated.');
       const data = result.data;
-      setUploads(current => ({ ...current, [doc.name]: { id: data.id, accuracy: data.accuracy ?? 0, status: data.validated ? 'Validated' : 'Errors found', noOcr: data.noOcr, findings: data.findings } }));
+      setUploads(current => ({ ...current, [doc.name]: { id: data.id, accuracy: data.accuracy ?? 0, status: data.validated ? 'Validated' : 'Errors found', noOcr: data.noOcr, findings: data.findings, checkpoints: data.checkpoints } }));
     } catch (reason) {
       setUploads(current => ({ ...current, [doc.name]: { accuracy: 0, status: 'Errors found', findings: [reason instanceof Error ? reason.message : 'Document could not be validated.'] } }));
     } finally {
@@ -380,12 +379,17 @@ export default function ComplianceSubmissionPage() {
               ? <p className="text-[11px] text-gray-400">Loading required documents…</p>
               : <div className="space-y-2.5">{additionalDocs.map(doc => {
                   const up = uploads[doc.name];
-                  return <div key={doc.name} className="rounded-xl border border-gray-100 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+                  return <div key={doc.name} className="rounded-xl border border-gray-100 p-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <span className="flex-1 min-w-0"><strong className="block text-xs text-gray-900">{doc.name}</strong><span className="block text-[10px] text-gray-400 mt-0.5">{doc.frequency}{doc.mandatory ? ' · Mandatory' : ''}{doc.requiresDocument ? ' · Document required' : ''}</span></span>
                     {up ? <span title={up.findings?.join(' ')} className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${up.status === 'Validated' ? 'bg-green-50 text-green-700' : up.status === 'Validating' ? 'bg-gray-100 text-gray-500' : 'bg-red-50 text-red-700'}`}>{up.status === 'Validated' ? (up.noOcr ? 'Recorded' : '100% Accuracy') : up.status === 'Validating' ? 'Validating…' : `${up.accuracy}% · Errors found`}</span> : <span className="text-[10px] text-gray-300 flex-shrink-0">Not uploaded</span>}
                     <label className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 flex-shrink-0"><Upload size={12}/>Upload<input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => uploadEvidence(doc, e.target.files?.[0])}/></label>
                     {up?.findings?.length ? <button type="button" onClick={() => setViewErrors({ name: doc.name, findings: up.findings ?? [] })} className="text-[10px] text-blue-700 font-semibold flex-shrink-0 hover:underline">View errors</button> : null}
                     {up && <button onClick={() => setUploads(current => { const next = { ...current }; delete next[doc.name]; return next; })} className="text-[10px] text-red-600 flex-shrink-0">Remove</button>}
+                    </div>
+                    {up?.checkpoints?.length ? <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1 text-[10px] border-t border-gray-100 pt-2">
+                      {up.checkpoints.map(c => <li key={c.key} className={c.passed ? 'text-green-700' : c.required ? 'text-red-600' : 'text-amber-600'}>{c.passed ? '✓' : '✗'} {c.label}{!c.passed && c.detail ? <span className="text-gray-400"> — {c.detail}</span> : null}</li>)}
+                    </ul> : null}
                   </div>;
                 })}</div>}
           </div>}

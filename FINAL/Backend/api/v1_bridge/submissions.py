@@ -103,9 +103,19 @@ def _submissions(request):
     checksum = ""
     accuracy = None
     findings = []
+    checkpoint_results = []
     if file_obj:
         checksum = payloads.sha256_checksum(file_obj)
-        if not no_ocr:
+        # Additional (non-template) forms can carry an OCR verification checklist
+        # configured for the form name; verify against it when present.
+        from bss_core.models import CustomFormName
+        form = None
+        form_key = document_type or ftype
+        if form_key:
+            form = (CustomFormName.objects.filter(is_active=True, name__iexact=form_key)
+                    .filter(Q(state__iexact=state) | Q(state="")).first())
+        has_checkpoints = bool(form and form.ocr_checkpoints)
+        if has_checkpoints or not no_ocr:
             ocr_text = None
             try:
                 file_obj.seek(0)
@@ -117,7 +127,14 @@ def _submissions(request):
                     file_obj.seek(0)
                 except (AttributeError, OSError):
                     pass
-            accuracy, findings = compliance.validate_evidence(file_obj, ftype, ocr_text=ocr_text)
+            if has_checkpoints:
+                accuracy, checkpoint_results, findings = ocr_client.verify_checkpoints(
+                    form.ocr_checkpoints, ocr_text or "",
+                    context={"contractor": payloads._party_name(user), "employer": employer,
+                             "site": site, "month": month, "year": year, "period": period,
+                             "worker": "", "form_name": form.name})
+            else:
+                accuracy, findings = compliance.validate_evidence(file_obj, ftype, ocr_text=ocr_text)
 
     submission_id = (request.data.get("submissionId") or "").strip()
     if submission_id:
@@ -156,6 +173,7 @@ def _submissions(request):
     submission.checksum_sha256 = checksum
     submission.ocr_accuracy = accuracy
     submission.validation_findings = findings
+    submission.checkpoint_results = checkpoint_results
     submission.status = "PENDING"
     if file_obj:
         safe_name = os.path.basename(file_obj.name or "evidence")
@@ -173,6 +191,7 @@ def _submissions(request):
             "fileName": submission.original_name, "checksum": checksum,
             "accuracy": accuracy,
             "noOcr": no_ocr,
+            "checkpoints": checkpoint_results,
             "validated": no_ocr or (accuracy is not None and accuracy >= 100),
             "findings": findings,
         }

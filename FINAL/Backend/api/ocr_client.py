@@ -349,3 +349,112 @@ def _extract_near_label(raw: str, label: str):
                 if _looks_like_name(lines[j]):
                     return re.sub(r"\s+", " ", lines[j]).title()
     return None
+
+
+# ── Additional-form OCR checklist verification ───────────────────────────────
+# A premade catalog of checkpoints the admin can tick when creating an
+# additional form. On upload, the recognised text is checked against each
+# ticked pointer and the results are shown to the uploader.
+CHECKPOINT_CATALOG = [
+    {"key": "signature", "type": "signature", "label": "Signature / Authorised signatory"},
+    {"key": "name", "type": "name", "label": "Party name (contractor / employer / site / worker)"},
+    {"key": "date", "type": "date", "label": "Date present"},
+    {"key": "period", "type": "period", "label": "Reporting period (month / year) present"},
+    {"key": "seal", "type": "seal", "label": "Seal / Company stamp"},
+    {"key": "title", "type": "title", "label": "Form title / heading"},
+    {"key": "licence", "type": "keyword", "label": "Licence / registration number"},
+    {"key": "amount", "type": "amount", "label": "Amount / figures"},
+    {"key": "readable", "type": "readable", "label": "Readable / not blank"},
+]
+
+_SIGNATURE_WORDS = ("SIGNATURE", "SIGNATORY", "SIGNED BY", "AUTHORISED SIGNATORY",
+                    "AUTHORIZED SIGNATORY", "FOR AND ON BEHALF")
+_SEAL_WORDS = ("SEAL", "STAMP", "COMMON SEAL", "COMPANY SEAL")
+_DATE_RE = re.compile(r"\b\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}\b")
+_AMOUNT_RE = re.compile(r"(?:₹|RS\.?|INR)\s?[\d,]+(?:\.\d{1,2})?")
+_MONTHS = ("JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY",
+           "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER")
+
+
+def catalog():
+    """The premade checkpoint catalog the admin picks from."""
+    return [dict(entry) for entry in CHECKPOINT_CATALOG]
+
+
+def _contains(value: str, upper: str, squashed: str) -> bool:
+    if not value:
+        return False
+    if value.upper() in upper:
+        return True
+    sq = _squash(value)
+    return bool(sq) and sq in squashed
+
+
+def _evaluate_checkpoint(ctype, value, upper, squashed, context):
+    """Return (passed, detail) for one checkpoint against the OCR text."""
+    if ctype == "signature":
+        return (any(w in upper for w in _SIGNATURE_WORDS),
+                "no signature / signatory text found")
+    if ctype == "seal":
+        return (any(w in upper for w in _SEAL_WORDS), "no seal / stamp text found")
+    if ctype == "date":
+        return (bool(_DATE_RE.search(upper)), "no date found")
+    if ctype == "amount":
+        return (bool(_AMOUNT_RE.search(upper)), "no amount found")
+    if ctype == "readable":
+        return (len((upper or "").strip()) >= 20, "little or no readable text")
+    if ctype == "period":
+        month = str((context or {}).get("month") or "").upper()
+        year = str((context or {}).get("year") or "")
+        period = str((context or {}).get("period") or "").upper()
+        hit = (month and month in upper) or (year and year in upper) \
+            or (period and _contains(period, upper, squashed))
+        return (bool(hit), f"period {month} {year}".strip() + " not found")
+    if ctype == "name":
+        target = str((context or {}).get(value or "contractor") or "").strip()
+        if not target:
+            return True, "no name configured"
+        return (_contains(target, upper, squashed), f"{value or 'contractor'} name not found")
+    if ctype == "title":
+        target = value or str((context or {}).get("form_name") or "")
+        if not target:
+            return True, "no title configured"
+        return (_contains(target, upper, squashed), "form title not found")
+    if ctype == "regex":
+        try:
+            return (bool(re.search(value, upper, re.I)), "pattern not found")
+        except re.error:
+            return False, "invalid pattern"
+    # default: keyword / custom marker
+    if not value:
+        return True, ""
+    return (_contains(value, upper, squashed), f"'{value}' not found")
+
+
+def verify_checkpoints(checkpoints, ocr_text, context=None):
+    """Verify recognised text against an additional form's checklist.
+
+    ``checkpoints`` = ``[{"type","label","value"?,"required"?}, …]``.
+    ``context`` = contractor/employer/site/worker names + month/year/period and
+    the form name. Returns ``(accuracy, results, findings)`` where each result is
+    ``{"key","label","type","required","passed","detail"}``."""
+    text = ocr_text or ""
+    upper = text.upper()
+    squashed = _squash(text)
+    results, findings = [], []
+    for cp in checkpoints or []:
+        if not isinstance(cp, dict):
+            continue
+        ctype = str(cp.get("type") or "keyword").lower()
+        label = str(cp.get("label") or ctype)
+        value = str(cp.get("value") or "").strip()
+        required = bool(cp.get("required"))
+        passed, detail = _evaluate_checkpoint(ctype, value, upper, squashed, context or {})
+        results.append({"key": str(cp.get("key") or ctype), "label": label, "type": ctype,
+                        "required": required, "passed": passed, "detail": detail})
+        findings.append(("Verified: " if passed else "Missing: ") + label
+                        + (": " + detail if not passed else ""))
+    total = len(results)
+    passed_count = sum(1 for r in results if r["passed"])
+    accuracy = round((passed_count / total) * 100, 2) if total else 100.0
+    return accuracy, results, findings
