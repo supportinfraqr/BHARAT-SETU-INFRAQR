@@ -73,10 +73,16 @@ def run_all(verbose=False):
         except Exception as exc:  # noqa: BLE001
             results.append((label, f"failed: {exc}"))
 
-    try:
-        results.append(("CLRA register library", _run_clra_library()))
-    except Exception as exc:  # noqa: BLE001
-        results.append(("CLRA register library", f"failed: {exc}"))
+    # The CLRA register library is intentionally NOT seeded automatically — the
+    # seeded templates were cleared and should not come back on deploy. The
+    # importer command stays available for opt-in use:
+    #   python manage.py import_clra_templates --state Maharashtra
+    # Set BSS_SEED_CLRA=1 to re-enable the automatic (only-if-empty) import.
+    if os.environ.get("BSS_SEED_CLRA", "").strip().lower() in ("1", "true", "yes"):
+        try:
+            results.append(("CLRA register library", _run_clra_library()))
+        except Exception as exc:  # noqa: BLE001
+            results.append(("CLRA register library", f"failed: {exc}"))
 
     if verbose:
         for label, status in results:
