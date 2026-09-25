@@ -643,7 +643,33 @@ def state_applicability(request):
                     status=status.HTTP_200_OK)
 
 
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def register_template_reset_defaults(request):
+    """Admin: reset every register template back to its source default.
+
+    Re-renders each template's faithful default layout from the CLRA source
+    archive, discarding admin HTML/columns/field edits. Row model (per-worker vs
+    row-level register) is re-applied from the code manifest."""
+    from .admin_console import log_audit
+    if request.user.role != "bss_admin":
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    from bss_core.seeders import clra
+    try:
+        total = clra.reset_all()
+    except Exception as exc:  # noqa: BLE001
+        return Response({"error": f"The templates could not be reset: {exc}"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    log_audit(request.user, "UPDATE", "register_template", 0,
+              after={"summary": "Reset all CLRA register templates to default"})
+    return Response({"ok": True, "count": total,
+                     "summary": f"Reset {total} register template(s) to default."},
+                    status=status.HTTP_200_OK)
+
+
 __all__ = ["register_templates", "register_template_detail", "register_template_file",
+           "register_template_reset_defaults",
            "contractor_register_templates", "employer_register_templates",
            "clra_master_template", "state_applicability",
            "applicable_form_codes", "applicable_templates", "state_strength",

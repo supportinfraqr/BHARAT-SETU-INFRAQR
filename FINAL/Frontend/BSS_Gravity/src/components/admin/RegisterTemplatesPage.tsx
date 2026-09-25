@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CheckCircle2, Copy, Download, FilePlus2, FileSpreadsheet, Loader2, Pencil, Plus, Search, X } from 'lucide-react';
+import { CheckCircle2, Copy, Download, FilePlus2, FileSpreadsheet, Loader2, Pencil, Plus, RotateCcw, Search, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 
 type FieldMapping = { column: string; fieldKey: string };
@@ -1376,6 +1376,20 @@ export default function RegisterTemplatesPage() {
     finally { setBusy(false); }
   }
 
+  async function resetDefaults() {
+    if (!window.confirm('Reset ALL register templates to their default layout from the source files? '
+      + 'Any HTML/column/field edits you made will be discarded.')) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const response = await fetch('/api/admin/register-templates/reset-defaults', { method: 'POST' });
+      const body = await response.json().catch(() => ({})) as { error?: string; count?: number; summary?: string };
+      if (!response.ok) throw new Error(body.error ?? 'Reset failed.');
+      setNotice(body.summary ?? `Reset ${body.count ?? 0} template(s) to default.`);
+      void load();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Reset failed.'); }
+    finally { setBusy(false); }
+  }
+
   const columns: DataColumn<TemplateRow>[] = [
     { id:'state', header:'State / Region', value:r => r.state },
     { id:'form', header:'Form', value:r => r.formCode, render:r => <div className="flex items-center gap-2"><span className="font-mono text-xs font-semibold text-gray-800">{r.formCode}</span>{r.formatAvailable === false && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700" title="The source matrix lists no official register format for this state">No format</span>}{r.authored ? <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">Authored</span> : null}</div> },
@@ -1429,6 +1443,7 @@ export default function RegisterTemplatesPage() {
       <label className="relative"><Search size={14} className="absolute left-3 top-2.5 text-gray-400"/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search form or title…" className="h-9 rounded-lg border border-gray-200 pl-9 pr-3 text-xs w-64"/></label>
       <span className="text-xs text-gray-400">{rows.length} template{rows.length === 1 ? '' : 's'}</span>
       <a href="/admin/masters/form-names" className="ml-auto inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50"><FileSpreadsheet size={14}/>Additional Forms</a>
+      <button type="button" disabled={busy} onClick={() => void resetDefaults()} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-50"><RotateCcw size={14}/>Reset to default</button>
       <button onClick={() => { setBuilder(blankDraft()); setError(''); }} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold shadow-sm hover:bg-[#052d50] transition-colors"><FilePlus2 size={14}/>+ New Template</button>
     </div>
 

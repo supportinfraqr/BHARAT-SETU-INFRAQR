@@ -24,28 +24,9 @@ MODULE_SEEDERS: list[tuple[str, str]] = [
     ("statutory rate master", "bss_core.seeders.statutory"),
     ("minimum wage master", "bss_core.seeders.minimum_wage"),
     ("default letter templates", "bss_core.seeders.letter_templates"),
+    # State-wise CLRA register templates (defaults defined in code).
+    ("CLRA register templates (state-wise defaults)", "bss_core.seeders.clra"),
 ]
-
-
-def _clra_zip() -> str | None:
-    path = os.environ.get("CLRA_ZIP", "/app/data/clra-registers.zip")
-    return path if path and os.path.exists(path) else None
-
-
-def _run_clra_library() -> str:
-    """One-time (only-if-empty) import of the CLRA register library.
-
-    Scoped to Maharashtra only — the template library is seeded for that state
-    alone (both locally and in prod), so the other states' register files are
-    intentionally not imported.
-    """
-    zip_path = _clra_zip()
-    if not zip_path:
-        return "skipped (no bundle)"
-    from django.core.management import call_command
-    call_command("import_clra_templates", zip=zip_path, state="Maharashtra", only_if_empty=True)
-    call_command("import_clra_applicability", zip=zip_path, only_if_empty=True)
-    return "ok"
 
 
 def run_all(verbose=False):
@@ -72,17 +53,6 @@ def run_all(verbose=False):
             results.append((label, "ok"))
         except Exception as exc:  # noqa: BLE001
             results.append((label, f"failed: {exc}"))
-
-    # The CLRA register library is intentionally NOT seeded automatically — the
-    # seeded templates were cleared and should not come back on deploy. The
-    # importer command stays available for opt-in use:
-    #   python manage.py import_clra_templates --state Maharashtra
-    # Set BSS_SEED_CLRA=1 to re-enable the automatic (only-if-empty) import.
-    if os.environ.get("BSS_SEED_CLRA", "").strip().lower() in ("1", "true", "yes"):
-        try:
-            results.append(("CLRA register library", _run_clra_library()))
-        except Exception as exc:  # noqa: BLE001
-            results.append(("CLRA register library", f"failed: {exc}"))
 
     if verbose:
         for label, status in results:

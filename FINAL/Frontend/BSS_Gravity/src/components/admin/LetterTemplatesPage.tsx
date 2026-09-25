@@ -35,8 +35,58 @@ const LETTER_TOKENS: StudioToken[] = [
   { value: '{{employerBssId}}', label: 'Principal employer BSS ID', group: 'Parties' },
   { value: '{{siteName}}', label: 'Site name', group: 'Parties' },
   { value: '{{siteAddress}}', label: 'Site address', group: 'Parties' },
+  { value: '{{salaryBreakdownTable}}', label: 'Salary & CTC Breakdown Table', group: 'Tables & Columns' },
+  { value: '{{relievingClearanceTable}}', label: 'Relieving Clearance Table', group: 'Tables & Columns' },
+  { value: '{{employmentGridTable}}', label: 'Employment Grid Matrix', group: 'Tables & Columns' },
+  { value: '{{formXVTable}}', label: 'FORM XV Service Certificate Table', group: 'Tables & Columns' },
+  { value: '{{relievingDate}}', label: 'Relieving date', group: 'Employment' },
+  { value: '{{identificationMarks}}', label: 'Identification marks', group: 'Worker' },
   { value: '{{logoUrl}}', label: 'Logo (header)', group: 'Branding' },
 ];
+
+const FORM_XV_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><style>
+  * { box-sizing: border-box; }
+  body { margin:0; background:#fff; color:#111827; font-family: "Noto Sans", Arial, sans-serif; }
+  .page { width:794px; margin:0 auto; padding:32px 44px; font-size:12px; }
+  .header-block { text-align:center; font-weight:bold; margin-bottom:20px; text-transform:uppercase; line-height:1.4; }
+  .header-block .form-title { font-size:16px; letter-spacing:0.5px; }
+  .header-block .rule-title { font-size:12px; color:#475569; font-weight:normal; text-transform:none; }
+  .header-block .sub-title { font-size:14px; color:#0f172a; margin-top:2px; text-decoration:underline; }
+  .field-row { font-size:12px; margin:7px 0; line-height:1.6; border-bottom:1px dotted #94a3b8; padding-bottom:3px; display:flex; justify-content:space-between; }
+  .field-label { font-weight:600; color:#334155; }
+  .field-val { color:#0f172a; font-weight:bold; }
+  table.xv-table { width:100%; border-collapse:collapse; margin:20px 0 10px 0; font-size:11px; text-align:center; border:1px solid #334155; }
+  table.xv-table th, table.xv-table td { border:1px solid #334155; padding:6px 4px; vertical-align:middle; }
+  table.xv-table th { background:#f1f5f9; color:#0f172a; font-weight:bold; }
+  table.xv-table tr.col-nums td { background:#e2e8f0; font-weight:600; font-size:10px; color:#475569; }
+  .sign { display:flex; justify-content:space-between; gap:12px; margin:46px 0 6px; }
+  .sign > div { width:40%; text-align:center; font-size:11px; }
+  .sign .line { border-top:1px solid #4b5563; margin-top:40px; padding-top:5px; font-weight:600; }
+  .foot { margin-top:24px; border-top:1px solid #e5e7eb; padding-top:6px; font-size:10px; color:#6b7280; text-align:center; }
+</style></head><body><div class="page">
+<div class="header-block">
+  <div class="form-title">FORM XV</div>
+  <div class="rule-title">[See Rule 77]</div>
+  <div class="sub-title">Service Certificate</div>
+</div>
+
+<div class="field-row"><span class="field-label">Name and address of Contractor:</span><span class="field-val">{{contractorName}}, {{contractorAddress}}</span></div>
+<div class="field-row"><span class="field-label">Name and address of the establishment in/under which contract is carried on:</span><span class="field-val">{{employerName}}, {{siteAddress}}</span></div>
+<div class="field-row"><span class="field-label">Nature and location of work:</span><span class="field-val">{{department}}, {{siteName}}</span></div>
+<div class="field-row"><span class="field-label">Name and address of the workman:</span><span class="field-val">{{workerName}}, {{address}}</span></div>
+<div class="field-row"><span class="field-label">Age or Date of Birth:</span><span class="field-val">{{dob}}</span></div>
+<div class="field-row"><span class="field-label">Identification Marks:</span><span class="field-val">{{identificationMarks}}</span></div>
+<div class="field-row"><span class="field-label">Father’s / Husband’s Name:</span><span class="field-val">{{fatherName}}</span></div>
+<div class="field-row"><span class="field-label">Name and address of Principal Employer:</span><span class="field-val">{{employerName}}, {{siteAddress}}</span></div>
+
+{{formXVTable}}
+
+<div class="sign">
+  <div><div class="line">{{workerName}}</div><div>Signature of Workman</div></div>
+  <div><div class="line">{{contractorName}}</div><div>Signature of Contractor / Authorized Signatory</div></div>
+</div>
+<div class="foot">Generated under Central Contract Labour (Regulation &amp; Abolition) Rules · Bharat Shram Setu</div>
+</div></body></html>`;
 
 const LETTER_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><style>
   * { box-sizing: border-box; }
@@ -76,6 +126,8 @@ const LETTER_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><
   <tr><td>Gross Monthly Wage</td><td>{{wage}}</td></tr>
   <tr><td>Total Monthly CTC</td><td>{{ctc}}</td></tr>
 </table>
+<h3>C. Detailed Salary &amp; CTC Breakdown</h3>
+{{salaryBreakdownTable}}
 <div class="sign">
   <div><div class="line">{{workerName}}</div><div>Worker Signature</div><div class="id">ID: {{workerBssId}}</div></div>
   <div><div class="line">{{contractorName}}</div><div>Contractor Signatory</div><div class="id">ID: {{contractorBssId}}</div></div>
@@ -89,7 +141,8 @@ const SAMPLE: Record<string, string> = {
   letterTitle: 'Appointment Letter', refNo: 'BSS/APPT/00042', issueDate: '01 Sep 2026',
   workerName: 'Ramesh Kumar', workerBssId: 'BSS-W9MQKMHMQYKU', fatherName: 'Suresh Kumar',
   dob: '05 May 1995', gender: 'M', mobile: '9876543210', address: 'Village X, Pune, Maharashtra',
-  designation: 'Mason', department: 'Civil Works', doj: '12 Jun 2026', wage: '₹25,000',
+  designation: 'Mason', department: 'Civil Works', doj: '12 Jun 2026', relievingDate: '25 Sep 2026',
+  identificationMarks: 'Mole on right forearm', wage: '₹25,000',
   costSheetCode: 'BSS-CS-78A9B2', costSheetName: 'Maharashtra Construction — Skilled Grade A',
   costSheetCategory: 'Skilled', costSheetGrade: 'Grade A', ctc: '₹29,850',
   epfEmployer: '₹1,950', esicEmployer: '₹813', netTakeHome: '₹22,400',
@@ -97,6 +150,87 @@ const SAMPLE: Record<string, string> = {
   contractorAddress: 'Plot 4, MIDC, Pune', employerName: 'Adani Infra Pvt Ltd',
   employerBssId: 'BSS-E00000000001',
   siteName: 'Demo Metro Site', siteAddress: 'Sector 21, Navi Mumbai, Maharashtra',
+  formXVTable: `
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:11px;text-align:center;border:1px solid #334155;">
+      <thead>
+        <tr style="background:#f1f5f9;color:#0f172a;font-weight:bold;">
+          <th style="padding:6px;border:1px solid #334155;width:6%;" rowspan="2">Sl. No.</th>
+          <th style="padding:6px;border:1px solid #334155;" colspan="2">Total period for which employed</th>
+          <th style="padding:6px;border:1px solid #334155;width:22%;" rowspan="2">Nature of work done</th>
+          <th style="padding:6px;border:1px solid #334155;width:30%;" rowspan="2">Rate of wages (with particulars of unit in case of Piece-work)</th>
+          <th style="padding:6px;border:1px solid #334155;width:18%;" rowspan="2">Remarks</th>
+        </tr>
+        <tr style="background:#f8fafc;color:#0f172a;font-weight:bold;">
+          <th style="padding:6px;border:1px solid #334155;width:12%;">From</th>
+          <th style="padding:6px;border:1px solid #334155;width:12%;">To</th>
+        </tr>
+        <tr style="background:#e2e8f0;font-weight:600;font-size:10px;color:#475569;">
+          <td style="padding:4px;border:1px solid #334155;">1</td>
+          <td style="padding:4px;border:1px solid #334155;">2</td>
+          <td style="padding:4px;border:1px solid #334155;">3</td>
+          <td style="padding:4px;border:1px solid #334155;">4</td>
+          <td style="padding:4px;border:1px solid #334155;">5</td>
+          <td style="padding:4px;border:1px solid #334155;">6</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:8px 6px;border:1px solid #334155;">1</td>
+          <td style="padding:8px 6px;border:1px solid #334155;">12 Jun 2026</td>
+          <td style="padding:8px 6px;border:1px solid #334155;">25 Sep 2026</td>
+          <td style="padding:8px 6px;border:1px solid #334155;">Masonry &amp; Civil Works</td>
+          <td style="padding:8px 6px;border:1px solid #334155;">₹25,000 / Month</td>
+          <td style="padding:8px 6px;border:1px solid #334155;">Satisfactory Service</td>
+        </tr>
+      </tbody>
+    </table>
+  `,
+  salaryBreakdownTable: `
+    <table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;">
+      <thead>
+        <tr style="background:#073B67;color:#fff;">
+          <th style="padding:6px 10px;text-align:left;border:1px solid #073B67;">Salary Component</th>
+          <th style="padding:6px 10px;text-align:right;border:1px solid #073B67;">Monthly Rate (₹)</th>
+          <th style="padding:6px 10px;text-align:right;border:1px solid #073B67;">Annual Value (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:6px 10px;border:1px solid #cbd5e1;">Basic Wage</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">15,000</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">1,80,000</td></tr>
+        <tr style="background:#f8fafc;"><td style="padding:6px 10px;border:1px solid #cbd5e1;">House Rent Allowance (HRA)</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">6,000</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">72,000</td></tr>
+        <tr><td style="padding:6px 10px;border:1px solid #cbd5e1;">Special / Site Allowance</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">4,000</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">48,000</td></tr>
+        <tr style="background:#f1f5f9;font-weight:bold;"><td style="padding:6px 10px;border:1px solid #94a3b8;color:#073B67;">Gross Monthly Salary</td><td style="padding:6px 10px;text-align:right;border:1px solid #94a3b8;color:#073B67;">25,000</td><td style="padding:6px 10px;text-align:right;border:1px solid #94a3b8;color:#073B67;">3,00,000</td></tr>
+        <tr><td style="padding:6px 10px;border:1px solid #cbd5e1;">Employer EPF Contribution (12%)</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">1,800</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">21,600</td></tr>
+        <tr style="background:#f8fafc;"><td style="padding:6px 10px;border:1px solid #cbd5e1;">Employer ESIC Contribution (3.25%)</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">813</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">9,756</td></tr>
+        <tr style="background:#e0f2fe;font-weight:bold;"><td style="padding:6px 10px;border:1px solid #0284c7;color:#0369a1;">Total Cost to Company (CTC)</td><td style="padding:6px 10px;text-align:right;border:1px solid #0284c7;color:#0369a1;">27,613</td><td style="padding:6px 10px;text-align:right;border:1px solid #0284c7;color:#0369a1;">3,31,356</td></tr>
+      </tbody>
+    </table>
+  `,
+  relievingClearanceTable: `
+    <table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;">
+      <thead>
+        <tr style="background:#073B67;color:#fff;">
+          <th style="padding:6px 10px;text-align:left;border:1px solid #073B67;">Clearance Category</th>
+          <th style="padding:6px 10px;text-align:center;border:1px solid #073B67;">Clearance Status</th>
+          <th style="padding:6px 10px;text-align:left;border:1px solid #073B67;">Remarks / Authority Sign-Off</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:600;">Site Equipment & PPE Assets</td><td style="padding:6px 10px;text-align:center;border:1px solid #cbd5e1;color:#166534;font-weight:bold;">CLEARED</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">All issued items returned in full</td></tr>
+        <tr style="background:#f8fafc;"><td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:600;">Full & Final Wage Settlement</td><td style="padding:6px 10px;text-align:center;border:1px solid #cbd5e1;color:#166534;font-weight:bold;">CLEARED</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">All wages & statutory dues paid</td></tr>
+        <tr><td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:600;">Gate Pass & ID Credentials</td><td style="padding:6px 10px;text-align:center;border:1px solid #cbd5e1;color:#166534;font-weight:bold;">SURRENDERED</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">Identity card surrendered at site gate</td></tr>
+        <tr style="background:#f8fafc;"><td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:600;">Notice Period & Conduct Verification</td><td style="padding:6px 10px;text-align:center;border:1px solid #cbd5e1;color:#166534;font-weight:bold;">SATISFACTORY</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">Good conduct during service</td></tr>
+      </tbody>
+    </table>
+  `,
+  employmentGridTable: `
+    <table style="width:100%;border-collapse:collapse;margin:10px 0;font-size:12.5px;">
+      <tbody>
+        <tr><td style="border:1px solid #94a3b8;padding:6px 10px;background:#F0F4FA;color:#073B67;font-weight:600;width:35%;">Contractor / Service Provider</td><td style="border:1px solid #94a3b8;padding:6px 10px;">BuildWell Contractors Pvt Ltd (BSS-C00000000004)</td></tr>
+        <tr><td style="border:1px solid #94a3b8;padding:6px 10px;background:#F0F4FA;color:#073B67;font-weight:600;">Principal Employer</td><td style="border:1px solid #94a3b8;padding:6px 10px;">Adani Infra Pvt Ltd (BSS-E00000000001)</td></tr>
+        <tr><td style="border:1px solid #94a3b8;padding:6px 10px;background:#F0F4FA;color:#073B67;font-weight:600;">Project Site & Address</td><td style="border:1px solid #94a3b8;padding:6px 10px;">Demo Metro Site, Sector 21, Navi Mumbai, Maharashtra</td></tr>
+      </tbody>
+    </table>
+  `,
 };
 
 function renderPreview(htmlText: string, logoUrl: string): string {
@@ -211,6 +345,24 @@ export default function LetterTemplatesPage() {
     finally { setBusy(false); }
   }
 
+  async function seedAllStatesDefaults(overwrite = false) {
+    if (overwrite && !confirm("Are you sure you want to delete ALL existing state templates and replace them with statutory Form XV & Salary Breakdown defaults?")) {
+      return;
+    }
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const res = await fetch(`/api/admin/letter-templates/seed${overwrite ? '?overwrite=true' : ''}`, { method: "POST" });
+      const body = await res.json().catch(() => ({})) as { createdCount?: number; message?: string; error?: string };
+      if (!res.ok) throw new Error(body.error ?? "Seeding default templates failed.");
+      setNotice(body.message ?? `Successfully seeded default templates across all states!`);
+      void load();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Seeding default templates failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return <div className="space-y-6 pb-10">
     <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div>
@@ -218,7 +370,15 @@ export default function LetterTemplatesPage() {
         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Letter Templates</h1>
         <p className="text-sm text-gray-500 mt-1">State-wise HTML templates for Appointment and Experience (releasing) letters. Each state allows <strong>1 Appointment Letter</strong> and <strong>1 Releasing Letter</strong> max.</p>
       </div>
-      <div>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          disabled={busy}
+          onClick={() => void seedAllStatesDefaults(true)}
+          title="Seed and replace default statutory Form XV & Appointment templates across all states"
+          className="h-10 px-4 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-900 text-xs font-bold flex items-center gap-1.5 shadow-sm hover:bg-indigo-100 transition-colors disabled:opacity-60"
+        >
+          <Copy size={14} /> Seed / Replace with Defaults
+        </button>
         <button
           onClick={() => {
             const free = firstFreeStateType();
@@ -364,12 +524,12 @@ export default function LetterTemplatesPage() {
           </div>
 
           <DocumentStudioEditor
-            key={edit.id ?? "new"}
+            key={`${edit.id || 'new'}-${edit.letterType || 'APPOINTMENT'}`}
             value={edit.html ?? ""}
             onChange={html => setEdit(v => ({ ...v, html }))}
             tokens={LETTER_TOKENS}
             renderPreview={html => renderPreview(html, edit.logoUrl ?? "")}
-            defaultHtml={LETTER_STARTER_HTML}
+            defaultHtml={edit.letterType === "EXPERIENCE" ? FORM_XV_STARTER_HTML : LETTER_STARTER_HTML}
           />
         </div>
         <footer className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2"><button onClick={() => setEdit(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button><button disabled={busy || !edit.name?.trim() || stateTypeTaken(edit.state ?? "", edit.letterType ?? "APPOINTMENT", edit.id)} onClick={() => void save()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? "Saving…" : "Save template"}</button></footer>

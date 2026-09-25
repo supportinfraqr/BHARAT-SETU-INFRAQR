@@ -194,6 +194,168 @@ export default function DocumentStudioEditor({
     }
   }
 
+  function getSelectedElement<T extends HTMLElement>(tagName: string): T | null {
+    if (typeof window === 'undefined' || !canvasRef.current) return null;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return null;
+    let node: Node | null = sel.getRangeAt(0).startContainer;
+    while (node && node !== canvasRef.current) {
+      if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).tagName === tagName.toUpperCase()) {
+        return node as T;
+      }
+      node = node.parentNode;
+    }
+    return null;
+  }
+
+  function handleAddRow(position: 'above' | 'below') {
+    const tr = getSelectedElement<HTMLTableRowElement>('TR');
+    if (!tr) {
+      alert('Please place your cursor inside a table row to add a row.');
+      return;
+    }
+    const newTr = tr.cloneNode(true) as HTMLTableRowElement;
+    Array.from(newTr.cells).forEach(cell => {
+      cell.innerHTML = 'Data';
+    });
+    if (position === 'above') tr.before(newTr);
+    else tr.after(newTr);
+    emitRich();
+  }
+
+  function handleDeleteRow() {
+    const tr = getSelectedElement<HTMLTableRowElement>('TR');
+    if (!tr) {
+      alert('Please place your cursor inside a table row to delete it.');
+      return;
+    }
+    tr.remove();
+    emitRich();
+  }
+
+  function handleAddCol(position: 'left' | 'right') {
+    const td = getSelectedElement<HTMLTableCellElement>('TD') || getSelectedElement<HTMLTableCellElement>('TH');
+    const table = getSelectedElement<HTMLTableElement>('TABLE');
+    if (!td || !table) {
+      alert('Please place your cursor inside a table cell to add a column.');
+      return;
+    }
+    const colIdx = td.cellIndex;
+    const rows = table.querySelectorAll('tr');
+    rows.forEach(r => {
+      const targetCell = r.cells[colIdx];
+      if (targetCell) {
+        const isHeader = targetCell.tagName === 'TH';
+        const newCell = document.createElement(isHeader ? 'th' : 'td');
+        newCell.innerHTML = isHeader ? 'Header' : 'Data';
+        newCell.style.cssText = targetCell.style.cssText;
+        if (position === 'left') targetCell.before(newCell);
+        else targetCell.after(newCell);
+      }
+    });
+    emitRich();
+  }
+
+  function handleDeleteCol() {
+    const td = getSelectedElement<HTMLTableCellElement>('TD') || getSelectedElement<HTMLTableCellElement>('TH');
+    const table = getSelectedElement<HTMLTableElement>('TABLE');
+    if (!td || !table) {
+      alert('Please place your cursor inside a table cell to delete a column.');
+      return;
+    }
+    const colIdx = td.cellIndex;
+    const rows = table.querySelectorAll('tr');
+    rows.forEach(r => {
+      if (r.cells[colIdx]) r.cells[colIdx].remove();
+    });
+    emitRich();
+  }
+
+  function insertSalaryTable() {
+    const html = `<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;">
+      <thead>
+        <tr style="background:#073B67;color:#ffffff;">
+          <th style="padding:6px 10px;text-align:left;border:1px solid #073B67;">Salary Component</th>
+          <th style="padding:6px 10px;text-align:right;border:1px solid #073B67;">Monthly Rate (₹)</th>
+          <th style="padding:6px 10px;text-align:right;border:1px solid #073B67;">Annual Value (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:6px 10px;border:1px solid #cbd5e1;">Basic Wage</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">15,000</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">1,80,000</td></tr>
+        <tr style="background:#f8fafc;"><td style="padding:6px 10px;border:1px solid #cbd5e1;">House Rent Allowance (HRA)</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">6,000</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">72,000</td></tr>
+        <tr><td style="padding:6px 10px;border:1px solid #cbd5e1;">Special / Site Allowance</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">4,000</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">48,000</td></tr>
+        <tr style="background:#f1f5f9;font-weight:bold;"><td style="padding:6px 10px;border:1px solid #94a3b8;color:#073B67;">Gross Monthly Salary</td><td style="padding:6px 10px;text-align:right;border:1px solid #94a3b8;color:#073B67;">25,000</td><td style="padding:6px 10px;text-align:right;border:1px solid #94a3b8;color:#073B67;">3,00,000</td></tr>
+        <tr><td style="padding:6px 10px;border:1px solid #cbd5e1;">Employer EPF (12%)</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">1,800</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">21,600</td></tr>
+        <tr style="background:#f8fafc;"><td style="padding:6px 10px;border:1px solid #cbd5e1;">Employer ESIC (3.25%)</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">813</td><td style="padding:6px 10px;text-align:right;border:1px solid #cbd5e1;">9,756</td></tr>
+        <tr style="background:#e0f2fe;font-weight:bold;"><td style="padding:6px 10px;border:1px solid #0284c7;color:#0369a1;">Total Cost to Company (CTC)</td><td style="padding:6px 10px;text-align:right;border:1px solid #0284c7;color:#0369a1;">27,613</td><td style="padding:6px 10px;text-align:right;border:1px solid #0284c7;color:#0369a1;">3,31,356</td></tr>
+      </tbody>
+    </table><p><br></p>`;
+    cmd('insertHTML', html);
+  }
+
+  function insertRelievingTable() {
+    const html = `<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;">
+      <thead>
+        <tr style="background:#073B67;color:#ffffff;">
+          <th style="padding:6px 10px;text-align:left;border:1px solid #073B67;">Clearance Category</th>
+          <th style="padding:6px 10px;text-align:center;border:1px solid #073B67;">Clearance Status</th>
+          <th style="padding:6px 10px;text-align:left;border:1px solid #073B67;">Remarks / Verification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:600;">Site Equipment & Tools Handover</td><td style="padding:6px 10px;text-align:center;border:1px solid #cbd5e1;color:#166534;font-weight:bold;">CLEARED</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">All issued items returned in full</td></tr>
+        <tr style="background:#f8fafc;"><td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:600;">Full & Final Wage Settlement</td><td style="padding:6px 10px;text-align:center;border:1px solid #cbd5e1;color:#166534;font-weight:bold;">CLEARED</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">All wages & statutory dues paid</td></tr>
+        <tr><td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:600;">Gate Pass & ID Credentials</td><td style="padding:6px 10px;text-align:center;border:1px solid #cbd5e1;color:#166534;font-weight:bold;">SURRENDERED</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">Identity card surrendered at site</td></tr>
+        <tr style="background:#f8fafc;"><td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:600;">Notice Period & Conduct Verification</td><td style="padding:6px 10px;text-align:center;border:1px solid #cbd5e1;color:#166534;font-weight:bold;">SATISFACTORY</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">Good conduct during service</td></tr>
+      </tbody>
+    </table><p><br></p>`;
+    cmd('insertHTML', html);
+  }
+
+  function insertFormXVTable() {
+    const html = `<table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:11px;text-align:center;border:1px solid #334155;">
+      <thead>
+        <tr style="background:#f1f5f9;color:#0f172a;font-weight:bold;">
+          <th style="padding:8px 6px;border:1px solid #334155;width:6%;" rowspan="2">Sl. No.</th>
+          <th style="padding:8px 6px;border:1px solid #334155;" colspan="2">Total period for which employed</th>
+          <th style="padding:8px 6px;border:1px solid #334155;width:22%;" rowspan="2">Nature of work done</th>
+          <th style="padding:8px 6px;border:1px solid #334155;width:30%;" rowspan="2">Rate of wages (with particulars of unit in case of Piece-work)</th>
+          <th style="padding:8px 6px;border:1px solid #334155;width:18%;" rowspan="2">Remarks</th>
+        </tr>
+        <tr style="background:#f8fafc;color:#0f172a;font-weight:bold;">
+          <th style="padding:6px;border:1px solid #334155;width:12%;">From</th>
+          <th style="padding:6px;border:1px solid #334155;width:12%;">To</th>
+        </tr>
+        <tr style="background:#e2e8f0;font-weight:600;font-size:10px;color:#475569;">
+          <td style="padding:4px;border:1px solid #334155;">1</td>
+          <td style="padding:4px;border:1px solid #334155;">2</td>
+          <td style="padding:4px;border:1px solid #334155;">3</td>
+          <td style="padding:4px;border:1px solid #334155;">4</td>
+          <td style="padding:4px;border:1px solid #334155;">5</td>
+          <td style="padding:4px;border:1px solid #334155;">6</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:8px 6px;border:1px solid #334155;">1</td>
+          <td style="padding:8px 6px;border:1px solid #334155;">{{doj}}</td>
+          <td style="padding:8px 6px;border:1px solid #334155;">{{relievingDate}}</td>
+          <td style="padding:8px 6px;border:1px solid #334155;">{{designation}}</td>
+          <td style="padding:8px 6px;border:1px solid #334155;">{{wage}} / Month</td>
+          <td style="padding:8px 6px;border:1px solid #334155;">Satisfactory</td>
+        </tr>
+      </tbody>
+    </table><p><br></p>`;
+    cmd('insertHTML', html);
+  }
+
+  function insertCustomGrid(cols: number) {
+    const headers = Array.from({ length: cols }, (_, i) => `<th style="padding:6px 10px;border:1px solid #073B67;background:#073B67;color:#fff;text-align:left;">Column ${i + 1}</th>`).join('');
+    const cells = Array.from({ length: cols }, () => `<td style="padding:6px 10px;border:1px solid #cbd5e1;">Value</td>`).join('');
+    const html = `<table style="width:100%;border-collapse:collapse;margin:10px 0;font-size:12px;"><thead><tr>${headers}</tr></thead><tbody><tr>${cells}</tr><tr>${cells}</tr></tbody></table><p><br></p>`;
+    cmd('insertHTML', html);
+  }
+
   const tool = 'h-7 px-2 rounded border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-100 bg-white';
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -209,6 +371,8 @@ export default function DocumentStudioEditor({
     return [...map.entries()];
   }, [filtered]);
 
+  const [tableMenuOpen, setTableMenuOpen] = useState(false);
+
   return <div className="space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex gap-1 bg-gray-100 p-0.5 rounded-lg">
@@ -219,7 +383,7 @@ export default function DocumentStudioEditor({
     </div>
 
     {tab === 'visual' && (
-      <div className="flex flex-wrap items-center gap-1 p-2 border border-gray-200 rounded-lg bg-gray-50">
+      <div className="flex flex-wrap items-center gap-1 p-2 border border-gray-200 rounded-lg bg-gray-50 relative">
         <button type="button" className={tool} onClick={() => cmd('bold')}><b>B</b></button>
         <button type="button" className={tool} onClick={() => cmd('italic')}><i>I</i></button>
         <button type="button" className={tool} onClick={() => cmd('underline')}><u>U</u></button>
@@ -232,7 +396,87 @@ export default function DocumentStudioEditor({
         <button type="button" className={tool} onClick={() => cmd('insertOrderedList')}>1. List</button>
         <button type="button" className={tool} onClick={() => cmd('justifyLeft')}>Left</button>
         <button type="button" className={tool} onClick={() => cmd('justifyCenter')}>Center</button>
-        <button type="button" className={tool} onClick={() => cmd('insertHTML', '<table style="width:100%;border-collapse:collapse"><tbody><tr><td style="border:1px solid #999;padding:5px">Label</td><td style="border:1px solid #999;padding:5px">Value</td></tr></tbody></table><p><br></p>')}>Table</button>
+        
+        {/* Table & Column Dropdown */}
+        <div className="relative inline-block">
+          <button
+            type="button"
+            className={`${tool} text-[#073B67] font-bold bg-blue-50/70 border-blue-200 flex items-center gap-1`}
+            onClick={() => setTableMenuOpen(v => !v)}
+          >
+            📊 Insert Table / Columns ▾
+          </button>
+          {tableMenuOpen && (
+            <div className="absolute top-full left-0 mt-1 w-60 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-1.5 space-y-1 text-xs">
+              <p className="px-2 py-1 text-[10px] font-extrabold uppercase text-gray-400">Preset Tables</p>
+              <button
+                type="button"
+                onClick={() => { insertSalaryTable(); setTableMenuOpen(false); }}
+                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-blue-50 font-semibold text-gray-800 flex items-center justify-between"
+              >
+                <span>💰 Salary & CTC Breakdown</span>
+                <span className="text-[10px] text-blue-600">Preset</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { insertFormXVTable(); setTableMenuOpen(false); }}
+                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-blue-50 font-semibold text-gray-800 flex items-center justify-between"
+              >
+                <span>📜 Form XV Service Certificate</span>
+                <span className="text-[10px] text-blue-600">CLRA</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { insertRelievingTable(); setTableMenuOpen(false); }}
+                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-blue-50 font-semibold text-gray-800 flex items-center justify-between"
+              >
+                <span>📋 Relieving Clearance Table</span>
+                <span className="text-[10px] text-blue-600">Preset</span>
+              </button>
+              
+              <p className="px-2 py-1 text-[10px] font-extrabold uppercase text-gray-400 border-t border-gray-100 pt-1">Custom Grids</p>
+              <button
+                type="button"
+                onClick={() => { insertCustomGrid(2); setTableMenuOpen(false); }}
+                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-gray-100 text-gray-700"
+              >
+                📐 2-Column Key/Value Grid
+              </button>
+              <button
+                type="button"
+                onClick={() => { insertCustomGrid(3); setTableMenuOpen(false); }}
+                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-gray-100 text-gray-700"
+              >
+                📊 3-Column Table
+              </button>
+              <button
+                type="button"
+                onClick={() => { insertCustomGrid(4); setTableMenuOpen(false); }}
+                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-gray-100 text-gray-700"
+              >
+                📈 4-Column Table
+              </button>
+              <button
+                type="button"
+                onClick={() => { insertCustomGrid(5); setTableMenuOpen(false); }}
+                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-gray-100 text-gray-700"
+              >
+                🔢 5-Column Excel Grid
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Live Table Manipulation Tools */}
+        <span className="w-px h-5 bg-gray-200 mx-1" />
+        <button type="button" title="Add Row Above" className={tool} onClick={() => handleAddRow('above')}>+ Row Above</button>
+        <button type="button" title="Add Row Below" className={tool} onClick={() => handleAddRow('below')}>+ Row Below</button>
+        <button type="button" title="Delete Current Row" className={`${tool} text-red-600`} onClick={handleDeleteRow}>- Row</button>
+        <button type="button" title="Add Column Left" className={tool} onClick={() => handleAddCol('left')}>+ Col Left</button>
+        <button type="button" title="Add Column Right" className={tool} onClick={() => handleAddCol('right')}>+ Col Right</button>
+        <button type="button" title="Delete Current Column" className={`${tool} text-red-600`} onClick={handleDeleteCol}>- Col</button>
+
+        <span className="w-px h-5 bg-gray-200 mx-1" />
         <button type="button" className={`${tool} text-blue-700 bg-blue-50/80 border-blue-200`} onClick={() => insertToken('{{logoUrl}}')}>+ Logo Image</button>
         <span className="w-px h-5 bg-gray-200 mx-1" />
         <button type="button" className={tool} onClick={() => cmd('undo')}>Undo</button>

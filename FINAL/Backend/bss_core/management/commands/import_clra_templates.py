@@ -110,6 +110,23 @@ def _title(filename):
     return cleaned[:200] if len(cleaned) > 3 else ""
 
 
+def canon_form_code(code):
+    """Normalise a form code/label to its canonical ``FORM <roman>[-A|-B]`` form.
+
+    Handles the messy source names (``FORM No. XXVI Register Of Employment`` →
+    ``FORM XXVI``, ``Form XIII`` → ``FORM XIII``, ``FORM VI A`` → ``FORM VI-A``)
+    and bare tokens (``XIII`` → ``FORM XIII``). Letter forms (``FORM A``…) kept."""
+    text = str(code or "").upper().replace("–", "-").strip()
+    match = re.search(r"FORM\s+(?:NO\.?\s*)?([IVXLCDM]+)\s*-?\s*([AB])?\b", text)
+    if match:
+        return f"FORM {match.group(1)}" + (f"-{match.group(2)}" if match.group(2) else "")
+    match = re.match(r"^([IVXLCDM]+)\s*-?\s*([AB])?$", text)
+    if match:
+        return f"FORM {match.group(1)}" + (f"-{match.group(2)}" if match.group(2) else "")
+    match = re.fullmatch(r"([A-Z])", text)
+    return f"FORM {match.group(1)}" if match else text
+
+
 def _header_score(values):
     joined = " ".join(values).lower()
     score = len(values)
@@ -374,6 +391,21 @@ def _faithful_form_html(blocks, title, form_code, state, template_type):
 </body></html>"""
 
 
+def _faithful_register_html(blocks, title, form_code):
+    """Faithful default layout for a **register** stored as a docx.
+
+    Keeps the printed preamble exactly as it reads (FORM code, ``[See rule …]``,
+    title, contractor/establishment header lines) and turns the source data table
+    into the live ``{{HEAD}}`` / ``{{ROWS}}`` grid the renderer fills with the
+    master-file rows."""
+    html = _faithful_form_html(blocks, title or form_code, form_code, "", "register")
+    grid = ('<table class="grid"><thead><tr>{{HEAD}}</tr></thead>'
+            '<tbody>{{ROWS}}</tbody></table>')
+    # The register's bordered table is rendered with class "grid"; swap the first
+    # one (the data table) for the live grid.
+    return re.sub(r'<table class="grid">.*?</table>', grid, html, count=1, flags=re.S)
+
+
 def _faithful_xlsx_form_html(rows, title, form_code):
     """Reproduce a printable form stored as a spreadsheet grid (e.g. FORM XIX
     wage slip) rendering texts in reading order, columns preserved roughly,
@@ -464,6 +496,11 @@ class Command(BaseCommand):
         parser.add_argument("--zip", dest="zip_path", default=str(DEFAULT_ZIP))
         parser.add_argument("--dir", dest="dir_path")
         parser.add_argument("--state", dest="only_state", help="Import a single state only.")
+        parser.add_argument("--forms", dest="forms",
+                            help="Comma/space separated canonical form codes to import "
+                                 "(e.g. \"XIII,XVI\" or \"FORM XIII, FORM XVI\").")
+        parser.add_argument("--only-missing", dest="only_missing", action="store_true",
+                            help="Create templates that don't exist yet; never overwrite existing rows.")
         parser.add_argument("--dry-run", dest="dry_run", action="store_true",
                             help="Classify and print, do not write to the database.")
         parser.add_argument("--only-if-empty", dest="only_if_empty", action="store_true",
@@ -504,6 +541,9 @@ class Command(BaseCommand):
                     entries.append((parts[-2], parts[-1], archive.read(name)))
 
         only_state = options.get("only_state")
+        forms_arg = options.get("forms") or ""
+        forms_filter = {canon_form_code(tok) for tok in re.split(r"[,\s]+", forms_arg) if tok.strip()}
+        only_missing = bool(options.get("only_missing"))
         created = updated = skipped = 0
         by_state = {}
         for state, filename, data in entries:
@@ -512,6 +552,8 @@ class Command(BaseCommand):
             if filename.startswith("~$"):
                 continue
             form_code = _form_code(filename)
+            if forms_filter and canon_form_code(form_code) not in forms_filter:
+                continue
             title = _title(filename)
             classified = _classify(filename, data)
             if classified is None:
@@ -540,6 +582,10 @@ class Command(BaseCommand):
             elif fields and not columns:
                 html = _faithful_form_html(_docx_blocks(data), title or form_code,
                                            form_code, state, template_type)
+            elif columns and template_type == "register" and classified["source_format"] == "docx":
+                # A register stored as a Word doc: keep its printed preamble and
+                # turn its table into the live {{HEAD}}/{{ROWS}} grid.
+                html = _faithful_register_html(_docx_blocks(data), title or form_code, form_code)
             elif not columns and not fields and classified["source_format"] in ("xlsx", "xls"):
                 rows = (_parse_xlsx(data) if classified["source_format"] == "xlsx"
                         else _parse_xls(data))
@@ -560,6 +606,8 @@ class Command(BaseCommand):
                 "per_row": form_code.upper() in ("FORM X", "FORM XIX"),
             }
             existing = RegisterTemplate.objects.filter(state=state, form_code=form_code).first()
+            if only_missing and existing is not None:
+                continue
             if existing is None:
                 obj = RegisterTemplate(state=state, form_code=form_code, template_type=template_type,
                                        html=html, **defaults)

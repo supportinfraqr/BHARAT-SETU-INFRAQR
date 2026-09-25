@@ -87,6 +87,7 @@ _v1_patterns = _v1(
     ("admin/masters/<str:key>/<int:pk>", v1_bridge.admin_master_detail, "v1_admin_master_detail"),
     ("admin/masters/<str:key>/<int:pk>/file", v1_bridge.admin_master_file, "v1_admin_master_file"),
     ("admin/register-templates", v1_bridge.register_templates, "v1_register_templates"),
+    ("admin/register-templates/reset-defaults", v1_bridge.register_template_reset_defaults, "v1_register_template_reset_defaults"),
     ("admin/register-templates/<int:template_id>", v1_bridge.register_template_detail, "v1_register_template_detail"),
     ("admin/state-applicability", v1_bridge.state_applicability, "v1_state_applicability"),
     ("admin/activity", v1_bridge.admin_activity, "v1_admin_activity"),
