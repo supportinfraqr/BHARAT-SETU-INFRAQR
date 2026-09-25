@@ -1167,8 +1167,25 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
               <SearchableSelect
                 value={draft.fieldMappings.find(m => m.column === draft.columns[selectedCol])?.fieldKey ?? ''}
                 options={[
-                  ...fieldKeys.map(k => ({ value: k, label: k })),
-                  ...backendKeys.map(k => ({ value: `backend:${k}`, label: `backend · ${k}` })),
+                  ...fieldKeys.map(k => {
+                    if (k.startsWith('master_col_bss.') || k.startsWith('worker_bssid.') || k.startsWith('contractor_bssid.')) {
+                      return { value: k, label: k, category: 'master_entity' as const };
+                    }
+                    if (k.startsWith('self.') || k.startsWith('contractor.')) {
+                      return { value: k, label: k, category: 'self_contractor' as const };
+                    }
+                    return { value: k, label: k, category: 'master_column' as const };
+                  }),
+                  ...backendKeys.map(k => ({ value: `backend:${k}`, label: `backend · ${k}`, category: 'system' as const })),
+                  { value: 'self.bss_id', label: 'self.bss_id · Current Contractor BSS ID', category: 'self_contractor' },
+                  { value: 'self.name', label: 'self.name · Current Contractor Name', category: 'self_contractor' },
+                  { value: 'self.license_no', label: 'self.license_no · Current Contractor CLRA License No', category: 'self_contractor' },
+                  { value: 'self.pf_code', label: 'self.pf_code · Current Contractor PF Code', category: 'self_contractor' },
+                  { value: 'self.esic_code', label: 'self.esic_code · Current Contractor ESIC Code', category: 'self_contractor' },
+                  { value: 'self.address', label: 'self.address · Current Contractor Address', category: 'self_contractor' },
+                  { value: 'master_col_bss.contractor_name', label: 'master_col_bss.contractor_name · Contractor Name Lookup', category: 'master_entity' },
+                  { value: 'master_col_bss.employer_name', label: 'master_col_bss.employer_name · Employer Name Lookup', category: 'master_entity' },
+                  { value: 'master_col_bss.site_name', label: 'master_col_bss.site_name · Site Name Lookup', category: 'master_entity' },
                 ]}
                 onSelect={val => {
                   const colName = draft.columns[selectedCol];
