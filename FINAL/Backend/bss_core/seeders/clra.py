@@ -36,6 +36,9 @@ CLRA_DEFAULT_FORMS: dict[str, list[dict]] = {
 # CLRA records and every state's master file feeds them row by row.
 CLRA_ALWAYS_FORMS = ["FORM XIII", "FORM XVI", "FORM XVII"]
 
+# Forms excluded from all seeding (never created, and removed if already present).
+CLRA_EXCLUDE_FORMS = {"FORM XII"}
+
 DEFAULT_ARCHIVE = "/app/data/clra-registers.zip"
 
 
@@ -68,7 +71,10 @@ def _excel_forms_by_state(archive: str) -> dict[str, set[str]]:
             base = parts[-1]
             if base.startswith("~$") or not base.lower().endswith((".xls", ".xlsx")):
                 continue
-            found.setdefault(parts[-2], set()).add(canon_form_code(base).replace("FORM ", ""))
+            code = canon_form_code(base)
+            if code in CLRA_EXCLUDE_FORMS:
+                continue
+            found.setdefault(parts[-2], set()).add(code.replace("FORM ", ""))
     return found
 
 
@@ -108,9 +114,11 @@ def seed() -> int:
     archive = archive_path()
     if not archive:
         return 0
+    # Drop any excluded forms that were seeded previously (e.g. FORM XII).
+    RegisterTemplate.objects.filter(form_code__in=CLRA_EXCLUDE_FORMS).delete()
     before = RegisterTemplate.objects.count()
     excel = _excel_forms_by_state(archive)
-    always = [f.replace("FORM ", "") for f in CLRA_ALWAYS_FORMS]
+    always = [f.replace("FORM ", "") for f in CLRA_ALWAYS_FORMS if f not in CLRA_EXCLUDE_FORMS]
     for state in sorted(set(CLRA_DEFAULT_FORMS) | set(excel)):
         tokens = set(always)
         tokens |= excel.get(state, set())
@@ -137,9 +145,13 @@ def reset_all() -> int:
     archive = archive_path()
     if not archive:
         return 0
+    RegisterTemplate.objects.filter(form_code__in=CLRA_EXCLUDE_FORMS).delete()
     by_state: dict[str, set[str]] = {}
     for state, form_code in RegisterTemplate.objects.values_list("state", "form_code"):
-        by_state.setdefault(state, set()).add(canon_form_code(form_code).replace("FORM ", ""))
+        code = canon_form_code(form_code)
+        if code in CLRA_EXCLUDE_FORMS:
+            continue
+        by_state.setdefault(state, set()).add(code.replace("FORM ", ""))
     for state, codes in by_state.items():
         if not codes:
             continue
