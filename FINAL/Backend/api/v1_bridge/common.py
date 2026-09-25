@@ -439,10 +439,11 @@ def _mobile_credential_for(user):
 class PortalMutationError(Exception):
     """Raised by resource handlers to reject a mutation with a clear message."""
 
-    def __init__(self, message, status_code=400):
+    def __init__(self, message, status_code=400, extra=None):
         super().__init__(message)
         self.message = message
         self.status_code = status_code
+        self.extra = extra or {}
 
 
 def _nominee_doc_blob(docs):

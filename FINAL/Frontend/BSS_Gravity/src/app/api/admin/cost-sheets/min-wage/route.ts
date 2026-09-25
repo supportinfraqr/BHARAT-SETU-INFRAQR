@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const config = getRuntimeConfig();
     const params = new URL(request.url).searchParams;
     const query = new URLSearchParams();
-    for (const key of ['state', 'category', 'date']) {
+    for (const key of ['state', 'category', 'date', 'zone', 'grade', 'industry']) {
       const value = params.get(key);
       if (value) query.set(key, value);
     }

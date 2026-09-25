@@ -6,7 +6,7 @@ import { requireApiSession } from '@/server/session';
 
 /** Master keys the admin portal exposes (mirrors api/v1_bridge/admin_masters.py). */
 export const ADMIN_MASTER_KEYS = new Set([
-  'party', 'statutory', 'professional-tax', 'lwf', 'license', 'minimum-wage', 'document',
+  'party', 'statutory', 'professional-tax', 'lwf', 'license', 'minimum-wage',
   'register-doc', 'compliance', 'employer-document', 'employer-register', 'employer-act',
   'users',
 ]);

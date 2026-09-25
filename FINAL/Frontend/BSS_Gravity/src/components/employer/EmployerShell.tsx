@@ -16,7 +16,7 @@ const workforceGroup = { key:'nav.workforce', icon:Network, items:[
   ['nav.workers','/employer/workers'],
   ['nav.contractors','/employer/contractors'],
   ['Cost Sheets','/employer/cost-sheets'],
-  ['nav.gatePass','/employer/gate-pass'],['Gate Scan','/employer/gate-scan'],['Compliance Checklists','/employer/compliance-checklists'],
+  ['nav.gatePass','/employer/gate-pass'],['Gate Scan','/employer/gate-scan'],['Worker Compliance Checklists','/employer/worker-compliance-checklists'],
   ['nav.grievanceCentre','/employer/grievances'],
 ] };
 const sitesGroup = { key:'nav.sites', icon:LayoutDashboard, items:[
@@ -25,8 +25,6 @@ const sitesGroup = { key:'nav.sites', icon:LayoutDashboard, items:[
 ] };
 const complianceGroup = { key:'nav.compliance', icon:ClipboardCheck, items:[
   ['CLRA Registers','/employer/clra-registers'],
-  ['nav.contractorCompliance','/employer/compliance'],
-  ['nav.labourCompliance','/employer/labour-compliance'],
   ['nav.complianceSubmission','/employer/compliance-submission'],
 ] };
 const qrGroup = { key:'nav.qrSystem', icon:Network, items:[

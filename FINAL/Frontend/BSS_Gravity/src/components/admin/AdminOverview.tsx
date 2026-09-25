@@ -11,7 +11,6 @@ const MASTER_LINKS: Array<[string, string, string, typeof Users]> = [
   ['lwf', 'LWF Master', '/admin/masters/lwf', Landmark],
   ['license', 'License Management', '/admin/masters/license', FileText],
   ['minimum-wage', 'Minimum Wage', '/admin/masters/minimum-wage', FileText],
-  ['document', 'Document Master', '/admin/masters/document', FileText],
   ['compliance', 'Compliance Master', '/admin/masters/compliance', ShieldCheck],
   ['register-doc', 'CLRA Templates', '/admin/masters/register-template', BookOpenCheck],
 ];

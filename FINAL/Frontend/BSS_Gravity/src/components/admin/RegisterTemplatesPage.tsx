@@ -473,7 +473,7 @@ function renderPreview(mode: 'doc' | 'register', body: string, b: BuilderDraft):
 }
 
 // Searchable variable picker: an interactive combobox with floating filtered dropdown menu.
-type PickerOption = { value: string; label: string; category?: 'master_list' | 'master_entity' | 'master_column' | 'system' };
+type PickerOption = { value: string; label: string; category?: 'master_list' | 'master_entity' | 'master_column' | 'self_contractor' | 'system' };
 
 function SearchableSelect({ value, options, onSelect, placeholder = 'Search…', width = 'w-44' }: {
   value?: string; options: PickerOption[]; onSelect: (value: string) => void; placeholder?: string; width?: string;
@@ -509,6 +509,7 @@ function SearchableSelect({ value, options, onSelect, placeholder = 'Search…',
 
   const masterColumnMatches = matches.filter(o => o.category === 'master_column' || o.category === 'master_list');
   const masterEntityMatches = matches.filter(o => o.category === 'master_entity');
+  const selfContractorMatches = matches.filter(o => o.category === 'self_contractor');
   const systemMatches = matches.filter(o => o.category === 'system' || !o.category);
 
   const displayVal = isOpen ? q : (selectedOpt ? selectedOpt.label : (value || ''));
@@ -593,6 +594,32 @@ function SearchableSelect({ value, options, onSelect, placeholder = 'Search…',
                       className={`p-2 hover:bg-emerald-50 cursor-pointer transition-colors flex flex-col gap-0.5 ${o.value === value ? 'bg-emerald-50/90 font-bold text-emerald-900 border-l-2 border-emerald-600' : 'text-slate-800'}`}
                     >
                       <span className="font-mono text-[11px] font-semibold text-emerald-700">{o.value}</span>
+                      {o.label !== o.value && (
+                        <span className="text-[10px] text-slate-500">{o.label}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 3. Logged-In Contractor Session Tokens (self.*) */}
+              {selfContractorMatches.length > 0 && (
+                <div>
+                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-purple-900 bg-purple-50 border-y border-purple-200 sticky top-0 backdrop-blur-xs">
+                    👤 Logged-In Contractor Session (self.*) ({selfContractorMatches.length})
+                  </div>
+                  {selfContractorMatches.map(o => (
+                    <div
+                      key={o.value}
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => {
+                        onSelect(o.value);
+                        setQ('');
+                        setIsOpen(false);
+                      }}
+                      className={`p-2 hover:bg-purple-50 cursor-pointer transition-colors flex flex-col gap-0.5 ${o.value === value ? 'bg-purple-50/90 font-bold text-purple-900 border-l-2 border-purple-600' : 'text-slate-800'}`}
+                    >
+                      <span className="font-mono text-[11px] font-semibold text-purple-700">{o.value}</span>
                       {o.label !== o.value && (
                         <span className="text-[10px] text-slate-500">{o.label}</span>
                       )}
@@ -864,6 +891,19 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
     { value: '{{master_col_bss.worker_esic}}', label: '{{master_col_bss.worker_esic}} · Worker ESIC IP Number', category: 'master_entity' },
     { value: '{{master_col_bss.worker_designation}}', label: '{{master_col_bss.worker_designation}} · Worker Designation / Trade', category: 'master_entity' },
     { value: '{{master_col_bss.worker_doj}}', label: '{{master_col_bss.worker_doj}} · Worker Date of Joining', category: 'master_entity' },
+
+    // Logged-In Contractor Session Tokens (self.* concept — current contractor user context)
+    { value: '{{self.bss_id}}', label: '{{self.bss_id}} · Current Contractor BSS ID (Logged-in)', category: 'self_contractor' },
+    { value: '{{self.name}}', label: '{{self.name}} · Current Contractor Name (Logged-in)', category: 'self_contractor' },
+    { value: '{{self.company_name}}', label: '{{self.company_name}} · Current Contractor Company Name', category: 'self_contractor' },
+    { value: '{{self.license_no}}', label: '{{self.license_no}} · Current Contractor CLRA License No.', category: 'self_contractor' },
+    { value: '{{self.pan}}', label: '{{self.pan}} · Current Contractor PAN Number', category: 'self_contractor' },
+    { value: '{{self.gstin}}', label: '{{self.gstin}} · Current Contractor GSTIN Number', category: 'self_contractor' },
+    { value: '{{self.email}}', label: '{{self.email}} · Current Contractor Email Address', category: 'self_contractor' },
+    { value: '{{self.mobile}}', label: '{{self.mobile}} · Current Contractor Mobile Number', category: 'self_contractor' },
+    { value: '{{self.address}}', label: '{{self.address}} · Current Contractor Registered Address', category: 'self_contractor' },
+    { value: '{{self.pf_code}}', label: '{{self.pf_code}} · Current Contractor PF Establishment Code', category: 'self_contractor' },
+    { value: '{{self.esic_code}}', label: '{{self.esic_code}} · Current Contractor ESIC Code', category: 'self_contractor' },
   ];
 
   const allTokenOptions: PickerOption[] = [
@@ -1380,7 +1420,11 @@ export default function RegisterTemplatesPage() {
 
     {view && <div className="fixed inset-0 z-[95] bg-black/50 flex justify-end" role="presentation"><section role="dialog" aria-modal="true" aria-label="Register template fields" className="bg-white w-full max-w-lg h-full overflow-y-auto">
       <header className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-start justify-between gap-3">
-        <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Register template</p><h2 className="font-semibold text-gray-950 mt-0.5 flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#073B67]"/>{view.state} · {view.formCode}</h2>{view.title && <p className="text-xs text-gray-500 mt-0.5">{view.title}</p>}</div>
+        <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Register template</p><h2 className="font-semibold text-gray-950 mt-0.5 flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#073B67]"/>{view.state} · {view.formCode}</h2>{view.title && <p className="text-xs text-gray-500 mt-0.5">{view.title}</p>}
+          <div className="mt-2 flex flex-wrap items-center gap-1">
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${view.perRow ? 'bg-violet-50 text-violet-700' : 'bg-slate-100 text-slate-600'}`} title={view.perRow ? 'Renders once per worker in the master file' : 'Renders once for the whole batch'}>{view.perRow ? '👤 Per worker' : 'Whole batch'}</span>
+          </div>
+        </div>
         <button onClick={() => setView(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button>
       </header>
       <div className="p-5 space-y-5">

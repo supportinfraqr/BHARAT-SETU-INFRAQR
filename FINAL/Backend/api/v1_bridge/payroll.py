@@ -226,6 +226,7 @@ def payroll_setup(request):
                         status=status.HTTP_200_OK)
     body = request.data if isinstance(request.data, dict) else {}
     data = _handle_payroll_setup(request.user, body)
+    from .admin_console import log_audit
     log_audit(request.user, "UPDATE", "payroll_setup", request.user.id,
               after={"summary": "Updated payroll setup"})
     return Response({"data": data}, status=status.HTTP_200_OK)

@@ -8,6 +8,7 @@ lost between the form and the database.
 
 # ruff: noqa: F401,F403
 import os
+import re
 import uuid
 
 from django.db import IntegrityError
@@ -163,31 +164,23 @@ def _specs():
         },
     }
     min_wage = {
-        "model": MinimumWage, "order": "id",
+        "model": MinimumWage, "order": "-id",
         "defaults": {"industry": "All Industries"},
-        "unique": ("state", "wage_zone", "grade", "employment_category", "effective_from"),
+        "unique": ("state", "wage_zone", "grade", "employment_category",
+                   "effective_from", "effective_to"),
         "unique_message": "This record already exists — duplicate cannot be added",
         "file_field": "notification_file",
+        "validate": _validate_min_wage,
         "fields": {
             "state": ("state", "text"), "zone": ("wage_zone", "text"),
-            "grade": ("grade", "text"), "employmentCategory": ("employment_category", "text"),
+            "industry": ("industry", "text"), "grade": ("grade", "text"),
+            "employmentCategory": ("employment_category", "text"),
             "basicPerMonth": ("basic_wage", "number"), "vdaPerMonth": ("vda", "number"),
             "totalPerMonth": ("total_wage", "number"),
             "effectiveFrom": ("effective_from", "date"), "effectiveTo": ("effective_to", "date"),
             "minimumWage": (None, "number"), "floorWage": (None, "number"),
             "notificationNumber": ("notification_number", "text"),
-        },
-    }
-    document = {
-        "model": RegisterDocumentMaster, "order": "id", "code_prefix": "DM",
-        "kind": "document", "kind_filter": "document",
-        "fields": {
-            "name": ("document_name", "text"), "frequency": ("frequency", "text"),
-            "state": ("state", "text"), "formNumber": ("form_number", "text"),
-            "criticality": ("criticality", "text"), "act": ("act", "text"),
-            "mandatory": ("is_mandatory", "yesno"), "status": ("is_active", "active"),
-            "type": (None, "text"), "formatType": (None, "text"),
-            "note": (None, "text"), "validationMapping": (None, "text"),
+            "status": ("is_active", "active"),
         },
     }
     register_doc = {
@@ -201,7 +194,7 @@ def _specs():
         },
     }
     compliance = {
-        "model": ComplianceMaster, "order": "id",
+        "model": ComplianceMaster, "order": "id", "read_only": True,
         "fields": {
             "act": ("act", "text"), "form": ("form_number", "text"),
             "nature": ("nature", "text"), "remark": ("remark", "text"),
@@ -232,6 +225,9 @@ def _specs():
 
     statutory = {
         "model": StatutoryMaster, "order": "id",
+        "unique": ("label",),
+        "unique_message": "This record already exists — duplicate cannot be added",
+        "code_from": "label", "code_attr": "component",
         "fields": {
             "component": ("label", "text"), "rateType": ("rate_type", "ratetype"),
             "condition": ("condition", "text"), "rate": ("rate", "number"),
@@ -241,7 +237,7 @@ def _specs():
 
     return {
         "party": party, "statutory": statutory, "professional-tax": pt, "lwf": lwf, "license": license_m,
-        "minimum-wage": min_wage, "document": document, "register-doc": register_doc,
+        "minimum-wage": min_wage, "register-doc": register_doc,
         "compliance": compliance, "employer-document": employer_document,
         "employer-register": employer_register, "employer-act": employer_act,
         "users": {
@@ -428,6 +424,24 @@ def _queryset(spec):
     return qs
 
 
+def _derive_code(spec, obj):
+    """Fill a unique machine-readable code (e.g. ``component``) from a human
+    field (e.g. ``label``) when a master opts in via ``code_from``/``code_attr``."""
+    attr = spec.get("code_attr")
+    source_field = spec.get("code_from")
+    if not attr or not source_field:
+        return
+    if str(getattr(obj, attr, "") or "").strip():
+        return  # a code already exists — keep it
+    source = str(getattr(obj, source_field, "") or "").strip()
+    base = re.sub(r"[^A-Z0-9]+", "_", source.upper()).strip("_")[:20] or "COMPONENT"
+    code, n = base, 1
+    queryset = type(obj).objects
+    while queryset.filter(**{attr: code}).exists():
+        code, n = f"{base}_{n}", n + 1
+    setattr(obj, attr, code)
+
+
 def _unique_conflict(spec, obj, exclude_pk=None):
     """An existing record that shares the spec's declared unique key, if any.
 
@@ -444,8 +458,72 @@ def _unique_conflict(spec, obj, exclude_pk=None):
 
 def _reject_duplicate(spec, obj, exclude_pk=None):
     message = spec.get("unique_message") or "A record with the same key already exists."
-    if _unique_conflict(spec, obj, exclude_pk) is not None:
-        raise PortalMutationError(message, 409)
+    conflict = _unique_conflict(spec, obj, exclude_pk)
+    if conflict is not None:
+        # Hand back the existing row so the UI can open it for editing/reactivation.
+        raise PortalMutationError(message, 409, extra={"conflictRow": _row(spec, conflict)})
+
+
+def _validate_min_wage(obj):
+    """Server-side Minimum Wage rules (mirrors the UI: required + consistency)."""
+    from decimal import Decimal
+    required = {
+        "State": obj.state, "Wage Zone": obj.wage_zone, "Grade": obj.grade,
+        "Employment Category": obj.employment_category,
+        "Effective From": obj.effective_from,
+    }
+    missing = [label for label, value in required.items() if not str(value or "").strip()]
+    if missing:
+        raise PortalMutationError(f"Required: {', '.join(missing)}.", 400)
+    if obj.basic_wage is None or obj.vda is None or obj.total_wage is None:
+        raise PortalMutationError("Basic, VDA and Total amounts are required.", 400)
+    basic, vda, total = (Decimal(str(obj.basic_wage)), Decimal(str(obj.vda)),
+                         Decimal(str(obj.total_wage)))
+    if basic < 0 or vda < 0 or total < 0:
+        raise PortalMutationError("Amounts must be non-negative.", 400)
+    if total != basic + vda:
+        raise PortalMutationError("Total Per Month must equal Basic + VDA.", 400)
+    if obj.effective_from and obj.effective_to and obj.effective_to < obj.effective_from:
+        raise PortalMutationError("Effective To cannot be before Effective From.", 400)
+    _reject_min_wage_overlap(obj)
+
+
+def _reject_min_wage_overlap(obj):
+    """A minimum-wage period must not overlap another row for the same worker
+    group (state + zone + grade + employment category). Open-ended periods
+    (null effective_to) run until superseded, so they overlap any later row."""
+    from bss_core.models import MinimumWage
+    qs = MinimumWage.objects.filter(
+        state=obj.state, wage_zone=obj.wage_zone, grade=obj.grade,
+        employment_category=obj.employment_category)
+    if obj.pk:
+        qs = qs.exclude(pk=obj.pk)
+    candidate = list(qs.values("id", "state", "wage_zone", "grade",
+                               "employment_category", "effective_from", "effective_to"))
+    if not candidate:
+        return
+    from_open, from_to = obj.effective_from, obj.effective_to
+    if from_open is None:
+        # A worker group with no effective_from cannot be dated at all.
+        raise PortalMutationError("Effective From is required.", 400)
+    for row in candidate:
+        e_from, e_to = row["effective_from"], row["effective_to"]
+        if e_from is None:
+            raise PortalMutationError(
+                "Existing row is missing Effective From — fix the earlier record first.", 409,
+                extra={"conflictRow": row["id"]})
+        if e_to is not None and e_to < e_from:
+            continue  # malformed earlier row; not treated as a conflict here
+        # Overlap if the ranges intersect (inclusive boundaries).
+        if not (from_to is not None and from_to < e_from) \
+                and not (e_to is not None and e_to < from_open):
+            raise PortalMutationError(
+                "Period overlaps an existing {} row for {} ({}"
+                "{}) in zone {}.".format(
+                    row["grade"], row["state"], row["effective_from"],
+                    f" to {row['effective_to']}" if row["effective_to"] else " onwards",
+                    row["wage_zone"]), 409,
+                extra={"conflictRow": row["id"]})
 
 
 def _counts():
@@ -470,12 +548,15 @@ def _masters(request, key):
         if hasattr(obj, field):
             setattr(obj, field, value)
     _apply(spec, obj, body)
+    _derive_code(spec, obj)
     if spec.get("kind") and hasattr(obj, "kind"):
         obj.kind = spec["kind"]
     if spec.get("code_prefix") and hasattr(obj, "code"):
         obj.code = f"{spec['code_prefix']}-{uuid.uuid4().hex[:6].upper()}"
     if hasattr(obj, "industry") and not (getattr(obj, "industry", "") or "").strip():
         obj.industry = "All Industries"
+    if spec.get("validate"):
+        spec["validate"](obj)
     _reject_duplicate(spec, obj)
     try:
         obj.save()
@@ -498,6 +579,8 @@ def _master_detail(request, key, pk):
     if request.method in ("PATCH", "POST"):
         body = request.data if isinstance(request.data, dict) else {}
         _apply(spec, obj, body)
+        if spec.get("validate"):
+            spec["validate"](obj)
         _reject_duplicate(spec, obj, exclude_pk=obj.pk)
         try:
             obj.save()

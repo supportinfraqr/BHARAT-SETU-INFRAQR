@@ -136,6 +136,19 @@ def _letter_tokens(binding, letter_type: str, logo_url: str = "") -> dict:
     ref = f"BSS/{ref_prefix}/{binding.id:05d}"
     issue = _fmt(binding.accepted_at or binding.created_at)
     wage = _money(_offered_wage(binding))
+
+    # Cost Sheet facts
+    cs = getattr(binding, "cost_sheet", None)
+    cb = getattr(binding, "cost_breakdown", {}) or {}
+    cs_code = getattr(cs, "code", "") if cs else ""
+    cs_name = getattr(cs, "name", "") if cs else ""
+    cs_cat = getattr(cs, "worker_category", "") if cs else ""
+    cs_grade = getattr(cs, "grade", "") if cs else ""
+    ctc_val = binding.computed_ctc if getattr(binding, "computed_ctc", None) is not None else cb.get("ctc")
+    epf_val = cb.get("statutoryEmployer", {}).get("EPF") if isinstance(cb.get("statutoryEmployer"), dict) else None
+    esic_val = cb.get("statutoryEmployer", {}).get("ESIC") if isinstance(cb.get("statutoryEmployer"), dict) else None
+    takehome_val = cb.get("netTakeHome")
+
     return {
         "letterTitle": _e(LETTER_NAMES.get(letter_type, "Letter")),
         "refNo": _e(ref),
@@ -144,6 +157,14 @@ def _letter_tokens(binding, letter_type: str, logo_url: str = "") -> dict:
         "dob": w["dob"], "gender": w["gender"], "mobile": w["mobile"], "address": w["address"],
         "designation": w["designation"], "department": w["department"], "doj": w["doj"],
         "wage": _e(wage),
+        "costSheetCode": _e(cs_code),
+        "costSheetName": _e(cs_name),
+        "costSheetCategory": _e(cs_cat),
+        "costSheetGrade": _e(cs_grade),
+        "ctc": _money(ctc_val),
+        "epfEmployer": _money(epf_val),
+        "esicEmployer": _money(esic_val),
+        "netTakeHome": _money(takehome_val),
         "contractorName": p["contractor"], "contractorBssId": p["contractorBss"],
         "contractorAddress": p["contractorAddr"],
         "employerName": p["employer"],

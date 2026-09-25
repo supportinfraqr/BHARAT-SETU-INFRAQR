@@ -26,6 +26,7 @@ const LETTER_TOKENS: StudioToken[] = [
   { value: '{{department}}', label: 'Department', group: 'Employment' },
   { value: '{{doj}}', label: 'Date of joining', group: 'Employment' },
   { value: '{{wage}}', label: 'Gross monthly wage', group: 'Employment' },
+  { value: '{{costSheetCode}}', label: 'Cost sheet code (Auto-fetches details)', group: 'Cost Sheet' },
   { value: '{{contractorName}}', label: 'Contractor name', group: 'Parties' },
   { value: '{{contractorBssId}}', label: 'Contractor BSS ID', group: 'Parties' },
   { value: '{{contractorAddress}}', label: 'Contractor address', group: 'Parties' },
@@ -64,8 +65,16 @@ const LETTER_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><
 <p>With reference to your engagement, we are pleased to appoint you on the terms set out below, at the project site of <strong>{{employerName}}</strong> through <strong>{{contractorName}}</strong>.</p>
 <h3>A. Employer &amp; Site</h3>
 <table class="kv"><tr><td>Contractor / Service Provider</td><td>{{contractorName}} ({{contractorBssId}})</td></tr><tr><td>Principal Employer</td><td>{{employerName}} ({{employerBssId}})</td></tr><tr><td>Site</td><td>{{siteName}}</td></tr></table>
-<h3>B. Worker Particulars</h3>
-<table class="kv"><tr><td>Name</td><td>{{workerName}}</td></tr><tr><td>BSS Worker ID</td><td>{{workerBssId}}</td></tr><tr><td>Date of Joining</td><td>{{doj}}</td></tr><tr><td>Designation</td><td>{{designation}}</td></tr><tr><td>Gross Monthly Wage</td><td>{{wage}}</td></tr></table>
+<h3>B. Worker Particulars &amp; Cost Structure</h3>
+<table class="kv">
+  <tr><td>Name</td><td>{{workerName}}</td></tr>
+  <tr><td>BSS Worker ID</td><td>{{workerBssId}}</td></tr>
+  <tr><td>Date of Joining</td><td>{{doj}}</td></tr>
+  <tr><td>Designation</td><td>{{designation}}</td></tr>
+  <tr><td>Cost Sheet Attached</td><td>{{costSheetName}} ({{costSheetCode}})</td></tr>
+  <tr><td>Gross Monthly Wage</td><td>{{wage}}</td></tr>
+  <tr><td>Total Monthly CTC</td><td>{{ctc}}</td></tr>
+</table>
 <div class="sign">
   <div><div class="line">{{workerName}}</div><div>Worker Signature</div><div class="id">ID: {{workerBssId}}</div></div>
   <div><div class="line">{{contractorName}}</div><div>Contractor Signatory</div><div class="id">ID: {{contractorBssId}}</div></div>
@@ -80,6 +89,9 @@ const SAMPLE: Record<string, string> = {
   workerName: 'Ramesh Kumar', workerBssId: 'BSS-W9MQKMHMQYKU', fatherName: 'Suresh Kumar',
   dob: '05 May 1995', gender: 'M', mobile: '9876543210', address: 'Village X, Pune, Maharashtra',
   designation: 'Mason', department: 'Civil Works', doj: '12 Jun 2026', wage: '₹25,000',
+  costSheetCode: 'BSS-CS-78A9B2', costSheetName: 'Maharashtra Construction — Skilled Grade A',
+  costSheetCategory: 'Skilled', costSheetGrade: 'Grade A', ctc: '₹29,850',
+  epfEmployer: '₹1,950', esicEmployer: '₹813', netTakeHome: '₹22,400',
   contractorName: 'BuildWell Contractors Pvt Ltd', contractorBssId: 'BSS-C00000000004',
   contractorAddress: 'Plot 4, MIDC, Pune', employerName: 'Adani Infra Pvt Ltd',
   employerBssId: 'BSS-E00000000001',

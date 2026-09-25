@@ -9,6 +9,7 @@ Reference: ``Requirements/BSS_Cost sheet template_flows.docx``.
 """
 
 from django.db import models
+from django.db.models import Q
 
 from .auth import User
 from .compliance import MinimumWage
@@ -40,6 +41,9 @@ class CostSheetTemplate(models.Model):
     effective_date = models.DateField(null=True, blank=True)
     effective_to = models.DateField(null=True, blank=True)
     worker_category = models.CharField(max_length=60, blank=True)
+    # Minimum-wage grade (Grade A / A+ / B / C) — matches MinimumWage.grade so
+    # the min-wage lookup pairs the template with the exact wage row.
+    grade = models.CharField(max_length=20, blank=True)
     designation = models.CharField(max_length=80, blank=True)
     currency = models.CharField(max_length=10, default="INR")
     calculation_frequency = models.CharField(max_length=20, choices=FREQ, default="MONTHLY")
@@ -61,6 +65,25 @@ class CostSheetTemplate(models.Model):
         db_table = "cost_sheet_template"
         indexes = [models.Index(fields=["state", "industry"], name="idx_cost_sheet_scope"),
                    models.Index(fields=["status"], name="idx_cost_sheet_status")]
+        # DB-level uniqueness for PLATFORM master templates (owner NULL). Org
+        # clones carry the same scope but are owner-owned customisations, so they
+        # must stay exempt or cloning the same master for many orgs would break.
+        # The effective period is part of the key so the same scope may exist for
+        # distinct validity windows (2026 vs 2027 notifications) — mirroring the
+        # minimum-wage master. nulls_distinct=False makes blank dates collide.
+        constraints = [
+            models.UniqueConstraint(
+                fields=["template_type", "state", "industry", "worker_category",
+                        "grade", "designation", "effective_date", "effective_to"],
+                condition=Q(owner__isnull=True) & ~Q(template_type="SITE"),
+                nulls_distinct=False,
+                name="uq_cost_sheet_scope"),
+            models.UniqueConstraint(
+                fields=["template_type", "site"],
+                condition=Q(owner__isnull=True) & Q(template_type="SITE"),
+                nulls_distinct=False,
+                name="uq_cost_sheet_site_scope"),
+        ]
 
     def __str__(self):
         return f"{self.code} {self.name}"
@@ -104,6 +127,7 @@ class CostSheetMinimumWage(models.Model):
     minimum_daily_wage = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     notification_number = models.CharField(max_length=80, blank=True)
     effective_date = models.DateField(null=True, blank=True)
+    effective_to = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

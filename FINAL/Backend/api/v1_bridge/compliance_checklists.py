@@ -82,10 +82,47 @@ def _set_field(checklist, key, done, officer=None):
     return field
 
 
+def _satisfied_keys(worker):
+    """Checklist keys the worker's own records already satisfy — the same source
+    the gate-pass eligibility uses, so the two views agree."""
+    from bss_core.models import (WorkerWelfareSafety, WorkerBanking,
+                                 WorkerSocialSecurity, WorkerIdentity)
+
+    def yes(value):
+        return str(value or "").strip().lower() in ("done", "yes", "completed", "fit", "verified", "true")
+
+    ws = WorkerWelfareSafety.objects.filter(user=worker).first()
+    banking = WorkerBanking.objects.filter(user=worker).first()
+    social = WorkerSocialSecurity.objects.filter(user=worker).first()
+    identity = WorkerIdentity.objects.filter(user=worker).first()
+    keys = set()
+    if ws and yes(ws.medical_examination_status):
+        keys.add("medical")
+    if ws and (ws.ppe_required or (ws.types_of_ppe_given or "").strip()):
+        keys.add("safety_kit")
+    if ws and ws.safety_training_completed:
+        keys.add("safety_training")
+    if ws and yes(ws.site_induction_status):
+        keys.add("site_induction")
+    if identity and (identity.aadhaar or "").strip():
+        keys.add("aadhaar")
+    if (banking and (banking.bank_account_number or "").strip()
+            and str(banking.bank_verification_status or "").strip().lower() == "verified"):
+        keys.add("bank")
+    if social and social.uan_verified and (social.epfo_uan or "").strip():
+        keys.add("uan")
+    if social and social.esic_verified and (social.esic_ip_number or "").strip():
+        keys.add("esi")
+    return keys
+
+
 def _checklist_row(checklist):
+    # A field reads as DONE when the officer ticked it OR the worker's own
+    # records satisfy it (keeps the checklist aligned with gate-pass eligibility).
+    satisfied = _satisfied_keys(checklist.worker)
     fields = [{
         "id": f.id, "key": f.key, "label": payloads._d(f.label), "category": f.category,
-        "status": f.status,
+        "status": "DONE" if (f.status == "DONE" or f.key in satisfied) else "PENDING",
         "officer": payloads._d(f.officer.username if f.officer_id else ""),
         "officerId": f.officer_id,
         "completedAt": payloads._dts(f.completed_at) if f.completed_at else "",

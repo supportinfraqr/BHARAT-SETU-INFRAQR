@@ -534,7 +534,7 @@ class MinimumWage(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["state", "wage_zone", "grade", "employment_category",
-                        "effective_from"],
+                        "effective_from", "effective_to"],
                 name="uq_minimum_wage_key"),
         ]
 

@@ -245,6 +245,190 @@ def _classify_docx(blocks):
     return [], fields, paras[:25], "form", any(f.get("signature") for f in fields)
 
 
+def _faithful_form_html(blocks, title, form_code, state, template_type):
+    """Reproduce a printed form as HTML, exactly as it reads in the source.
+
+    Walks the docx blocks in order (paragraphs + tables) and re-renders them:
+    centered bold headings, ``[See rule ...]`` citations, field labels (dotted
+    fill when blank), value tokens where a label maps to a master-file field,
+    and bordered tables. This mirrors the paper form rather than inventing a
+    generic section/block layout."""
+    from api import clra
+
+    def esc(value):
+        return (str(value or "").replace("&", "&amp;").replace("<", "&lt;")
+                .replace(">", "&gt;").replace('"', "&quot;"))
+
+    def field_key(label):
+        text = " ".join(str(label or "").lower().split()).rstrip(".: ")
+        text = text.replace("\u2026", "")
+        if not text:
+            return ""
+        # Worker master-file fields, matched more strictly than the generic
+        # column heuristic (which would map "Name of the Establishment" too).
+        worker = (
+            (("name", "employee"), "name"), (("name", "workman"), "name"),
+            (("name", "worker"), "name"), (("employee", "name"), "name"),
+            (("father",), "fatherName"), (("husband",), "fatherName"),
+            (("spouse",), "fatherName"), (("sex",), "gender"),
+            (("age",), ""), (("date of entry",), "doj"), (("date of joining",), "doj"),
+            (("joining",), "doj"), (("designation",), "designation"),
+            (("department",), "department"), (("mobile",), "mobile"),
+            (("mother tongue",), ""), (("permanent address",), "address"),
+            (("residential address",), "address"), (("local address",), "address"),
+            (("aadhaar",), "aadhaar"),
+        )
+        for needles, key in worker:
+            if all(n in text for n in needles):
+                return key
+        general = clra.match_column(label)
+        if general and "establishment" not in text and "contractor" not in text:
+            return general
+        return ""
+
+    lines = []
+    header_done = False
+
+    def end_header():
+        nonlocal header_done
+        if not header_done:
+            header_done = True
+
+    def is_title(text):
+        lowered = text.strip().lower()
+        return bool(re.match(r"^(form\s+[ivxlcdm0-9]|\[see rule|\[form)", lowered)) or \
+            (len(text.strip()) <= 60 and not text.rstrip().endswith(":") and not header_done)
+
+    for block in blocks:
+        if block["kind"] == "p":
+            raw = block["text"]
+            text = raw.strip()
+            if not text:
+                lines.append('<div class="gap"></div>')
+                continue
+            lower = text.lower()
+            if not header_done and (re.match(r"^form\s+[ivxlcdm0-9]", lower)
+                                    or lower.startswith("[see rule") or lower.startswith("[form")):
+                lines.append(f'<p class="formtitle">{esc(text)}</p>')
+                continue
+            if not header_done and is_title(text):
+                lines.append(f'<p class="title">{esc(text)}</p>')
+                end_header()
+                continue
+            if lower.startswith("[see rule") or (text.startswith("[") and text.endswith("]") and len(text) < 90):
+                lines.append(f'<p class="rule">{esc(text)}</p>')
+                end_header()
+                continue
+            key = field_key(text.rstrip(" .:"))
+            if key and (text.rstrip().endswith(":") or len(text.rstrip(" .:")) <= 70):
+                lines.append(f'<div class="field"><span class="label">{esc(text.rstrip(" .:"))}:</span>'
+                             f'<span class="fill value"><b>{{{{{key}}}}}</b></span></div>')
+                end_header()
+                continue
+            if text.rstrip().endswith(":"):
+                lines.append(f'<div class="field"><span class="label">{esc(text)}</span>'
+                             f'<span class="fill"></span></div>')
+                end_header()
+                continue
+            if any(w in lower for w in ("signature", "place:", "date:")):
+                lines.append(f'<div class="sign">{esc(text)}</div>')
+                end_header()
+                continue
+            if (len(text) <= 70 and not text.endswith(".")) or lower.startswith("to"):
+                lines.append(f'<p class="lead">{esc(text)}</p>')
+                end_header()
+                continue
+            lines.append(f'<p>{esc(text)}</p>')
+        else:
+            end_header()
+            inner = []
+            for row in block["rows"]:
+                cells = "".join(
+                    f'<td>{esc(c)}</td>' if (i == len(row) - 1) or not row[i]
+                    else f'<td>{esc(c)}</td>'
+                    for i, c in enumerate(row))
+                inner.append(f'<tr>{cells}</tr>')
+            lines.append(f'<table class="grid">{"" .join(inner)}</table>')
+            lines.append('<div class="gap"></div>')
+
+    return f"""<!doctype html><html><head><meta charset="utf-8">
+<style>
+  * {{ box-sizing: border-box; }}
+  body {{ font-family: 'Times New Roman', Times, serif; margin: 28px; color: #000; }}
+  p {{ margin: 4px 0; font-size: 13px; }}
+  p.formtitle {{ text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 2px; }}
+  p.rule {{ text-align: center; font-size: 11px; color: #333; margin-bottom: 8px; }}
+  p.title {{ text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 12px; }}
+  p.lead {{ font-weight: 600; margin-top: 8px; }}
+  .gap {{ height: 10px; }}
+  .field {{ display: flex; gap: 8px; align-items: baseline; margin: 6px 0; font-size: 13px; }}
+  .field .label {{ flex: none; }}
+  .field .fill {{ flex: 1; border-bottom: 1px solid #000; min-height: 1.2em; display: inline-block; }}
+  .field .value b {{ font-weight: 600; }}
+  .sign {{ margin-top: 18px; text-align: right; font-size: 13px; }}
+  table.grid {{ border-collapse: collapse; width: 100%; font-size: 12px; margin: 8px 0; }}
+  table.grid td, table.grid th {{ border: 1px solid #000; padding: 4px 6px; }}
+  @media print {{ body {{ margin: 8mm; }} }}
+</style></head><body>
+  {chr(10).join(lines)}
+</body></html>"""
+
+
+def _faithful_xlsx_form_html(rows, title, form_code):
+    """Reproduce a printable form stored as a spreadsheet grid (e.g. FORM XIX
+    wage slip) rendering texts in reading order, columns preserved roughly,
+    tables as bordered grids. Mirrors the printed sheet rather than tabular data."""
+    def esc(value):
+        return (str(value or "").replace("&", "&amp;").replace("<", "&lt;")
+                .replace(">", "&gt;"))
+
+    lines = []
+    header_done = False
+    for row in rows:
+        cells = [str(c).strip() if c is not None else "" for c in row]
+        cells = [c for c in cells if c]
+        if not cells:
+            continue
+        first = cells[0]
+        lower = first.lower()
+        if not header_done and re.match(r"^form\s+[ivxlcdm0-9]", lower):
+            lines.append(f'<p class="formtitle">{esc(first)}</p>')
+            continue
+        if not header_done and (lower.lstrip("* \u00a0").startswith("[see rule")
+                                or lower.lstrip("* \u00a0").startswith("[")):
+            lines.append(f'<p class="rule">{esc(first)}</p>')
+            continue
+        if not header_done:
+            lines.append(f'<p class="title">{esc(first)}</p>')
+            header_done = True
+            continue
+        if len(cells) > 1:
+            cells_html = "".join(f'<td>{esc(c)}</td>' for c in cells)
+            lines.append(f'<table class="grid"><tr>{cells_html}</tr></table>')
+        elif len(first) <= 90:
+            lines.append(f'<div class="field"><span class="label">{esc(first)}:</span>'
+                         f'<span class="fill"></span></div>')
+        else:
+            lines.append(f'<p>{esc(first)}</p>')
+
+    return f"""<!doctype html><html><head><meta charset="utf-8">
+<style>
+  * {{ box-sizing: border-box; }}
+  body {{ font-family: 'Times New Roman', Times, serif; margin: 28px; color: #000; }}
+  p {{ margin: 4px 0; font-size: 13px; }}
+  p.formtitle {{ text-align: center; font-weight: bold; font-size: 15px; }}
+  p.title {{ text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 10px; }}
+  .field {{ display: flex; gap: 8px; margin: 6px 0; font-size: 13px; }}
+  .field .label {{ flex: none; }}
+  .field .fill {{ flex: 1; border-bottom: 1px solid #000; min-height: 1.2em; }}
+  table.grid {{ border-collapse: collapse; width: 100%; font-size: 12px; margin: 4px 0; }}
+  table.grid td, table.grid th {{ border: 1px solid #000; padding: 4px 6px; }}
+  @media print {{ body {{ margin: 8mm; }} }}
+</style></head><body>
+  {chr(10).join(lines)}
+</body></html>"""
+
+
 def _classify(name, data):
     """Return the structured template draft for one register file."""
     ext = os.path.splitext(name)[1].lower()
@@ -287,7 +471,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from bss_core.models import RegisterTemplate
-        from api.v1_bridge.register_templates import _auto_form_html
 
         if options.get("only_if_empty") and RegisterTemplate.objects.exists():
             self.stdout.write("CLRA templates already present — import skipped.")
@@ -347,15 +530,30 @@ class Command(BaseCommand):
             meta = classified["meta"]
             template_type = classified["type"]
             html = ""
-            if fields and not columns:
-                html = _auto_form_html(title or form_code, form_code, state, template_type,
-                                       fields, columns)
+            if form_code.upper() in ("FORM X", "FORM XIX") and classified["source_format"] == "docx":
+                # Identity cards / wage slips stored as Word docs are per-worker
+                # forms — never render them as tabular registers.
+                template_type = "form"
+                columns = []
+                html = _faithful_form_html(_docx_blocks(data), title or form_code,
+                                           form_code, state, template_type)
+            elif fields and not columns:
+                html = _faithful_form_html(_docx_blocks(data), title or form_code,
+                                           form_code, state, template_type)
+            elif not columns and not fields and classified["source_format"] in ("xlsx", "xls"):
+                rows = (_parse_xlsx(data) if classified["source_format"] == "xlsx"
+                        else _parse_xls(data))
+                html = _faithful_xlsx_form_html(rows, title or form_code, form_code)
 
             defaults = {
                 "title": title, "source_format": classified["source_format"],
                 "output_format": "pdf" if classified["source_format"] == "docx" else "xlsx",
                 "columns": columns, "fields": fields,
-                "meta": {"lines": meta, "file": filename},
+                "meta": {"lines": meta, "file": filename,
+                         # Identity Cards (FORM X) and Wage Slips (FORM XIX)
+                         # render once per worker; every other form/register
+                         # renders once for the whole batch.
+                         "scope": "per-worker" if form_code.upper() in ("FORM X", "FORM XIX") else "whole"},
                 "is_active": True,
                 # Identity Cards (FORM X) and Wage Slips (FORM XIX) are issued
                 # once per worker — the authored layout repeats per master row.
@@ -372,13 +570,9 @@ class Command(BaseCommand):
                 for key, value in defaults.items():
                     setattr(obj, key, value)
                 obj.template_type = template_type
-                if html:
-                    if not obj.html:
-                        obj.html = html
-                elif columns and not fields:
-                    # Register now renders from its columns — drop the stale
-                    # form layout an earlier import generated from header cells.
-                    obj.html = ""
+                # Re-seeding always regenerates the faithful form layout so the
+                # imported HTML matches the printed source exactly.
+                obj.html = html
                 updated += 1
             obj.source_file.save(_safe_storage_name(state, filename, form_code),
                                 ContentFile(data), save=False)

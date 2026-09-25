@@ -4,7 +4,7 @@
 import { INDIA_STATES } from '@/data/indiaStates';
 
 export type AdminFieldType = 'text' | 'number' | 'select' | 'date' | 'textarea' | 'checkbox' | 'multi' | 'file';
-export type AdminField = { name: string; label: string; type: AdminFieldType; options?: string[]; required?: boolean; placeholder?: string; noPlaceholder?: boolean };
+export type AdminField = { name: string; label: string; type: AdminFieldType; options?: string[]; required?: boolean; placeholder?: string; noPlaceholder?: boolean; readOnly?: boolean };
 export type AdminRow = Record<string, string | number | boolean | string[]>;
 
 export type MasterConfig = {
@@ -20,9 +20,19 @@ export type MasterConfig = {
   // shows the data with no Add / Edit / Deactivate / Delete actions.
   readOnly?: boolean;
   initial?: AdminRow;
+  // Optional per-master validation run on Save; returns an error message or null.
+  validate?: (record: AdminRow, mode: 'add' | 'edit') => string | null;
+  // When a duplicate is rejected, close the Add/Edit window and show the error
+  // banner instead of auto-opening the conflicting record (default: auto-open).
+  closeOnDuplicate?: boolean;
+  // Optional live derivation: run on every form change to auto-fill fields
+  // derived from others (e.g. Total = Basic + VDA). Fields to derive should
+  // also be marked readOnly so they cannot diverge.
+  derive?: (form: HTMLFormElement) => void;
 };
 
 const STATES = INDIA_STATES;
+const ZONES = ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5', 'Zone 6', 'Zone 7', 'Zone 8', 'Zone 9', 'Zone 10'];
 const YES_NO = ['Yes', 'No'];
 const ACTIVE_STATUS = ['Active', 'Inactive'];
 
@@ -119,12 +129,44 @@ export const LICENSE_MASTER: MasterConfig = {
   initial: { name: '', state: 'Maharashtra', industry: 'Construction', applicabilityCount: 1, govtFee: 1000, securityDeposit: 0, effectiveFrom: '2026-04-01', effectiveTo: '2027-03-31', status: 'Active', minWageApplicability: 'Yes', paymentFrequency: 'Yearly', bonusPercent: 8.33, bonusPayoutMonth: 'October', grade: '', employmentCategory: '', wageZone: '' },
 };
 
+// Minimum Wage consistency rules (amounts and effective window).
+// The derived fields (Total / Minimum / Floor) are auto-filled from
+// Basic + VDA via `derive` and locked (`readOnly`), so they can't diverge.
+function deriveMinimumWage(form: HTMLFormElement) {
+  const element = form.elements as unknown as Record<string, HTMLInputElement>;
+  const basic = Number(element.basicPerMonth?.value ?? 0);
+  const vda = Number(element.vdaPerMonth?.value ?? 0);
+  const total = basic + vda;
+  const totalSet = String(element.basicPerMonth?.value).trim() !== '' || String(element.vdaPerMonth?.value).trim() !== '';
+  if (element.totalPerMonth) element.totalPerMonth.value = totalSet ? String(total) : '';
+  if (element.minimumWage) element.minimumWage.value = totalSet ? String(total) : '';
+  if (element.floorWage) element.floorWage.value = String(element.basicPerMonth?.value ?? '') !== '' ? String(basic) : '';
+}
+
+function validateMinimumWage(record: AdminRow): string | null {
+  const num = (v: unknown) => Number(v ?? 0);
+  const basic = num(record.basicPerMonth), vda = num(record.vdaPerMonth);
+  const total = num(record.totalPerMonth), minWage = num(record.minimumWage), floor = num(record.floorWage);
+  if ([basic, vda, total, minWage, floor].some(n => Number.isNaN(n) || n < 0)) {
+    return 'Amounts must be valid non-negative numbers.';
+  }
+  if (total !== basic + vda) return 'Total Per Month must equal Basic + VDA.';
+  if (minWage !== total) return 'Minimum Wage must equal Total Per Month.';
+  if (floor !== basic) return 'Floor Wage must equal Basic Per Month.';
+  const from = String(record.effectiveFrom ?? ''), to = String(record.effectiveTo ?? '');
+  if (from && to && to < from) return 'Effective To cannot be before Effective From.';
+  return null;
+}
+
+export const INDUSTRY_OPTIONS = ['Construction', 'Manufacturing', 'Retail', 'Hospitality', 'Facility Management', 'Logistics & Warehousing', 'IT & Telecom', 'Healthcare', 'All Industries'];
+
 export const MINIMUM_WAGE_MASTER: MasterConfig = {
-  key: 'minimum-wage', title: 'Minimum Wage Configuration', description: 'Zone-wise minimum wage — Basic, VDA, Total, Minimum Wage and Floor Wage per grade + employment category, effective-date based.',
+  key: 'minimum-wage', title: 'Minimum Wage Configuration', description: 'Zone-wise minimum wage — Basic, VDA, Total, Minimum Wage and Floor Wage per industry + grade + employment category, effective-date based.',
   statusField: 'status',
   columns: [
     { id: 'state', header: 'State', value: r => String(r.state) },
     { id: 'zone', header: 'Wage Zone', value: r => String(r.zone) },
+    { id: 'industry', header: 'Industry', value: r => String(r.industry || 'All Industries') },
     { id: 'grade', header: 'Grade + Employment Category', value: r => `${r.grade} · ${r.employmentCategory}` },
     { id: 'basic', header: 'Basic / Month', value: r => `₹${r.basicPerMonth}` },
     { id: 'vda', header: 'VDA / Month', value: r => `₹${r.vdaPerMonth}` },
@@ -132,60 +174,37 @@ export const MINIMUM_WAGE_MASTER: MasterConfig = {
     { id: 'minWage', header: 'Minimum Wage', value: r => `₹${r.minimumWage}` },
     { id: 'floor', header: 'Floor Wage', value: r => `₹${r.floorWage}` },
     { id: 'notificationNumber', header: 'Notification No.', value: r => String(r.notificationNumber || '—') },
-    { id: 'notificationFile', header: 'Notification PDF', value: r => String(r.notificationFile || ''), render: r => r.notificationFile ? <a href={`/api/admin/masters/minimum-wage/${r.id}/file`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-blue-700 hover:underline">View PDF</a> : <span className="text-gray-400 text-xs">—</span> },
-  ],
-  fields: [
-    { name: 'state', label: 'State', type: 'select', options: STATES, required: true },
-    { name: 'zone', label: 'Wage Zone', type: 'text', required: true, placeholder: 'Zone 1' },
-    { name: 'grade', label: 'Grade', type: 'select', options: ['Grade A', 'Grade B', 'Grade C'], required: true, noPlaceholder: true },
-    { name: 'employmentCategory', label: 'Employment Category', type: 'select', options: ['Skilled', 'Semi-skilled', 'Unskilled'], required: true },
-    { name: 'basicPerMonth', label: 'Basic Per Month (₹)', type: 'number', required: true },
-    { name: 'vdaPerMonth', label: 'VDA Per Month (₹)', type: 'number', required: true },
-    { name: 'totalPerMonth', label: 'Total Per Month (₹)', type: 'number', required: true },
-    { name: 'minimumWage', label: 'Minimum Wage (₹)', type: 'number', required: true },
-    { name: 'floorWage', label: 'Floor Wage (₹)', type: 'number', required: true },
-    { name: 'effectiveFrom', label: 'Effective From', type: 'date', required: true },
-    { name: 'effectiveTo', label: 'Effective To', type: 'date' },
-    { name: 'notificationNumber', label: 'Notification Number', type: 'text', placeholder: 'e.g. MH/LAB/2026/123' },
-    { name: 'notificationFile', label: 'Notification PDF', type: 'file' },
-  ],
-  rows: [],
-  initial: { state: 'Maharashtra', zone: 'Zone 1', grade: 'Grade A', employmentCategory: 'Skilled', basicPerMonth: 10000, vdaPerMonth: 350, totalPerMonth: 10350, minimumWage: 10350, floorWage: 10000, effectiveFrom: '2026-04-01', effectiveTo: '2027-03-31', notificationNumber: '', notificationFile: '' },
-};
-
-export const DOCUMENT_MASTER: MasterConfig = {
-  key: 'document', title: 'Document Master', description: 'Statutory document master — name, type, frequency, state, form number, criticality, format, act mapping, mandatory flag and validation mapping.',
-  statusField: 'status',
-  columns: [
-    { id: 'name', header: 'Document Name', value: r => String(r.name) },
-    { id: 'type', header: 'Document Type', value: r => String(r.type) },
-    { id: 'form', header: 'Form Number', value: r => String(r.formNumber) },
-    { id: 'frequency', header: 'Frequency', value: r => String(r.frequency) },
-    { id: 'criticality', header: 'Criticality', value: r => String(r.criticality), render: r => <Criticality value={String(r.criticality)}/> },
-    { id: 'act', header: 'Act Mapping', value: r => String(r.act) },
-    { id: 'mandatory', header: 'Mandatory', value: r => String(r.mandatory), render: r => <Badge ok={r.mandatory === 'Yes'}/> },
+    { id: 'notificationFile', header: 'Notification PDF', value: r => String(r.notificationFile || ''), render: r => r.notificationFile
+      ? <div className="flex items-center gap-2"><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-700">Attached</span><a href={`/api/admin/masters/minimum-wage/${r.id}/file`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-blue-700 hover:underline">View</a><a href={`/api/admin/masters/minimum-wage/${r.id}/file?download=1`} className="text-xs font-semibold text-gray-600 hover:underline">Download</a></div>
+      : <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Missing</span> },
     { id: 'status', header: 'Status', value: r => String(r.status), render: r => <StatusBadge value={String(r.status)}/> },
   ],
   fields: [
-    { name: 'name', label: 'Document Name', type: 'text', required: true },
-    { name: 'type', label: 'Document Type', type: 'select', options: ['Register', 'Challan', 'Return', 'Certificate', 'Form'], required: true },
-    { name: 'frequency', label: 'Frequency', type: 'select', options: ['Monthly', 'Quarterly', 'Half Yearly', 'Yearly', 'Monthly-Annual'], required: true },
-    { name: 'state', label: 'State Mapping', type: 'select', options: ['All India', ...STATES], required: true },
-    { name: 'formNumber', label: 'Form Number', type: 'text', required: true, placeholder: 'FORM XII' },
-    { name: 'criticality', label: 'Criticality', type: 'select', options: ['High', 'Medium', 'Low'], required: true },
-    { name: 'formatType', label: 'Format Type', type: 'select', options: ['PDF', 'XLS', 'Both'] },
-    { name: 'note', label: 'Note', type: 'textarea' },
-    { name: 'act', label: 'Act Mapping', type: 'text', placeholder: 'CLRA / Factories / Minimum Wages Act' },
-    { name: 'mandatory', label: 'Mandatory Document Flag', type: 'select', options: YES_NO, required: true },
-    { name: 'validationMapping', label: 'Validation Mapping', type: 'textarea', placeholder: 'OCR fields to validate' },
-    { name: 'status', label: 'Active/Inactive Status', type: 'select', options: ACTIVE_STATUS, required: true },
+    { name: 'state', label: 'State', type: 'select', options: STATES, required: true },
+    { name: 'zone', label: 'Wage Zone', type: 'select', options: ZONES, required: true, noPlaceholder: true },
+    { name: 'industry', label: 'Industry', type: 'select', options: INDUSTRY_OPTIONS, required: true, noPlaceholder: true },
+    { name: 'grade', label: 'Grade', type: 'select', options: ['Grade A', 'Grade A+', 'Grade B', 'Grade C'], required: true, noPlaceholder: true },
+    { name: 'employmentCategory', label: 'Employment Category', type: 'select', options: ['Skilled', 'Semi-skilled', 'Unskilled', 'Highly skilled'], required: true, noPlaceholder: true },
+    { name: 'basicPerMonth', label: 'Basic Per Month (₹)', type: 'number', required: true },
+    { name: 'vdaPerMonth', label: 'VDA Per Month (₹)', type: 'number', required: true },
+    { name: 'totalPerMonth', label: 'Total Per Month (₹)', type: 'number', required: true, readOnly: true },
+    { name: 'minimumWage', label: 'Minimum Wage (₹)', type: 'number', required: true, readOnly: true },
+    { name: 'floorWage', label: 'Floor Wage (₹)', type: 'number', required: true, readOnly: true },
+    { name: 'effectiveFrom', label: 'Effective From', type: 'date', required: true },
+    { name: 'effectiveTo', label: 'Effective To', type: 'date' },
+    { name: 'notificationNumber', label: 'Notification Number', type: 'text', placeholder: 'e.g. MH/LAB/2026/123' },
+    { name: 'notificationFile', label: 'Notification PDF', type: 'file', required: true },
+    { name: 'status', label: 'Status', type: 'select', options: ['Active', 'Inactive'], required: true, noPlaceholder: true },
   ],
   rows: [],
-  initial: { name: '', type: 'Register', frequency: 'Monthly', state: 'All India', formNumber: '', criticality: 'High', formatType: 'PDF', note: '', act: '', mandatory: 'Yes', validationMapping: '', status: 'Active' },
+  initial: { state: 'Maharashtra', zone: 'Zone 1', industry: 'Construction', grade: 'Grade A', employmentCategory: 'Skilled', basicPerMonth: 10000, vdaPerMonth: 350, totalPerMonth: 10350, minimumWage: 10350, floorWage: 10000, effectiveFrom: '2026-04-01', effectiveTo: '2027-03-31', notificationNumber: '', notificationFile: '', status: 'Active' },
+  derive: deriveMinimumWage,
+  validate: validateMinimumWage,
 };
 
 export const COMPLIANCE_MASTER: MasterConfig = {
-  key: 'compliance', title: 'Compliance Master', description: 'Compliance items for audit scoring — act mapping, form mapping, nature of compliance, remark and maximum score.',
+  key: 'compliance', title: 'Compliance Master', description: 'Compliance items for audit scoring — act mapping, form mapping, nature of compliance, remark and maximum score. Seeded from the platform catalogue (read-only).',
+  readOnly: true,
   columns: [
     { id: 'act', header: 'Act Mapping', value: r => String(r.act) },
     { id: 'form', header: 'Form Mapping', value: r => String(r.form) },
@@ -360,6 +379,7 @@ export const PERMISSION_ACTIONS = ['View', 'Create', 'Edit', 'Delete', 'Approve'
 export const STATUTORY_MASTER: MasterConfig = {
   key: 'statutory', title: 'Statutory Master', description: 'Central statutory component rules & rates (EPF 12%, ESIC 3.25%, LWF, Bonus, Gratuity) locked for platform compliance.',
   statusField: 'status',
+  closeOnDuplicate: true,
   columns: [
     { id: 'component', header: 'Statutory Component', value: r => String(r.component) },
     { id: 'rate', header: 'Rate / Value', value: r => String(r.rate) },
@@ -368,10 +388,10 @@ export const STATUTORY_MASTER: MasterConfig = {
     { id: 'status', header: 'Status', value: r => String(r.status), render: r => <StatusBadge value={String(r.status)}/> },
   ],
   fields: [
-    { name: 'component', label: 'Statutory Component', type: 'select', options: ['EPF (Employer PF)', 'ESIC (Employer)', 'Bonus', 'Gratuity', 'Labour Welfare Fund', 'Leave Reserve', 'Weekly Off', 'National Holidays'], required: true },
-    { name: 'status', label: 'Status', type: 'select', options: ACTIVE_STATUS, required: true },
+    { name: 'component', label: 'Statutory Component', type: 'select', options: ['EPF (Employer PF)', 'ESIC (Employer)', 'Bonus', 'Gratuity', 'Labour Welfare Fund', 'Leave Reserve', 'Weekly Off', 'National Holidays'], required: true, noPlaceholder: true },
+    { name: 'status', label: 'Status', type: 'select', options: ACTIVE_STATUS, required: true, noPlaceholder: true },
     { name: 'rate', label: 'Default Rate / %', type: 'number', required: true },
-    { name: 'rateType', label: 'Rate Type', type: 'select', options: ['Percent of wages', 'Fixed amount', 'Days'], required: true },
+    { name: 'rateType', label: 'Rate Type', type: 'select', options: ['Percent of wages', 'Fixed amount', 'Days'], required: true, noPlaceholder: true },
     { name: 'condition', label: 'Applicability Condition', type: 'text', placeholder: 'e.g. Wage <= 21,000 / Establishments with 20+ workers' },
   ],
   rows: [
@@ -381,10 +401,10 @@ export const STATUTORY_MASTER: MasterConfig = {
     { id: 4, component: 'Gratuity', rate: 4.81, rateType: 'Percent of wages', condition: '5+ years continuous service', status: 'Active' },
     { id: 5, component: 'Labour Welfare Fund (LWF)', rate: 0.75, rateType: 'Percent of wages', condition: 'State specific LWF rules', status: 'Active' },
   ],
-  initial: { component: 'EPF (Employer PF)', status: 'Active', rate: 12, rateType: 'Percent of wages', condition: 'Establishments with 20+ employees' },
+  initial: { component: 'EPF (Employer PF)', status: 'Active', rate: 0, rateType: 'Percent of wages', condition: 'Establishments with 20+ employees' },
 };
 
-export const ADMIN_MASTERS: MasterConfig[] = [PARTY_MASTER, USERS_MASTER, STATUTORY_MASTER, PT_MASTER, LWF_MASTER, LICENSE_MASTER, MINIMUM_WAGE_MASTER, DOCUMENT_MASTER, COMPLIANCE_MASTER, REGISTER_DOC_MASTER, EMPLOYER_DOCUMENT_MAPPING, EMPLOYER_ACT_MAPPING, EMPLOYER_REGISTER_MAPPING];
+export const ADMIN_MASTERS: MasterConfig[] = [PARTY_MASTER, USERS_MASTER, STATUTORY_MASTER, PT_MASTER, LWF_MASTER, LICENSE_MASTER, MINIMUM_WAGE_MASTER, COMPLIANCE_MASTER, REGISTER_DOC_MASTER, EMPLOYER_DOCUMENT_MAPPING, EMPLOYER_ACT_MAPPING, EMPLOYER_REGISTER_MAPPING];
 
 // ── tiny shared badge helpers ────────────────────────────────────────────────
 export function StatusBadge({ value }: { value: string }) {
@@ -402,7 +422,6 @@ export const MASTER_BY_KEY: Record<string, MasterConfig> = {
   lwf: LWF_MASTER,
   license: LICENSE_MASTER,
   'minimum-wage': MINIMUM_WAGE_MASTER,
-  document: DOCUMENT_MASTER,
   compliance: COMPLIANCE_MASTER,
   'register-doc': REGISTER_DOC_MASTER,
   'employer-document': EMPLOYER_DOCUMENT_MAPPING,

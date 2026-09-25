@@ -21,7 +21,7 @@ def _template_row(t):
         "outputFormat": t.resolved_output_format(),
         "columns": list(t.columns or []),
         "fields": list(t.fields or []),
-        "meta": t.meta or {},
+        "meta": {**((t.meta or {})), "scope": "per-worker" if t.per_row else "whole"},
         "html": t.html or "",
         "perRow": t.per_row,
         "fieldMappings": [{"column": m.column, "fieldKey": m.field_key}

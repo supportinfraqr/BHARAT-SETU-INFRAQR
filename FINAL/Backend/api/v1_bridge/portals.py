@@ -265,11 +265,13 @@ def admin_masters(request, key):
     try:
         result = _masters(request, key)
     except PortalMutationError as exc:
-        # A duplicate is an expected user error, not a server failure: return it
-        # with HTTP 200 so the browser console isn't polluted by a failed
-        # request. The UI keys off the missing "row" and shows the message.
-        code = 200 if exc.status_code == 409 else exc.status_code
-        return Response({"error": exc.message}, status=code)
+        # A duplicate/validation is an expected user error, not a server failure:
+        # return it with HTTP 200 so the browser console isn't polluted by a
+        # failed request. The UI keys off the missing "row" and shows the message.
+        code = 200 if exc.status_code in (400, 409) else exc.status_code
+        payload = {"error": exc.message}
+        payload.update(getattr(exc, "extra", None) or {})
+        return Response(payload, status=code)
     if result is None:
         return Response({"error": "Unknown master."}, status=status.HTTP_404_NOT_FOUND)
     if request.method == "POST":
@@ -289,9 +291,11 @@ def admin_master_detail(request, key, pk):
     try:
         result = _master_detail(request, key, pk)
     except PortalMutationError as exc:
-        # Duplicates return 200 (see admin_masters) so the console stays clean.
-        code = 200 if exc.status_code == 409 else exc.status_code
-        return Response({"error": exc.message}, status=code)
+        # Duplicates/validation return 200 (see admin_masters) so the console stays clean.
+        code = 200 if exc.status_code in (400, 409) else exc.status_code
+        payload = {"error": exc.message}
+        payload.update(getattr(exc, "extra", None) or {})
+        return Response(payload, status=code)
     if result is None:
         return Response({"error": "Unknown master."}, status=status.HTTP_404_NOT_FOUND)
     log_audit(request.user, "DELETE" if request.method == "DELETE" else "UPDATE",
@@ -299,11 +303,12 @@ def admin_master_detail(request, key, pk):
     return Response(result, status=status.HTTP_200_OK)
 
 
-@api_view(["GET", "POST"])
+@api_view(["GET", "POST", "DELETE"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_master_file(request, key, pk):
-    """Upload (POST) or download (GET) the file attached to a master record.
+    """Upload (POST), download (GET) or remove (DELETE) the file attached to a
+    master record.
 
     Only masters that declare a ``file_field`` (e.g. Minimum Wage's notification
     PDF) accept a file."""
@@ -322,11 +327,30 @@ def admin_master_file(request, key, pk):
         stored = getattr(obj, field, None)
         if not stored:
             return Response({"error": "No file attached."}, status=status.HTTP_404_NOT_FOUND)
-        return FileResponse(stored.open("rb"), as_attachment=True,
-                            filename=os.path.basename(stored.name))
+        # Default to inline so the browser previews the PDF; ?download=1 forces save.
+        as_attachment = str(request.query_params.get("download", "")).lower() in ("1", "true", "yes")
+        return FileResponse(stored.open("rb"), as_attachment=as_attachment,
+                            filename=os.path.basename(stored.name),
+                            content_type="application/pdf")
+    if request.method == "DELETE":
+        stored = getattr(obj, field, None)
+        if stored:
+            stored.delete(save=True)
+        log_audit(request.user, "UPDATE", f"master:{key}", pk,
+                  after={"summary": f"Removed {key} notification file"})
+        return Response({"row": _row(spec, obj)}, status=status.HTTP_200_OK)
     upload = request.FILES.get("file")
     if upload is None:
         return Response({"error": "Choose a PDF to upload."}, status=status.HTTP_400_BAD_REQUEST)
+    # Strict validation: PDF only, <= 10 MB, and it must start with %PDF.
+    if upload.size > 10 * 1024 * 1024:
+        return Response({"error": "PDF must be 10 MB or smaller."},
+                        status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+    header = upload.read(5)
+    upload.seek(0)
+    if (upload.content_type or "").lower() != "application/pdf" or header != b"%PDF-":
+        return Response({"error": "Only PDF files are accepted."},
+                        status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
     setattr(obj, field, upload)
     obj.save()
     log_audit(request.user, "UPDATE", f"master:{key}", pk,
@@ -415,6 +439,8 @@ __all__ = [
     "cost_sheet_clone",
     "cost_sheet_statutory_master",
     "cost_sheet_min_wage_lookup",
+    "cost_sheet_min_wage_zones",
+    "cost_sheet_generate_code",
     "org_cost_sheet_update",
     "org_cost_sheet_preview",
     "cost_sheet_new_version",
