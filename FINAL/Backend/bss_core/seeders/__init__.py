@@ -33,12 +33,17 @@ def _clra_zip() -> str | None:
 
 
 def _run_clra_library() -> str:
-    """One-time (only-if-empty) import of the state-wise CLRA register library."""
+    """One-time (only-if-empty) import of the CLRA register library.
+
+    Scoped to Maharashtra only — the template library is seeded for that state
+    alone (both locally and in prod), so the other states' register files are
+    intentionally not imported.
+    """
     zip_path = _clra_zip()
     if not zip_path:
         return "skipped (no bundle)"
     from django.core.management import call_command
-    call_command("import_clra_templates", zip=zip_path, only_if_empty=True)
+    call_command("import_clra_templates", zip=zip_path, state="Maharashtra", only_if_empty=True)
     call_command("import_clra_applicability", zip=zip_path, only_if_empty=True)
     return "ok"
 
