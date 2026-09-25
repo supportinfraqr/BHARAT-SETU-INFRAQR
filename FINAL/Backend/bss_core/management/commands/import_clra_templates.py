@@ -500,7 +500,39 @@ def _faithful_xlsx_register_html(rows, title, form_code, columns):
             best, header_idx = score, i
     grid = ('<table class="grid"><thead><tr>{{HEAD}}</tr></thead>'
             '<tbody>{{ROWS}}</tbody></table>')
-    lines, header_done = [], False
+    def token_for(label):
+        t = label.lower()
+        if "principal employer" in t:
+            return "{{EMPLOYER_NAME}}"
+        if "contractor" in t:
+            return "{{CONTRACTOR_NAME}}"
+        if "establishment" in t:
+            return "{{EMPLOYER_NAME}}"
+        if "nature and location" in t or "location of work" in t:
+            return "{{SITE_NAME}}"
+        return ""
+
+    preamble_end = header_idx if header_idx is not None else 15
+    rule = ""
+    register_title = ""
+    for row in rows[:preamble_end]:
+        cells = [norm(c) for c in row if norm(c)]
+        if not cells:
+            continue
+        text = " ".join(cells)
+        lower = text.lower()
+        if lower.lstrip("* \u00a0").startswith("[") and not rule:
+            rule = text
+        elif re.match(r"^form\s+[ivxlcdm0-9]", lower):
+            continue
+        elif not register_title and not re.match(r"^\d+\.", text):
+            register_title = text
+    main_title = (f"{register_title} {form_code}".strip() if register_title else "") or title or form_code
+    lines = [f'<h1 style="text-align:center;font-size:18px;font-weight:bold;margin:8px 0;">{esc(main_title)}</h1>']
+    if rule:
+        lines.append('<h2 style="text-align:center;font-size:14px;font-weight:600;'
+                     f'margin:2px 0 8px;color:#475569;">{esc(rule)}</h2>')
+    header_done = False
     for i, row in enumerate(rows):
         cells = [norm(c) for c in row if norm(c)]
         if not cells:
@@ -510,19 +542,20 @@ def _faithful_xlsx_register_html(rows, title, form_code, columns):
             header_done = True
             continue
         text = " ".join(cells)
+        lower = text.lower()
         if header_done:
             # numeric sub-header row ("1.0  2.0  …") — the column numbering.
             if all(re.fullmatch(r"\d+(\.\d+)?", c) for c in cells):
                 continue
             lines.append(f"<p>{esc(_tokenize_period(text))}</p>")
             continue
-        lower = text.lower()
-        if re.match(r"^form\s+[ivxlcdm0-9]", lower):
-            lines.append(f'<p class="formtitle">{esc(text)}</p>')
-        elif lower.lstrip("* \u00a0").startswith("["):
-            lines.append(f'<p class="rule">{esc(text)}</p>')
-        elif not lines:
-            lines.append(f'<p class="title">{esc(text)}</p>')
+        if re.match(r"^form\s+[ivxlcdm0-9]", lower) or lower.lstrip("* \u00a0").startswith("["):
+            continue
+        if text == register_title:
+            continue
+        if re.match(r"^\d+\.", text):
+            key = re.sub(r"[.\s]+$", "", text)
+            lines.append(f'<p style="margin:4px 0;font-size:12px;"><b>{esc(key)}:</b> {token_for(text)}</p>')
         else:
             lines.append(f"<p>{esc(text)}</p>")
     return f"""<!doctype html><html><head><meta charset="utf-8">
@@ -530,9 +563,6 @@ def _faithful_xlsx_register_html(rows, title, form_code, columns):
   * {{ box-sizing: border-box; }}
   body {{ font-family: 'Times New Roman', Times, serif; margin: 28px; color: #000; }}
   p {{ margin: 4px 0; font-size: 13px; }}
-  p.formtitle {{ text-align: center; font-weight: bold; font-size: 15px; }}
-  p.rule {{ text-align: center; font-size: 11px; color: #333; margin-bottom: 8px; }}
-  p.title {{ text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 10px; }}
   table.grid {{ border-collapse: collapse; width: 100%; font-size: 12px; margin: 8px 0; }}
   table.grid td, table.grid th {{ border: 1px solid #000; padding: 4px 6px; }}
   @media print {{ body {{ margin: 8mm; }} }}

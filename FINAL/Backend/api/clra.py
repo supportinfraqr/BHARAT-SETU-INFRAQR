@@ -433,7 +433,30 @@ def _header_lines_from_html(html_text, template, rows, context):
         inner = inner.replace("{{ACT}}", str(template.get("act", "")))
         plain = _TAG_RE.sub("", inner)
         plain = re.sub(r"\s+", " ", unescape(plain).replace("\xa0", " ")).strip()
-        if plain:
+        if plain and re.search(r"[A-Za-z0-9]", plain):
+            lines.append(plain)
+    return lines
+
+
+def _footer_lines_from_html(html_text, template, rows, context):
+    """Authored footer ``<p>`` lines (after the last table) as plain text, with
+    data placeholders resolved — so a register's declaration (e.g. "There is no
+    deduction for damage or Loss during the month of …") appears at the bottom of
+    the generated Excel register, with the period tokens filled in."""
+    if not html_text:
+        return []
+    text = str(html_text)
+    idx = text.lower().rfind("</table>")
+    tail = text[idx + len("</table>"):] if idx != -1 else ""
+    lines = []
+    for match in _DOC_P_RE.finditer(tail):
+        inner = render_doc_body(match.group(1), rows, context)
+        for token, source in _META_TOKEN_SOURCES.items():
+            inner = inner.replace("{{" + token + "}}", str((context or {}).get(source, "")))
+        inner = inner.replace("{{ACT}}", str(template.get("act", "")))
+        plain = _TAG_RE.sub("", inner)
+        plain = re.sub(r"\s+", " ", unescape(plain).replace("\xa0", " ")).strip()
+        if plain and re.search(r"[A-Za-z0-9]", plain):
             lines.append(plain)
     return lines
 
@@ -472,6 +495,16 @@ def _write_template_sheet(wb, template, rows, header_fill, header_font, context=
             value = resolve_cell(key, row, context, index=i)
             if value is not None:
                 ws.cell(row=table_row + i, column=col, value=value)
+    # Declaration / footer lines (e.g. "No fine imposed during the month of …")
+    # rendered below the table with the period tokens resolved.
+    footer_cursor = table_row + len(rows) + 1
+    for line in _footer_lines_from_html(template.get("html"), template, rows, context):
+        cell = ws.cell(row=footer_cursor, column=1, value=line)
+        cell.font = Font(size=10, italic=True)
+        if len(columns) > 1:
+            ws.merge_cells(start_row=footer_cursor, start_column=1,
+                           end_row=footer_cursor, end_column=len(columns))
+        footer_cursor += 1
     return ws
 
 

@@ -87,6 +87,15 @@ def _apply_row_model():
                 template.save(update_fields=["per_row", "meta", "updated_at"])
 
 
+def _seed_field_mappings():
+    """(Re)build the CLRA register field mappings + calculation rules.
+
+    Runs **after** the templates exist so every seeded register's columns are
+    mapped to master-file field keys (the *mapping of tokens to columns*)."""
+    from django.core.management import call_command
+    call_command("seed_register_config")
+
+
 def seed() -> int:
     """Create the default templates that don't exist yet.
 
@@ -111,6 +120,7 @@ def seed() -> int:
         call_command("import_clra_templates", zip=archive, state=state,
                      forms=",".join(sorted(tokens)), only_missing=True)
     _apply_row_model()
+    _seed_field_mappings()
     return RegisterTemplate.objects.count() - before
 
 
@@ -135,4 +145,5 @@ def reset_all() -> int:
             continue
         call_command("import_clra_templates", zip=archive, state=state, forms=",".join(sorted(codes)))
     _apply_row_model()
+    _seed_field_mappings()
     return RegisterTemplate.objects.count()
