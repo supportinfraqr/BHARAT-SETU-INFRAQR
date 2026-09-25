@@ -461,6 +461,86 @@ def _faithful_xlsx_form_html(rows, title, form_code):
 </body></html>"""
 
 
+_MONTH_YEAR_RE = re.compile(
+    r"(?i)\b(january|february|march|april|may|june|july|august|september|"
+    r"october|november|december)\b[\s,]*\d{2,4}")
+
+
+def _tokenize_period(text):
+    """Replace a baked-in month + year with the register-period tokens so the
+    printed declaration follows the selected frequency (``{{MONTH}} {{YEAR}}``)."""
+    out = _MONTH_YEAR_RE.sub("{{MONTH}} {{YEAR}}", str(text or ""))
+    # A declaration that trails "during the month of" with no month value gets
+    # the period tokens appended (source had the month in a merged cell).
+    if re.search(r"(?i)month of\s*$", out) and "{{MONTH}}" not in out:
+        out = out.rstrip() + " {{MONTH}} {{YEAR}}"
+    return out
+
+
+def _faithful_xlsx_register_html(rows, title, form_code, columns):
+    """Faithful default for an ``.xls``/``.xlsx`` **register**.
+
+    Renders the printed preamble (FORM code, ``[See rule …]``, title, numbered
+    header lines), the live ``{{HEAD}}``/``{{ROWS}}`` grid where the source header
+    row sits, and the trailing declaration footer — with its month/year
+    tokenised (``{{MONTH}} {{YEAR}}``) so it tracks the register period."""
+    def esc(value):
+        return (str(value or "").replace("&", "&amp;").replace("<", "&lt;")
+                .replace(">", "&gt;"))
+
+    def norm(value):
+        return re.sub(r"\s+", " ", str(value or "").strip())
+
+    col_keys = {norm(c).lower() for c in (columns or []) if norm(c)}
+    header_idx, best = None, 0
+    for i, row in enumerate(rows[:40]):
+        cells = [norm(c) for c in row if norm(c)]
+        score = sum(1 for c in cells if c.lower() in col_keys)
+        if score > best:
+            best, header_idx = score, i
+    grid = ('<table class="grid"><thead><tr>{{HEAD}}</tr></thead>'
+            '<tbody>{{ROWS}}</tbody></table>')
+    lines, header_done = [], False
+    for i, row in enumerate(rows):
+        cells = [norm(c) for c in row if norm(c)]
+        if not cells:
+            continue
+        if header_idx is not None and i == header_idx:
+            lines.append(grid)
+            header_done = True
+            continue
+        text = " ".join(cells)
+        if header_done:
+            # numeric sub-header row ("1.0  2.0  …") — the column numbering.
+            if all(re.fullmatch(r"\d+(\.\d+)?", c) for c in cells):
+                continue
+            lines.append(f"<p>{esc(_tokenize_period(text))}</p>")
+            continue
+        lower = text.lower()
+        if re.match(r"^form\s+[ivxlcdm0-9]", lower):
+            lines.append(f'<p class="formtitle">{esc(text)}</p>')
+        elif lower.lstrip("* \u00a0").startswith("["):
+            lines.append(f'<p class="rule">{esc(text)}</p>')
+        elif not lines:
+            lines.append(f'<p class="title">{esc(text)}</p>')
+        else:
+            lines.append(f"<p>{esc(text)}</p>")
+    return f"""<!doctype html><html><head><meta charset="utf-8">
+<style>
+  * {{ box-sizing: border-box; }}
+  body {{ font-family: 'Times New Roman', Times, serif; margin: 28px; color: #000; }}
+  p {{ margin: 4px 0; font-size: 13px; }}
+  p.formtitle {{ text-align: center; font-weight: bold; font-size: 15px; }}
+  p.rule {{ text-align: center; font-size: 11px; color: #333; margin-bottom: 8px; }}
+  p.title {{ text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 10px; }}
+  table.grid {{ border-collapse: collapse; width: 100%; font-size: 12px; margin: 8px 0; }}
+  table.grid td, table.grid th {{ border: 1px solid #000; padding: 4px 6px; }}
+  @media print {{ body {{ margin: 8mm; }} }}
+</style></head><body>
+  {chr(10).join(lines)}
+</body></html>"""
+
+
 def _classify(name, data):
     """Return the structured template draft for one register file."""
     ext = os.path.splitext(name)[1].lower()
@@ -586,6 +666,12 @@ class Command(BaseCommand):
                 # A register stored as a Word doc: keep its printed preamble and
                 # turn its table into the live {{HEAD}}/{{ROWS}} grid.
                 html = _faithful_register_html(_docx_blocks(data), title or form_code, form_code)
+            elif columns and template_type == "register" and classified["source_format"] in ("xlsx", "xls"):
+                # An Excel register: keep its printed preamble + declaration
+                # (month/year tokenised) and the live {{HEAD}}/{{ROWS}} grid.
+                rows = (_parse_xlsx(data) if classified["source_format"] == "xlsx"
+                        else _parse_xls(data))
+                html = _faithful_xlsx_register_html(rows, title or form_code, form_code, columns)
             elif not columns and not fields and classified["source_format"] in ("xlsx", "xls"):
                 rows = (_parse_xlsx(data) if classified["source_format"] == "xlsx"
                         else _parse_xls(data))
