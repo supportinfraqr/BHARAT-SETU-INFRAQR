@@ -489,6 +489,7 @@ def contractor_compliance_batches(request):
     generated_on = timezone.localdate()
     data = clra.build_workbook(
         rows, contractor=payloads._party_name(user),
+        employer=(payloads._party_name(site.employer) if site and site.employer_id else ""),
         site=(site.site_name if site else site_label),
         site_code=(site.site_code if site else ""), state=state,
         financial_year=fy, month=month, year=year, registers=registers,

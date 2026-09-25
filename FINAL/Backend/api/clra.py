@@ -407,6 +407,8 @@ def build_master_template():
 
 
 _DOC_P_RE = re.compile(r"<p\b[^>]*>(.*?)</p>", re.S | re.I)
+# Any header line (title/secondary/paragraph) — h1/h2/p in document order.
+_DOC_LINE_RE = re.compile(r"<(h1|h2|p)\b[^>]*>(.*?)</\1>", re.S | re.I)
 _TAG_RE = re.compile(r"<[^>]+>")
 _META_TOKEN_SOURCES = {
     "CONTRACTOR_NAME": "contractor", "EMPLOYER_NAME": "employer",
@@ -417,17 +419,18 @@ _META_TOKEN_SOURCES = {
 
 
 def _header_lines_from_html(html_text, template, rows, context):
-    """Authored header ``<p>`` lines (before the first table) as plain text, with
-    data placeholders resolved — so the custom header Key:value lines also appear
-    in the generated Excel register, not just the HTML/PDF view."""
+    """Header lines (``<h1>``/``<h2>``/``<p>`` before the first table) as plain
+    text, with data placeholders resolved — so the register's printed preamble
+    (title, ``[See rule …]``, Key:value header lines) appears in the generated
+    Excel register exactly as in the source, with nothing extra added."""
     if not html_text:
         return []
     text = str(html_text)
     table_idx = text.lower().find("<table")
     head = text[:table_idx] if table_idx != -1 else text
     lines = []
-    for match in _DOC_P_RE.finditer(head):
-        inner = render_doc_body(match.group(1), rows, context)
+    for match in _DOC_LINE_RE.finditer(head):
+        inner = render_doc_body(match.group(2), rows, context)
         for token, source in _META_TOKEN_SOURCES.items():
             inner = inner.replace("{{" + token + "}}", str((context or {}).get(source, "")))
         inner = inner.replace("{{ACT}}", str(template.get("act", "")))
@@ -467,23 +470,22 @@ def _write_template_sheet(wb, template, rows, header_fill, header_font, context=
         columns = [label for label, _ in REGISTER_COLUMNS]
     title = (template.get("formCode") or template.get("title") or "Register")[:31]
     ws = wb.create_sheet(title=title)
-    ws["A1"] = template.get("title") or template.get("formCode") or "Register"
-    _bold(ws, "A1", 12)
-    ws["A2"] = (f"Form: {template.get('formCode', '')}    "
-                f"State: {template.get('state', '')}")
     field_mappings = template.get("fieldMappings") or {}
     mapping = [(field_mappings.get(col) or match_column(col)) for col in columns]
     rows = apply_calculation_rules(rows, template.get("calculationRules"))
 
+    # Faithful source layout: the register's own printed preamble (title, [See
+    # rule …], Key:value header lines) then the data grid. No added title/form/
+    # state rows, no branding, no dates — nothing the source doesn't have.
     header_lines = _header_lines_from_html(template.get("html"), template, rows, context)
-    row_cursor = 3
+    row_cursor = 1
     for line in header_lines:
         ws.cell(row=row_cursor, column=1, value=line).font = Font(size=10)
         if len(columns) > 1:
             ws.merge_cells(start_row=row_cursor, start_column=1,
                            end_row=row_cursor, end_column=len(columns))
         row_cursor += 1
-    table_row = (row_cursor + 1) if header_lines else 4
+    table_row = row_cursor
 
     for col, label in enumerate(columns, start=1):
         cell = ws.cell(row=table_row, column=col, value=label)
@@ -521,7 +523,7 @@ def build_register_workbook(template, rows, context=None):
     return out.getvalue()
 
 
-def build_workbook(rows, *, contractor="", site="", site_code="", state="",
+def build_workbook(rows, *, contractor="", employer="", site="", site_code="", state="",
                    financial_year="", month="", year="", registers=None,
                    generated_on="", templates=None):
     """Return the bytes of an XLSX workbook: cover sheet + one sheet per register.
@@ -532,6 +534,28 @@ def build_workbook(rows, *, contractor="", site="", site_code="", state="",
     registers = list(registers or [])
     templates = list(templates or [])
     wb = Workbook()
+    header_fill = PatternFill("solid", fgColor="0A192F")
+    header_font = Font(bold=True, color="FFFFFF")
+
+    if templates:
+        # CLRA registers render exactly like the source: one sheet per register
+        # with its printed preamble + data grid only — no cover sheet, no added
+        # title/form/state rows, no branding or dates.
+        wb.remove(wb.active)
+        context = backend_context(
+            contractor=contractor, employer=employer, site=site, site_code=site_code, state=state,
+            month=month, year=year, financial_year=financial_year,
+            record_count=len(rows), generated_on=generated_on)
+        for template in templates:
+            # Register-style templates (with parsed columns) become sheets;
+            # form-style templates (no columns) render to PDF, not Excel.
+            if not template.get("columns"):
+                continue
+            _write_template_sheet(wb, template, rows, header_fill, header_font, context)
+        out = io.BytesIO()
+        wb.save(out)
+        return out.getvalue()
+
     cover = wb.active
     cover.title = "Cover"
     cover.column_dimensions["A"].width = 28
@@ -552,23 +576,6 @@ def build_workbook(rows, *, contractor="", site="", site_code="", state="",
     for i, (label, value) in enumerate(meta, start=3):
         cover.cell(row=i, column=1, value=label).font = Font(bold=True)
         cover.cell(row=i, column=2, value=value)
-
-    header_fill = PatternFill("solid", fgColor="0A192F")
-    header_font = Font(bold=True, color="FFFFFF")
-    if templates:
-        context = backend_context(
-            contractor=contractor, site=site, site_code=site_code, state=state,
-            month=month, year=year, financial_year=financial_year,
-            record_count=len(rows), generated_on=generated_on)
-        for template in templates:
-            # Register-style templates (with parsed columns) become sheets;
-            # form-style templates (no columns) render to PDF, not Excel.
-            if not template.get("columns"):
-                continue
-            _write_template_sheet(wb, template, rows, header_fill, header_font, context)
-        out = io.BytesIO()
-        wb.save(out)
-        return out.getvalue()
 
     for reg in registers:
         title = reg.get("formNo") or reg.get("name") or "Register"
