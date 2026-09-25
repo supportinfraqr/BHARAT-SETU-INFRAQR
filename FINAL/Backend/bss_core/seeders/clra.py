@@ -32,6 +32,10 @@ CLRA_DEFAULT_FORMS: dict[str, list[dict]] = {
     ],
 }
 
+# Seeded for every state that has them: the muster/wage registers are the core
+# CLRA records and every state's master file feeds them row by row.
+CLRA_ALWAYS_FORMS = ["FORM XIII", "FORM XVI", "FORM XVII"]
+
 DEFAULT_ARCHIVE = "/app/data/clra-registers.zip"
 
 
@@ -48,13 +52,10 @@ def _manifest_forms(state: str) -> str:
     return ",".join(entry["form"].replace("FORM ", "") for entry in CLRA_DEFAULT_FORMS.get(state, []))
 
 
-def _register_of_forms_by_state(archive: str) -> dict[str, set[str]]:
-    """Excel registers whose source file is named like ``Register of …``.
-
-    These print a declaration line ("No fine imposed during the month of …")
-    that must follow the register period, so they are seeded for every state
-    that has them."""
-    import re
+def _excel_forms_by_state(archive: str) -> dict[str, set[str]]:
+    """Every Excel (``.xls``/``.xlsx``) register present per state, as canonical
+    form tokens. Excel registers are the tabular records (muster/wage/deduction/
+    fines/advances/overtime) that the master file feeds row by row."""
     import zipfile
     from bss_core.management.commands.import_clra_templates import canon_form_code
 
@@ -66,8 +67,6 @@ def _register_of_forms_by_state(archive: str) -> dict[str, set[str]]:
                 continue
             base = parts[-1]
             if base.startswith("~$") or not base.lower().endswith((".xls", ".xlsx")):
-                continue
-            if not re.search(r"register of", base, re.I):
                 continue
             found.setdefault(parts[-2], set()).add(canon_form_code(base).replace("FORM ", ""))
     return found
@@ -91,8 +90,9 @@ def _apply_row_model():
 def seed() -> int:
     """Create the default templates that don't exist yet.
 
-    The set is the explicit manifest **plus** every state's Excel registers
-    named like ``Register of …``."""
+    For every state: the always-on muster/wage registers (XIII, XVI, XVII) that
+    the state has, **plus every Excel register** in that state, plus any explicit
+    manifest entries."""
     from django.core.management import call_command
     from bss_core.models import RegisterTemplate
 
@@ -100,10 +100,12 @@ def seed() -> int:
     if not archive:
         return 0
     before = RegisterTemplate.objects.count()
-    register_of = _register_of_forms_by_state(archive)
-    for state in sorted(set(CLRA_DEFAULT_FORMS) | set(register_of)):
-        tokens = {entry["form"].replace("FORM ", "") for entry in CLRA_DEFAULT_FORMS.get(state, [])}
-        tokens |= register_of.get(state, set())
+    excel = _excel_forms_by_state(archive)
+    always = [f.replace("FORM ", "") for f in CLRA_ALWAYS_FORMS]
+    for state in sorted(set(CLRA_DEFAULT_FORMS) | set(excel)):
+        tokens = set(always)
+        tokens |= excel.get(state, set())
+        tokens |= {entry["form"].replace("FORM ", "") for entry in CLRA_DEFAULT_FORMS.get(state, [])}
         if not tokens:
             continue
         call_command("import_clra_templates", zip=archive, state=state,
