@@ -106,6 +106,8 @@ _v1_patterns = _v1(
     ("cost-sheets/<int:template_id>/update", v1_bridge.org_cost_sheet_update, "v1_org_cost_sheet_update"),
     ("cost-sheets/<int:template_id>/preview", v1_bridge.org_cost_sheet_preview, "v1_org_cost_sheet_preview"),
     ("cost-sheets/<int:template_id>/approve", v1_bridge.org_cost_sheet_approve, "v1_org_cost_sheet_approve"),
+    ("cost-sheets/<int:template_id>/submit", v1_bridge.org_cost_sheet_submit, "v1_org_cost_sheet_submit"),
+    ("cost-sheets/<int:template_id>/reject", v1_bridge.org_cost_sheet_reject, "v1_org_cost_sheet_reject"),
     ("admin/cost-sheets/<int:template_id>/new-version", v1_bridge.cost_sheet_new_version, "v1_cost_sheet_new_version"),
     ("admin/letter-templates", v1_bridge.admin_letter_templates, "v1_admin_letter_templates"),
     ("admin/letter-templates/<int:template_id>", v1_bridge.admin_letter_template_detail, "v1_admin_letter_template_detail"),

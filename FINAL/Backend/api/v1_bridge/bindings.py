@@ -408,21 +408,30 @@ def _apply_binding_terms(binding, data):
     if sheet_id not in (None, ""):
         from bss_core.models import CostSheetTemplate
         sheet = CostSheetTemplate.objects.filter(pk=sheet_id, status="PUBLISHED").first()
-        if sheet is not None:
-            # Applicability validation — state must match the site when both are set.
-            site_state = str(getattr(binding.site, "state", "") or "").strip()
-            if sheet.state and site_state and sheet.state.lower() != site_state.lower():
-                raise PortalMutationError(
-                    f"This cost sheet is for {sheet.state}, but the site is in {site_state}. "
-                    "Select a cost sheet for the site's state.", 409)
-            result = costsheet.compute_worker_cost(
-                sheet, include_contractor=getattr(binding.contractor, "role", "") == "contractor")
-            binding.cost_sheet = sheet
-            binding.computed_ctc = Decimal(str(result["ctc"]))
-            binding.offered_wage = Decimal(str(result["minimumWage"]))
-            binding.cost_breakdown = result
-            if sheet.designation and not binding.designation:
-                binding.designation = sheet.designation[:80]
+        if sheet is None:
+            raise PortalMutationError(
+                "That cost sheet is not available — it must be adopted for the site and "
+                "accepted by the employer before it can be used.", 409)
+        # Only the contractor's own employer-accepted sheet for this site is usable.
+        if sheet.owner_id != binding.contractor_id:
+            raise PortalMutationError(
+                "Adopt this template for the site and get the employer's acceptance before binding.", 409)
+        if sheet.site_id and sheet.site_id != binding.site_id:
+            raise PortalMutationError("This cost sheet is for a different site.", 409)
+        # Applicability validation — state must match the site when both are set.
+        site_state = str(getattr(binding.site, "state", "") or "").strip()
+        if sheet.state and site_state and sheet.state.lower() != site_state.lower():
+            raise PortalMutationError(
+                f"This cost sheet is for {sheet.state}, but the site is in {site_state}. "
+                "Select a cost sheet for the site's state.", 409)
+        result = costsheet.compute_worker_cost(
+            sheet, include_contractor=getattr(binding.contractor, "role", "") == "contractor")
+        binding.cost_sheet = sheet
+        binding.computed_ctc = Decimal(str(result["ctc"]))
+        binding.offered_wage = Decimal(str(result["minimumWage"]))
+        binding.cost_breakdown = result
+        if sheet.designation and not binding.designation:
+            binding.designation = sheet.designation[:80]
             return binding
 
     wage = data.get("offeredWage", data.get("offered_wage"))

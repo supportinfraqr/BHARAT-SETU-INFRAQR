@@ -69,6 +69,9 @@ export async function POST(request: Request) {
     // binding (feeds the appointment letter issued on acceptance).
     const offeredWage = Number(body.offeredWage);
     if (Number.isFinite(offeredWage) && offeredWage > 0) consent.offeredWage = offeredWage;
+    // Cost sheet (employer-accepted) attached at approval — replaces manual wage.
+    const costSheetId = Number(body.costSheetId);
+    if (Number.isInteger(costSheetId) && costSheetId > 0) consent.costSheetId = costSheetId;
 
     const result = await upstreamRequest(config.apiBaseUrl, `/v1/bindings/${bindingId}/consent`, session, {
       method: 'POST',

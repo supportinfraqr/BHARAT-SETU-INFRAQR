@@ -57,6 +57,7 @@ project site of <strong>{{{{employerName}}}}</strong> through <strong>{{{{contra
 </table>
 <h3>D. Wages</h3>
 <table class="kv"><tr><td>Gross Monthly Wage</td><td>{{{{wage}}}}</td></tr></table>
+{{{{costSheetSection}}}}
 <p>Your engagement is subject to applicable labour laws and the terms agreed with the contractor. You shall
 follow all site safety rules, use the personal protective equipment provided, complete site induction, and
 report any unsafe condition to the site safety officer immediately.</p>

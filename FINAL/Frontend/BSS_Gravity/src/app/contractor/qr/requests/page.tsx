@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Building2, CheckCircle2, Clock3, Handshake, History, KeyRound, Link2, MapPin, UserRound } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -20,8 +20,9 @@ export default function ContractorBindingRequestsPage() {
   const [otp, setOtp] = useState('');
   const [otpMode, setOtpMode] = useState<'bind' | 'unbind'>('bind');
   const [wageFor, setWageFor] = useState<ContractorBindingRequest | null>(null);
-  const [wageInput, setWageInput] = useState('');
+  const [acceptSheet, setAcceptSheet] = useState('');
   const [wageError, setWageError] = useState('');
+  const [costSheets, setCostSheets] = useState<Array<{ id:number; name:string; code:string; status?:string; ownerId?:number|null; siteId?:number|null; siteName?:string }>>([]);
   const [confirm, setConfirm] = useState<{ row: ContractorBindingRequest; kind: 'approve' | 'reject' | 'accept' | 'ce-unbind' | 'worker-unbind' | 'worker-decline' } | null>(null);
   const [sitesFor, setSitesFor] = useState<ContractorBindingRequest | null>(null);
   const [historyFor, setHistoryFor] = useState<ContractorBindingRequest | null>(null);
@@ -31,10 +32,25 @@ export default function ContractorBindingRequestsPage() {
 
   const rows = employerScope === 'all' ? contractor.bindingRequests : contractor.bindingRequests.filter(r => r.employer === employerScope);
 
-  async function accept(row: ContractorBindingRequest, wage?: number) {
+  // Cost sheets the contractor can attach at bind time — only employer-accepted
+  // (PUBLISHED) copies, filtered to the binding's site.
+  useEffect(() => {
+    let active = true;
+    void fetch('/api/contractor/cost-sheets', { cache:'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((b: { rows?: Array<{ id:number; name:string; code:string; status?:string; ownerId?:number|null; siteId?:number|null; siteName?:string }> } | null) => {
+        if (active && b?.rows) setCostSheets(b.rows);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+  const acceptSite = wageFor ? contractor.sites.find(s => s.id === wageFor.siteId) : undefined;
+  const acceptSheets = costSheets.filter(s => s.status === 'PUBLISHED' && !!s.ownerId && (!s.siteId || (acceptSite && String(s.siteId) === acceptSite.id)));
+
+  async function accept(row: ContractorBindingRequest, costSheetId?: number) {
     setBusy(true); setError(''); setNotice('');
     try {
-      const response = await fetch('/api/worker/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: row.id, action: 'accept', offeredWage: wage }) });
+      const response = await fetch('/api/worker/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: row.id, action: 'accept', costSheetId }) });
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
       if (!response.ok) throw new Error(result.error || 'Binding could not be accepted.');
       const accepted = result.data?.status === 'Accepted';
@@ -47,17 +63,16 @@ export default function ContractorBindingRequestsPage() {
 
   function openWagePrompt(row: ContractorBindingRequest) {
     setWageFor(row);
-    setWageInput('');
+    setAcceptSheet('');
     setWageError('');
   }
 
   async function confirmWage() {
     if (!wageFor) return;
-    const wage = Number(wageInput);
-    if (!(wage > 0)) { setWageError('Enter the offered monthly wage (₹).'); return; }
+    if (!acceptSheet) { setWageError('Pick an employer-accepted cost sheet for the site.'); return; }
     const row = wageFor;
     setWageFor(null);
-    await accept(row, wage);
+    await accept(row, Number(acceptSheet));
   }
 
   async function declineWorker(row: ContractorBindingRequest) {
@@ -295,11 +310,14 @@ export default function ContractorBindingRequestsPage() {
     {wageFor && (
       <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4">
         <section role="dialog" aria-modal="true" className="bg-white rounded-2xl p-6 w-full max-w-sm">
-          <h2 className="font-semibold text-gray-900">Approve binding — offered wage</h2>
+          <h2 className="font-semibold text-gray-900">Approve binding — cost sheet</h2>
           <p className="text-xs text-gray-500 mt-1">{wageFor.entityName} · {wageFor.site}</p>
-          <p className="text-[11px] text-gray-400 mt-2">Record the monthly wage offered to this worker. It is stored on the binding and printed on the worker&apos;s appointment letter.</p>
-          <label className="block mt-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">Offered monthly wage (₹)</label>
-          <input autoFocus inputMode="numeric" value={wageInput} onChange={e => { setWageInput(e.target.value.replace(/[^\d]/g, '')); setWageError(''); }} placeholder="e.g. 18000" className="mt-1 w-full bg-[#F5F5F7] border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none"/>
+          <p className="text-[11px] text-gray-400 mt-2">Pick the employer-accepted cost sheet for this site. The wage, statutory components, custom costs and CTC are auto-computed and printed on the worker&apos;s appointment letter.</p>
+          <label className="block mt-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">Cost sheet (required)</label>
+          <select value={acceptSheet} onChange={e => { setAcceptSheet(e.target.value); setWageError(''); }} disabled={!acceptSheets.length} className="mt-1 w-full bg-[#F5F5F7] border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none disabled:text-gray-500">
+            <option value="">{acceptSheets.length ? 'Select an employer-accepted cost sheet…' : 'No accepted cost sheet for this site'}</option>
+            {acceptSheets.map(s => <option key={s.id} value={s.id}>{s.name}{s.siteName ? ` · ${s.siteName}` : ''} · {s.code}</option>)}
+          </select>
           {wageError && <p className="text-[11px] text-red-600 font-semibold mt-2">{wageError}</p>}
           <div className="mt-4 flex gap-2 justify-end">
             <button onClick={() => setWageFor(null)} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold">Cancel</button>

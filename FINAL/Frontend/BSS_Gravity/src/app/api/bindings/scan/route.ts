@@ -27,7 +27,7 @@ export async function POST(request: Request) {
         siteToken: typeof body.siteToken === 'string' ? body.siteToken : '',
         site: typeof body.site === 'string' ? body.site : '',
         offeredWage: Number.isFinite(offeredWage) && offeredWage > 0 ? offeredWage : undefined,
-        costSheetId: typeof body.costSheetId === 'string' && body.costSheetId ? Number(body.costSheetId) : undefined,
+        costSheetId: Number.isFinite(Number(body.costSheetId)) && Number(body.costSheetId) > 0 ? Number(body.costSheetId) : undefined,
         siteIds: Array.isArray(body.siteIds) ? body.siteIds.filter(id => Number.isInteger(id)) : [],
         preview: body.preview === true,
       }),

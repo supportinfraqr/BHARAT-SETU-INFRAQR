@@ -27,6 +27,7 @@ const LETTER_TOKENS: StudioToken[] = [
   { value: '{{doj}}', label: 'Date of joining', group: 'Employment' },
   { value: '{{wage}}', label: 'Gross monthly wage', group: 'Employment' },
   { value: '{{costSheetCode}}', label: 'Cost sheet code (Auto-fetches details)', group: 'Cost Sheet' },
+  { value: '{{costSheetSection}}', label: 'Attached cost sheet block (blank if none)', group: 'Cost Sheet' },
   { value: '{{contractorName}}', label: 'Contractor name', group: 'Parties' },
   { value: '{{contractorBssId}}', label: 'Contractor BSS ID', group: 'Parties' },
   { value: '{{contractorAddress}}', label: 'Contractor address', group: 'Parties' },

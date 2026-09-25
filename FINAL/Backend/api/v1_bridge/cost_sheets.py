@@ -555,10 +555,16 @@ def cost_sheets_available(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def cost_sheet_clone(request, template_id):
-    """Contractor adopts a published BSS template into their own site cost sheet proposal.
+    """Contractor adopts a published BSS template for one of its allotted sites.
 
-    Adopted templates enter 'REVIEW' status for the Principal Employer's review & approval."""
-    from bss_core.models import CostSheetTemplate
+    The adopted copy starts as a DRAFT: the contractor customises its cost heads
+    and then explicitly submits it, which moves it to REVIEW for the Principal
+    Employer's acceptance. Employers cannot adopt — they only accept/reject
+    contractor proposals. Adoption is per-site: the contractor must hold an
+    approved allotment for the chosen site, and only one live proposal per
+    (template, site) is allowed."""
+    from bss_core.models import CostSheetTemplate, Site
+    from .bindings import _contractor_site_ids
     if request.user.role != "contractor":
         return Response({"error": "Only contractors can adopt cost sheet templates for a site proposal. Employers review and accept contractor proposals."},
                         status=status.HTTP_403_FORBIDDEN)
@@ -569,15 +575,29 @@ def cost_sheet_clone(request, template_id):
         return Response({"error": "This template is not available to adopt."},
                         status=status.HTTP_409_CONFLICT)
     body = request.data if isinstance(request.data, dict) else {}
+    # Adoption is per-site — the chosen site must be one the contractor is
+    # actually allotted (approved allotment on an accepted employer binding).
+    raw_site = body.get("siteId", body.get("site_id"))
+    site = Site.objects.filter(pk=raw_site).first() if raw_site not in (None, "") else None
+    if site is None:
+        return Response({"error": "Choose the allotted site this cost sheet is for."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if site.id not in _contractor_site_ids(request.user):
+        return Response({"error": "That site is not allotted to you."},
+                        status=status.HTTP_403_FORBIDDEN)
+    existing = CostSheetTemplate.objects.filter(
+        owner=request.user, parent=source, site=site).exclude(status="ARCHIVED")
+    if existing.exists():
+        return Response({"error": f"You already have a cost sheet for {site.site_name} from this template."},
+                        status=status.HTTP_409_CONFLICT)
     clone = _clone_template(source, request.user, name=body.get("name"))
-    
-    if request.user.role == "contractor":
-        # Contractor adoption puts sheet into REVIEW status requiring Employer sign-off
-        clone.status = "REVIEW"
-        clone.save(update_fields=["status", "updated_at"])
+    clone.site = site
+    # Adopted copies begin as an editable DRAFT; submission is a separate action.
+    clone.status = "DRAFT"
+    clone.save(update_fields=["site", "status", "updated_at"])
 
     log_audit(request.user, "CREATE", "cost_sheet_template", clone.id,
-              after={"summary": f"Adopted cost sheet {source.code} → {clone.code} (Status: {clone.status})"})
+              after={"summary": f"Adopted cost sheet {source.code} for site {site.site_name} → {clone.code} (Draft)"})
     return Response({"data": _template_row(clone, full=True)}, status=status.HTTP_201_CREATED)
 
 
@@ -695,15 +715,23 @@ def cost_sheet_min_wage_lookup(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def org_cost_sheet_update(request, template_id):
-    """An org edits its own customised template — name + the custom cost lines
-    flagged 'editable by org'. Statutory and minimum-wage values stay locked."""
+    """A contractor edits its own DRAFT cost sheet — name + the custom cost lines
+    flagged 'editable by org'. Statutory and minimum-wage values stay locked.
+
+    Once submitted for employer acceptance (REVIEW) or accepted (PUBLISHED) the
+    sheet is locked; an employer rejection returns it to DRAFT, where it can be
+    edited and resubmitted."""
     from bss_core.models import CostSheetTemplate
-    if request.user.role not in ("contractor", "employer"):
-        return Response({"error": "Only employers and contractors can edit their cost sheets."},
+    if request.user.role != "contractor":
+        return Response({"error": "Only contractors edit their own cost sheet drafts; employers accept or reject proposals."},
                         status=status.HTTP_403_FORBIDDEN)
     t = CostSheetTemplate.objects.filter(pk=template_id, owner=request.user).first()
     if t is None:
         return Response({"error": "Template not found."}, status=status.HTTP_404_NOT_FOUND)
+    if t.status != "DRAFT":
+        return Response({"error": "This cost sheet has been submitted and is locked. "
+                                  "If the employer rejects it, it returns to Draft and can be edited again."},
+                        status=status.HTTP_409_CONFLICT)
     body = request.data if isinstance(request.data, dict) else {}
     if body.get("name"):
         t.name = str(body["name"])[:160]
@@ -767,31 +795,87 @@ def cost_sheet_new_version(request, template_id):
     return Response({"data": _template_row(clone, full=True)}, status=status.HTTP_201_CREATED)
 
 
+def _employer_engaged_contractor_ids(employer):
+    """Contractor user ids engaged with this employer (accepted binding OR an
+    approved site allotment at one of the employer's sites)."""
+    from bss_core.models import ContractorEmployerBinding, ContractorSiteAllotment, Site
+    site_ids = set(Site.objects.filter(employer=employer).values_list("id", flat=True))
+    return set(ContractorEmployerBinding.objects.filter(
+        employer=employer, binding_status="ACCEPTED").values_list("contractor_id", flat=True)) | set(
+        ContractorSiteAllotment.objects.filter(site_id__in=site_ids, status="APPROVED")
+        .values_list("binding__contractor_id", flat=True))
+
+
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def org_cost_sheet_approve(request, template_id):
-    """Employer approves a contractor-adopted cost sheet (transitions status from REVIEW to PUBLISHED)."""
-    from bss_core.models import CostSheetTemplate, ContractorEmployerBinding, ContractorSiteAllotment, Site
+    """Employer accepts a contractor's submitted cost sheet (REVIEW → PUBLISHED)."""
+    from bss_core.models import CostSheetTemplate
     if request.user.role != "employer":
         return Response({"error": "Only principal employers can accept contractor cost sheets."}, status=status.HTTP_403_FORBIDDEN)
     
     t = CostSheetTemplate.objects.filter(pk=template_id).first()
     if t is None:
         return Response({"error": "Cost sheet not found."}, status=status.HTTP_404_NOT_FOUND)
+    if t.status != "REVIEW":
+        return Response({"error": "Only a cost sheet submitted for acceptance can be approved."},
+                        status=status.HTTP_409_CONFLICT)
     
-    site_ids = set(Site.objects.filter(employer=request.user).values_list("id", flat=True))
-    contractor_user_ids = set(ContractorEmployerBinding.objects.filter(employer=request.user, binding_status="ACCEPTED")
-                             .values_list("contractor_id", flat=True)) | set(
-                                 ContractorSiteAllotment.objects.filter(site_id__in=site_ids, status="APPROVED")
-                                 .values_list("binding__contractor_id", flat=True))
-    
-    if t.owner_id not in contractor_user_ids:
+    if t.owner_id not in _employer_engaged_contractor_ids(request.user):
         return Response({"error": "This cost sheet does not belong to an engaged contractor at your sites."}, status=status.HTTP_403_FORBIDDEN)
     
     t.status = "PUBLISHED"
     t.save(update_fields=["status", "updated_at"])
     log_audit(request.user, "APPROVE", "cost_sheet_template", t.id, after={"summary": f"Employer approved contractor cost sheet {t.code}"})
+    return Response({"data": _template_row(t, full=True)}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def org_cost_sheet_submit(request, template_id):
+    """Contractor submits their DRAFT cost sheet to the employer (DRAFT → REVIEW).
+    After this the sheet is locked until the employer accepts or rejects it."""
+    from bss_core.models import CostSheetTemplate
+    if request.user.role != "contractor":
+        return Response({"error": "Only the contractor that owns the draft can submit it."},
+                        status=status.HTTP_403_FORBIDDEN)
+    t = CostSheetTemplate.objects.filter(pk=template_id, owner=request.user).first()
+    if t is None:
+        return Response({"error": "Cost sheet not found."}, status=status.HTTP_404_NOT_FOUND)
+    if t.status != "DRAFT":
+        return Response({"error": "Only a Draft cost sheet can be submitted."},
+                        status=status.HTTP_409_CONFLICT)
+    t.status = "REVIEW"
+    t.save(update_fields=["status", "updated_at"])
+    log_audit(request.user, "UPDATE", "cost_sheet_template", t.id,
+              after={"summary": f"Contractor submitted cost sheet {t.code} for employer acceptance"})
+    return Response({"data": _template_row(t, full=True)}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def org_cost_sheet_reject(request, template_id):
+    """Employer rejects a submitted cost sheet (REVIEW → DRAFT) so the contractor
+    can revise and resubmit."""
+    from bss_core.models import CostSheetTemplate
+    if request.user.role != "employer":
+        return Response({"error": "Only principal employers can reject contractor cost sheets."},
+                        status=status.HTTP_403_FORBIDDEN)
+    t = CostSheetTemplate.objects.filter(pk=template_id).first()
+    if t is None:
+        return Response({"error": "Cost sheet not found."}, status=status.HTTP_404_NOT_FOUND)
+    if t.status != "REVIEW":
+        return Response({"error": "Only a cost sheet submitted for acceptance can be rejected."},
+                        status=status.HTTP_409_CONFLICT)
+    if t.owner_id not in _employer_engaged_contractor_ids(request.user):
+        return Response({"error": "This cost sheet does not belong to an engaged contractor at your sites."}, status=status.HTTP_403_FORBIDDEN)
+    t.status = "DRAFT"
+    t.save(update_fields=["status", "updated_at"])
+    log_audit(request.user, "UPDATE", "cost_sheet_template", t.id,
+              after={"summary": f"Employer rejected contractor cost sheet {t.code} → Draft"})
     return Response({"data": _template_row(t, full=True)}, status=status.HTTP_200_OK)
 
 
@@ -802,5 +886,6 @@ __all__ = ["cost_sheets", "cost_sheet_detail", "cost_sheet_preview",
            "cost_sheet_min_wage_zones",
            "cost_sheet_generate_code",
            "org_cost_sheet_update", "org_cost_sheet_preview", "org_cost_sheet_approve",
+           "org_cost_sheet_submit", "org_cost_sheet_reject",
            "cost_sheet_new_version",
            "_template_row", "_apply_template", "_clone_template"]

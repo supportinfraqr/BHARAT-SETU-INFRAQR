@@ -46,6 +46,33 @@ def _money(value) -> str:
         return "—"
 
 
+def _cost_sheet_section(cs, cb) -> str:
+    """Render the attached cost sheet as an offer-letter section. Empty string
+    when the binding has no cost sheet, so templates using ``{{costSheetSection}}``
+    simply show nothing in that case."""
+    if cs is None:
+        return ""
+    cb = cb or {}
+    breakdown = [
+        ("Basic wage", _money(cb.get("basicWage"))),
+        ("VDA", _money(cb.get("vda"))),
+        ("Minimum wage", _money(cb.get("minimumWage"))),
+        ("Statutory (employer)", _money(cb.get("statutoryTotal"))),
+        ("Custom / other costs", _money(cb.get("customTotal"))),
+        ("CTC", _money(cb.get("ctc"))),
+    ]
+    rows = "".join(f"<tr><td>{_e(label)}</td><td>{value}</td></tr>" for label, value in breakdown)
+    grade = _e(getattr(cs, "grade", "") or "")
+    category = _e(getattr(cs, "worker_category", "") or "")
+    qualifier = " · ".join(x for x in (category, grade) if x)
+    header = f"<strong>{_e(cs.name)}</strong> ({_e(cs.code)})"
+    if qualifier:
+        header += f" — {qualifier}"
+    return (f'<h3>E. Cost Sheet Attached</h3>'
+            f'<p>Your cost sheet: {header}.</p>'
+            f'<table class="kv">{rows}</table>')
+
+
 def _offered_wage(binding):
     """Monthly wage agreed at binding, falling back to the worker's latest
     recorded wage so the letter is never blank when a wage exists."""
@@ -161,6 +188,7 @@ def _letter_tokens(binding, letter_type: str, logo_url: str = "") -> dict:
         "costSheetName": _e(cs_name),
         "costSheetCategory": _e(cs_cat),
         "costSheetGrade": _e(cs_grade),
+        "costSheetSection": _cost_sheet_section(cs, cb),
         "ctc": _money(ctc_val),
         "epfEmployer": _money(epf_val),
         "esicEmployer": _money(esic_val),
@@ -215,6 +243,8 @@ def render_letter(binding, letter_type: str) -> str:
     ref = f"BSS/{ref_prefix}/{binding.id:05d}"
     issue = _fmt(binding.accepted_at or binding.created_at)
     wage = _money(_offered_wage(binding))
+    cost_sheet_html = _cost_sheet_section(getattr(binding, "cost_sheet", None),
+                                          getattr(binding, "cost_breakdown", {}) or {})
 
     if letter_type == "appointment":
         body = f"""
@@ -248,6 +278,7 @@ def render_letter(binding, letter_type: str) -> str:
         <table class="kv">
           <tr><td>Gross Monthly Wage</td><td>{wage}</td></tr>
         </table>
+        {cost_sheet_html}
         <p>Your engagement is subject to applicable labour laws and the terms agreed with the contractor. You shall
         follow all site safety rules, use the personal protective equipment provided, complete site induction, and
         report any unsafe condition to the site safety officer immediately.</p>

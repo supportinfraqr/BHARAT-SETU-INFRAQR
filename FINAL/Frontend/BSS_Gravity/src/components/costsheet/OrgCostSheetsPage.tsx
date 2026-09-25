@@ -8,6 +8,7 @@ type Custom = { name:string; amount:number; rateType:string; frequency:string; a
 type Template = {
   id:number; name:string; code:string; state:string; industry:string; workerCategory:string;
   designation:string; status:string; ownerId:number | null; currency:string;
+  siteId?:number | null; siteName?:string;
   custom:Custom[]; minimumWage:{ basicWage:number; vda:number; minimumMonthlyWage:number; notificationNumber?:string } | null;
 };
 type Breakdown = {
@@ -27,6 +28,8 @@ export default function OrgCostSheetsPage() {
   const [amounts, setAmounts] = useState<Record<string, number>>({});
   const [preview, setPreview] = useState<Breakdown | null>(null);
   const [busy, setBusy] = useState(false);
+  const [sites, setSites] = useState<Array<{ id:string; name:string; state?:string }>>([]);
+  const [adoptSite, setAdoptSite] = useState<Record<number,string>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,6 +46,15 @@ export default function OrgCostSheetsPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
   useEffect(() => { void load(); }, [load]);
 
+  // Contractors adopt per allotted site — load their sites for the picker.
+  useEffect(() => {
+    if (role !== "contractor") return;
+    fetch('/api/portal', { cache:'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((j: { data?: { sites?: Array<{ id:string; name:string; state?:string }> } } | null) => setSites(j?.data?.sites ?? []))
+      .catch(() => {});
+  }, [role]);
+
   async function computeCost(template: Template, overrides?: Record<string, number>) {
     const response = await fetch(`/api/cost-sheets/${template.id}/preview`, {
       method:"POST", headers:{ "Content-Type":"application/json" },
@@ -53,18 +65,19 @@ export default function OrgCostSheetsPage() {
     setPreview(body.data);
   }
 
-  async function copy(template: Template) {
+  async function copy(template: Template, siteId?: string) {
+    if (!siteId) { setError("Choose the allotted site this cost sheet is for."); return; }
     setBusy(true); setError(""); setNotice("");
     try {
-      // Try contractor-specific endpoint first, fallback to general endpoint
-      let response = await fetch(`/api/contractor/cost-sheets/${template.id}/clone`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({}) });
+      // Contractor adoption is per-site — the site is sent with the clone.
+      let response = await fetch(`/api/contractor/cost-sheets/${template.id}/clone`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ siteId: Number(siteId) }) });
       if (response.status === 404) {
-        response = await fetch(`/api/cost-sheets/${template.id}/clone`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({}) });
+        response = await fetch(`/api/cost-sheets/${template.id}/clone`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ siteId: Number(siteId) }) });
       }
       const body = await response.json().catch(() => ({})) as { data?:Template; error?:string };
       if (!response.ok || !body.data) throw new Error(body.error ?? "The template could not be adopted.");
       setRows(current => [body.data!, ...current]);
-      setNotice(`Adopted "${template.name}" proposal — submitted to Principal Employer for acceptance.`);
+      setNotice(`Adopted "${template.name}" for ${body.data.siteName || "the site"} — Draft ready to edit.`);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Adoption failed."); }
     finally { setBusy(false); }
   }
@@ -103,29 +116,75 @@ export default function OrgCostSheetsPage() {
       if (!response.ok || !body.data) throw new Error(body.error ?? "The cost sheet could not be approved.");
       setRows(current => current.map(r => r.id === template.id ? body.data! : r));
       if (editing?.id === template.id) setEditing(null);
-      setNotice(`Approved cost sheet proposal "${template.name}" for active use.`);
+      setNotice(`Accepted cost sheet proposal "${template.name}" for active use.`);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Approval failed."); }
+    finally { setBusy(false); }
+  }
+
+  async function rejectCostSheet(template: Template) {
+    if (!window.confirm(`Reject "${template.name}" and send it back to the contractor for revision?`)) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const response = await fetch(`/api/cost-sheets/${template.id}/reject`, {
+        method:"POST", headers:{ "Content-Type":"application/json" },
+      });
+      const body = await response.json().catch(() => ({})) as { data?:Template; error?:string };
+      if (!response.ok || !body.data) throw new Error(body.error ?? "The cost sheet could not be rejected.");
+      setRows(current => current.map(r => r.id === template.id ? body.data! : r));
+      if (editing?.id === template.id) setEditing(null);
+      setNotice(`Rejected "${template.name}" — returned to the contractor as a Draft.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Rejection failed."); }
+    finally { setBusy(false); }
+  }
+
+  async function submitProposal(template: Template) {
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const response = await fetch(`/api/cost-sheets/${template.id}/submit`, {
+        method:"POST", headers:{ "Content-Type":"application/json" },
+      });
+      const body = await response.json().catch(() => ({})) as { data?:Template; error?:string };
+      if (!response.ok || !body.data) throw new Error(body.error ?? "The cost sheet could not be submitted.");
+      setRows(current => current.map(r => r.id === template.id ? body.data! : r));
+      if (editing?.id === template.id) setEditing(null);
+      setNotice(`Submitted "${template.name}" to the Principal Employer for acceptance.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Submission failed."); }
     finally { setBusy(false); }
   }
 
   const columns: DataColumn<Template>[] = [
     { id:"name", header:"Template", value:r => r.name, render:r => <div><strong className="text-gray-900">{r.name}</strong><p className="font-mono text-[10px] text-gray-400">{r.code}</p></div> },
     { id:"state", header:"State / Industry", value:r => `${r.state || "All India"} · ${r.industry || "All"}` },
+    { id:"site", header:"Site", value:r => r.siteName || (r.siteId ? `#${r.siteId}` : "—") },
     { id:"category", header:"Category / Designation", value:r => `${r.workerCategory || "—"} · ${r.designation || "—"}` },
     { id:"status", header:"Status", value:r => r.status, render:r => {
-      const isReview = r.status === "REVIEW";
-      return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isReview ? "bg-amber-100 text-amber-800 border border-amber-300" : r.status === "PUBLISHED" ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600"}`}>
-        {isReview ? "⏳ Pending Employer Acceptance" : r.status}
+      const label = r.status === "REVIEW" ? "⏳ Pending Employer Acceptance"
+        : r.status === "DRAFT" ? "Draft — not submitted" : r.status;
+      return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.status === "REVIEW" ? "bg-amber-100 text-amber-800 border border-amber-300" : r.status === "PUBLISHED" ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600"}`}>
+        {label}
       </span>;
     } },
     { id:"origin", header:"Origin", value:r => r.ownerId ? "Adopted / Contractor" : "BSS Platform Master", render:r => <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.ownerId ? "bg-blue-50 text-blue-700 border border-blue-200" : "bg-purple-50 text-purple-700 border border-purple-200"}`}>{r.ownerId ? "Contractor Proposal" : "Platform Master"}</span> },
-    { id:"actions", header:"Actions", filterable:false, value:r => r.id, render:r => (
-      <div className="flex items-center gap-2">
-        {!r.ownerId && role !== "employer" && <button disabled={busy} onClick={() => void copy(r)} className="text-xs font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg inline-flex items-center gap-1 disabled:opacity-50"><Copy size={12}/>Adopt for Site</button>}
-        {r.status === "REVIEW" && role === "employer" && <button disabled={busy} onClick={() => void approveCostSheet(r)} className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 rounded-lg inline-flex items-center gap-1 disabled:opacity-50 shadow-sm"><CheckCircle2 size={12}/>Accept Proposal</button>}
-        <button onClick={() => openEditor(r)} className="text-xs font-semibold text-gray-700 hover:text-[#073B67] inline-flex items-center gap-1"><Calculator size={12}/>View &amp; Edit</button>
-      </div>
-    ) },
+    { id:"actions", header:"Actions", filterable:false, value:r => r.id, render:r => {
+      const isContractor = role === "contractor";
+      const isEmployer = role === "employer";
+      const canEdit = isContractor && !!r.ownerId && r.status === "DRAFT";
+      return <div className="flex items-center gap-2">
+        {isContractor && !r.ownerId && <>
+          <select value={adoptSite[r.id] ?? ""} onChange={e => setAdoptSite(s => ({ ...s, [r.id]: e.target.value }))} className="h-8 rounded-lg border border-gray-200 px-2 text-xs bg-white" aria-label="Allotted site">
+            <option value="">{sites.length ? "Select allotted site…" : "No site allotted"}</option>
+            {sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.state ? ` · ${s.state}` : ""}</option>)}
+          </select>
+          <button disabled={busy || !adoptSite[r.id]} onClick={() => void copy(r, adoptSite[r.id])} className="text-xs font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg inline-flex items-center gap-1 disabled:opacity-50"><Copy size={12}/>Adopt for Site</button>
+        </>}
+        {canEdit && <button disabled={busy} onClick={() => void submitProposal(r)} className="text-xs font-bold text-white bg-[#073B67] hover:bg-[#0a4a80] px-2.5 py-1 rounded-lg inline-flex items-center gap-1 disabled:opacity-50"><CheckCircle2 size={12}/>Submit to Employer</button>}
+        {isEmployer && r.status === "REVIEW" && <>
+          <button disabled={busy} onClick={() => void approveCostSheet(r)} className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 rounded-lg inline-flex items-center gap-1 disabled:opacity-50 shadow-sm"><CheckCircle2 size={12}/>Accept Proposal</button>
+          <button disabled={busy} onClick={() => void rejectCostSheet(r)} className="text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1 rounded-lg disabled:opacity-50">Reject</button>
+        </>}
+        <button onClick={() => openEditor(r)} className="text-xs font-semibold text-gray-700 hover:text-[#073B67] inline-flex items-center gap-1"><Calculator size={12}/>{canEdit ? "Edit" : "View"}</button>
+      </div>;
+    } },
   ];
 
   return <div className="space-y-6 pb-10">
@@ -137,10 +196,12 @@ export default function OrgCostSheetsPage() {
     {loading ? <p className="flex items-center gap-2 text-sm text-gray-500 py-10"><Loader2 size={16} className="animate-spin"/>Loading cost sheets…</p>
       : <EnterpriseDataTable title="Available cost sheet templates" rows={rows} columns={columns} rowKey={r => String(r.id)} filename="org-cost-sheets"/>}
 
-    {editing && <div className="fixed inset-0 z-[90] bg-black/50 flex justify-end" role="presentation">
+    {editing && (() => {
+      const editable = role === "contractor" && !!editing.ownerId && editing.status === "DRAFT";
+      return <div className="fixed inset-0 z-[90] bg-black/50 flex justify-end" role="presentation">
       <section role="dialog" aria-modal="true" aria-label="Cost sheet" className="bg-white w-full max-w-2xl h-full overflow-y-auto">
         <header className="sticky top-0 z-10 bg-white border-b border-gray-100 px-5 py-4 flex items-start justify-between gap-3">
-          <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Cost sheet</p><input value={editing.name} disabled={!editing.ownerId} onChange={e => setEditing({ ...editing, name:e.target.value })} className="font-semibold text-gray-950 mt-0.5 w-full border-b border-transparent focus:border-gray-300 disabled:bg-transparent"/><p className="text-xs text-gray-500 mt-0.5">{editing.code} · {editing.state || "All India"} · {editing.workerCategory || "—"}</p></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Cost sheet</p><input value={editing.name} disabled={!editable} onChange={e => setEditing({ ...editing, name:e.target.value })} className="font-semibold text-gray-950 mt-0.5 w-full border-b border-transparent focus:border-gray-300 disabled:bg-transparent"/><p className="text-xs text-gray-500 mt-0.5">{editing.code} · {editing.state || "All India"} · {editing.workerCategory || "—"}</p></div>
           <button onClick={() => setEditing(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button>
         </header>
         <div className="p-5 space-y-5">
@@ -153,7 +214,7 @@ export default function OrgCostSheetsPage() {
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Custom cost heads</p>
             <div className="space-y-2">{editing.custom.map((c, i) => <div key={i} className="grid grid-cols-[1.6fr_120px_120px] gap-2 items-center text-xs">
               <span className="font-semibold text-gray-800">{c.name}{!c.editableByOrg && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Platform fixed</span>}</span>
-              <input type="number" disabled={!c.editableByOrg} value={amounts[c.name] ?? c.amount} onChange={e => setAmounts(a => ({ ...a, [c.name]:Number(e.target.value) }))} className="h-9 border border-gray-200 rounded-lg px-2 text-xs disabled:bg-gray-50"/>
+              <input type="number" disabled={!editable || !c.editableByOrg} value={amounts[c.name] ?? c.amount} onChange={e => setAmounts(a => ({ ...a, [c.name]:Number(e.target.value) }))} className="h-9 border border-gray-200 rounded-lg px-2 text-xs disabled:bg-gray-50"/>
               <span className="text-gray-400">{c.frequency === "ONE_TIME" ? "one-time" : c.frequency.toLowerCase()} · {c.appliesTo}</span>
             </div>)}</div>
           </div>
@@ -172,12 +233,15 @@ export default function OrgCostSheetsPage() {
         </div>
         <footer className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-4 flex justify-end gap-2">
           <button onClick={() => setEditing(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Close</button>
-          {editing.status === "REVIEW" && role === "employer" && (
+          {editable && <button disabled={busy} onClick={() => void saveEditor()} className="h-10 px-4 rounded-lg border border-[#073B67] text-[#073B67] text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5"><Save size={14}/>{busy ? "Saving…" : "Save draft"}</button>}
+          {editable && <button disabled={busy} onClick={() => void submitProposal(editing)} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5"><CheckCircle2 size={14}/>Submit to Employer</button>}
+          {editing.status === "REVIEW" && role === "employer" && <>
+            <button disabled={busy} onClick={() => void rejectCostSheet(editing)} className="h-10 px-4 rounded-lg border border-red-200 text-red-700 bg-red-50 text-xs font-bold hover:bg-red-100 disabled:opacity-60">Reject</button>
             <button disabled={busy} onClick={() => void approveCostSheet(editing)} className="h-10 px-4 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 disabled:opacity-60 inline-flex items-center gap-1.5 shadow-sm"><CheckCircle2 size={14}/>Accept Proposal</button>
-          )}
-          {editing.ownerId && role !== "employer" && <button disabled={busy} onClick={() => void saveEditor()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5"><Save size={14}/>{busy ? "Saving…" : "Save cost sheet"}</button>}
+          </>}
         </footer>
       </section>
-    </div>}
+    </div>;
+    })()}
   </div>;
 }

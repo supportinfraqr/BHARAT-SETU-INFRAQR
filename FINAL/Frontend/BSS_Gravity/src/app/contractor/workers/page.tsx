@@ -41,7 +41,8 @@ export default function WorkerMasterPage() {
   const [profileDetail, setProfileDetail] = useState<ScanVerifyData | null>(null);
   const [docsView, setDocsView] = useState<ContractorWorker | null>(null);
   const [idView, setIdView] = useState<ContractorWorker | null>(null);
-  const [costSheets, setCostSheets] = useState<Array<{ id:number; name:string; code:string }>>([]);
+  const [costSheets, setCostSheets] = useState<Array<{ id:number; name:string; code:string; status?:string; ownerId?:number|null; siteId?:number|null; siteName?:string }>>([]);
+  const [bindSite, setBindSite] = useState('');
   const [sheetView, setSheetView] = useState<ContractorWorker | null>(null);
   const [sheetChoice, setSheetChoice] = useState('');
   const [docsView2, setDocsView2] = useState<ContractorWorker | null>(null);
@@ -53,7 +54,7 @@ export default function WorkerMasterPage() {
     let active = true;
     void fetch('/api/contractor/cost-sheets', { cache:'no-store' })
       .then(response => (response.ok ? response.json() : null))
-      .then((body: { rows?: Array<{ id:number; name:string; code:string }> } | null) => {
+      .then((body: { rows?: Array<{ id:number; name:string; code:string; status?:string; ownerId?:number|null; siteId?:number|null; siteName?:string }> } | null) => {
         if (active && body?.rows) setCostSheets(body.rows);
       })
       .catch(() => {});
@@ -63,6 +64,10 @@ export default function WorkerMasterPage() {
   const active = scopedRows.filter(w => w.status === 'Accepted').length;
   const pending = scopedRows.filter(w => w.status === 'Pending').length;
   const inactive = scopedRows.filter(w => w.status === 'Rejected' || w.status === 'Cancelled' || w.status === 'Expired').length;
+  // Only the employer-accepted cost sheet for the chosen site may be used to bind.
+  const bindSiteObj = contractor.sites.find(s => s.name === bindSite);
+  const bindCostSheets = costSheets.filter(s => s.status === 'PUBLISHED' && !!s.ownerId && (!s.siteId || String(s.siteId) === bindSiteObj?.id));
+  const acceptedCostSheets = costSheets.filter(s => s.status === 'PUBLISHED' && !!s.ownerId);
 
   // Open the full worker profile: the row carries the binding summary, and the
   // identity-verify endpoint returns the extensive record (bound tier).
@@ -165,8 +170,8 @@ export default function WorkerMasterPage() {
       <header className="p-5 border-b flex justify-between"><div><h2 id="add-worker-title" className="font-semibold">Bind an existing BSS worker</h2><p className="text-xs text-gray-500 mt-0.5">Enter the worker&apos;s BSS ID — the worker must accept before the profile unlocks. Workers register themselves; you cannot create one here.</p></div><button onClick={() => setModal(null)} aria-label="Close"><X/></button></header>
       <form onSubmit={submitSingle} className="p-5 grid sm:grid-cols-2 gap-4">
         <Field name="bssId" label="BSS ID" pattern="(?:BSS-W[A-Za-z0-9]{10,11}|BSS\d{12})" placeholder="BSS-W7KQ2M9X4RT"/>
-        <label className="text-xs font-semibold text-gray-700">Site<select required name="site" className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white"><option value="">Select site</option>{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name} — {s.employer}</option>)}</select></label>
-        <label className="text-xs font-semibold text-gray-700 sm:col-span-2">Cost sheet template<select name="costSheetId" className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white"><option value="">No template — enter wage manually</option>{costSheets.map(s => <option key={s.id} value={s.id}>{s.name} · {s.code}</option>)}</select><span className="block text-[10px] text-gray-400 mt-1">Selecting a template auto-computes the wage, statutory components, custom costs and CTC.</span></label>
+        <label className="text-xs font-semibold text-gray-700">Site<select required name="site" value={bindSite} onChange={e => setBindSite(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white"><option value="">Select site</option>{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name} — {s.employer}</option>)}</select></label>
+        <label className="text-xs font-semibold text-gray-700 sm:col-span-2">Cost sheet (required)<select required name="costSheetId" disabled={!bindSite || !bindCostSheets.length} className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white disabled:bg-gray-50 disabled:text-gray-500"><option value="">{!bindSite ? 'Select a site first' : bindCostSheets.length ? 'Select an employer-accepted cost sheet…' : 'No accepted cost sheet for this site'}</option>{bindCostSheets.map(s => <option key={s.id} value={s.id}>{s.name}{s.siteName ? ` · ${s.siteName}` : ''} · {s.code}</option>)}</select><span className="block text-[10px] text-gray-400 mt-1">Wage, statutory components, custom costs and CTC are auto-computed from the cost sheet. Adopt a template for the site and get the employer&apos;s acceptance first.</span></label>
         {error && <p role="alert" className="sm:col-span-2 text-sm text-red-700">{error}</p>}
         <div className="sm:col-span-2 flex justify-end gap-2"><button type="button" onClick={() => setModal(null)} className="px-4 py-2 text-sm">Cancel</button><button disabled={busy} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold">{busy ? 'Saving…' : 'Bind worker'}</button></div>
       </form>
@@ -256,7 +261,7 @@ export default function WorkerMasterPage() {
       <header className="p-5 border-b border-gray-100 flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Change Cost Sheet</p><h2 className="font-semibold text-gray-950 mt-0.5">{sheetView.name}</h2><p className="text-xs text-gray-500 font-mono mt-0.5">{sheetView.bssId}</p></div><button onClick={() => setSheetView(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button></header>
       <div className="p-5 space-y-4">
         <p className="text-xs text-gray-500">Current cost sheet: <strong className="text-gray-800">{sheetView.costSheetName || sheetView.costSheet || '—'}</strong>. Selecting a new template recalculates the wage, statutory components, custom costs and CTC.</p>
-        <label className="text-xs font-semibold text-gray-700">Cost sheet template<select value={sheetChoice} onChange={e => setSheetChoice(e.target.value)} disabled={busy} className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white disabled:opacity-60"><option value="">Select template</option>{costSheets.map(s => <option key={s.id} value={s.id}>{s.name} · {s.code}</option>)}</select></label>
+        <label className="text-xs font-semibold text-gray-700">Cost sheet<select value={sheetChoice} onChange={e => setSheetChoice(e.target.value)} disabled={busy} className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white disabled:opacity-60"><option value="">{acceptedCostSheets.length ? 'Select an employer-accepted cost sheet…' : 'No accepted cost sheet'}</option>{acceptedCostSheets.map(s => <option key={s.id} value={s.id}>{s.name}{s.siteName ? ` · ${s.siteName}` : ''} · {s.code}</option>)}</select></label>
         {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
         <div className="flex justify-end gap-2"><button onClick={() => setSheetView(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button><button disabled={busy || !sheetChoice} onClick={() => void changeCostSheet(sheetView, sheetChoice)} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Applying…' : 'Apply cost sheet'}</button></div>
       </div>
