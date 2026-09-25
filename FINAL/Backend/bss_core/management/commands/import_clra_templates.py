@@ -661,7 +661,7 @@ class Command(BaseCommand):
                 continue
             if filename.startswith("~$"):
                 continue
-            form_code = _form_code(filename)
+            form_code = canon_form_code(_form_code(filename))
             if forms_filter and canon_form_code(form_code) not in forms_filter:
                 continue
             title = _title(filename)

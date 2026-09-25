@@ -1,17 +1,19 @@
 """State-wise CLRA register templates seeded by default.
 
-The default set is defined here **in code**, segregated by state — this is the
-source of truth for which CLRA forms a fresh deployment comes up with.
+The default set is defined here **in code** and derived from the
+``State wise form of CLRA`` matrix (the state × purpose → form table), not from
+a hard-coded per-state list. For every state we seed exactly the seven core
+CLRA registers, each with the form number the matrix assigns to that state:
 
-Each entry names the form to seed for that state plus its row model:
+    Register of Workmen · MusterRoll · Wage Register ·
+    Deductions for Damage or Loss · Register of Fines ·
+    Register of Advances · Register of Overtime
 
-* ``per_row=False`` — **row-level register**: one document listing every
-  master-file worker as a row (the ``{{HEAD}}`` / ``{{ROWS}}`` grid).
-* ``per_row=True``  — **per-worker document**: one copy per master-file row
-  (e.g. Identity Card FORM X, Wage Slip FORM XIX).
+All seven are **row-level registers** — one document that lists every
+master-file worker as a row (the ``{{HEAD}}`` / ``{{ROWS}}`` grid).
 
-``seed()`` only **creates missing** templates (it never overwrites admin edits);
-``reset_all()`` re-renders every existing template back to its source default.
+``seed()`` only **creates missing** templates (never overwrites admin edits);
+``reset_all()`` re-renders them back to their source default.
 """
 
 from __future__ import annotations
@@ -19,22 +21,16 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-# State → forms seeded by default.
-CLRA_DEFAULT_FORMS: dict[str, list[dict]] = {
-    "Andhra Pradesh": [
-        {"form": "FORM XIII", "per_row": False},   # Register of Workmen Employed
-        {"form": "FORM XVI", "per_row": False},    # Register of Wages
-        {"form": "FORM XVII", "per_row": False},   # Register of Wages-cum-Muster Roll
-        {"form": "FORM XX", "per_row": False},     # Register of Deductions
-        {"form": "FORM XXI", "per_row": False},    # Register of Fines
-        {"form": "FORM XXII", "per_row": False},   # Register of Advances
-        {"form": "FORM XXIII", "per_row": False},  # Register of Overtime
-    ],
-}
-
-# Seeded for every state that has them: the muster/wage registers are the core
-# CLRA records and every state's master file feeds them row by row.
-CLRA_ALWAYS_FORMS = ["FORM XIII", "FORM XVI", "FORM XVII"]
+# The seven core registers, keyed by the exact purpose label in the matrix.
+CLRA_REGISTER_PURPOSES = [
+    "Register of Workmen",
+    "MusterRoll",
+    "Wage Register",
+    "Deductions for Damage or Loss",
+    "Register of Fines",
+    "Register of Advances",
+    "Register of Overtime",
+]
 
 # Forms excluded from all seeding (never created, and removed if already present).
 CLRA_EXCLUDE_FORMS = {"FORM XII"}
@@ -51,111 +47,115 @@ def archive_path() -> str | None:
     return str(local) if local.exists() else None
 
 
-def _manifest_forms(state: str) -> str:
-    return ",".join(entry["form"].replace("FORM ", "") for entry in CLRA_DEFAULT_FORMS.get(state, []))
+def _ensure_matrix(archive: str) -> None:
+    """Make sure the applicability matrix (state × purpose → form) is loaded."""
+    from django.core.management import call_command
+    try:
+        call_command("import_clra_applicability", zip=archive, only_if_empty=True)
+    except Exception:  # noqa: BLE001 — never block seeding on this
+        pass
 
 
-def _excel_forms_by_state(archive: str) -> dict[str, set[str]]:
-    """Every Excel (``.xls``/``.xlsx``) register present per state, as canonical
-    form tokens. Excel registers are the tabular records (muster/wage/deduction/
-    fines/advances/overtime) that the master file feeds row by row."""
-    import zipfile
+def _matrix_forms_by_state() -> dict[str, set[str]]:
+    """``{state: {form tokens}}`` — the state's form for each of the 7 purposes.
+
+    Reads the matrix rows imported into ``StateFormApplicability`` and maps every
+    cell label (e.g. ``FORM XIII``) to its canonical token. Special markers such
+    as ``NO CHANGE`` are ignored."""
     from bss_core.management.commands.import_clra_templates import canon_form_code
+    from bss_core.models import StateFormApplicability
 
-    found: dict[str, set[str]] = {}
-    with zipfile.ZipFile(archive) as bundle:
-        for name in bundle.namelist():
-            parts = name.split("/")
-            if len(parts) < 3:
-                continue
-            base = parts[-1]
-            if base.startswith("~$") or not base.lower().endswith((".xls", ".xlsx")):
-                continue
-            code = canon_form_code(base)
-            if code in CLRA_EXCLUDE_FORMS:
-                continue
-            found.setdefault(parts[-2], set()).add(code.replace("FORM ", ""))
-    return found
+    out: dict[str, set[str]] = {}
+    rows = (StateFormApplicability.objects
+            .filter(purpose__in=CLRA_REGISTER_PURPOSES)
+            .values_list("state", "form_label"))
+    for state, label in rows:
+        code = canon_form_code(label)
+        if not code.startswith("FORM") or code in CLRA_EXCLUDE_FORMS:
+            continue
+        out.setdefault(state, set()).add(code.replace("FORM ", ""))
+    return out
 
 
-def _apply_row_model():
-    """Set ``per_row`` / ``meta.scope`` from the manifest for the configured forms."""
+def _allowed_pairs(matrix: dict[str, set[str]]) -> set[tuple[str, str]]:
+    from bss_core.management.commands.import_clra_templates import canon_form_code
+    allowed = set()
+    for state, forms in matrix.items():
+        for form in forms:
+            allowed.add((state, canon_form_code(form)))
+    return allowed
+
+
+def _prune(matrix: dict[str, set[str]]) -> None:
+    """Delete any template that is not one of the state's seven default forms."""
+    from bss_core.management.commands.import_clra_templates import canon_form_code
     from bss_core.models import RegisterTemplate
-    from bss_core.management.commands.import_clra_templates import canon_form_code
 
-    for state, forms in CLRA_DEFAULT_FORMS.items():
-        for entry in forms:
-            code = canon_form_code(entry["form"])
-            per_row = bool(entry.get("per_row"))
-            for template in RegisterTemplate.objects.filter(state=state, form_code=code):
-                template.per_row = per_row
-                template.meta = {**(template.meta or {}), "scope": "per-worker" if per_row else "whole"}
-                template.save(update_fields=["per_row", "meta", "updated_at"])
+    allowed = _allowed_pairs(matrix)
+    for template in RegisterTemplate.objects.all():
+        canonical = canon_form_code(template.form_code)
+        # Drop non-allowed forms and any non-canonical code left by an older import.
+        if (template.state, canonical) not in allowed or template.form_code != canonical:
+            template.delete()
 
 
-def _seed_field_mappings():
-    """(Re)build the CLRA register field mappings + calculation rules.
+def _set_row_model(matrix: dict[str, set[str]]) -> None:
+    """All seven are row-level registers (one document, workers as rows)."""
+    from bss_core.models import RegisterTemplate
+    for template in RegisterTemplate.objects.all():
+        template.per_row = False
+        template.meta = {**(template.meta or {}), "scope": "whole"}
+        template.save(update_fields=["per_row", "meta", "updated_at"])
 
-    Runs **after** the templates exist so every seeded register's columns are
-    mapped to master-file field keys (the *mapping of tokens to columns*)."""
+
+def _seed_field_mappings() -> None:
+    """Build the register field mappings + calculation rules after the templates
+    exist (maps each column to a master-file field key)."""
     from django.core.management import call_command
     call_command("seed_register_config")
 
 
 def seed() -> int:
-    """Create the default templates that don't exist yet.
-
-    For every state: the always-on muster/wage registers (XIII, XVI, XVII) that
-    the state has, **plus every Excel register** in that state, plus any explicit
-    manifest entries."""
+    """Create the seven default registers for every state (missing only)."""
     from django.core.management import call_command
     from bss_core.models import RegisterTemplate
 
     archive = archive_path()
     if not archive:
         return 0
-    # Drop any excluded forms that were seeded previously (e.g. FORM XII).
-    RegisterTemplate.objects.filter(form_code__in=CLRA_EXCLUDE_FORMS).delete()
+    _ensure_matrix(archive)
+    matrix = _matrix_forms_by_state()
+    _prune(matrix)
     before = RegisterTemplate.objects.count()
-    excel = _excel_forms_by_state(archive)
-    always = [f.replace("FORM ", "") for f in CLRA_ALWAYS_FORMS if f not in CLRA_EXCLUDE_FORMS]
-    for state in sorted(set(CLRA_DEFAULT_FORMS) | set(excel)):
-        tokens = set(always)
-        tokens |= excel.get(state, set())
-        tokens |= {entry["form"].replace("FORM ", "") for entry in CLRA_DEFAULT_FORMS.get(state, [])}
-        if not tokens:
+    for state, forms in matrix.items():
+        if not forms:
             continue
         call_command("import_clra_templates", zip=archive, state=state,
-                     forms=",".join(sorted(tokens)), only_missing=True)
-    _apply_row_model()
+                     forms=",".join(sorted(forms)), only_missing=True)
+    _set_row_model(matrix)
     _seed_field_mappings()
     return RegisterTemplate.objects.count() - before
 
 
 def reset_all() -> int:
-    """Re-render every existing template back to its source default (overwrite).
+    """Reset every template back to its source default (overwrite).
 
-    Groups the existing (state, form) rows and re-imports them from the archive,
-    restoring the faithful default layout + columns/fields. Admin HTML edits are
-    discarded; the manifest row model is re-applied afterwards."""
+    Re-imports the seven registers per state from the archive, restoring the
+    faithful default layout + columns/fields and discarding admin edits."""
     from django.core.management import call_command
-    from bss_core.management.commands.import_clra_templates import canon_form_code
     from bss_core.models import RegisterTemplate
 
     archive = archive_path()
     if not archive:
         return 0
-    RegisterTemplate.objects.filter(form_code__in=CLRA_EXCLUDE_FORMS).delete()
-    by_state: dict[str, set[str]] = {}
-    for state, form_code in RegisterTemplate.objects.values_list("state", "form_code"):
-        code = canon_form_code(form_code)
-        if code in CLRA_EXCLUDE_FORMS:
+    _ensure_matrix(archive)
+    matrix = _matrix_forms_by_state()
+    _prune(matrix)
+    for state, forms in matrix.items():
+        if not forms:
             continue
-        by_state.setdefault(state, set()).add(code.replace("FORM ", ""))
-    for state, codes in by_state.items():
-        if not codes:
-            continue
-        call_command("import_clra_templates", zip=archive, state=state, forms=",".join(sorted(codes)))
-    _apply_row_model()
+        call_command("import_clra_templates", zip=archive, state=state,
+                     forms=",".join(sorted(forms)))
+    _set_row_model(matrix)
     _seed_field_mappings()
     return RegisterTemplate.objects.count()
