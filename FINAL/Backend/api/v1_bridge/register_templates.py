@@ -23,6 +23,7 @@ def _template_row(t):
         "fields": list(t.fields or []),
         "meta": t.meta or {},
         "html": t.html or "",
+        "perRow": t.per_row,
         "fieldMappings": [{"column": m.column, "fieldKey": m.field_key}
                           for m in t.field_mappings.all()],
         "calculationRules": [{"targetField": r.target_field, "label": r.label, "formula": r.formula}
@@ -194,6 +195,7 @@ def _create_template(request, body):
     columns = _clean_columns(body.get("columns"))
     fields = _clean_fields(body.get("fields"))
     html = str(body.get("html") or "")
+    per_row = bool(body.get("perRow"))
     # Flow guard: an Excel register needs columns; a Doc form needs fields or a
     # directly-authored HTML layout (the live Doc editor).
     if template_type == "register" and not columns:
@@ -211,7 +213,7 @@ def _create_template(request, body):
         template_type=template_type, status=status_value,
         act=act, frequency=frequency, criticality=criticality, is_mandatory=is_mandatory,
         source_format=source_format, output_format=output_format,
-        columns=columns, fields=fields, html=html,
+        columns=columns, fields=fields, html=html, per_row=per_row,
         is_active=body.get("active", True), format_available=True,
         meta={"authored": True, "author": str(request.user)},
     )
@@ -404,6 +406,8 @@ def register_template_detail(request, template_id):
         template.is_active = bool(body.get("active"))
     if "columns" in body:
         template.columns = _clean_columns(body.get("columns"))
+    if body.get("perRow") is not None:
+        template.per_row = bool(body.get("perRow"))
     if "fields" in body:
         template.fields = _clean_fields(body.get("fields"))
         if not template.html and template.fields:

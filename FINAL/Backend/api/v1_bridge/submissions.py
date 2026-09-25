@@ -479,6 +479,7 @@ def contractor_compliance_batches(request):
          "frequency": t.frequency or "Monthly",
          "period": clra.reporting_period(month, year, t.frequency)["label"],
          "columns": list(t.columns or []), "html": t.html or "",
+         "perRow": t.per_row,
          "act": t.act, "calculationRules": [
              {"targetField": r.target_field, "formula": r.formula}
              for r in t.calculation_rules.all()],
@@ -784,6 +785,7 @@ def compliance_batch_register(request, batch_id, template_id):
     html = clra.render_register_html(
         {"formCode": template.form_code, "title": template.title, "state": template.state,
          "columns": list(template.columns or []), "html": template.html or "",
+         "perRow": template.per_row,
          "fieldMappings": {m.column: m.field_key for m in template.field_mappings.all()},
          "calculationRules": [{"targetField": r.target_field, "formula": r.formula}
                               for r in template.calculation_rules.all()]},

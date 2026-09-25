@@ -80,6 +80,10 @@ class RegisterTemplate(models.Model):
     # Admin-authored HTML layout for the register (with {{tokens}} / {{ROWS}}).
     # When blank, the register is rendered from `columns` as a plain table.
     html = models.TextField(blank=True)
+    # Per-worker documents (Identity Card / Wage Slip): render once per
+    # master-file row instead of once per batch. The authored HTML is wrapped
+    # in a {{#rows}} loop when rendered.
+    per_row = models.BooleanField(default=False)
     source_file = models.FileField(upload_to="clra/templates/%Y/", blank=True)
     is_active = models.BooleanField(default=True)
     format_available = models.BooleanField(default=True)

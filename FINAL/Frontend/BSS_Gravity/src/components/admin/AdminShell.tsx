@@ -11,7 +11,7 @@ import BrandText from '@/components/BrandText';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 // Wage & statutory cost configuration (rates, minimum wage, cost sheets) is its
-// own cluster — separate from the CLRA statutory register library.
+// own cluster — separate from the CLRA register library.
 const wageCostGroup = { key: 'Wages & Statutory Cost', icon: Banknote, items: [
   ['Statutory Master', '/admin/masters/statutory'],
   ['Minimum Wage', '/admin/masters/minimum-wage'],
@@ -24,7 +24,6 @@ const clraGroup = { key: 'CLRA Registers', icon: BookOpenCheck, items: [
   ['CLRA Templates', '/admin/masters/register-template'],
   ['State Applicability', '/admin/masters/state-applicability'],
   ['Compliance Master', '/admin/masters/compliance'],
-  ['Document Master', '/admin/masters/document'],
 ] as const };
 const partyGroup = { key: 'Party & Templates', icon: BookOpenCheck, items: [
   ['Party Master', '/admin/masters/party'],
@@ -38,11 +37,11 @@ const mappingsGroup = { key: 'Mappings', icon: Link2, items: [
 const accessGroup = { key: 'Users & Access', icon: Users, items: [
   ['User Registration', '/admin/users'],
   ['Permission Page', '/admin/permissions'],
+  ['Bulk Register', '/admin/bulk-register'],
 ] as const };
 const auditOpsGroup = { key: 'Audit & Reports', icon: BookOpenCheck, items: [
   ['Activity Report', '/admin/activity'],
   ['Audit Reports', '/admin/audit-reports'],
-  ['Bulk Register', '/admin/bulk-register'],
 ] as const };
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {

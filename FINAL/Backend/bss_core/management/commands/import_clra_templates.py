@@ -357,6 +357,9 @@ class Command(BaseCommand):
                 "columns": columns, "fields": fields,
                 "meta": {"lines": meta, "file": filename},
                 "is_active": True,
+                # Identity Cards (FORM X) and Wage Slips (FORM XIX) are issued
+                # once per worker — the authored layout repeats per master row.
+                "per_row": form_code.upper() in ("FORM X", "FORM XIX"),
             }
             existing = RegisterTemplate.objects.filter(state=state, form_code=form_code).first()
             if existing is None:

@@ -609,7 +609,11 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
 
     If the admin authored an HTML layout (`template['html']`) it is used, with
     ``{{TOKENS}}`` for the header/meta and ``{{HEAD}}`` / ``{{ROWS}}`` for the
-    data table. Otherwise a plain columns-based table is generated."""
+    data table. Otherwise a plain columns-based table is generated.
+
+    Per-row documents (`template['perRow']`, e.g. Identity Cards / Wage Slips)
+    repeat their layout once per master-file row with a page break between
+    copies, so every worker gets their own document."""
     columns = [str(c) for c in (template.get("columns") or [])]
     field_mappings = template.get("fieldMappings") or {}
     mapping = [(field_mappings.get(col) or match_column(col)) for col in columns]
@@ -639,6 +643,10 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
             "ACT": _esc(template.get("act", "")),
             "HEAD": head, "ROWS": "".join(body),
         }
+        if template.get("perRow") and not _DOC_BLOCK_RE.search(admin_html):
+            inner = _DOC_BLOCK_RE.sub("", admin_html)
+            admin_html = (f"{{{{#rows}}}}\n{inner}\n"
+                          f'<div style="page-break-after:always" aria-hidden="true"></div>\n{{{{/rows}}}}')
         out = render_doc_body(admin_html, rows, context)
         for key, value in tokens.items():
             out = out.replace("{{" + key + "}}", value).replace("{{ " + key + " }}", value)

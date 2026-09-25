@@ -194,7 +194,7 @@ export default function ClraRegistersPage() {
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Governance controls</p>
         <h1 className="text-2xl font-bold mt-1">CLRA Registers</h1>
-        <p className="text-sm text-gray-500 mt-1">Adopt the statutory CLRA registers per state (use <strong>Select all</strong> or <strong>Adopt all forms</strong>). Contractors with a site in a state can only upload once it is adopted; use <strong>Remove adoption</strong> to revoke a state.</p>
+        <p className="text-sm text-gray-500 mt-1">Adopt the CLRA registers per state (use <strong>Select all</strong> or <strong>Adopt all forms</strong>). Contractors with a site in a state can only upload once it is adopted; use <strong>Remove adoption</strong> to revoke a state.</p>
       </div>
       <button type="button" onClick={() => void adoptAllStates()} disabled={busy || !boards.length} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5 self-start whitespace-nowrap"><CheckCircle2 size={14}/>Adopt all forms (all states)</button>
     </header>

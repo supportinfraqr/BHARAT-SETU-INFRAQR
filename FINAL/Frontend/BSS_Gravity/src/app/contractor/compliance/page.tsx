@@ -380,7 +380,7 @@ export default function ContractorCompliancePage() {
 
       <div className="grid lg:grid-cols-2 gap-5">
       <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">CLRA Register Generation</h2><p className="text-xs text-gray-400 mt-0.5">Upload master data and generate statutory registers based on State / Site / Location.</p></header>
+        <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">CLRA Register Generation</h2><p className="text-xs text-gray-400 mt-0.5">Upload master data and generate registers based on State / Site / Location.</p></header>
         <div className="p-5 space-y-4">
           <div className="grid sm:grid-cols-3 gap-3">
             <label className="text-xs font-semibold">Year<select value={year} onChange={e => setYear(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{YEARS.map(y => <option key={y}>{y}</option>)}</select></label>
@@ -433,7 +433,7 @@ export default function ContractorCompliancePage() {
       {/* PAN-India register template library for the selected state */}
       <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
         <header className="px-5 py-4 border-b border-gray-100 flex flex-wrap justify-between gap-2 items-center">
-          <div><h2 className="text-sm font-semibold text-gray-950">Register Template Library — {activeState}</h2><p className="text-xs text-gray-400 mt-0.5">State-wise statutory register templates used to render your registers (one sheet per form).</p></div>
+          <div><h2 className="text-sm font-semibold text-gray-950">Register Template Library — {activeState}</h2><p className="text-xs text-gray-400 mt-0.5">State-wise register templates used to render your registers (one sheet per form).</p></div>
           <div className="flex items-center gap-3">
             <label className="text-xs font-semibold text-gray-600">State
               <select value={activeState} onChange={e => setState(e.target.value)} className="ml-2 h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white">{(allowedStates.length ? allowedStates : STATES).map(s => <option key={s}>{s}</option>)}</select>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CheckCircle2, Download, FilePlus2, FileSpreadsheet, Loader2, Pencil, Plus, Search, X } from 'lucide-react';
+import { CheckCircle2, Copy, Download, FilePlus2, FileSpreadsheet, Loader2, Pencil, Plus, Search, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 
 type FieldMapping = { column: string; fieldKey: string };
@@ -20,6 +20,7 @@ type TemplateRow = {
   columns: string[]; fields: FormField[]; meta: { lines?: string[]; file?: string };
   html: string; active: boolean; fieldMappings?: FieldMapping[]; calculationRules?: CalcRule[];
   formatAvailable?: boolean; version: number; fileName: string; hasFile: boolean; authored?: boolean;
+  perRow?: boolean;
 };
 
 type BuilderDraft = {
@@ -29,12 +30,12 @@ type BuilderDraft = {
   criticality: string; isMandatory: boolean; outputFormat: string; sourceFormat: string;
   columns: string[]; columnInput: string;
   fields: FormField[];
-  html: string;
+  html: string; perRow: boolean;
   fieldMappings: FieldMapping[]; calcRules: CalcRule[];
 };
 
 const FIELD_KEYS = [
-  'sl', 'name', 'bssId', 'fatherName', 'gender', 'designation', 'department', 'doj', 'mobile', 'site', 'location',
+  'bss_id', 'bssId', 'sl', 'name', 'fatherName', 'gender', 'designation', 'department', 'doj', 'mobile', 'site', 'location',
   'Employee_Code', 'Employee_Name', 'Gender', 'Father_Name', 'Date_of_Birth', 'Age', 'Date_Of_Joining', 'Date_Of_Leaving',
   'Designation', 'Department', 'Shift', 'Branch_Address', 'Address', 'Location', 'State', 'Month', 'Account_No', 'Bank_Name',
   'Name_of_contractor', 'Address_of_contractor', 'Nature_ofWork_contractor', 'Tenure_of_Employement', 'Bank_transaction_ID',
@@ -108,6 +109,7 @@ function draftFromRow(row: TemplateRow): BuilderDraft {
     columns: row.columns, columnInput: '',
     fields: (row.fields || []).map(f => ({ ...blankField(), ...f })),
     html: row.html || '',
+    perRow: row.perRow ?? false,
     fieldMappings: row.fieldMappings ?? [],
     calcRules: row.calculationRules ?? [],
   };
@@ -120,7 +122,7 @@ function blankDraft(): BuilderDraft {
     outputFormat: 'xlsx',
     sourceFormat: 'html',
     columns: [], columnInput: '',
-    fields: [], html: '',
+    fields: [], html: '', perRow: false,
     fieldMappings: [], calcRules: [],
   };
 }
@@ -425,7 +427,11 @@ function sampleHeadRows(columns: string[], mappings: FieldMapping[]): { head: st
 // Fill data placeholders for a live preview: {{#rows}} blocks, {{sys.key}},
 // bare master-file {{fieldKey}}, then the uppercase {{TOKENS}}.
 function renderPreview(mode: 'doc' | 'register', body: string, b: BuilderDraft): string {
-  const rawContent = body && body.trim() ? body : (mode === 'register' ? REGISTER_STARTER : DOC_STARTER);
+  let rawContent = body && body.trim() ? body : (mode === 'register' ? REGISTER_STARTER : DOC_STARTER);
+  // Per-worker documents repeat once per master row (no explicit {{#rows}} block).
+  if (b.perRow && !/\{\{#\s*rows\s*\}\}/i.test(rawContent)) {
+    rawContent = `{{#rows}}\n${rawContent}\n<div style="page-break-after:always" aria-hidden="true"></div>\n{{/rows}}`;
+  }
   let out = rawContent;
 
   const tokens: Record<string, string> = {
@@ -467,7 +473,7 @@ function renderPreview(mode: 'doc' | 'register', body: string, b: BuilderDraft):
 }
 
 // Searchable variable picker: an interactive combobox with floating filtered dropdown menu.
-type PickerOption = { value: string; label: string };
+type PickerOption = { value: string; label: string; category?: 'master_list' | 'master_entity' | 'master_column' | 'system' };
 
 function SearchableSelect({ value, options, onSelect, placeholder = 'Search…', width = 'w-44' }: {
   value?: string; options: PickerOption[]; onSelect: (value: string) => void; placeholder?: string; width?: string;
@@ -501,6 +507,10 @@ function SearchableSelect({ value, options, onSelect, placeholder = 'Search…',
     ? options.filter(o => o.label.toLowerCase().includes(term) || o.value.toLowerCase().includes(term))
     : options;
 
+  const masterColumnMatches = matches.filter(o => o.category === 'master_column' || o.category === 'master_list');
+  const masterEntityMatches = matches.filter(o => o.category === 'master_entity');
+  const systemMatches = matches.filter(o => o.category === 'system' || !o.category);
+
   const displayVal = isOpen ? q : (selectedOpt ? selectedOpt.label : (value || ''));
 
   return (
@@ -510,7 +520,16 @@ function SearchableSelect({ value, options, onSelect, placeholder = 'Search…',
         <input
           type="text"
           value={displayVal}
-          onFocus={() => { setIsOpen(true); setQ(''); }}
+          onFocus={() => {
+            if (typeof window !== 'undefined') {
+              const sel = window.getSelection();
+              if (sel && sel.rangeCount > 0) {
+                // Keep active selection snapshot
+              }
+            }
+            setIsOpen(true);
+            setQ('');
+          }}
           onChange={e => { setQ(e.target.value); setIsOpen(true); }}
           placeholder={placeholder}
           className={`h-8 border border-slate-300 rounded-lg pl-7 pr-6 text-xs bg-white focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-500 font-mono ${width}`}
@@ -525,26 +544,89 @@ function SearchableSelect({ value, options, onSelect, placeholder = 'Search…',
       </div>
 
       {isOpen && (
-        <div className={`absolute z-[9999] left-0 ${dropUp ? 'bottom-full mb-1' : 'top-full mt-1'} w-64 max-h-52 overflow-y-auto bg-white border border-slate-300 rounded-lg shadow-2xl divide-y divide-slate-100`}>
+        <div className={`absolute z-[9999] left-0 ${dropUp ? 'bottom-full mb-1' : 'top-full mt-1'} w-84 max-h-72 overflow-y-auto bg-white border border-slate-300 rounded-lg shadow-2xl divide-y divide-slate-100`}>
           {matches.length === 0 ? (
             <div className="p-2.5 text-slate-400 text-[11px] italic text-center">No matching tokens found</div>
           ) : (
-            matches.slice(0, 80).map(o => (
-              <div
-                key={o.value}
-                onClick={() => {
-                  onSelect(o.value);
-                  setQ('');
-                  setIsOpen(false);
-                }}
-                className={`p-2 hover:bg-blue-50 cursor-pointer transition-colors flex flex-col gap-0.5 ${o.value === value ? 'bg-blue-50/90 font-bold text-blue-900 border-l-2 border-blue-600' : 'text-slate-800'}`}
-              >
-                <span className="font-mono text-[11px] font-semibold text-blue-700">{o.value}</span>
-                {o.label !== o.value && (
-                  <span className="text-[10px] text-slate-500">{o.label}</span>
-                )}
-              </div>
-            ))
+            <div className="py-1">
+              {/* 1. Master Sheet Columns */}
+              {masterColumnMatches.length > 0 && (
+                <div>
+                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-900 bg-blue-50 border-y border-blue-200 sticky top-0 backdrop-blur-xs">
+                    📊 Master Sheet Columns ({masterColumnMatches.length})
+                  </div>
+                  {masterColumnMatches.map(o => (
+                    <div
+                      key={o.value}
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => {
+                        onSelect(o.value);
+                        setQ('');
+                        setIsOpen(false);
+                      }}
+                      className={`p-2 hover:bg-blue-50 cursor-pointer transition-colors flex flex-col gap-0.5 ${o.value === value ? 'bg-blue-50/90 font-bold text-blue-900 border-l-2 border-blue-600' : 'text-slate-800'}`}
+                    >
+                      <span className="font-mono text-[11px] font-semibold text-blue-700">{o.value}</span>
+                      {o.label !== o.value && (
+                        <span className="text-[10px] text-slate-500">{o.label}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 2. Master BSS ID Lookups (master_col_bss) */}
+              {masterEntityMatches.length > 0 && (
+                <div>
+                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-900 bg-emerald-50 border-y border-emerald-200 sticky top-0 backdrop-blur-xs">
+                    🔗 Master BSS ID Lookups (master_col_bss) ({masterEntityMatches.length})
+                  </div>
+                  {masterEntityMatches.map(o => (
+                    <div
+                      key={o.value}
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => {
+                        onSelect(o.value);
+                        setQ('');
+                        setIsOpen(false);
+                      }}
+                      className={`p-2 hover:bg-emerald-50 cursor-pointer transition-colors flex flex-col gap-0.5 ${o.value === value ? 'bg-emerald-50/90 font-bold text-emerald-900 border-l-2 border-emerald-600' : 'text-slate-800'}`}
+                    >
+                      <span className="font-mono text-[11px] font-semibold text-emerald-700">{o.value}</span>
+                      {o.label !== o.value && (
+                        <span className="text-[10px] text-slate-500">{o.label}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 3. Operational System Tokens */}
+              {systemMatches.length > 0 && (
+                <div>
+                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-900 bg-indigo-50 border-y border-indigo-200 sticky top-0 backdrop-blur-xs">
+                    ⚙️ Operational System Tokens ({systemMatches.length})
+                  </div>
+                  {systemMatches.map(o => (
+                    <div
+                      key={o.value}
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => {
+                        onSelect(o.value);
+                        setQ('');
+                        setIsOpen(false);
+                      }}
+                      className={`p-2 hover:bg-indigo-50/50 cursor-pointer transition-colors flex flex-col gap-0.5 ${o.value === value ? 'bg-indigo-50/90 font-bold text-indigo-900 border-l-2 border-indigo-600' : 'text-slate-800'}`}
+                    >
+                      <span className="font-mono text-[11px] font-semibold text-indigo-700">{o.value}</span>
+                      {o.label !== o.value && (
+                        <span className="text-[10px] text-slate-500">{o.label}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -586,28 +668,141 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
+  const savedRangeRef = useRef<Range | null>(null);
+
+  function saveSelection() {
+    if (typeof window === 'undefined') return;
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && ref.current?.contains(sel.anchorNode)) {
+      savedRangeRef.current = sel.getRangeAt(0);
+    }
+  }
+
+  useEffect(() => {
+    function handleSelectionChange() {
+      if (typeof window === 'undefined') return;
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && ref.current?.contains(sel.anchorNode)) {
+        savedRangeRef.current = sel.getRangeAt(0);
+      }
+    }
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, []);
+
+  function restoreSelection() {
+    if (typeof window === 'undefined' || !ref.current) return;
+    const sel = window.getSelection();
+    if (!sel) return;
+    let range: Range | null = null;
+    if (sel && sel.rangeCount > 0) {
+      const r = sel.getRangeAt(0);
+      if (r.startContainer && r.startContainer.isConnected && ref.current.contains(r.startContainer)) {
+        range = r;
+      }
+    }
+    if (!range) {
+      const saved = savedRangeRef.current;
+      if (saved && saved.startContainer && saved.startContainer.isConnected && ref.current.contains(saved.startContainer)) {
+        range = saved;
+      }
+    }
+    if (!range) {
+      range = document.createRange();
+      range.selectNodeContents(ref.current);
+      range.collapse(false);
+    }
+    sel.removeAllRanges();
+    sel.addRange(range);
+    savedRangeRef.current = range;
+  }
+
+  function highlightTokensForCanvas(html: string): string {
+    if (!html) return '';
+    return html.replace(/<span[^>]*contenteditable=["']false["'][^>]*>(\{\{[^}]+\}\})<\/span>|(\{\{[^}]+\}\})/gi, (match, badgeToken, rawToken) => {
+      const tok = badgeToken || rawToken;
+      if (!tok || tok.toLowerCase().includes('logourl')) return match;
+      return `<span style="background:#0284c7;color:#ffffff;padding:2px 7px;border-radius:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:700;letter-spacing:0.3px;display:inline-block;vertical-align:baseline;box-shadow:0 1px 2px rgba(0,0,0,0.1);" contenteditable="false">${tok}</span>`;
+    });
+  }
+
+  function cleanHtmlForExport(html: string): string {
+    return html.replace(/<span[^>]*contenteditable=["']false["'][^>]*>(\{\{[^}]+\}\})<\/span>/gi, '$1');
+  }
+
   const hasCanvas = mode === 'doc';
+
+  useEffect(() => {
+    if (tab === 'visual' && ref.current && hasCanvas) {
+      const highlighted = highlightTokensForCanvas(body);
+      if (ref.current.innerHTML !== highlighted) {
+        ref.current.innerHTML = highlighted;
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   function commit(next: string, syncCanvas = true) {
     setBody(next);
     if (syncCanvas && hasCanvas && tab === 'visual' && ref.current && ref.current.innerHTML !== next) {
-      ref.current.innerHTML = next;
+      ref.current.innerHTML = highlightTokensForCanvas(next);
     }
-    onChange(htmlShell(next));
+    onChange(htmlShell(cleanHtmlForExport(next)));
   }
 
-  function emitRich() { commit(ref.current?.innerHTML ?? '', false); }
+  function emitRich() {
+    const raw = ref.current?.innerHTML ?? '';
+    commit(raw, false);
+  }
 
   function cmd(command: string, value?: string) {
     if (!hasCanvas || !ref.current) return;
+    restoreSelection();
     ref.current.focus();
     document.execCommand(command, false, value);
+    saveSelection();
     emitRich();
+  }
+
+  function badgeSpan(tok: string): string {
+    return `<span style="background:#0284c7;color:#ffffff;padding:2px 7px;border-radius:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:700;letter-spacing:0.3px;display:inline-block;vertical-align:baseline;box-shadow:0 1px 2px rgba(0,0,0,0.1);" contenteditable="false">${tok}</span>&nbsp;`;
+  }
+
+  function docTokenAtCaret(tok: string): boolean {
+    const canvas = ref.current;
+    const sel = window.getSelection();
+    if (!canvas || !sel) return false;
+    restoreSelection();
+    const range = sel.rangeCount > 0 && sel.getRangeAt(0).startContainer.isConnected && canvas.contains(sel.getRangeAt(0).startContainer)
+      ? sel.getRangeAt(0)
+      : null;
+    if (!range) return false;
+    const div = document.createElement('div');
+    div.innerHTML = badgeSpan(tok);
+    const node = div.firstElementChild;
+    if (!node) return false;
+    range.deleteContents();
+    range.insertNode(node);
+    const caret = document.createRange();
+    caret.setStartAfter(node);
+    caret.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(caret);
+    savedRangeRef.current = caret;
+    emitRich();
+    return true;
   }
 
   function insertToken(tok: string) {
     if (hasCanvas && tab === 'visual' && ref.current) {
-      cmd('insertHTML', `<span class="token-chip" style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:11px;font-weight:600;" contenteditable="false">${tok}</span>&nbsp;`);
+      if (tok.toLowerCase().includes('logourl')) {
+        cmd('insertHTML', `<img src="{{logoUrl}}" alt="Logo" style="max-height:50px;width:auto;display:inline-block;vertical-align:middle;margin:4px 8px 4px 0;" />&nbsp;`);
+        return;
+      }
+      if (docTokenAtCaret(tok)) return;
+      ref.current.focus();
+      restoreSelection();
+      cmd('insertHTML', badgeSpan(tok));
       return;
     }
     // Excel visual / code tab: insert into the body text (keep the table last).
@@ -629,73 +824,51 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
   ];
 
   const systemTokenOptions: PickerOption[] = [
-    // Date & Time Tokens
-    { value: '{{TODAY_DATE}}', label: '{{TODAY_DATE}} · Today (YYYY-MM-DD)' },
-    { value: '{{TODAY}}', label: '{{TODAY}} · Today (DD MMM YYYY)' },
-    { value: '{{CURRENT_DATE}}', label: '{{CURRENT_DATE}} · Today (DD/MM/YYYY)' },
-    { value: '{{DATE}}', label: '{{DATE}} · Current Date' },
-    { value: '{{TIME}}', label: '{{TIME}} · Current Time' },
-    { value: '{{GENERATED_ON}}', label: '{{GENERATED_ON}} · Generation Date' },
-    { value: '{{MONTH}}', label: '{{MONTH}} · Current Month' },
-    { value: '{{YEAR}}', label: '{{YEAR}} · Current Year' },
-    { value: '{{FINANCIAL_YEAR}}', label: '{{FINANCIAL_YEAR}} · Financial Year' },
+    // Operational System Tokens
+    { value: '{{TODAY_DATE}}', label: '{{TODAY_DATE}} · Today (YYYY-MM-DD)', category: 'system' },
+    { value: '{{TODAY}}', label: '{{TODAY}} · Today (DD MMM YYYY)', category: 'system' },
+    { value: '{{CURRENT_DATE}}', label: '{{CURRENT_DATE}} · Today (DD/MM/YYYY)', category: 'system' },
+    { value: '{{DATE}}', label: '{{DATE}} · Current Date', category: 'system' },
+    { value: '{{TIME}}', label: '{{TIME}} · Current Time', category: 'system' },
+    { value: '{{GENERATED_ON}}', label: '{{GENERATED_ON}} · Generation Date', category: 'system' },
+    { value: '{{MONTH}}', label: '{{MONTH}} · Current Month', category: 'system' },
+    { value: '{{YEAR}}', label: '{{YEAR}} · Current Year', category: 'system' },
+    { value: '{{FINANCIAL_YEAR}}', label: '{{FINANCIAL_YEAR}} · Financial Year', category: 'system' },
 
-    // Worker BSS ID & Demographic Tokens
-    { value: '{{worker_bssid}}', label: '{{worker_bssid}} · Worker BSS ID (e.g. BSSW000001)' },
-    { value: '{{worker.bss_id}}', label: '{{worker.bss_id}} · Worker BSS ID' },
-    { value: '{{worker_bssid.dob}}', label: '{{worker_bssid.dob}} · Worker Date of Birth' },
-    { value: '{{worker.dob}}', label: '{{worker.dob}} · Worker Date of Birth' },
-    { value: '{{worker_bssid.name}}', label: '{{worker_bssid.name}} · Worker Full Name' },
-    { value: '{{worker.name}}', label: '{{worker.name}} · Worker Full Name' },
-    { value: '{{worker_bssid.gender}}', label: '{{worker_bssid.gender}} · Worker Gender' },
-    { value: '{{worker_bssid.father_name}}', label: '{{worker_bssid.father_name}} · Worker Father/Spouse Name' },
-    { value: '{{worker_bssid.mobile}}', label: '{{worker_bssid.mobile}} · Worker Mobile Number' },
-    { value: '{{worker_bssid.address}}', label: '{{worker_bssid.address}} · Worker Residential Address' },
-    { value: '{{worker_bssid.uan}}', label: '{{worker_bssid.uan}} · Worker UAN Number' },
-    { value: '{{worker_bssid.esic}}', label: '{{worker_bssid.esic}} · Worker ESIC IP Number' },
-    { value: '{{worker_bssid.doj}}', label: '{{worker_bssid.doj}} · Worker Date of Joining' },
-    { value: '{{worker_bssid.designation}}', label: '{{worker_bssid.designation}} · Worker Designation / Trade' },
-    { value: '{{worker_bssid.department}}', label: '{{worker_bssid.department}} · Worker Department' },
-    { value: '{{worker_bssid.aadhaar}}', label: '{{worker_bssid.aadhaar}} · Worker Masked Aadhaar' },
+    // BSS ID System Lookup Tokens (master_col_bss concept — CLRA resolution engine)
+    { value: '{{master_col_bss.contractor_name}}', label: '{{master_col_bss.contractor_name}} · Contractor Company Name', category: 'master_entity' },
+    { value: '{{master_col_bss.contractor_bssid}}', label: '{{master_col_bss.contractor_bssid}} · Contractor BSS ID', category: 'master_entity' },
+    { value: '{{master_col_bss.contractor_address}}', label: '{{master_col_bss.contractor_address}} · Contractor Registered Address', category: 'master_entity' },
+    { value: '{{master_col_bss.contractor_license_no}}', label: '{{master_col_bss.contractor_license_no}} · Contractor CLRA License Number', category: 'master_entity' },
+    { value: '{{master_col_bss.contractor_pf_code}}', label: '{{master_col_bss.contractor_pf_code}} · Contractor PF Establishment Code', category: 'master_entity' },
+    { value: '{{master_col_bss.contractor_esic_code}}', label: '{{master_col_bss.contractor_esic_code}} · Contractor ESIC Code Number', category: 'master_entity' },
+    { value: '{{master_col_bss.contractor_pan}}', label: '{{master_col_bss.contractor_pan}} · Contractor PAN Number', category: 'master_entity' },
 
-    // Contractor BSS ID & Master Tokens
-    { value: '{{contractor_bssid}}', label: '{{contractor_bssid}} · Contractor BSS ID (e.g. BSSC000044)' },
-    { value: '{{contractor.bss_id}}', label: '{{contractor.bss_id}} · Contractor BSS ID' },
-    { value: '{{contractor_bssid.dob}}', label: '{{contractor_bssid.dob}} · Contractor DOB / Inc. Date' },
-    { value: '{{contractor.dob}}', label: '{{contractor.dob}} · Contractor DOB / Inc. Date' },
-    { value: '{{contractor_bssid.name}}', label: '{{contractor_bssid.name}} · Contractor Company Name' },
-    { value: '{{contractor.name}}', label: '{{contractor.name}} · Contractor Company Name' },
-    { value: '{{contractor.code}}', label: '{{contractor.code}} · Contractor Master Code' },
-    { value: '{{contractor.pan}}', label: '{{contractor.pan}} · Contractor PAN Card Number' },
-    { value: '{{contractor.gstin}}', label: '{{contractor.gstin}} · Contractor GSTIN Number' },
-    { value: '{{contractor.cin}}', label: '{{contractor.cin}} · Contractor CIN Number' },
-    { value: '{{contractor.mobile}}', label: '{{contractor.mobile}} · Contractor Contact Mobile' },
-    { value: '{{contractor.email}}', label: '{{contractor.email}} · Contractor Official Email' },
-    { value: '{{contractor.address}}', label: '{{contractor.address}} · Contractor Registered Address' },
-    { value: '{{contractor.pf_code}}', label: '{{contractor.pf_code}} · Contractor PF Establishment Code' },
-    { value: '{{contractor.esic_code}}', label: '{{contractor.esic_code}} · Contractor ESIC Code Number' },
-    { value: '{{contractor.license_no}}', label: '{{contractor.license_no}} · Contractor CLRA License Number' },
+    { value: '{{master_col_bss.employer_name}}', label: '{{master_col_bss.employer_name}} · Principal Employer Name', category: 'master_entity' },
+    { value: '{{master_col_bss.employer_bssid}}', label: '{{master_col_bss.employer_bssid}} · Employer BSS ID', category: 'master_entity' },
+    { value: '{{master_col_bss.employer_address}}', label: '{{master_col_bss.employer_address}} · Employer Address', category: 'master_entity' },
+    { value: '{{master_col_bss.employer_cin}}', label: '{{master_col_bss.employer_cin}} · Employer Corporate CIN', category: 'master_entity' },
 
-    // Employer & Site Master Tokens
-    { value: '{{CONTRACTOR_NAME}}', label: '{{CONTRACTOR_NAME}} · Contractor Name' },
-    { value: '{{EMPLOYER_NAME}}', label: '{{EMPLOYER_NAME}} · Principal Employer' },
-    { value: '{{employer.name}}', label: '{{employer.name}} · Principal Employer Name' },
-    { value: '{{employer.cin}}', label: '{{employer.cin}} · Employer Corporate CIN' },
-    { value: '{{employer.pan}}', label: '{{employer.pan}} · Employer PAN Number' },
-    { value: '{{employer.gstin}}', label: '{{employer.gstin}} · Employer GSTIN Number' },
-    { value: '{{employer.address}}', label: '{{employer.address}} · Employer Registered Address' },
-    { value: '{{SITE_NAME}}', label: '{{SITE_NAME}} · Site Name' },
-    { value: '{{SITE_CODE}}', label: '{{SITE_CODE}} · Site Code' },
-    { value: '{{site.name}}', label: '{{site.name}} · Work Site Name' },
-    { value: '{{site.code}}', label: '{{site.code}} · Work Site Code' },
-    { value: '{{site.address}}', label: '{{site.address}} · Work Site Address' },
-    { value: '{{site.state}}', label: '{{site.state}} · Work Site State' },
-    { value: '{{site.manager}}', label: '{{site.manager}} · Site Manager Name' },
+    { value: '{{master_col_bss.site_name}}', label: '{{master_col_bss.site_name}} · Work Site Name', category: 'master_entity' },
+    { value: '{{master_col_bss.site_code}}', label: '{{master_col_bss.site_code}} · Work Site Code', category: 'master_entity' },
+    { value: '{{master_col_bss.site_address}}', label: '{{master_col_bss.site_address}} · Work Site Address', category: 'master_entity' },
+    { value: '{{master_col_bss.site_state}}', label: '{{master_col_bss.site_state}} · Work Site State', category: 'master_entity' },
+
+    { value: '{{master_col_bss.worker_name}}', label: '{{master_col_bss.worker_name}} · Worker Full Name', category: 'master_entity' },
+    { value: '{{master_col_bss.worker_bssid}}', label: '{{master_col_bss.worker_bssid}} · Worker BSS ID', category: 'master_entity' },
+    { value: '{{master_col_bss.worker_dob}}', label: '{{master_col_bss.worker_dob}} · Worker Date of Birth', category: 'master_entity' },
+    { value: '{{master_col_bss.worker_gender}}', label: '{{master_col_bss.worker_gender}} · Worker Gender', category: 'master_entity' },
+    { value: '{{master_col_bss.worker_father_name}}', label: '{{master_col_bss.worker_father_name}} · Worker Father/Spouse Name', category: 'master_entity' },
+    { value: '{{master_col_bss.worker_mobile}}', label: '{{master_col_bss.worker_mobile}} · Worker Mobile Number', category: 'master_entity' },
+    { value: '{{master_col_bss.worker_uan}}', label: '{{master_col_bss.worker_uan}} · Worker UAN Number', category: 'master_entity' },
+    { value: '{{master_col_bss.worker_esic}}', label: '{{master_col_bss.worker_esic}} · Worker ESIC IP Number', category: 'master_entity' },
+    { value: '{{master_col_bss.worker_designation}}', label: '{{master_col_bss.worker_designation}} · Worker Designation / Trade', category: 'master_entity' },
+    { value: '{{master_col_bss.worker_doj}}', label: '{{master_col_bss.worker_doj}} · Worker Date of Joining', category: 'master_entity' },
   ];
 
   const allTokenOptions: PickerOption[] = [
     ...systemTokenOptions,
-    ...fieldKeys.map(k => ({ value: `{{${k}}}`, label: `{{${k}}}` })),
+    ...fieldKeys.map(k => ({ value: `{{${k}}}`, label: `{{${k}}}`, category: 'master_column' as const })),
   ];
 
   const [tokenSearch, setTokenSearch] = useState('');
@@ -720,10 +893,40 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
         </div>
         <div>
           <h3 className="text-xs font-bold uppercase tracking-wider">{mode === 'register' ? 'Excel Spreadsheet Studio' : 'Word Document Studio'}</h3>
-          <p className="text-[11px] text-slate-300">Statutory {mode === 'register' ? 'Register Table Grid & Column Mapping' : 'Form Layout & Smart Document Template'}</p>
+          <p className="text-[11px] text-slate-300">{mode === 'register' ? 'Register Table Grid & Column Mapping' : 'Form Layout & Smart Document Template'}</p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            const prompt = `Available Variable Tokens for Bharat Shram Setu Register / Form Template (${mode.toUpperCase()} MODE):\n\n` +
+              allTokenOptions.map(t => `- ${t.label}: ${t.value} [Category: ${t.category || 'general'}]`).join('\n') +
+              `\n\nPlease construct a clean, valid HTML layout for a CLRA statutory form / register template using these tokens.`;
+            navigator.clipboard.writeText(prompt);
+            alert('Copied token prompt for ChatGPT / LLM to clipboard!');
+          }}
+          className="h-8 px-2.5 rounded-lg bg-emerald-600 text-white text-[11px] font-bold flex items-center gap-1 hover:bg-emerald-700 shadow-sm"
+        >
+          <Copy size={13} /> Copy for GPT
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const content = `AVAILABLE VARIABLE TOKENS FOR BHARAT SHRAM SETU REGISTER TEMPLATE (${mode.toUpperCase()} MODE):\n\n` +
+              allTokenOptions.map(t => `[${(t.category || 'general').toUpperCase()}] ${t.label} => ${t.value}`).join('\n');
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `bss_register_tokens_${mode}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="h-8 px-2.5 rounded-lg bg-sky-700 text-white text-[11px] font-bold flex items-center gap-1 hover:bg-sky-800 shadow-sm"
+        >
+          <Download size={13} /> Download Fields (.txt)
+        </button>
         <div className="flex items-center gap-0.5 bg-white/10 backdrop-blur-md p-1 rounded-lg">
           <button type="button" className={tabBtn(tab === 'visual')} onClick={() => setTab('visual')}>{mode === 'register' ? 'Sheet Grid & Designer' : 'Word Canvas'}</button>
           <button type="button" className={tabBtn(tab === 'code')} onClick={() => setTab('code')}>HTML Code</button>
@@ -975,7 +1178,16 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
         {/* Paper Canvas Container */}
         <div className="flex justify-center overflow-auto py-4">
           <div className="bg-white border border-slate-300 shadow-xl rounded-sm p-8 min-h-[500px] w-full max-w-[700px] transition-transform origin-top" style={{ transform: `scale(${Number(zoom) / 100})` }}>
-            <div ref={ref} contentEditable suppressContentEditableWarning onInput={emitRich} className="focus:outline-none min-h-[450px] leading-relaxed text-slate-900 text-sm font-sans" />
+            <div
+              ref={ref}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={emitRich}
+              onMouseUp={saveSelection}
+              onKeyUp={saveSelection}
+              onFocus={saveSelection}
+              className="focus:outline-none min-h-[450px] leading-relaxed text-slate-900 text-sm font-sans"
+            />
           </div>
         </div>
       </div>
@@ -1061,6 +1273,7 @@ export default function RegisterTemplatesPage() {
         sourceFormat: builder.sourceFormat || 'html',
         columns: builder.columns, fields: builder.fields,
         html: builder.html,
+        perRow: builder.perRow,
         fieldMappings: builder.fieldMappings, calculationRules: builder.calcRules,
       };
       const isNew = builder.id === null;
@@ -1116,8 +1329,11 @@ export default function RegisterTemplatesPage() {
     { id:'mandatory', header:'Mandatory', value:r => (r.isMandatory ? 'Yes' : 'No'), render:r => r.isMandatory ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-50 text-green-700">Yes</span> : <span className="text-gray-300 text-xs">—</span> },
     { id:'cols', header:'Columns', value:r => r.columns.length, render:r => <span className={r.columns.length ? 'font-semibold text-green-700' : 'text-gray-400'}>{r.columns.length}</span> },
     { id:'fields', header:'Fields / Layout', value:r => (r.fields?.length || (r.html ? 1 : 0)), render:r => (
-      r.html ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700" title="Authored Word HTML Document Template">HTML Layout</span>
-      : <span className={r.fields?.length ? 'font-semibold text-blue-700' : 'text-gray-400'}>{r.fields?.length ?? 0}</span>
+      <div className="flex flex-wrap items-center gap-1">
+      {r.html ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700" title="Authored Word HTML Document Template">HTML Layout</span>
+      : <span className={r.fields?.length ? 'font-semibold text-blue-700' : 'text-gray-400'}>{r.fields?.length ?? 0}</span>}
+      {r.perRow ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-50 text-violet-700" title="Renders once per worker (Identity Card / Wage Slip style)">Per worker</span> : null}
+      </div>
     ) },
     { id:'version', header:'Version', value:r => r.version },
     { id:'actions', header:'Actions', filterable:false, value:r => r.id, render:r => (
@@ -1137,8 +1353,8 @@ export default function RegisterTemplatesPage() {
   return <div className="space-y-6 pb-10">
     <header>
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">BSS Admin · Masters</p>
-      <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">CLRA Templates</h1>
-      <p className="text-sm text-gray-500 mt-1">The consolidated CLRA register library — one template per State + Form (doc metadata, criticality, mandatory and the imported CLRA registers), plus forms the admin authors field-dictionary style.</p>
+      <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">CLRA Register &amp; Form Templates</h1>
+      <p className="text-sm text-gray-500 mt-1">Pan-India CLRA register &amp; form studio — manage state-wise tabular registers (Excel grid mapping), register cards, and authored form layouts.</p>
     </header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
@@ -1156,7 +1372,7 @@ export default function RegisterTemplatesPage() {
       <label className="relative"><Search size={14} className="absolute left-3 top-2.5 text-gray-400"/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search form or title…" className="h-9 rounded-lg border border-gray-200 pl-9 pr-3 text-xs w-64"/></label>
       <span className="text-xs text-gray-400">{rows.length} template{rows.length === 1 ? '' : 's'}</span>
       <a href="/admin/masters/form-names" className="ml-auto inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50"><FileSpreadsheet size={14}/>Additional Forms</a>
-      <button onClick={() => { setBuilder(blankDraft()); setError(''); }} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-[#073B67] text-white text-xs font-bold"><FilePlus2 size={14}/>New form</button>
+      <button onClick={() => { setBuilder(blankDraft()); setError(''); }} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold shadow-sm hover:bg-[#052d50] transition-colors"><FilePlus2 size={14}/>+ New Template</button>
     </div>
 
     {loading ? <p className="flex items-center gap-2 text-sm text-gray-500 py-10"><Loader2 size={16} className="animate-spin"/>Loading templates…</p>
@@ -1190,7 +1406,7 @@ export default function RegisterTemplatesPage() {
     {builder && <div className="fixed inset-0 z-[96] bg-black/50 grid place-items-center p-4">
       <section role="dialog" aria-modal="true" aria-label="Register form builder" className="w-full max-w-4xl bg-white rounded-2xl overflow-hidden max-h-[94vh] flex flex-col">
         <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <div><h2 className="text-sm font-semibold">{builder.id ? `Edit form · ${builder.state} · ${builder.formCode}` : 'New statutory form / register'}</h2><p className="text-[11px] text-gray-500 mt-0.5">Pick a <b>Format</b> first: <b>Excel</b> = a column register (map each column to a master-file field or a backend value); <b>Doc</b> = a form where you type each field/question and choose its source.</p></div>
+          <div><h2 className="text-sm font-semibold">{builder.id ? `Edit form · ${builder.state} · ${builder.formCode}` : 'New form / register'}</h2><p className="text-[11px] text-gray-500 mt-0.5">Pick a <b>Format</b> first: <b>Excel</b> = a column register (map each column to a master-file field or a backend value); <b>Doc</b> = a form where you type each field/question and choose its source.</p></div>
           <button onClick={() => setBuilder(null)} aria-label="Close"><X size={16}/></button>
         </header>
         <div className="overflow-y-auto">
@@ -1203,6 +1419,7 @@ export default function RegisterTemplatesPage() {
             <label className="text-[11px] font-semibold text-gray-600">Criticality<select value={builder.criticality} onChange={e => patch('criticality', e.target.value)} className="mt-1 w-full h-9 rounded-lg border border-gray-200 px-2 text-xs bg-white"><option value="">—</option><option>High</option><option>Medium</option><option>Low</option></select></label>
             <label className="text-[11px] font-semibold text-gray-600 flex flex-col">Mandatory<label className="mt-3 inline-flex items-center gap-2 text-xs text-gray-700 cursor-pointer"><input type="checkbox" checked={builder.isMandatory} onChange={e => patch('isMandatory', e.target.checked)} className="accent-[#073B67]"/>Yes</label></label>
             <label className="text-[11px] font-semibold text-gray-600">Frequency<select value={builder.frequency} onChange={e => patch('frequency', e.target.value)} className="mt-1 w-full h-9 rounded-lg border border-gray-200 px-2 text-xs bg-white"><option value="">—</option>{FREQUENCY_CHOICES.map(f => <option key={f} value={f}>{f}</option>)}{builder.frequency && !FREQUENCY_CHOICES.includes(builder.frequency) ? <option value={builder.frequency}>{builder.frequency}</option> : null}</select></label>
+            {!isRegister && <label className="text-[11px] font-semibold text-gray-600 flex flex-col" title="Identity Cards, Wage Slips and per-employee documents render one copy per worker in the master file.">Per worker<label className="mt-3 inline-flex items-center gap-2 text-xs text-gray-700 cursor-pointer"><input type="checkbox" checked={builder.perRow} onChange={e => patch('perRow', e.target.checked)} className="accent-[#073B67]"/>One per worker</label></label>}
           </div>
 
           <div className="p-5 space-y-5">
