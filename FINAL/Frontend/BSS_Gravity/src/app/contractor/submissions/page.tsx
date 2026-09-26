@@ -56,6 +56,7 @@ export default function ComplianceSubmissionPage() {
 
   // Create-compliance filter is Financial Year + Frequency + Period (same as generation).
   const [createOpen, setCreateOpen] = useState(false);
+  const [siteName, setSiteName] = useState('');
   const [fy, setFy] = useState(FYS[0]);
   const [createFreq, setCreateFreq] = useState<Frequency>('Monthly');
   const [createPeriod, setCreatePeriod] = useState<string>(MONTHS[6]);
@@ -124,18 +125,19 @@ export default function ComplianceSubmissionPage() {
     return map;
   }, [generatedBatches, freq]);
 
-  // Submission context (derived from the contractor's sites — no per-submission site picker).
-  const ctxSiteObj = contractor.sites[0];
-  const ctxSite = ctxSiteObj?.name || '';
-  const ctxEmployer = ctxSiteObj?.employer || contractor.employers[0]?.name || '';
-  const ctxState = ctxSiteObj?.state || '';
+  // Submission context (derived from the selected site — no per-submission site picker elsewhere).
+  const activeSiteObj = contractor.sites.find(s => s.name === siteName) ?? contractor.sites[0];
+  const ctxSite = activeSiteObj?.name || '';
+  const ctxEmployer = activeSiteObj?.employer || contractor.employers[0]?.name || '';
+  const ctxState = activeSiteObj?.state || '';
 
   // Generated registers for the Create-tab filter: Financial Year + Period (mirrors generation).
   const month = periodMonth(createPeriod);
   const createFyKey = fy.replace('FY ', '');
   const generatedForCreate = useMemo(
-    () => contractor.complianceBatches.filter(b => (b.financialYear || '') === createFyKey && b.month === month),
-    [contractor.complianceBatches, createFyKey, month]);
+    () => contractor.complianceBatches.filter(b => (b.financialYear || '') === createFyKey && b.month === month
+      && (!activeSiteObj || !b.site || b.site === activeSiteObj.name)),
+    [contractor.complianceBatches, createFyKey, month, activeSiteObj]);
   // Registers already submitted are no longer submittable.
   const pendingBatches = generatedForCreate.filter(b => b.status !== 'Submitted');
   const uploadedEvidenceCount = additionalDocs.filter(d => uploads[d.name]?.id).length;
@@ -144,7 +146,7 @@ export default function ComplianceSubmissionPage() {
   // independent of generated registers so they can be uploaded anytime.
   const firstBatch = generatedForCreate[0];
   const firstBatchSite = firstBatch?.site || '';
-  const docsSiteId = String(ctxSiteObj?.id ?? '');
+  const docsSiteId = String(activeSiteObj?.id ?? '');
   useEffect(() => {
     let active = true;
     setDocsBusy(true);
@@ -218,17 +220,18 @@ export default function ComplianceSubmissionPage() {
 
   async function performSubmit(batchIds: string[]) {
     setBusy(true); setError(''); setNotice('');
-    // Submission context follows the generated batch selected for this period (falls back to the first site).
+    // Submission context follows the generated batch selected for this period
+    // (falls back to the selected site).
     const uploadIds = additionalDocs.map(d => uploads[d.name]?.id).filter((id): id is number => typeof id === 'number');
     const ctxBatch = contractor.complianceBatches.find(b => batchIds.includes(b.id));
-    const siteObj = contractor.sites.find(s => s.name === (ctxBatch?.site || '')) ?? contractor.sites[0];
+    const siteObj = contractor.sites.find(s => s.name === (ctxBatch?.site || '')) ?? activeSiteObj;
     const empName = siteObj?.employer || ctxEmployer;
-    const siteName = ctxBatch?.site || siteObj?.name || ctxSite;
+    const subSiteName = ctxBatch?.site || siteObj?.name || ctxSite;
     const stName = ctxBatch?.state || siteObj?.state || ctxState;
     try {
       const response = await fetch('/api/portal/compliances', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: 'submit', employer: empName, site: siteName, period: `${createPeriod} ${fy.replace('FY ', '')}`, financialYear: fy, state: stName, month, location: '', complianceType: '', docName: '', uploadIds, batchIds }),
+        body: JSON.stringify({ kind: 'submit', employer: empName, site: subSiteName, period: `${createPeriod} ${fy.replace('FY ', '')}`, financialYear: fy, state: stName, month, location: '', complianceType: '', docName: '', uploadIds, batchIds }),
       });
       const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['auditReports'][number]; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error ?? 'Compliance could not be submitted.');
@@ -355,6 +358,7 @@ export default function ComplianceSubmissionPage() {
           <div className="rounded-xl bg-blue-50 border border-blue-100 text-blue-900 px-3.5 py-3 text-[11px] leading-5">
             You are submitting for <strong>{createPeriod} {fy.replace('FY ', '')}</strong> ({createFreq}). Monthly forms are included every month; Quarterly / Half-Yearly / Yearly forms are included once their period has ended (based on today&apos;s date).
           </div>
+          <label className="text-xs font-semibold">Site<select value={activeSiteObj?.name || ''} onChange={e => setSiteName(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}</select></label>
           <label className="text-xs font-semibold">Financial Year<select value={fy} onChange={e => setFy(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{FYS.map(f => <option key={f}>{f}</option>)}</select></label>
           <label className="text-xs font-semibold">Frequency<select value={createFreq} onChange={e => { const f = e.target.value as Frequency; setCreateFreq(f); setCreatePeriod(periodsFor(f)[0]); }} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select></label>
           <label className="text-xs font-semibold">Period<select value={createPeriod} onChange={e => setCreatePeriod(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{periodsFor(createFreq).map(p => <option key={p}>{p}</option>)}</select></label>
