@@ -450,7 +450,7 @@ def contractor_compliance_batches(request):
     # adopted CLRA register forms for its sites in that state.
     from .register_templates import (applicable_templates, employer_adopted_ids,
                                      gate_templates_by_adoption)
-    adopted_ids = employer_adopted_ids(site.employer, state) if (site and site.employer_id and state) else set()
+    adopted_ids = employer_adopted_ids(site.employer, state, site=site) if (site and site.employer_id and state) else set()
     if state and not adopted_ids:
         return Response(
             {"error": f"The principal employer has not adopted CLRA register forms for {state}. "
@@ -608,11 +608,11 @@ def contractor_clra_validate(request):
     if site is None:
         site = Site.objects.filter(id__in=site_ids).order_by("id").first()
     employer = site.employer if site else None
-    adopted = employer_adopted_ids(employer, state) if (employer is not None and state) else set()
+    adopted = employer_adopted_ids(employer, state, site=site) if (employer is not None and state) else set()
     if state and not adopted:
         report["errors"].append({"row": 0, "field": "adoption",
-                                 "message": f"The principal employer has not adopted CLRA registers for {state} — generation is blocked."})
-    site_templates = (gate_templates_by_adoption(applicable_templates(state)[0], employer, state)
+                                 "message": f"The principal employer has not adopted CLRA registers for this site — generation is blocked."})
+    site_templates = (gate_templates_by_adoption(applicable_templates(state)[0], employer, state, site=site)
                       if state else [])
     if state and not site_templates:
         report["errors"].append({"row": 0, "field": "template",
@@ -707,7 +707,7 @@ def compliance_batch_site_documents(request, batch_id):
     templates_list, mapped_forms = applicable_templates(state)
     # Hard gate: once the site's employer has adopted CLRA forms for this state,
     # the site only sees the adopted ones (site-wise contractor availability).
-    adopted = employer_adopted_ids(employer, state)
+    adopted = employer_adopted_ids(employer, state, site=site)
     if adopted:
         templates_list = [t for t in templates_list if t.id in adopted]
     by_form = {t.form_code.strip().upper(): t for t in templates_list}

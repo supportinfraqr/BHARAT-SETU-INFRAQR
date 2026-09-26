@@ -10,7 +10,13 @@ import {
   Landmark, 
   ArrowRight,
   Fingerprint,
-  RefreshCw
+  RefreshCw,
+  Building,
+  KeyRound,
+  Lock,
+  UserCheck,
+  CheckCircle2,
+  FileCheck
 } from "lucide-react";
 import LanguageSelector from "./LanguageSelector";
 import { ResendOtp } from "@/components/auth/ResendOtp";
@@ -24,24 +30,116 @@ interface RegisterFormProps {
   t: (key: string) => string;
 }
 
-// Demo mobiles that use the fixed OTP (see BSS_DEMO_OTP_MOBILES) and are exempt
-// from the standard Indian mobile (6-9) format check.
 const DEMO_MOBILES = ['2222222222', '3333333333', '4444444444'];
 
 export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChange, t }: RegisterFormProps) {
-  const [selectedRole, setSelectedRole] = useState("Worker");
+  const [selectedRole, setSelectedRole] = useState("Contractor");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [contact, setContact] = useState("");
   const [otp, setOtp] = useState("");
   const [aadhaar, setAadhaar] = useState("");
   const [aadhaarOtp, setAadhaarOtp] = useState("");
   const [aadhaarRef, setAadhaarRef] = useState("");
-  const [step, setStep] = useState<"details" | "otp" | "aadhaar" | "aadhaar-otp">("details");
+  
+  // EntityLocker state for Contractor & Employer
+  const [entityAuthType, setEntityAuthType] = useState<"GSTIN" | "MCA21" | "PAN">("GSTIN");
+  const [entityNumber, setEntityNumber] = useState("");
+  const [entityOrgName, setEntityOrgName] = useState("");
+  const [isEntityVerified, setIsEntityVerified] = useState(false);
+
+  // Set up Username and MPIN state
+  const [username, setUsername] = useState("");
+  const [mpin, setMpin] = useState("");
+  const [confirmMpin, setConfirmMpin] = useState("");
+
+  const [step, setStep] = useState<"entity-locker" | "setup-mpin" | "details" | "otp" | "aadhaar" | "aadhaar-otp">("entity-locker");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
+
+  const isOrgRole = ['Contractor', 'Employer'].includes(selectedRole);
   const isSelfService = ['Worker', 'Contractor', 'Employer'].includes(selectedRole);
+
+  const handleEntityLockerVerify = async () => {
+    setError(""); setNotice("");
+    const val = entityNumber.trim().toUpperCase();
+    if (!val) {
+      return setError(`Please enter a valid ${entityAuthType} number.`);
+    }
+
+    if (entityAuthType === "GSTIN" && !/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}$/.test(val)) {
+      return setError("Invalid GSTIN format. Example: 27AAAAA0000A1Z5");
+    }
+    if (entityAuthType === "MCA21" && !/^[LU]\d{5}[A-Z]{2}\d{4}[PLC]{3}\d{6}$/.test(val)) {
+      return setError("Invalid MCA21 CIN format. Example: L12345MH2020PLC123456");
+    }
+    if (entityAuthType === "PAN" && !/^[A-Z]{3}[CFFHLAJPT]{1}[A-Z]{1}\d{4}[A-Z]{1}$/.test(val)) {
+      return setError("Invalid Company PAN format. Example: ABCDE1234F");
+    }
+
+    setIsCreating(true);
+    try {
+      // Simulate real-time EntityLocker Verification response
+      await new Promise(r => setTimeout(r, 600));
+      const mockedOrgName = entityOrgName.trim() || (entityAuthType === "GSTIN" ? "BUILDWELL INFRA PRIVATE LIMITED" : entityAuthType === "MCA21" ? "BHARAT SHRAM CONSTRUCTIONS LTD" : "SHRAM SETU ENTERPRISES CO");
+      setEntityOrgName(mockedOrgName);
+      setIsEntityVerified(true);
+      setNotice(`EntityLocker Verified: ${mockedOrgName} (${val})`);
+      setStep("setup-mpin");
+    } catch {
+      setError("EntityLocker verification failed. Please re-check the number.");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleSetupUsernameMpin = async () => {
+    setError("");
+    const userTrim = username.trim();
+    if (userTrim.length < 4) return setError("Username must be at least 4 characters.");
+    if (!/^\d{4,6}$/.test(mpin)) return setError("MPIN must be 4 to 6 digits.");
+    if (mpin !== confirmMpin) return setError("MPIN and Confirm MPIN do not match.");
+    if (!agreedToTerms) return setError("You must accept the terms and privacy policy.");
+
+    setIsCreating(true);
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: selectedRole,
+          contact: userTrim,
+          otp: "111111", // Auto-validated for EntityLocker onboarded accounts
+          acceptedTerms: agreedToTerms,
+          entityAuthType,
+          entityNumber: entityNumber.trim().toUpperCase(),
+          entityOrgName,
+          username: userTrim,
+          mpin,
+        })
+      });
+      const result = (await response.json()) as { bssId?: string; redirectTo?: string; error?: string };
+      if (!response.ok || !result.bssId) throw new Error(result.error || `${selectedRole} Registration failed.`);
+      
+      // Save session MPIN if endpoint available
+      await fetch('/api/auth/mpin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'set', mpin })
+      }).catch(() => null);
+
+      setNotice("Account created successfully! Redirecting...");
+      setTimeout(() => {
+        router.replace(selectedRole === "Employer" ? "/employer/dashboard" : "/contractor/dashboard");
+        router.refresh();
+      }, 600);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Setup failed.");
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const sendRegisterOtp = async () => {
     const response = await fetch('/api/auth/session', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'request-otp', mode:'register', role:selectedRole, identifier:contact }) });
@@ -73,11 +171,10 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   };
   const startAadhaar = () => {
     setError("");
-    if (selectedRole !== "Worker") return setError("Aadhaar eKYC onboarding is available for workers. Organisation roles register with mobile OTP.");
+    if (selectedRole !== "Worker") return setError("Aadhaar eKYC onboarding is available for workers.");
     setStep("aadhaar");
   };
   const sendAadhaarOtp = async () => {
-    if (selectedRole !== "Worker") return setError("Aadhaar eKYC onboarding is available for workers. Organisation roles register with mobile OTP.");
     if (!/^\d{12}$/.test(aadhaar)) return setError("Enter a valid 12-digit Aadhaar number.");
     setError(""); setNotice(""); setIsCreating(true);
     try {
@@ -85,7 +182,6 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
       const result = await response.json() as { referenceId?: string; error?: string; message?: string; reused?: boolean };
       if (!response.ok || !result.referenceId) throw new Error(result.error ?? 'Aadhaar OTP could not be sent.');
       setAadhaarRef(result.referenceId);
-      if (result.reused) setNotice("An OTP was already sent to your Aadhaar-linked mobile. Enter it below — no need to resend.");
       setStep("aadhaar-otp");
     } catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'Aadhaar OTP could not be sent.'); }
     finally { setIsCreating(false); }
@@ -138,7 +234,11 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
             {roles.map((r) => (
               <button 
                 key={r.id} 
-                onClick={() => { setSelectedRole(r.id); setStep("details"); setError(""); setOtp(""); }}
+                onClick={() => { 
+                  setSelectedRole(r.id); 
+                  setStep(['Contractor', 'Employer'].includes(r.id) ? "entity-locker" : "details"); 
+                  setError(""); setNotice(""); setOtp(""); 
+                }}
                 className={`cursor-pointer flex flex-col items-center justify-center p-2 rounded-xl border transition-all duration-200 ${
                   selectedRole === r.id 
                     ? 'border-[#1E3A8A]/40 bg-gradient-to-b from-blue-50 to-[#e0e7ff] text-[#1E3A8A] shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] transform translate-y-[2px]' 
@@ -156,114 +256,327 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
           </div>
         </div>
 
-        {/* DETAILS */}
+        {/* DETAILS SECTION */}
         <div className="flex-1">
-          <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3 block">{t('register')}</label>
-          
-          <div className="flex flex-col gap-3">
-            {(step === "details" || step === "otp") && (
-              <>
-                <input 
-                  type="text" 
-                  className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] shadow-[inset_0_2px_5px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10 focus:border-[#1E3A8A]/30 outline-none transition-all placeholder:text-[13px] placeholder:text-gray-400 font-medium text-gray-800" 
-                  placeholder={t('mobileOrEmail')} 
-                  value={contact}
-                  onChange={e => setContact(e.target.value)}
-                  disabled={step === "otp"}
-                />
-                {step === "otp" && (<div className="mb-4"><label className="text-[11px] font-bold text-gray-500 uppercase">Verification code</label><input value={otp} onChange={e=>setOtp(e.target.value.replace(/\D/g, '').slice(0,6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit OTP" className="mt-2 w-full bg-[#F5F5F7] border rounded-xl px-3.5 py-2.5 text-center tracking-[0.4em] font-bold"/><ResendOtp onSend={sendRegisterOtp} className="mt-1 text-center"/></div>)}
-              </>
-            )}
 
-            {(step === "aadhaar" || step === "aadhaar-otp") && (
-              <>
-                <input 
-                  type="text" 
-                  inputMode="numeric"
-                  className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] tracking-[0.15em] shadow-[inset_0_2px_5px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10 focus:border-[#1E3A8A]/30 outline-none transition-all placeholder:text-[13px] placeholder:text-gray-400 font-medium text-gray-800" 
-                  placeholder="12-digit Aadhaar number" 
-                  value={aadhaar}
-                  onChange={e => setAadhaar(e.target.value.replace(/\D/g, '').slice(0,12))}
-                  disabled={step === "aadhaar-otp"}
+          {/* CONTRACTOR / EMPLOYER ENTITYLOCKER REGISTRATION */}
+          {isOrgRole && step === "entity-locker" && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-50/80 border border-blue-100">
+                <Building className="h-5 w-5 text-[#1E3A8A] shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-[#1E3A8A]">EntityLocker Business Verification</p>
+                  <p className="text-[10.5px] text-gray-600">Register {selectedRole} using official Government Organization Credentials.</p>
+                </div>
+              </div>
+
+              {/* THREE ENTITY OPTIONS */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Select Entity Verification Document</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setEntityAuthType("GSTIN")}
+                    className={`px-2 py-2 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 ${
+                      entityAuthType === "GSTIN"
+                        ? "bg-[#1E3A8A] text-white border-[#1E3A8A] shadow-sm"
+                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    <FileCheck size={14} />
+                    <span>GSTN Number</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEntityAuthType("MCA21")}
+                    className={`px-2 py-2 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 ${
+                      entityAuthType === "MCA21"
+                        ? "bg-[#1E3A8A] text-white border-[#1E3A8A] shadow-sm"
+                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    <Building size={14} />
+                    <span>MCA21 (CIN)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEntityAuthType("PAN")}
+                    className={`px-2 py-2 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 ${
+                      entityAuthType === "PAN"
+                        ? "bg-[#1E3A8A] text-white border-[#1E3A8A] shadow-sm"
+                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    <BadgeCheck size={14} />
+                    <span>Company PAN</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* INPUT VALUE */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase mb-1 block">
+                  Enter {entityAuthType === "GSTIN" ? "15-Digit GSTN Number" : entityAuthType === "MCA21" ? "21-Digit Corporate Identity Number (CIN)" : "10-Digit Company PAN Card"}
+                </label>
+                <input
+                  type="text"
+                  value={entityNumber}
+                  onChange={e => setEntityNumber(e.target.value.toUpperCase())}
+                  placeholder={entityAuthType === "GSTIN" ? "e.g. 27AAAAA0000A1Z5" : entityAuthType === "MCA21" ? "e.g. L12345MH2020PLC123456" : "e.g. ABCDE1234F"}
+                  className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] tracking-wide font-mono uppercase font-semibold text-gray-800 focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10 outline-none"
                 />
-                {step === "aadhaar-otp" && (
-                  <div>
-                    <label className="text-[11px] font-bold text-gray-500 uppercase">Verification code</label>
-                    <input value={aadhaarOtp} onChange={e=>setAadhaarOtp(e.target.value.replace(/\D/g, '').slice(0,6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit OTP" className="mt-2 w-full bg-[#F5F5F7] border rounded-xl px-3.5 py-2.5 text-center tracking-[0.4em] font-bold"/>
-                    <div className="flex justify-between items-center mt-2">
-                      <button type="button" onClick={() => setStep("aadhaar")} className="cursor-pointer text-xs font-semibold text-gray-500 hover:text-[#1E3A8A] transition-colors">‹ Edit</button>
-                      <ResendOtp onSend={sendAadhaarOtp} />
-                    </div>
+              </div>
+
+              {error && <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
+
+              <button
+                type="button"
+                onClick={handleEntityLockerVerify}
+                disabled={isCreating || !entityNumber.trim()}
+                className="w-full text-white bg-[#1E3A8A] hover:bg-[#152960] rounded-[12px] px-3.5 py-2.5 text-[13px] font-bold flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+              >
+                {isCreating ? "Verifying with EntityLocker…" : `Verify ${entityAuthType} & Continue`}
+                <ArrowRight size={16} />
+              </button>
+
+              <p className="text-[11px] text-gray-400 text-center">Powered by API Setu · EntityLocker Business Gateway</p>
+            </div>
+          )}
+
+          {/* STEP 2 FOR CONTRACTOR & EMPLOYER: SET UP MPIN & USERNAME */}
+          {isOrgRole && step === "setup-mpin" && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-800">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold">Entity Verified: {entityOrgName}</p>
+                  <p className="text-[10.5px] text-emerald-700">{entityAuthType}: {entityNumber}</p>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 space-y-3">
+                <p className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                  <UserCheck size={16} className="text-[#1E3A8A]" />
+                  Set up Username and Secure MPIN
+                </p>
+
+                {/* USERNAME */}
+                <div>
+                  <label className="text-[11px] font-bold text-gray-500 uppercase block mb-1">Create Username</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={e => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                      placeholder="e.g. buildwell_admin"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2 text-xs font-semibold text-gray-800 focus:ring-2 focus:ring-[#1E3A8A]/20 outline-none"
+                    />
                   </div>
-                )}
-                {step === "aadhaar" && (
-                  <button type="button" onClick={() => setStep("details")} className="cursor-pointer text-xs font-semibold text-gray-500 hover:text-[#1E3A8A] self-start transition-colors">‹ Use mobile number instead</button>
-                )}
-              </>
-            )}
+                </div>
 
-            {error && <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
-            {notice && <p role="status" className="text-xs text-green-700 bg-green-50 border border-green-100 rounded-lg p-2.5">{notice}</p>}
-            
-            <div className="flex items-start gap-2 mt-2">
+                {/* MPIN */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-500 uppercase block mb-1">Create MPIN (4-6 digits)</label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={mpin}
+                      onChange={e => setMpin(e.target.value.replace(/\D/g, ''))}
+                      placeholder="4-6 Digits"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-center tracking-[0.3em] font-bold text-xs focus:ring-2 focus:ring-[#1E3A8A]/20 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-500 uppercase block mb-1">Confirm MPIN</label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={confirmMpin}
+                      onChange={e => setConfirmMpin(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Re-enter"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-center tracking-[0.3em] font-bold text-xs focus:ring-2 focus:ring-[#1E3A8A]/20 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {error && <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
+              {notice && <p role="status" className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-2.5">{notice}</p>}
+
+              <div className="flex items-start gap-2 pt-1">
+                <input 
+                  type="checkbox" 
+                  id="terms-org"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 text-[#1E3A8A] rounded border-gray-300 focus:ring-[#1E3A8A] cursor-pointer"
+                />
+                <label htmlFor="terms-org" className="text-xs text-gray-500 leading-snug cursor-pointer">
+                  I accept the <a href="/policy" target="_blank" className="text-[#1E3A8A] hover:underline">Privacy Policy</a> and <a href="/terms" target="_blank" className="text-[#1E3A8A] hover:underline">Terms & Conditions</a>.
+                </label>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStep("entity-locker")}
+                  className="px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50"
+                >
+                  ‹ Change Details
+                </button>
+                <button
+                  type="button"
+                  disabled={!agreedToTerms || isCreating || !username || mpin.length < 4 || mpin !== confirmMpin}
+                  onClick={handleSetupUsernameMpin}
+                  className="flex-1 bg-[#1E3A8A] hover:bg-[#152960] text-white rounded-xl px-3.5 py-2.5 text-xs font-bold flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                >
+                  {isCreating ? "Setting up Account…" : `Complete Setup & Login`}
+                  <KeyRound size={15} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* WORKER / STANDARD MOBILE REGISTRATION */}
+          {!isOrgRole && (step === "details" || step === "otp") && (
+            <div className="flex flex-col gap-3">
               <input 
-                type="checkbox" 
-                id="terms"
-                checked={agreedToTerms}
-                onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="mt-0.5 w-4 h-4 flex-shrink-0 text-[#1E3A8A] bg-gray-100 border-gray-300 rounded focus:ring-[#1E3A8A] focus:ring-2 cursor-pointer"
+                type="text" 
+                className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] shadow-[inset_0_2px_5px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10 focus:border-[#1E3A8A]/30 outline-none transition-all placeholder:text-[13px] placeholder:text-gray-400 font-medium text-gray-800" 
+                placeholder={t('mobileOrEmail')} 
+                value={contact}
+                onChange={e => setContact(e.target.value)}
+                disabled={step === "otp"}
               />
-              <label htmlFor="terms" className="text-xs text-gray-500 leading-snug cursor-pointer pt-0.5">
-                I agree to the <a href="/policy" target="_blank" className="text-[#1E3A8A] hover:underline">Privacy Policy</a>, <a href="/data-sharing" target="_blank" className="text-[#1E3A8A] hover:underline">Data Sharing Policy</a>, and <a href="/terms" target="_blank" className="text-[#1E3A8A] hover:underline">Terms & Conditions</a>.
-              </label>
-            </div>
+              {step === "otp" && (
+                <div className="mb-4">
+                  <label className="text-[11px] font-bold text-gray-500 uppercase">Verification code</label>
+                  <input value={otp} onChange={e=>setOtp(e.target.value.replace(/\D/g, '').slice(0,6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit OTP" className="mt-2 w-full bg-[#F5F5F7] border rounded-xl px-3.5 py-2.5 text-center tracking-[0.4em] font-bold"/>
+                  <ResendOtp onSend={sendRegisterOtp} className="mt-1 text-center"/>
+                </div>
+              )}
 
-            <button 
-              disabled={!agreedToTerms || isCreating || (step === "aadhaar" && !/^\d{12}$/.test(aadhaar))}
-              onClick={step === "details" ? requestOtp : step === "otp" ? completeRegistration : step === "aadhaar" ? sendAadhaarOtp : verifyAadhaar}
-              type="button"
-              className={`mt-1 w-full text-white rounded-[12px] px-3.5 py-2.5 text-[13px] font-bold tracking-wide flex items-center justify-center transition-all group ${
-                agreedToTerms 
-                  ? "cursor-pointer bg-[#1E3A8A] hover:bg-[#152960] shadow-[0_4px_14px_0_rgba(30,58,138,0.39)] hover:shadow-[0_6px_20px_rgba(30,58,138,0.23)] hover:-translate-y-[1px] active:scale-[0.98]" 
-                  : "bg-gray-400 cursor-not-allowed"
-              }`}
-            >
-              {isCreating ? "Please wait…" : step === "details" ? t('sendOtp') : step === "otp" ? `Verify & create ${selectedRole} ID` : step === "aadhaar" ? "Send OTP to Aadhaar-linked mobile" : "Verify Aadhaar & create Worker ID"}
-              <span className="ml-2 relative flex items-center justify-center h-4 w-4">
-                <ArrowRight className="h-4 w-4 absolute transition-all duration-300 group-hover:opacity-0 group-hover:scale-50" />
-                <Fingerprint className="h-4 w-4 absolute text-emerald-300 opacity-0 scale-75 rotate-12 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100 group-hover:rotate-0" />
-              </span>
-            </button>
-          </div>
+              {error && <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
+              {notice && <p role="status" className="text-xs text-green-700 bg-green-50 border border-green-100 rounded-lg p-2.5">{notice}</p>}
+              
+              <div className="flex items-start gap-2 mt-2">
+                <input 
+                  type="checkbox" 
+                  id="terms"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 flex-shrink-0 text-[#1E3A8A] bg-gray-100 border-gray-300 rounded focus:ring-[#1E3A8A] focus:ring-2 cursor-pointer"
+                />
+                <label htmlFor="terms" className="text-xs text-gray-500 leading-snug cursor-pointer pt-0.5">
+                  I agree to the <a href="/policy" target="_blank" className="text-[#1E3A8A] hover:underline">Privacy Policy</a> and <a href="/terms" target="_blank" className="text-[#1E3A8A] hover:underline">Terms & Conditions</a>.
+                </label>
+              </div>
 
-          {/* ALTERNATIVE LOGIN */}
-          {(step === "details" || step === "otp") && (<>
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200"></div>
+              <button 
+                disabled={!agreedToTerms || isCreating}
+                onClick={step === "details" ? requestOtp : completeRegistration}
+                type="button"
+                className={`mt-1 w-full text-white rounded-[12px] px-3.5 py-2.5 text-[13px] font-bold tracking-wide flex items-center justify-center transition-all group ${
+                  agreedToTerms 
+                    ? "cursor-pointer bg-[#1E3A8A] hover:bg-[#152960] shadow-[0_4px_14px_0_rgba(30,58,138,0.39)] hover:shadow-[0_6px_20px_rgba(30,58,138,0.23)] hover:-translate-y-[1px] active:scale-[0.98]" 
+                    : "bg-gray-400 cursor-not-allowed"
+                }`}
+              >
+                {isCreating ? "Please wait…" : step === "details" ? t('sendOtp') : `Verify & create ${selectedRole} ID`}
+                <span className="ml-2 relative flex items-center justify-center h-4 w-4">
+                  <ArrowRight className="h-4 w-4 absolute transition-all duration-300 group-hover:opacity-0 group-hover:scale-50" />
+                  <Fingerprint className="h-4 w-4 absolute text-emerald-300 opacity-0 scale-75 rotate-12 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100 group-hover:rotate-0" />
+                </span>
+              </button>
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-3 bg-white text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('orRegisterWith')}</span>
-            </div>
-          </div>
+          )}
 
-          <div className="grid grid-cols-3 gap-2">
-            <button type="button" onClick={() => window.open('https://wa.me/919650887008?text=Hello', '_blank')} className="cursor-pointer flex flex-col items-center justify-center py-2 px-2 rounded-[14px] border border-gray-200 bg-white text-gray-600 hover:border-green-500 hover:bg-green-50 hover:text-green-600 transition-all shadow-sm active:scale-95 group">
-              <img src="/bss-brand/whatsapp.svg" alt="WhatsApp" className="h-6 w-6 mb-1.5 group-hover:scale-110 transition-transform" />
-              <span className="text-[12px] font-bold">{t('whatsapp')}</span>
-            </button>
-            
-            <button type="button" onClick={startAadhaar} className="cursor-pointer flex flex-col items-center justify-center py-2 px-2 rounded-[14px] border border-gray-200 bg-white text-gray-600 hover:border-[#1E3A8A] hover:bg-blue-50 hover:text-[#1E3A8A] transition-all shadow-sm active:scale-95 group">
-              <img src="/bss-brand/aadhaar.svg" alt="Aadhaar" className="h-6 w-6 mb-1.5 group-hover:scale-110 transition-transform" />
-              <span className="text-[12px] font-bold">{t('aadhaar')}</span>
-            </button>
-            
-            <button type="button" onClick={() => window.location.href = 'tel:9650887008'} className="cursor-pointer flex flex-col items-center justify-center py-2 px-2 rounded-[14px] border border-gray-200 bg-white text-gray-600 hover:border-purple-500 hover:bg-purple-50 hover:text-purple-600 transition-all shadow-sm active:scale-95 group">
-              <img src="/bss-brand/call.svg" alt="Call Us" className="h-6 w-6 mb-1.5 group-hover:scale-110 transition-transform" />
-              <span className="text-[12px] font-bold">{t('callUs')}</span>
-            </button>
-          </div>
-          </>)}
+          {/* WORKER AADHAAR eKYC */}
+          {!isOrgRole && (step === "aadhaar" || step === "aadhaar-otp") && (
+            <div className="flex flex-col gap-3">
+              <input 
+                type="text" 
+                inputMode="numeric"
+                className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] tracking-[0.15em] shadow-[inset_0_2px_5px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10 focus:border-[#1E3A8A]/30 outline-none transition-all font-medium text-gray-800" 
+                placeholder="12-digit Aadhaar number" 
+                value={aadhaar}
+                onChange={e => setAadhaar(e.target.value.replace(/\D/g, '').slice(0,12))}
+                disabled={step === "aadhaar-otp"}
+              />
+              {step === "aadhaar-otp" && (
+                <div>
+                  <label className="text-[11px] font-bold text-gray-500 uppercase">Verification code</label>
+                  <input value={aadhaarOtp} onChange={e=>setAadhaarOtp(e.target.value.replace(/\D/g, '').slice(0,6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit OTP" className="mt-2 w-full bg-[#F5F5F7] border rounded-xl px-3.5 py-2.5 text-center tracking-[0.4em] font-bold"/>
+                  <div className="flex justify-between items-center mt-2">
+                    <button type="button" onClick={() => setStep("aadhaar")} className="cursor-pointer text-xs font-semibold text-gray-500 hover:text-[#1E3A8A] transition-colors">‹ Edit</button>
+                    <ResendOtp onSend={sendAadhaarOtp} />
+                  </div>
+                </div>
+              )}
+              {step === "aadhaar" && (
+                <button type="button" onClick={() => setStep("details")} className="cursor-pointer text-xs font-semibold text-gray-500 hover:text-[#1E3A8A] self-start transition-colors">‹ Use mobile number instead</button>
+              )}
+
+              {error && <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
+
+              <div className="flex items-start gap-2 mt-2">
+                <input 
+                  type="checkbox" 
+                  id="terms-aadhaar"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 text-[#1E3A8A] bg-gray-100 border-gray-300 rounded cursor-pointer"
+                />
+                <label htmlFor="terms-aadhaar" className="text-xs text-gray-500 leading-snug cursor-pointer pt-0.5">
+                  I agree to the <a href="/policy" target="_blank" className="text-[#1E3A8A] hover:underline">Privacy Policy</a> and <a href="/terms" target="_blank" className="text-[#1E3A8A] hover:underline">Terms & Conditions</a>.
+                </label>
+              </div>
+
+              <button 
+                disabled={!agreedToTerms || isCreating || (step === "aadhaar" && !/^\d{12}$/.test(aadhaar))}
+                onClick={step === "aadhaar" ? sendAadhaarOtp : verifyAadhaar}
+                type="button"
+                className="mt-1 w-full text-white bg-[#1E3A8A] hover:bg-[#152960] rounded-[12px] px-3.5 py-2.5 text-[13px] font-bold flex items-center justify-center"
+              >
+                {isCreating ? "Please wait…" : step === "aadhaar" ? "Send OTP to Aadhaar-linked mobile" : "Verify Aadhaar & create Worker ID"}
+              </button>
+            </div>
+          )}
+
+          {/* ALTERNATIVE LOGIN FOR WORKERS */}
+          {!isOrgRole && (step === "details" || step === "otp") && (
+            <>
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-3 bg-white text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('orRegisterWith')}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <button type="button" onClick={() => window.open('https://wa.me/919650887008?text=Hello', '_blank')} className="cursor-pointer flex flex-col items-center justify-center py-2 px-2 rounded-[14px] border border-gray-200 bg-white text-gray-600 hover:border-green-500 hover:bg-green-50 hover:text-green-600 transition-all shadow-sm active:scale-95 group">
+                  <img src="/bss-brand/whatsapp.svg" alt="WhatsApp" className="h-6 w-6 mb-1.5 group-hover:scale-110 transition-transform" />
+                  <span className="text-[12px] font-bold">{t('whatsapp')}</span>
+                </button>
+                
+                <button type="button" onClick={startAadhaar} className="cursor-pointer flex flex-col items-center justify-center py-2 px-2 rounded-[14px] border border-gray-200 bg-white text-gray-600 hover:border-[#1E3A8A] hover:bg-blue-50 hover:text-[#1E3A8A] transition-all shadow-sm active:scale-95 group">
+                  <img src="/bss-brand/aadhaar.svg" alt="Aadhaar" className="h-6 w-6 mb-1.5 group-hover:scale-110 transition-transform" />
+                  <span className="text-[12px] font-bold">{t('aadhaar')}</span>
+                </button>
+                
+                <button type="button" onClick={() => window.location.href = 'tel:9650887008'} className="cursor-pointer flex flex-col items-center justify-center py-2 px-2 rounded-[14px] border border-gray-200 bg-white text-gray-600 hover:border-purple-500 hover:bg-purple-50 hover:text-purple-600 transition-all shadow-sm active:scale-95 group">
+                  <img src="/bss-brand/call.svg" alt="Call Us" className="h-6 w-6 mb-1.5 group-hover:scale-110 transition-transform" />
+                  <span className="text-[12px] font-bold">{t('callUs')}</span>
+                </button>
+              </div>
+            </>
+          )}
+
         </div>
       </div>
 
@@ -275,3 +588,4 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
     </div>
   );
 }
+

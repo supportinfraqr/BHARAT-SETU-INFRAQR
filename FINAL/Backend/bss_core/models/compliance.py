@@ -149,17 +149,20 @@ class RegisterCalculationRule(models.Model):
 
 
 class EmployerRegisterTemplateAdoption(models.Model):
-    """An employer adopting a State+Form CLRA register for its sites.
+    """An employer adopting a State+Form CLRA register **for a specific site**.
 
-    Adoption is per (employer, state, template). Once at least one row exists for
-    an employer in a state, that state is *gated*: the employer's contractors only
-    see the adopted forms for their sites in that state (site-wise). States with
-    no adoption rows keep the full applicable library (backward compatible)."""
+    Adoption is per (employer, site, template). Once at least one row exists for
+    a site, that site is *gated*: the employer's contractors at that site only see
+    the adopted forms (plus mandatory ones). Sites with no adoption rows keep the
+    full applicable library (backward compatible)."""
 
     employer = models.ForeignKey(User, on_delete=models.CASCADE,
                                  related_name="register_template_adoptions")
     template = models.ForeignKey(RegisterTemplate, on_delete=models.CASCADE,
                                  related_name="employer_adoptions")
+    # The site this adoption applies to. Null only for legacy state-level rows.
+    site = models.ForeignKey("Site", on_delete=models.CASCADE, null=True, blank=True,
+                             related_name="register_template_adoptions")
     state = models.CharField(max_length=60, db_index=True)
     is_active = models.BooleanField(default=True)
     adopted_at = models.DateTimeField(auto_now_add=True)
@@ -167,12 +170,14 @@ class EmployerRegisterTemplateAdoption(models.Model):
     class Meta:
         db_table = "employer_register_template_adoption"
         constraints = [models.UniqueConstraint(
-            fields=["employer", "template"], name="uq_employer_register_template")]
-        indexes = [models.Index(fields=["employer", "state"],
+            fields=["employer", "site", "template"], name="uq_employer_site_register_template")]
+        indexes = [models.Index(fields=["employer", "site"],
+                                name="idx_emp_reg_tpl_site"),
+                   models.Index(fields=["employer", "state"],
                                 name="idx_emp_reg_tpl_state")]
 
     def __str__(self):
-        return f"{self.employer_id} {self.state} -> {self.template_id}"
+        return f"{self.employer_id} site{self.site_id} -> {self.template_id}"
 
 
 class StateCode(models.Model):
