@@ -898,7 +898,23 @@ def _background_fetch_documents(session, access_token, profile, user):
             if existing:
                 if user is not None and existing.user_id != getattr(user, "id", None):
                     existing.user = user
-                    existing.save(update_fields=["user"])
+                try:
+                    file_bytes = dl.download_document(access_token, uri)
+                    if file_bytes:
+                        folder = dl.ensure_doc_dir()
+                        fname = dl.safe_filename(uri) + ".pdf"
+                        fpath = os.path.join(folder, fname)
+                        with open(fpath, "wb") as f:
+                            f.write(file_bytes)
+                        existing.file.save(fname, ContentFile(file_bytes), save=False)
+                        existing.file_path = existing.file.name
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("DigiLocker re-download %s failed: %s", uri, exc)
+                existing.downloaded_at = tz.now()
+                existing.doc_date = (item.get("doc_date") or "")[:60]
+                existing.issuer = (item.get("issuer") or "")[:120]
+                existing.document_name = (item.get("document_name") or "")[:200]
+                existing.save()
                 continue
             try:
                 file_bytes = dl.download_document(access_token, uri)
