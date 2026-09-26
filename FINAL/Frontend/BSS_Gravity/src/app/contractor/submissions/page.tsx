@@ -110,6 +110,9 @@ export default function ComplianceSubmissionPage() {
 
   const rawDocuments = contractor.submissions.documents as DocumentRow[];
   const documents = useMemo(() => scoped(rawDocuments, row => row.employer), [scoped, rawDocuments]);
+  // Only evidence rows stamped with a package Unique No. count as actually submitted —
+  // a bare upload (draft) stays out of the Submissions Log until "Submit Form" is pressed.
+  const submittedDocuments = useMemo(() => documents.filter(doc => doc.uniqueNo), [documents]);
 
   // Sync default selected year if availableYears changes
   useEffect(() => {
@@ -120,11 +123,11 @@ export default function ComplianceSubmissionPage() {
 
   // Documents filtered by selected Year
   const yearFilteredDocuments = useMemo(() => {
-    return documents.filter(doc => {
+    return submittedDocuments.filter(doc => {
       const fyStr = doc.financialYear || (doc.period?.includes('FY') ? doc.period.slice(doc.period.indexOf('FY')) : '');
       return (fyStr || availableYears[0]) === selectedYear;
     });
-  }, [documents, selectedYear, availableYears]);
+  }, [submittedDocuments, selectedYear, availableYears]);
 
   const filteredDocuments = useMemo(() => {
     return yearFilteredDocuments.filter(doc => periodOf(doc.month || doc.period?.split(' ')[0] || '', freq) === selectedPeriod);
@@ -172,7 +175,20 @@ export default function ComplianceSubmissionPage() {
       && (!activeSiteObj || !b.site || b.site === activeSiteObj.name)),
     [contractor.complianceBatches, createFyKey, month, activeSiteObj]);
 
-  const uploadedEvidenceCount = additionalDocs.filter(d => uploads[d.name]?.id).length;
+  // Names of evidence forms that already carry a submitted package ref for the current create context.
+  const submittedNames = useMemo(() => {
+    const periodStr = `${createPeriod} ${fy.replace('FY ', '')}`;
+    const names = new Set<string>();
+    documents.forEach(doc => {
+      if (doc.source !== 'evidence' || !doc.uniqueNo) return;
+      if (doc.period !== periodStr && doc.month !== month) return;
+      names.add(doc.type);
+      if (doc.documentType) names.add(doc.documentType);
+    });
+    return names;
+  }, [documents, createPeriod, fy, month]);
+
+  const submittedEvidenceCount = additionalDocs.filter(d => submittedNames.has(d.name)).length;
 
   const docsSiteId = String(activeSiteObj?.id ?? '');
   useEffect(() => {
@@ -291,8 +307,8 @@ export default function ComplianceSubmissionPage() {
     { id:'action', header:'Document', filterable:false, value:b => b.id, render:b => b.hasFile ? <a href={`/api/portal/compliance-batches/${b.id}`} download className="text-blue-700 font-semibold text-xs inline-flex items-center gap-1 hover:underline"><Download size={12}/>Download registers</a> : <span className="text-gray-400 text-xs">No file</span> },
   ];
 
-  const verified = documents.filter(row => row.status === 'Verified').length;
-  const pending = documents.filter(row => row.status !== 'Verified' && row.status !== 'Returned').length;
+  const verified = submittedDocuments.filter(row => row.status === 'Verified').length;
+  const pending = submittedDocuments.filter(row => row.status !== 'Verified' && row.status !== 'Returned').length;
 
   async function submitBatch(batchId: string) {
     setBusy(true); setError(''); setNotice('');
@@ -382,7 +398,7 @@ export default function ComplianceSubmissionPage() {
     {error && <p role="alert" className="bss-alert bss-alert-error flex items-center gap-2"><AlertCircle size={15}/>{error}</p>}
 
     <section className="bss-kpi-grid grid grid-cols-2 md:grid-cols-4 gap-3">
-      <Metric label="Total Submissions" value={documents.length} icon={FileUp} tone="bg-blue-50 text-blue-700"/>
+      <Metric label="Total Submissions" value={submittedDocuments.length} icon={FileUp} tone="bg-blue-50 text-blue-700"/>
       <Metric label="Verified Packages" value={verified} icon={CheckCircle2} tone="bg-green-50 text-green-700"/>
       <Metric label="Pending Review" value={pending} icon={FileCheck2} tone="bg-amber-50 text-amber-700"/>
       <Metric label="Employer Scope" value={employerScope === 'all' ? contractor.employers.length : 1} icon={ShieldCheck} tone="bg-indigo-50 text-indigo-700"/>
@@ -611,7 +627,7 @@ export default function ComplianceSubmissionPage() {
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-extrabold uppercase tracking-wider text-gray-500">
-                2. Required Evidence Documents ({uploadedEvidenceCount}/{additionalDocs.length} Submitted
+                2. Required Evidence Documents ({submittedEvidenceCount}/{additionalDocs.length} Submitted
                 {totalMandatoryDocsCount > 0 ? ` · ${uploadedMandatoryCount}/${totalMandatoryDocsCount} Mandatory` : ''})
               </p>
               {isPartialSubmission && (
@@ -640,6 +656,7 @@ export default function ComplianceSubmissionPage() {
                   <tbody className="divide-y divide-gray-100 text-xs">
                     {additionalDocs.map(doc => {
                       const up = uploads[doc.name];
+                      const isSubmitted = submittedNames.has(doc.name);
                       return (
                         <tr key={doc.name} className={`hover:bg-slate-50/70 transition-colors ${up?.status === 'Validated' ? 'bg-green-50/20' : doc.mandatory ? 'bg-amber-50/15' : ''}`}>
                           <td className="py-3 px-3.5 font-semibold text-gray-900">
@@ -662,7 +679,7 @@ export default function ComplianceSubmissionPage() {
                                 up.status === 'Validating' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 
                                 'bg-red-100 text-red-800 border border-red-200'
                               }`}>
-                                {up.status === 'Validated' ? '✓ Submitted & Validated' : up.status === 'Validating' ? 'Validating…' : 'Errors found'}
+                                {up.status === 'Validated' ? (isSubmitted ? '✓ Submitted' : '✓ Validated · press Submit') : up.status === 'Validating' ? 'Validating…' : 'Errors found'}
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100/80 border border-amber-200 px-2.5 py-0.5 rounded-full">
@@ -679,7 +696,7 @@ export default function ComplianceSubmissionPage() {
                               </label>
                               {up && (
                                 <>
-                                  {up.id != null && (
+                                  {up.id != null && !isSubmitted && (
                                     <button
                                       type="button"
                                       onClick={() => void submitSingleForm(doc.name, up.id)}
