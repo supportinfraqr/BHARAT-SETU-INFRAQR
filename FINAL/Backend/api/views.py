@@ -892,6 +892,9 @@ def _background_fetch_documents(session, access_token, profile, user):
             seen.add(uri)
             existing = DigiLockerDocument.objects.filter(profile=profile, uri=uri).first()
             if existing:
+                if user is not None and existing.user_id != getattr(user, "id", None):
+                    existing.user = user
+                    existing.save(update_fields=["user"])
                 continue
             try:
                 file_bytes = dl.download_document(access_token, uri)
@@ -1032,6 +1035,22 @@ class DigiLockerViewSet(viewsets.GenericViewSet):
             except Exception:
                 pass
 
+        # A DigiLocker account is linked to this user. Previously-fetched documents
+        # may still be attached to an older user (the profile can be re-linked),
+        # which hid them from the Documents wallet — re-home them to this user and
+        # re-register them so the Documents checklist shows them as present.
+        if user is not None:
+            for row in DigiLockerDocument.objects.filter(profile=profile).exclude(user=user):
+                row.user = user
+                row.save(update_fields=["user"])
+                code = _digilocker_master_code({"doctype": row.doctype, "name": row.file_name or "", "uri": row.uri or ""})
+                if code and row.file_path:
+                    try:
+                        with open(row.file_path, "rb") as fh:
+                            _sync_document_register(user, code, fh.read(), row.file_name or "document")
+                    except Exception:
+                        pass
+
         import threading
         threading.Thread(target=_background_fetch_documents,
                          args=(session, access_token, profile, user), daemon=True).start()
@@ -1073,7 +1092,11 @@ class DigiLockerViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=["get"])
     def documents(self, request):
-        docs = DigiLockerDocument.objects.filter(user=request.user).order_by("-created_at")
+        # Match on the document's user OR its profile owner, so documents fetched
+        # before the profile was (re)linked still show for the linked user.
+        docs = (DigiLockerDocument.objects
+                .filter(Q(user=request.user) | Q(profile__user=request.user))
+                .distinct().order_by("-created_at"))
         latest = DigiLockerSession.objects.filter(user=request.user).order_by("-id").first()
         return Response({
             "data": DigiLockerDocumentSerializer(docs, many=True).data,
