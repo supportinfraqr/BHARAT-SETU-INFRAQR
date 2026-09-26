@@ -17,6 +17,7 @@ class EntityLockerAuth(models.Model):
 
     state = models.CharField(max_length=128, unique=True, db_index=True)
     code_verifier = models.CharField(max_length=200)
+    role = models.CharField(max_length=20, blank=True, default="contractor")  # contractor / employer
     id_type = models.CharField(max_length=20, blank=True)    # GSTIN / MCA21 / PAN
     id_value = models.CharField(max_length=60, blank=True)
     status = models.CharField(max_length=20, choices=STATUS, default="INITIATED")

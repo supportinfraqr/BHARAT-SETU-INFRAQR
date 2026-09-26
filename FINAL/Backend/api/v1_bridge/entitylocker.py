@@ -31,22 +31,26 @@ def _expiry():
 def entitylocker_start(request):
     """Create a pending EntityLocker authorization and return the consent URL.
 
-    Body: ``{"idType": "GSTIN|MCA21|PAN", "idValue": "…"}`` (the number the user
-    entered, echoed back so the callback can record what was verified)."""
+    Body: ``{"role": "contractor|employer", "idType": "GSTIN|MCA21|PAN",
+    "idValue": "…"}``. Each role uses its own registered EntityLocker app."""
     from bss_core.models import EntityLockerAuth
-    if not settings.ENTITYLOCKER_CLIENT_ID or not settings.ENTITYLOCKER_CLIENT_SECRET:
-        return Response({"error": "EntityLocker verification is not configured."},
-                        status=status.HTTP_503_SERVICE_UNAVAILABLE)
     body = request.data if isinstance(request.data, dict) else {}
+    role = str(body.get("role") or "contractor").strip().lower()
+    if role not in settings.ENTITYLOCKER_APPS:
+        role = "contractor"
+    app = settings.ENTITYLOCKER_APPS[role]
+    if not app.get("client_id") or not app.get("client_secret"):
+        return Response({"error": f"EntityLocker verification is not configured for {role}."},
+                        status=status.HTTP_503_SERVICE_UNAVAILABLE)
     id_type = str(body.get("idType") or "GSTIN").strip()[:20]
     id_value = str(body.get("idValue") or "").strip()[:60]
     state = secrets.token_urlsafe(24)
     verifier = entitylocker_client.generate_code_verifier()
     EntityLockerAuth.objects.create(
-        state=state, code_verifier=verifier, id_type=id_type, id_value=id_value,
-        expires_at=_expiry())
-    url = entitylocker_client.build_authorize_url(state, verifier, id_type=id_type)
-    return Response({"data": {"url": url, "state": state}}, status=status.HTTP_200_OK)
+        state=state, code_verifier=verifier, role=role, id_type=id_type,
+        id_value=id_value, expires_at=_expiry())
+    url = entitylocker_client.build_authorize_url(app, state, verifier, id_type=id_type)
+    return Response({"data": {"url": url, "state": state, "role": role}}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET", "POST"])
@@ -81,7 +85,8 @@ def entitylocker_callback(request):
                         status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        token = entitylocker_client.exchange_code(code, auth.code_verifier)
+        app = settings.ENTITYLOCKER_APPS.get(auth.role or "contractor", {})
+        token = entitylocker_client.exchange_code(app, code, auth.code_verifier)
         entity = entitylocker_client.get_entity(token["access_token"])
     except entitylocker_client.EntityLockerError as exc:
         auth.status, auth.error = "FAILED", str(exc)[:1000]
@@ -99,8 +104,9 @@ def entitylocker_callback(request):
                              "doi", "email", "mobile", "updated_at"])
     return Response({"verified": True, "data": {
         "entityName": auth.entity_name, "verifiedBy": auth.verified_by,
-        "entityLockerId": auth.entity_locker_id, "idType": auth.id_type,
-        "idValue": auth.id_value, "doi": auth.doi, "email": auth.email, "mobile": auth.mobile,
+        "entityLockerId": auth.entity_locker_id, "role": auth.role,
+        "idType": auth.id_type, "idValue": auth.id_value,
+        "doi": auth.doi, "email": auth.email, "mobile": auth.mobile,
     }}, status=status.HTTP_200_OK)
 
 

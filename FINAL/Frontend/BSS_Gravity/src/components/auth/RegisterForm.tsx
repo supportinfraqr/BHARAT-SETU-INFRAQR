@@ -89,7 +89,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
       } catch { /* storage unavailable — continue */ }
       const response = await fetch('/api/entitylocker/start', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idType: entityAuthType, idValue: val }),
+        body: JSON.stringify({ role: selectedRole.toLowerCase(), idType: entityAuthType, idValue: val }),
       });
       const body = await response.json().catch(() => ({})) as { data?: { url?: string }; error?: string };
       if (!response.ok || !body.data?.url) throw new Error(body.error || 'EntityLocker could not be started.');

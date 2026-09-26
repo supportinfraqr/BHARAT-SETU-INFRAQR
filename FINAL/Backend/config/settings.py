@@ -218,13 +218,26 @@ DIGILOCKER_DOC_DIR = os.environ.get("DIGILOCKER_DOC_DIR", str(BASE_DIR / "media/
 
 # ---------------------------------------------------------------------------
 # DigiLocker EntityLocker OAuth2 (backend-only). Business/entity verification
-# via the Meri Pehchaan Entity Locker (GSTIN / CIN / Udyam / PAN). Credentials
-# come from env only (BSS_ENTITYLOCKER_*).
+# via the Meri Pehchaan Entity Locker (GSTIN / CIN / Udyam / PAN). One app per
+# role (separate client id/secret registered in the portal). Credentials come
+# from env only (BSS_ENTITYLOCKER_*); the legacy un-suffixed keys are the
+# contractor fallback.
 # ---------------------------------------------------------------------------
-ENTITYLOCKER_CLIENT_ID = os.environ.get("BSS_ENTITYLOCKER_CLIENT_ID", "")
-ENTITYLOCKER_CLIENT_SECRET = os.environ.get("BSS_ENTITYLOCKER_CLIENT_SECRET", "")
-ENTITYLOCKER_REDIRECT_URI = os.environ.get(
-    "BSS_ENTITYLOCKER_REDIRECT_URI", "http://localhost:3003/Return/EntityLocker")
+def _el_app(role):
+    prefix = f"BSS_ENTITYLOCKER_{role.upper()}_"
+    fallback = "BSS_ENTITYLOCKER_" if role == "contractor" else "BSS_ENTITYLOCKER_NONE_"
+    return {
+        "client_id": os.environ.get(prefix + "CLIENT_ID", os.environ.get(fallback + "CLIENT_ID", "")),
+        "client_secret": os.environ.get(prefix + "CLIENT_SECRET", os.environ.get(fallback + "CLIENT_SECRET", "")),
+        "redirect_uri": os.environ.get(prefix + "REDIRECT_URI", os.environ.get(
+            fallback + "REDIRECT_URI", "https://login.bharatshramsetu.com/Return/EntityLocker")),
+    }
+
+
+ENTITYLOCKER_APPS = {
+    "contractor": _el_app("contractor"),
+    "employer": _el_app("employer"),
+}
 ENTITYLOCKER_AUTHORIZE_URL = os.environ.get(
     "BSS_ENTITYLOCKER_AUTHORIZE_URL",
     "https://entity.digilocker.gov.in/public/oauth2/1/authorize")

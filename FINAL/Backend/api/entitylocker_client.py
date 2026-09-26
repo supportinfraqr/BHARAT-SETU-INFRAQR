@@ -56,12 +56,12 @@ def _url_quote(value: str) -> str:
     return quote(value, safe="+-" + " ").replace(" ", "+")
 
 
-def build_authorize_url(state: str, code_verifier: str, *, id_type: str = "") -> str:
+def build_authorize_url(app: dict, state: str, code_verifier: str, *, id_type: str = "") -> str:
     params = {
         "response_type": "code",
-        "client_id": settings.ENTITYLOCKER_CLIENT_ID,
+        "client_id": app.get("client_id", ""),
         "state": state,
-        "redirect_uri": settings.ENTITYLOCKER_REDIRECT_URI,
+        "redirect_uri": app.get("redirect_uri", ""),
         "code_challenge": generate_code_challenge(code_verifier),
         "code_challenge_method": "S256",
         "scope": settings.ENTITYLOCKER_SCOPE,
@@ -75,16 +75,16 @@ def build_authorize_url(state: str, code_verifier: str, *, id_type: str = "") ->
 # ---------------------------------------------------------------------------
 # Token + entity/user details
 # ---------------------------------------------------------------------------
-def exchange_code(code: str, code_verifier: str) -> dict:
+def exchange_code(app: dict, code: str, code_verifier: str) -> dict:
     """POST /public/oauth2/1/token → {access_token, refresh_token, id_token, ...}."""
     resp = requests.post(
         settings.ENTITYLOCKER_TOKEN_URL,
         data={
             "grant_type": "authorization_code",
             "code": code,
-            "client_id": settings.ENTITYLOCKER_CLIENT_ID,
-            "client_secret": settings.ENTITYLOCKER_CLIENT_SECRET,
-            "redirect_uri": settings.ENTITYLOCKER_REDIRECT_URI,
+            "client_id": app.get("client_id", ""),
+            "client_secret": app.get("client_secret", ""),
+            "redirect_uri": app.get("redirect_uri", ""),
             "code_verifier": code_verifier,
         },
         timeout=20,
