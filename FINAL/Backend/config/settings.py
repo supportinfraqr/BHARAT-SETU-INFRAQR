@@ -211,7 +211,13 @@ DIGILOCKER_FILE_URL = os.environ.get(
 DIGILOCKER_ACR = os.environ.get("DIGILOCKER_ACR", "aadhaar")
 DIGILOCKER_AMR = os.environ.get("DIGILOCKER_AMR", "aadhaar")
 DIGILOCKER_SCOPE = os.environ.get(
-    "DIGILOCKER_SCOPE", "files.issueddocs+files.uploadeddocs+userdetails+address+picture+avs")
+    "DIGILOCKER_SCOPE", "files.issueddocs+userdetails+address+picture+avs")
+# The app only has "files.issueddocs" approval today, so uploaded/e-Aadhaar
+# pulls are off by default (opt-in via env once the portal grants them).
+DIGILOCKER_FETCH_UPLOADED = os.environ.get(
+    "DIGILOCKER_FETCH_UPLOADED", "false").strip().lower() in ("1", "true", "yes")
+DIGILOCKER_FETCH_EADHAAR = os.environ.get(
+    "DIGILOCKER_FETCH_EADHAAR", "false").strip().lower() in ("1", "true", "yes")
 DIGILOCKER_SESSION_TTL_MIN = int(os.environ.get("DIGILOCKER_SESSION_TTL_MIN", "10"))
 DIGILOCKER_DOC_DIR = os.environ.get("DIGILOCKER_DOC_DIR", str(BASE_DIR / "media/digilocker"))
 

@@ -866,8 +866,12 @@ def _background_fetch_documents(session, access_token, profile, user):
         items = []
         # Each endpoint is independent and optional — one failing (e.g. the app has
         # no files.uploadeddocs scope, or DigiLocker answers with an empty body)
-        # must never abort the issued-documents pull.
-        for loader in (dl.list_issued_documents, dl.list_uploaded_documents):
+        # must never abort the issued-documents pull. Uploaded / e-Aadhaar are
+        # opt-in (not granted for this app; PAN from issued docs is the norm).
+        loaders = [dl.list_issued_documents]
+        if getattr(settings, "DIGILOCKER_FETCH_UPLOADED", False):
+            loaders.append(dl.list_uploaded_documents)
+        for loader in loaders:
             try:
                 items += loader(access_token) or []
             except Exception as exc:
@@ -878,7 +882,7 @@ def _background_fetch_documents(session, access_token, profile, user):
         except Exception as exc:
             errors.append(f"apply: {exc}")
             logging.getLogger(__name__).warning("DigiLocker apply failed: %s", exc)
-        if (profile.eaadhaar or "").strip().upper() == "Y":
+        if (profile.eaadhaar or "").strip().upper() == "Y" and getattr(settings, "DIGILOCKER_FETCH_EADHAAR", False):
             try:
                 _store_eaadhaar(profile, user, dl.fetch_eaadhaar(access_token))
             except Exception as exc:
