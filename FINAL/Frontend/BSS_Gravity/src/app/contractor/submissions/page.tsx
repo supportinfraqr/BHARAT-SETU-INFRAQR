@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Download, FileCheck2, FileUp, ShieldCheck, Upload, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, CheckCircle2, Download, FileCheck2, FileUp, Info, ShieldCheck, Upload, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorPortalData } from '@/types/portal';
@@ -11,15 +11,41 @@ type CheckpointResult = { key:string; label:string; type:string; required:boolea
 type EvidenceUpload = { id?: number; accuracy: number; status: 'Validating' | 'Validated' | 'Errors found'; findings?: string[]; noOcr?: boolean; checkpoints?: CheckpointResult[] };
 type Tab = 'submissions' | 'create';
 
-const FYS = ['FY 2026-27', 'FY 2025-26'];
-const MONTHS = ['April', 'May', 'June', 'July', 'August', 'September', 'October'];
-
 const FREQUENCIES = ['Monthly', 'Quarterly', 'Half Yearly', 'Yearly'] as const;
 type Frequency = (typeof FREQUENCIES)[number];
-const FY_MONTHS = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
+const MONTHS = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
 const QUARTER_PERIODS = ['Q1 (Apr–Jun)', 'Q2 (Jul–Sep)', 'Q3 (Oct–Dec)', 'Q4 (Jan–Mar)'];
 const HALF_PERIODS = ['H1 (Apr–Sep)', 'H2 (Oct–Mar)'];
 const FINANCIAL_PERIODS = ['Full Year (Apr–Mar)'];
+
+// Generate Financial Years starting strictly from contractor registration date up to current date.
+function getFinancialYearsFromDate(incorpDateStr?: string): string[] {
+  const now = new Date();
+  const currentMonth = now.getMonth(); // 0-indexed (0=Jan, 3=Apr)
+  const currentYear = now.getFullYear();
+  const latestEndYear = currentMonth >= 3 ? currentYear + 1 : currentYear;
+
+  let startEndYear = latestEndYear;
+  if (incorpDateStr) {
+    const regDate = new Date(incorpDateStr);
+    if (!isNaN(regDate.getTime())) {
+      const regMonth = regDate.getMonth();
+      const regYear = regDate.getFullYear();
+      startEndYear = regMonth >= 3 ? regYear + 1 : regYear;
+    }
+  }
+
+  const list: string[] = [];
+  for (let endYr = latestEndYear; endYr >= Math.min(startEndYear, latestEndYear); endYr--) {
+    const startYr = endYr - 1;
+    const shortEnd = String(endYr).slice(-2);
+    list.push(`FY ${startYr}-${shortEnd}`);
+  }
+
+  // Fallback default if range is empty
+  if (list.length === 0) list.push('FY 2026-27', 'FY 2025-26');
+  return list;
+}
 
 function periodsFor(freq: Frequency): string[] {
   if (freq === 'Quarterly') return QUARTER_PERIODS;
@@ -27,22 +53,22 @@ function periodsFor(freq: Frequency): string[] {
   if (freq === 'Yearly') return FINANCIAL_PERIODS;
   return MONTHS;
 }
-// Which period (month/quarter/half/full-year) a given calendar month belongs to.
+
 function periodOf(month: string, freq: Frequency): string {
   if (freq === 'Monthly') return month;
-  const i = FY_MONTHS.indexOf(month);
+  const i = MONTHS.indexOf(month);
   if (i < 0) return '';
   if (freq === 'Quarterly') return QUARTER_PERIODS[Math.floor(i / 3)];
   if (freq === 'Half Yearly') return HALF_PERIODS[Math.floor(i / 6)];
   return FINANCIAL_PERIODS[0];
 }
-// Representative calendar month for a period label (used when submitting/uploading).
+
 function periodMonth(period: string): string {
-  if (FY_MONTHS.includes(period)) return period;
+  if (MONTHS.includes(period)) return period;
   const qi = QUARTER_PERIODS.indexOf(period);
-  if (qi >= 0) return FY_MONTHS[qi * 3 + 2];
+  if (qi >= 0) return MONTHS[qi * 3 + 2];
   const hi = HALF_PERIODS.indexOf(period);
-  if (hi >= 0) return FY_MONTHS[hi * 6 + 5];
+  if (hi >= 0) return MONTHS[hi * 6 + 5];
   if (FINANCIAL_PERIODS.includes(period)) return 'March';
   return period;
 }
@@ -54,43 +80,51 @@ export default function ComplianceSubmissionPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  // Create-compliance filter is Financial Year + Frequency + Period (same as generation).
-  const [createOpen, setCreateOpen] = useState(false);
+  // Dynamically compute registration-based Financial Years
+  const availableYears = useMemo(() => {
+    const regYears = getFinancialYearsFromDate(contractor.identity?.incorpDate);
+    const docYears: string[] = [];
+    (contractor.submissions.documents as DocumentRow[]).forEach(doc => {
+      const fyStr = doc.financialYear || (doc.period?.includes('FY') ? doc.period.slice(doc.period.indexOf('FY')) : '');
+      if (fyStr && !docYears.includes(fyStr)) docYears.push(fyStr);
+    });
+    const merged = Array.from(new Set([...regYears, ...docYears]));
+    return merged.sort().reverse();
+  }, [contractor.identity?.incorpDate, contractor.submissions.documents]);
+
+  // Default state filters
+  const [selectedYear, setSelectedYear] = useState<string>(availableYears[0] || 'FY 2026-27');
+  const [freq, setFreq] = useState<Frequency>('Monthly');
+  const [selectedPeriod, setSelectedPeriod] = useState<string>(MONTHS[5]); // Default September
+
+  // Create-submission states
   const [siteName, setSiteName] = useState('');
-  const [fy, setFy] = useState(FYS[0]);
+  const [fy, setFy] = useState(availableYears[0] || 'FY 2026-27');
   const [createFreq, setCreateFreq] = useState<Frequency>('Monthly');
-  const [createPeriod, setCreatePeriod] = useState<string>(MONTHS[6]);
+  const [createPeriod, setCreatePeriod] = useState<string>(MONTHS[5]);
   const [viewErrors, setViewErrors] = useState<{ name: string; findings: string[] } | null>(null);
-  // Additional documents the principal employer requires (adopted extra forms).
+
   const [uploads, setUploads] = useState<Record<string, EvidenceUpload>>({});
   const [additionalDocs, setAdditionalDocs] = useState<Array<{ name: string; frequency: string; mandatory: boolean; requiresDocument: boolean }>>([]);
   const [docsBusy, setDocsBusy] = useState(false);
 
-  const [selectedYear, setSelectedYear] = useState<string>(FYS[0]);
-  const [freq, setFreq] = useState<Frequency>('Monthly');
-  const [selectedPeriod, setSelectedPeriod] = useState<string>(MONTHS[6]);
+  const rawDocuments = contractor.submissions.documents as DocumentRow[];
+  const documents = useMemo(() => scoped(rawDocuments, row => row.employer), [scoped, rawDocuments]);
 
-  const documents = scoped(contractor.submissions.documents as DocumentRow[], row => row.employer);
+  // Sync default selected year if availableYears changes
+  useEffect(() => {
+    if (availableYears.length > 0 && !availableYears.includes(selectedYear)) {
+      setSelectedYear(availableYears[0]);
+    }
+  }, [availableYears, selectedYear]);
 
-  // Available Years
-  const availableYears = useMemo(() => {
-    const list: string[] = [];
-    documents.forEach(doc => {
-      const fyStr = doc.financialYear || (doc.period?.includes('FY') ? doc.period.slice(doc.period.indexOf('FY')) : '');
-      const yr = fyStr || FYS[0];
-      if (yr && !list.includes(yr)) list.push(yr);
-    });
-    FYS.forEach(f => { if (!list.includes(f)) list.push(f); });
-    return list;
-  }, [documents]);
-
-  // Documents filtered by selected Year and Month
+  // Documents filtered by selected Year
   const yearFilteredDocuments = useMemo(() => {
     return documents.filter(doc => {
       const fyStr = doc.financialYear || (doc.period?.includes('FY') ? doc.period.slice(doc.period.indexOf('FY')) : '');
-      return (fyStr || FYS[0]) === selectedYear;
+      return (fyStr || availableYears[0]) === selectedYear;
     });
-  }, [documents, selectedYear]);
+  }, [documents, selectedYear, availableYears]);
 
   const filteredDocuments = useMemo(() => {
     return yearFilteredDocuments.filter(doc => periodOf(doc.month || doc.period?.split(' ')[0] || '', freq) === selectedPeriod);
@@ -106,46 +140,40 @@ export default function ComplianceSubmissionPage() {
     return map;
   }, [yearFilteredDocuments, freq]);
 
-  // Generated CLRA registers from the batches (what the system produced).
+  // Generated CLRA registers from batches
   const fyKey = selectedYear.replace('FY ', '');
   const generatedBatches = useMemo(
     () => contractor.complianceBatches.filter(b => (b.financialYear || '') === fyKey),
     [contractor.complianceBatches, fyKey]);
   const periodBatches = generatedBatches.filter(b => periodOf(b.month, freq) === selectedPeriod);
 
-  // Generated-register counts for the Year/Period badges (submissions + generated registers).
   const batchCountByFy = useMemo(() => {
     const map: Record<string, number> = {};
     contractor.complianceBatches.forEach(b => { const k = b.financialYear || ''; map[k] = (map[k] || 0) + 1; });
     return map;
   }, [contractor.complianceBatches]);
+
   const batchCountByPeriod = useMemo(() => {
     const map: Record<string, number> = {};
     generatedBatches.forEach(b => { const p = periodOf(b.month, freq); map[p] = (map[p] || 0) + 1; });
     return map;
   }, [generatedBatches, freq]);
 
-  // Submission context (derived from the selected site — no per-submission site picker elsewhere).
+  // Active site & submission context
   const activeSiteObj = contractor.sites.find(s => s.name === siteName) ?? contractor.sites[0];
   const ctxSite = activeSiteObj?.name || '';
   const ctxEmployer = activeSiteObj?.employer || contractor.employers[0]?.name || '';
   const ctxState = activeSiteObj?.state || '';
 
-  // Generated registers for the Create-tab filter: Financial Year + Period (mirrors generation).
   const month = periodMonth(createPeriod);
   const createFyKey = fy.replace('FY ', '');
   const generatedForCreate = useMemo(
     () => contractor.complianceBatches.filter(b => (b.financialYear || '') === createFyKey && b.month === month
       && (!activeSiteObj || !b.site || b.site === activeSiteObj.name)),
     [contractor.complianceBatches, createFyKey, month, activeSiteObj]);
-  // Registers already submitted are no longer submittable.
-  const pendingBatches = generatedForCreate.filter(b => b.status !== 'Submitted');
+
   const uploadedEvidenceCount = additionalDocs.filter(d => uploads[d.name]?.id).length;
 
-  // The employer's additional (adopted) documents required for the site — listed
-  // independent of generated registers so they can be uploaded anytime.
-  const firstBatch = generatedForCreate[0];
-  const firstBatchSite = firstBatch?.site || '';
   const docsSiteId = String(activeSiteObj?.id ?? '');
   useEffect(() => {
     let active = true;
@@ -155,8 +183,6 @@ export default function ComplianceSubmissionPage() {
       .then((body: { data?: { documents?: Array<{ form:string; purpose:string; frequency:string; mandatory:boolean; requiresDocument?:boolean; custom?:boolean; templateId?:number|null }> } } | null) => {
         if (!active) return;
         const docs = (body?.data?.documents || [])
-          // Documents with no generated register (custom/additional forms, or
-          // statutory forms without a template) must be uploaded as evidence.
           .filter(doc => doc.custom || !doc.templateId)
           .map(doc => ({ name: doc.form || doc.purpose, frequency: doc.custom ? (doc.frequency || '') : '', mandatory: !!doc.mandatory, requiresDocument: doc.custom ? doc.requiresDocument !== false : true }));
         setAdditionalDocs(docs);
@@ -164,12 +190,63 @@ export default function ComplianceSubmissionPage() {
       .catch(() => { if (active) setAdditionalDocs([]); })
       .finally(() => { if (active) setDocsBusy(false); });
     return () => { active = false; };
-  }, [docsSiteId, firstBatchSite]);
+  }, [docsSiteId]);
 
-  const missingEvidence = additionalDocs.filter(doc => doc.mandatory && doc.requiresDocument && !(uploads[doc.name]?.status === 'Validated' && uploads[doc.name]?.id));
+  const [removedKeys, setRemovedKeys] = useState<string[]>([]);
+
+  // Reset local uploads/removals whenever the submission context (site · period · FY) changes,
+  // so switching site/period starts from a clean slate without leaking entries across contexts.
+  const uploadContextKey = `${docsSiteId}|${createPeriod}|${fy}`;
+  const lastContextKey = useRef(uploadContextKey);
+  useEffect(() => {
+    if (lastContextKey.current === uploadContextKey) return;
+    lastContextKey.current = uploadContextKey;
+    setUploads({});
+    setRemovedKeys([]);
+  }, [uploadContextKey]);
+
+  // Merge already-submitted evidence for the current period into uploads, without clobbering a
+  // local (not-yet-submitted) upload, and honouring removals.
+  useEffect(() => {
+    const periodStr = `${createPeriod} ${fy.replace('FY ', '')}`;
+    const periodSubmissions = documents.filter(doc => (doc.period === periodStr || doc.month === month) && doc.source === 'evidence');
+    setUploads(current => {
+      const next: Record<string, EvidenceUpload> = { ...current };
+      periodSubmissions.forEach(doc => {
+        const matched = additionalDocs.find(d => d.name.toLowerCase() === doc.type.toLowerCase() || doc.type.toLowerCase().includes(d.name.toLowerCase()))?.name;
+        const key = matched || doc.type;
+        if (removedKeys.includes(key) || removedKeys.includes(doc.type)) return;
+        if (next[key] && next[key].id == null) return; // keep a live local entry that has no server id yet
+        next[key] = {
+          id: typeof doc.id === 'number' ? doc.id : 1,
+          accuracy: doc.accuracy ?? 100,
+          status: doc.status === 'Returned' ? 'Errors found' : 'Validated',
+          findings: doc.findings,
+        };
+      });
+      return next;
+    });
+  }, [documents, createPeriod, fy, month, additionalDocs, removedKeys]);
+
+  function handleRemoveEvidence(docName: string) {
+    setRemovedKeys(prev => [...prev, docName]);
+    setUploads(current => {
+      const next = { ...current };
+      delete next[docName];
+      return next;
+    });
+  }
+
+  // PARTIAL SUBMISSION COMPUTATION:
+  // Total expected mandatory items = mandatory additional docs + required register batches
+  const uploadedMandatoryCount = additionalDocs.filter(doc => doc.mandatory && uploads[doc.name]?.status === 'Validated' && uploads[doc.name]?.id).length;
+  const totalMandatoryDocsCount = additionalDocs.filter(doc => doc.mandatory && doc.requiresDocument).length;
+  const missingEvidence = additionalDocs.filter(doc => doc.mandatory && doc.requiresDocument && uploads[doc.name]?.status !== 'Validated');
+  const isPartialSubmission = missingEvidence.length > 0;
 
   async function uploadEvidence(doc: { name: string; frequency: string; mandatory: boolean }, next?: File) {
     if (!next) return;
+    setRemovedKeys(prev => prev.filter(k => k !== doc.name));
     setError('');
     const acceptable = ['application/pdf', 'image/jpeg', 'image/png'].includes(next.type) && next.size <= 10 * 1024 * 1024;
     if (!acceptable) {
@@ -179,8 +256,8 @@ export default function ComplianceSubmissionPage() {
     setUploads(current => ({ ...current, [doc.name]: { accuracy: 0, status: 'Validating' } }));
     const form = new FormData();
     form.set('file', next); form.set('type', doc.name);
-    form.set('site', firstBatch?.site || ctxSite); form.set('employer', ctxEmployer);
-    form.set('state', firstBatch?.state || ctxState); form.set('financialYear', fy); form.set('month', month);
+    form.set('site', ctxSite); form.set('employer', ctxEmployer);
+    form.set('state', ctxState); form.set('financialYear', fy); form.set('month', month);
     form.set('documentType', doc.name); form.set('frequency', doc.frequency);
     form.set('mandatory', doc.mandatory ? 'true' : 'false');
     form.set('period', `${createPeriod} ${fy.replace('FY ', '')}`);
@@ -205,25 +282,21 @@ export default function ComplianceSubmissionPage() {
     { id:'registers', header:'Registers generated', value:b => b.notes || '—' },
     { id:'generatedOn', header:'Generated On', value:b => b.generatedOn },
     { id:'generatedBy', header:'Generated By', value:b => b.generatedBy },
-    { id:'status', header:'Status', value:b => b.status, render:b => <span className={b.status === 'Generated' ? 'text-green-700' : b.status === 'Failed' ? 'text-red-700' : 'text-orange-700'}>{b.status}</span> },
+    { 
+      id:'status', 
+      header:'Status', 
+      value:b => b.status, 
+      render:b => <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold ${b.status === 'Submitted' ? 'bg-green-50 text-green-700 border border-green-200' : b.status === 'Failed' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>{b.status === 'Generated' ? 'Pending Submission' : b.status}</span> 
+    },
     { id:'action', header:'Document', filterable:false, value:b => b.id, render:b => b.hasFile ? <a href={`/api/portal/compliance-batches/${b.id}`} download className="text-blue-700 font-semibold text-xs inline-flex items-center gap-1 hover:underline"><Download size={12}/>Download registers</a> : <span className="text-gray-400 text-xs">No file</span> },
   ];
 
   const verified = documents.filter(row => row.status === 'Verified').length;
   const pending = documents.filter(row => row.status !== 'Verified' && row.status !== 'Returned').length;
 
-  async function submitAll() {
-    if (missingEvidence.length) { setError(`Upload the mandatory additional documents before submitting: ${missingEvidence.map(d => d.name).join(', ')}.`); return; }
-    if (!pendingBatches.length && !uploadedEvidenceCount) return;
-    await performSubmit(pendingBatches.map(b => b.id));
-  }
-
-  async function performSubmit(batchIds: string[]) {
+  async function submitBatch(batchId: string) {
     setBusy(true); setError(''); setNotice('');
-    // Submission context follows the generated batch selected for this period
-    // (falls back to the selected site).
-    const uploadIds = additionalDocs.map(d => uploads[d.name]?.id).filter((id): id is number => typeof id === 'number');
-    const ctxBatch = contractor.complianceBatches.find(b => batchIds.includes(b.id));
+    const ctxBatch = contractor.complianceBatches.find(b => b.id === batchId);
     const siteObj = contractor.sites.find(s => s.name === (ctxBatch?.site || '')) ?? activeSiteObj;
     const empName = siteObj?.employer || ctxEmployer;
     const subSiteName = ctxBatch?.site || siteObj?.name || ctxSite;
@@ -231,71 +304,123 @@ export default function ComplianceSubmissionPage() {
     try {
       const response = await fetch('/api/portal/compliances', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: 'submit', employer: empName, site: subSiteName, period: `${createPeriod} ${fy.replace('FY ', '')}`, financialYear: fy, state: stName, month, location: '', complianceType: '', docName: '', uploadIds, batchIds }),
+        body: JSON.stringify({ kind: 'submit', employer: empName, site: subSiteName, period: `${createPeriod} ${fy.replace('FY ', '')}`, financialYear: fy, state: stName, month, location: '', complianceType: '', docName: '', uploadIds: [], batchIds: [batchId] }),
       });
       const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['auditReports'][number]; error?: string };
-      if (!response.ok || !result.data) throw new Error(result.error ?? 'Compliance could not be submitted.');
+      if (!response.ok || !result.data) throw new Error(result.error ?? 'Registers could not be submitted.');
       replaceContractor({ ...contractor, auditReports: [result.data, ...contractor.auditReports] });
-      setCreateOpen(false); setUploads({});
-      setNotice(`Compliance submitted. Audit report ${result.data.uniqueNo} generated — score ${result.data.scorePercent}%.`);
+      setNotice(`Registers submitted! Ref No: ${result.data.uniqueNo}.`);
       void refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Compliance could not be submitted.');
+      setError(reason instanceof Error ? reason.message : 'Registers could not be submitted.');
+    } finally { setBusy(false); }
+  }
+
+  async function submitSingleForm(docName: string, uploadId?: number) {
+    if (!uploadId) return;
+    setBusy(true); setError(''); setNotice('');
+    const siteObj = activeSiteObj;
+    const empName = siteObj?.employer || ctxEmployer;
+    const subSiteName = siteObj?.name || ctxSite;
+    const stName = siteObj?.state || ctxState;
+    try {
+      const response = await fetch('/api/portal/compliances', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'submit', employer: empName, site: subSiteName, period: `${createPeriod} ${fy.replace('FY ', '')}`, financialYear: fy, state: stName, month, location: '', complianceType: docName, docName, uploadIds: [uploadId], batchIds: [] }),
+      });
+      const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['auditReports'][number]; error?: string };
+      if (!response.ok || !result.data) throw new Error(result.error ?? 'Document could not be submitted.');
+      replaceContractor({ ...contractor, auditReports: [result.data, ...contractor.auditReports] });
+      setNotice(`Submitted successfully! Ref No: ${result.data.uniqueNo} (${docName}).`);
+      void refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Document could not be submitted.');
     } finally { setBusy(false); }
   }
 
   const documentColumns: DataColumn<DocumentRow>[] = [
-    { id:'type', header: 'Document', value: row => row.type, render: row => <div><strong className="text-gray-900">{row.type}</strong>{row.fileName && <p className="text-[10px] text-gray-400 mt-0.5">{row.fileName}</p>}{row.source === 'evidence' && row.id && <a href={`/api/contractor/submissions/${row.id}/file`} target="_blank" rel="noreferrer" className="block text-[10px] text-blue-600 hover:underline mt-0.5">View evidence</a>}{row.findings && row.findings.length > 0 && <button type="button" onClick={() => setViewErrors({ name: row.type, findings: row.findings ?? [] })} className="block text-[10px] text-blue-700 font-semibold hover:underline mt-0.5">View errors ({row.findings.length})</button>}</div> },
-    { id:'uniqueNo', header: 'Unique No.', value: row => row.uniqueNo ?? '—', render: row => row.uniqueNo ? <span className="font-mono text-blue-700 font-semibold">{row.uniqueNo}</span> : <span className="text-gray-300">—</span> },
-    { id:'employer', header: 'Client / Employer', value: row => row.employer },
-    { id:'state', header: 'State', value: row => row.state ?? '—', render: row => row.state || '—' },
-    { id:'site', header: 'Site', value: row => row.site },
-    { id:'month', header: 'Month', value: row => row.month ?? '—', render: row => row.month || '—' },
-    { id:'location', header: 'Location', value: row => row.location ?? '—', render: row => row.location || '—' },
+    { id:'type', header: 'Document / Package', value: row => row.type, render: row => <div><strong className="text-gray-900 font-semibold">{row.type}</strong>{row.fileName && <p className="text-[10px] text-gray-400 mt-0.5">{row.fileName}</p>}{row.source === 'evidence' && row.id && <a href={`/api/contractor/submissions/${row.id}/file`} target="_blank" rel="noreferrer" className="block text-[10px] text-blue-600 hover:underline mt-0.5">View evidence</a>}{row.findings && row.findings.length > 0 && <button type="button" onClick={() => setViewErrors({ name: row.type, findings: row.findings ?? [] })} className="block text-[10px] text-red-600 font-semibold hover:underline mt-0.5">View errors ({row.findings.length})</button>}</div> },
+    { id:'uniqueNo', header: 'Package Ref No.', value: row => row.uniqueNo ?? '—', render: row => row.uniqueNo ? <span className="font-mono text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">{row.uniqueNo}</span> : <span className="text-gray-300">—</span> },
+    { id:'employer', header: 'Principal Employer', value: row => row.employer },
+    { id:'site', header: 'Site / Location', value: row => `${row.site}${row.state ? ` (${row.state})` : ''}` },
     { id:'period', header: 'Period / FY', value: row => `${row.period}${row.financialYear ? ` · ${row.financialYear}` : ''}` },
-    { id:'accuracy', header: 'Accuracy', value: row => row.accuracy ?? '—', render: row => row.accuracy != null ? <span className={row.accuracy >= 100 ? 'text-green-700' : 'text-orange-700'}>{row.accuracy}%</span> : '—' },
-    { id:'created', header: 'Created', value: row => row.submittedAt, render: row => new Date(row.submittedAt).toLocaleDateString('en-IN') },
-    { id:'updated', header: 'Updated', value: row => row.updatedAt ?? row.submittedAt, render: row => (row.updatedAt ? new Date(row.updatedAt).toLocaleDateString('en-IN') : '—') },
-    { id:'daysLeft', header: 'Days Left', value: row => row.daysLeft ?? '—', render: row => row.daysLeft != null ? <span className={row.daysLeft <= 3 ? 'text-red-600 font-bold' : 'text-gray-700'}>{row.daysLeft}</span> : '—' },
-    { id:'status', header: 'Status', value: row => row.status, render: row => <span className={row.status === 'Verified' ? 'text-green-700' : row.status === 'Returned' ? 'text-red-700' : 'text-orange-700'}>{row.status}</span> },
+    { id:'accuracy', header: 'OCR Accuracy', value: row => row.accuracy ?? '—', render: row => row.accuracy != null ? <span className={`font-bold ${row.accuracy >= 100 ? 'text-green-700' : 'text-amber-700'}`}>{row.accuracy}%</span> : '—' },
+    { id:'created', header: 'Submitted On', value: row => row.submittedAt, render: row => new Date(row.submittedAt).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) },
+    { 
+      id:'status', 
+      header: 'Status', 
+      value: row => row.status, 
+      render: row => (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+          row.status === 'Verified' ? 'bg-green-100 text-green-800 border border-green-200' :
+          row.status === 'Returned' ? 'bg-red-100 text-red-800 border border-red-200' :
+          'bg-amber-100 text-amber-800 border border-amber-200'
+        }`}>
+          {row.status === 'Verified' ? 'Verified' : row.status === 'Returned' ? 'Returned' : 'Pending Review'}
+        </span>
+      ) 
+    },
   ];
 
   return <div className="space-y-6 pb-12">
-    <header className="bss-page-header flex-col sm:flex-row"><div><p className="bss-eyebrow">Contractor data exchange</p><h1 className="bss-page-title mt-1">Compliance Submission Centre</h1><p className="bss-page-description">Create period-based (Financial Year + Frequency + Period) compliance packages from your generated CLRA registers, submit them, and generate the Compliance Audit Report.</p></div>
+    {/* Clean Top Header */}
+    <header className="bss-page-header flex-col sm:flex-row justify-between items-start sm:items-center">
+      <div>
+        <p className="bss-eyebrow">Contractor Data Exchange</p>
+        <h1 className="bss-page-title mt-1">Compliance Submissions</h1>
+        <p className="bss-page-description">Manage and upload periodic statutory packages, CLRA registers, and evidence documents for principal employers.</p>
+      </div>
+      {contractor.identity?.incorpDate && (
+        <div className="bg-slate-100/80 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-700 flex items-center gap-2 mt-3 sm:mt-0">
+          <Info size={15} className="text-blue-700" />
+          <span>Registered: <strong>{new Date(contractor.identity.incorpDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</strong></span>
+        </div>
+      )}
     </header>
 
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
-    {error && !createOpen && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
+    {error && <p role="alert" className="bss-alert bss-alert-error flex items-center gap-2"><AlertCircle size={15}/>{error}</p>}
 
     <section className="bss-kpi-grid grid grid-cols-2 md:grid-cols-4 gap-3">
-      <Metric label="Submitted" value={documents.length} icon={FileUp} tone="bg-blue-50 text-blue-700"/>
-      <Metric label="Verified" value={verified} icon={CheckCircle2} tone="bg-green-50 text-green-700"/>
-      <Metric label="Pending review" value={pending} icon={FileCheck2} tone="bg-orange-50 text-orange-700"/>
-      <Metric label="Employer scope" value={employerScope === 'all' ? contractor.employers.length : 1} icon={ShieldCheck} tone="bg-indigo-50 text-indigo-700"/>
+      <Metric label="Total Submissions" value={documents.length} icon={FileUp} tone="bg-blue-50 text-blue-700"/>
+      <Metric label="Verified Packages" value={verified} icon={CheckCircle2} tone="bg-green-50 text-green-700"/>
+      <Metric label="Pending Review" value={pending} icon={FileCheck2} tone="bg-amber-50 text-amber-700"/>
+      <Metric label="Employer Scope" value={employerScope === 'all' ? contractor.employers.length : 1} icon={ShieldCheck} tone="bg-indigo-50 text-indigo-700"/>
     </section>
 
-    <div className="flex border-b overflow-x-auto">
-      {([['submissions', 'Submission Listing'], ['create', 'Create Compliance & Documents']] as Array<[Tab, string]>).map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${tab === id ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>{label}</button>)}
+    {/* Tab Selector */}
+    <div className="flex border-b border-gray-200 overflow-x-auto">
+      <button 
+        onClick={() => setTab('submissions')} 
+        className={`px-5 py-3 text-xs font-bold border-b-2 whitespace-nowrap transition-colors ${tab === 'submissions' ? 'border-[#073B67] text-[#073B67]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+      >
+        📋 Submissions Log &amp; Records
+      </button>
+      <button 
+        onClick={() => setTab('create')} 
+        className={`px-5 py-3 text-xs font-bold border-b-2 whitespace-nowrap transition-colors ${tab === 'create' ? 'border-[#073B67] text-[#073B67]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+      >
+        📤 Submit Compliance Package
+      </button>
     </div>
 
     {tab === 'submissions' && <div className="space-y-4">
-      <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs leading-5">Showing submissions for <strong>{employerScope === 'all' ? 'all bound principal employers' : employerScope}</strong>. Submissions are segregated by Financial Year, Frequency and Period below.</div>
-
-      {/* Financial Year Filter Tabs */}
-      <div className="bg-white p-3.5 rounded-2xl border border-gray-200 space-y-3 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex-shrink-0">Financial Year:</span>
+      {/* Filters Card */}
+      <div className="bg-white p-4 rounded-2xl border border-gray-200 space-y-3.5 shadow-sm">
+        {/* Registration-Based Financial Year Filter Tabs */}
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Financial Year:</span>
           <div className="flex flex-wrap gap-1.5">
             {availableYears.map(yr => {
               const yrCount = documents.filter(doc => {
                 const fyStr = doc.financialYear || (doc.period?.includes('FY') ? doc.period.slice(doc.period.indexOf('FY')) : '');
-                return (fyStr || FYS[0]) === yr;
+                return (fyStr || availableYears[0]) === yr;
               }).length + (batchCountByFy[yr.replace('FY ', '')] || 0);
               return (
                 <button
                   key={yr}
                   onClick={() => setSelectedYear(yr)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${selectedYear === yr ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${selectedYear === yr ? 'bg-[#073B67] text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                 >
                   {yr} <span className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] ${selectedYear === yr ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'}`}>{yrCount}</span>
                 </button>
@@ -305,18 +430,24 @@ export default function ComplianceSubmissionPage() {
         </div>
 
         {/* Frequency Filter */}
-        <div className="flex items-center gap-3 pt-2.5 border-t border-gray-100">
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex-shrink-0">Frequency:</span>
+        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-100">
+          <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Frequency:</span>
           <div className="flex flex-wrap gap-1.5">
             {FREQUENCIES.map(f => (
-              <button key={f} onClick={() => { setFreq(f); setSelectedPeriod(periodsFor(f)[0]); }} className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${freq === f ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{f}</button>
+              <button 
+                key={f} 
+                onClick={() => { setFreq(f); setSelectedPeriod(periodsFor(f)[0]); }} 
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${freq === f ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                {f}
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Period Filter Tabs (adapts to the selected Frequency) */}
-        <div className="flex items-center gap-3 pt-2.5 border-t border-gray-100 overflow-x-auto">
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex-shrink-0">Period:</span>
+        {/* Period Filter Tabs */}
+        <div className="flex items-center gap-3 pt-3 border-t border-gray-100 overflow-x-auto">
+          <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Period:</span>
           <div className="flex items-center gap-1.5">
             {periodsFor(freq).map(p => {
               const count = (documentsByPeriod[p]?.length || 0) + (batchCountByPeriod[p] || 0);
@@ -324,7 +455,7 @@ export default function ComplianceSubmissionPage() {
                 <button
                   key={p}
                   onClick={() => setSelectedPeriod(p)}
-                  className={`px-3 py-1 rounded-full text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5 ${selectedPeriod === p ? 'bg-blue-700 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  className={`px-3.5 py-1 rounded-full text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5 ${selectedPeriod === p ? 'bg-blue-700 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                 >
                   {p} <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${selectedPeriod === p ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'}`}>{count}</span>
                 </button>
@@ -332,75 +463,252 @@ export default function ComplianceSubmissionPage() {
             })}
           </div>
         </div>
-        <p className="text-[10px] text-gray-400 pt-2.5 border-t border-gray-100">Counts include submitted documents and generated CLRA registers for that Year / Period.</p>
       </div>
 
-      {/* Generated CLRA registers (what the system produced) */}
+      {/* Month-by-Month Compliance Matrix & Pending Overview */}
+      <section className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+              📅 {selectedYear} Monthly Compliance Tracker (Registers + Itemized Forms)
+            </h3>
+            <p className="text-[11px] text-gray-500 mt-0.5">Registers Batch (1 Unit) + Each Required Statutory Evidence Form counted as a separate item.</p>
+          </div>
+          <span className="text-[11px] font-bold text-[#073B67] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg">
+            {MONTHS.filter(m => {
+              const p = periodOf(m, freq);
+              const mDocs = documentsByPeriod[p] || [];
+              const hasRegs = (batchCountByPeriod[p] || 0) > 0;
+              const expectedFormsCount = additionalDocs.length || 1;
+              return hasRegs && mDocs.length >= expectedFormsCount;
+            }).length} / 12 Months Fully Submitted
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+          {MONTHS.map(m => {
+            const p = periodOf(m, freq);
+            const mDocs = documentsByPeriod[p] || [];
+            const hasRegs = (batchCountByPeriod[p] || 0) > 0;
+            const submittedFormsCount = mDocs.length;
+            const totalConfiguredForms = additionalDocs.length;
+            const totalUnits = 1 + (totalConfiguredForms > 0 ? totalConfiguredForms : 1);
+            const completedUnits = (hasRegs ? 1 : 0) + submittedFormsCount;
+            const isFull = completedUnits >= totalUnits;
+            const isPartial = completedUnits > 0 && !isFull;
+            const isSelected = selectedPeriod === p;
+
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setSelectedPeriod(p)}
+                className={`p-3 rounded-xl border text-left transition-all relative ${
+                  isSelected ? 'border-[#073B67] bg-blue-50/60 ring-2 ring-[#073B67]/20 shadow-xs' :
+                  isFull ? 'border-emerald-200 bg-emerald-50/30 hover:border-emerald-300' :
+                  isPartial ? 'border-blue-200 bg-blue-50/30 hover:border-blue-300' :
+                  'border-amber-200 bg-amber-50/30 hover:border-amber-300'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-900">{m}</span>
+                  {isFull ? (
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">
+                      {completedUnits}/{totalUnits} Complete
+                    </span>
+                  ) : isPartial ? (
+                    <span className="text-[10px] font-bold text-blue-800 bg-blue-100 px-1.5 py-0.5 rounded">
+                      {completedUnits}/{totalUnits} Submitted
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                      <AlertCircle size={10}/> 0/{totalUnits} Pending
+                    </span>
+                  )}
+                </div>
+                
+                <div className="mt-2 space-y-0.5 text-[10px]">
+                  <p className={`font-semibold flex items-center gap-1 ${hasRegs ? 'text-emerald-700' : 'text-amber-700'}`}>
+                    <span>{hasRegs ? '✓' : '•'}</span> Registers: {hasRegs ? 'Submitted' : 'Pending'}
+                  </p>
+                  <p className={`font-semibold flex items-center gap-1 ${submittedFormsCount > 0 ? (totalConfiguredForms && submittedFormsCount < totalConfiguredForms ? 'text-blue-700' : 'text-emerald-700') : 'text-amber-700'}`}>
+                    <span>{submittedFormsCount > 0 ? '✓' : '•'}</span> Forms: {submittedFormsCount}{totalConfiguredForms ? `/${totalConfiguredForms}` : ''} Uploaded
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Generated CLRA Registers */}
       <section className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
         {periodBatches.length
           ? <>
               <EnterpriseDataTable title={`Generated CLRA Registers (${selectedYear} · ${selectedPeriod})`} rows={periodBatches} columns={batchCols} rowKey={b => b.id} filename={`clra-generated-${fyKey}`} />
-              <p className="px-4 py-2.5 border-t border-gray-100 text-[11px] text-gray-400">Monthly forms generate every month; Quarterly / Half-Yearly / Yearly forms generate once their period ends — download the generated register pack.</p>
             </>
-          : <div className="px-5 py-4"><h3 className="flex items-center gap-2 text-sm font-bold text-[#062D4F]"><FileCheck2 size={16} className="text-[#073B67]"/>Generated CLRA Registers ({selectedYear})</h3><p className="mt-2 text-xs text-gray-400">No CLRA registers generated for {selectedPeriod} ({selectedYear}) yet. Use <strong>Master File &amp; CLRA Generation</strong> to upload a master file and generate.</p></div>}
+          : <div className="px-5 py-4"><h3 className="flex items-center gap-2 text-xs font-bold text-[#062D4F]"><FileCheck2 size={16} className="text-[#073B67]"/>Generated CLRA Registers ({selectedYear})</h3><p className="mt-1 text-xs text-gray-400">No CLRA registers generated for {selectedPeriod} ({selectedYear}) yet.</p></div>}
       </section>
 
-      {/* Segregated Submission Table */}
+      {/* Submissions Listing Table */}
       <section className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
         <EnterpriseDataTable title={`${selectedPeriod} Submissions (${selectedYear})`} rows={filteredDocuments} columns={documentColumns} rowKey={row => row.id} filename={`compliance-documents-${selectedPeriod.toLowerCase().replace(/[^a-z0-9]/g, '')}-${selectedYear.toLowerCase().replace(/[^a-z0-9]/g, '')}`} />
       </section>
     </div>}
 
-    {tab === 'create' && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-      <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Create Compliance Document</h2><p className="text-xs text-gray-400 mt-0.5">Pick the Financial Year and Month of the submission, include the CLRA registers generated for that period, and upload the evidence documents. OCR-style validation records accuracy per document.</p></header>
-      <div className="p-5 grid lg:grid-cols-[340px_1fr] gap-6">
-        <div className="space-y-3">
-          <div className="rounded-xl bg-blue-50 border border-blue-100 text-blue-900 px-3.5 py-3 text-[11px] leading-5">
-            You are submitting for <strong>{createPeriod} {fy.replace('FY ', '')}</strong> ({createFreq}). Monthly forms are included every month; Quarterly / Half-Yearly / Yearly forms are included once their period has ended (based on today&apos;s date).
-          </div>
-          <label className="text-xs font-semibold">Site<select value={activeSiteObj?.name || ''} onChange={e => setSiteName(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}</select></label>
-          <label className="text-xs font-semibold">Financial Year<select value={fy} onChange={e => setFy(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{FYS.map(f => <option key={f}>{f}</option>)}</select></label>
-          <label className="text-xs font-semibold">Frequency<select value={createFreq} onChange={e => { const f = e.target.value as Frequency; setCreateFreq(f); setCreatePeriod(periodsFor(f)[0]); }} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select></label>
-          <label className="text-xs font-semibold">Period<select value={createPeriod} onChange={e => setCreatePeriod(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{periodsFor(createFreq).map(p => <option key={p}>{p}</option>)}</select></label>
-        </div>
+    {tab === 'create' && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+      <header className="px-5 py-4 border-b border-gray-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Generated CLRA registers for {createPeriod} {fy.replace('FY ', '')} — no OCR needed (system-generated)</p>
+          <h2 className="text-sm font-bold text-gray-950 flex items-center gap-2">
+            <FileUp size={16} className="text-[#073B67]" />
+            Submit Compliance &amp; Evidence Package
+          </h2>
+          <p className="text-xs text-gray-500 mt-0.5">Select site, financial year, and period. Upload statutory evidence documents — part submissions are fully supported with real-time pending badges.</p>
+        </div>
+        <div className="flex-shrink-0">
+          <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-3 py-1 rounded-lg">
+            Part Submissions Allowed
+          </span>
+        </div>
+      </header>
+
+      <div className="p-5 grid lg:grid-cols-[340px_1fr] gap-6">
+        <div className="space-y-4">
+          <div className="rounded-xl bg-blue-50/80 border border-blue-100 text-blue-900 px-3.5 py-3 text-xs leading-5">
+            Submitting for <strong>{createPeriod} {fy.replace('FY ', '')}</strong> ({createFreq}). Supports full or part submissions.
+          </div>
+
+          <label className="text-xs font-bold text-gray-700 block">Site
+            <select value={activeSiteObj?.name || ''} onChange={e => setSiteName(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-white font-semibold">{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}</select>
+          </label>
+
+          <label className="text-xs font-bold text-gray-700 block">Financial Year (From Registration)
+            <select value={fy} onChange={e => setFy(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-white font-semibold">{availableYears.map(f => <option key={f}>{f}</option>)}</select>
+          </label>
+
+          <label className="text-xs font-bold text-gray-700 block">Frequency
+            <select value={createFreq} onChange={e => { const f = e.target.value as Frequency; setCreateFreq(f); setCreatePeriod(periodsFor(f)[0]); }} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-white font-semibold">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select>
+          </label>
+
+          <label className="text-xs font-bold text-gray-700 block">Period
+            <select value={createPeriod} onChange={e => setCreatePeriod(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-white font-semibold">{periodsFor(createFreq).map(p => <option key={p}>{p}</option>)}</select>
+          </label>
+        </div>
+
+        <div>
+          <p className="text-xs font-extrabold uppercase tracking-wider text-gray-500 mb-2">1. System-Generated CLRA Registers ({createPeriod} {fy.replace('FY ', '')})</p>
           {generatedForCreate.length
-            ? <div className="space-y-2 mb-5">{generatedForCreate.map(b => (
+            ? <div className="space-y-2 mb-6">{generatedForCreate.map(b => (
                 <div key={b.id} className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 flex items-center gap-3">
                   <span className="flex-1 min-w-0"><strong className="block text-xs text-gray-900">{b.state} · {b.site || b.siteCode}</strong><span className="block text-[10px] text-gray-400 mt-0.5">{b.month} {b.year} · {b.notes}</span></span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${b.status === 'Submitted' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>{b.status === 'Submitted' ? 'Submitted' : 'Generated · no OCR'}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${b.status === 'Submitted' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>{b.status === 'Submitted' ? 'Submitted' : 'Generated · Ready'}</span>
                   {b.hasFile && <a href={`/api/portal/compliance-batches/${b.id}`} download className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold flex items-center gap-1.5 flex-shrink-0 hover:bg-white"><Download size={12}/>Download</a>}
+                  {b.status !== 'Submitted' && <button type="button" onClick={() => void submitBatch(b.id)} disabled={busy} className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold flex items-center gap-1.5 flex-shrink-0 hover:bg-[#062D4F] disabled:opacity-40"><FileUp size={12}/>Submit</button>}
                 </div>
               ))}</div>
-            : <p className="text-[11px] text-gray-400 mb-5">No CLRA registers generated for {createPeriod} {fy.replace('FY ', '')}. Generate them from <strong>Master File &amp; CLRA Generation</strong> first.</p>}
+            : <p className="text-xs text-gray-400 mb-6">No CLRA registers generated for {createPeriod} {fy.replace('FY ', '')} yet.</p>}
 
-          {(docsBusy || additionalDocs.length > 0) && <div className="mb-5">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Additional documents required by the principal employer — upload before submitting</p>
-            {docsBusy
-              ? <p className="text-[11px] text-gray-400">Loading required documents…</p>
-              : <div className="space-y-2.5">{additionalDocs.map(doc => {
-                  const up = uploads[doc.name];
-                  return <div key={doc.name} className="rounded-xl border border-gray-100 p-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <span className="flex-1 min-w-0"><strong className="block text-xs text-gray-900">{doc.name}</strong><span className="block text-[10px] text-gray-400 mt-0.5">{doc.frequency}{doc.mandatory ? ' · Mandatory' : ''}{doc.requiresDocument ? ' · Document required' : ''}</span></span>
-                    {up ? <span title={up.findings?.join(' ')} className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${up.status === 'Validated' ? 'bg-green-50 text-green-700' : up.status === 'Validating' ? 'bg-gray-100 text-gray-500' : 'bg-red-50 text-red-700'}`}>{up.status === 'Validated' ? (up.noOcr ? 'Recorded' : '100% Accuracy') : up.status === 'Validating' ? 'Validating…' : `${up.accuracy}% · Errors found`}</span> : <span className="text-[10px] text-gray-300 flex-shrink-0">Not uploaded</span>}
-                    <label className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 flex-shrink-0"><Upload size={12}/>Upload<input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => uploadEvidence(doc, e.target.files?.[0])}/></label>
-                    {up?.findings?.length ? <button type="button" onClick={() => setViewErrors({ name: doc.name, findings: up.findings ?? [] })} className="text-[10px] text-blue-700 font-semibold flex-shrink-0 hover:underline">View errors</button> : null}
-                    {up && <button onClick={() => setUploads(current => { const next = { ...current }; delete next[doc.name]; return next; })} className="text-[10px] text-red-600 flex-shrink-0">Remove</button>}
-                    </div>
-                    {up?.checkpoints?.length ? <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1 text-[10px] border-t border-gray-100 pt-2">
-                      {up.checkpoints.map(c => <li key={c.key} className={c.passed ? 'text-green-700' : c.required ? 'text-red-600' : 'text-amber-600'}>{c.passed ? '✓' : '✗'} {c.label}{!c.passed && c.detail ? <span className="text-gray-400"> — {c.detail}</span> : null}</li>)}
-                    </ul> : null}
-                  </div>;
-                })}</div>}
-          </div>}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-extrabold uppercase tracking-wider text-gray-500">
+                2. Required Evidence Documents ({uploadedEvidenceCount}/{additionalDocs.length} Submitted
+                {totalMandatoryDocsCount > 0 ? ` · ${uploadedMandatoryCount}/${totalMandatoryDocsCount} Mandatory` : ''})
+              </p>
+              {isPartialSubmission && (
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                  Part Submissions Allowed ({missingEvidence.length} pending)
+                </span>
+              )}
+            </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-3 justify-between border-t border-gray-100 pt-4">
-            <p className={`text-xs flex items-center gap-1.5 ${missingEvidence.length ? 'text-orange-700' : 'text-green-700'}`}><FileCheck2 size={14}/>{missingEvidence.length ? `${missingEvidence.length} mandatory additional document${missingEvidence.length === 1 ? '' : 's'} not uploaded — upload to submit.` : (pendingBatches.length || uploadedEvidenceCount) ? `Ready to submit ${pendingBatches.length ? `${pendingBatches.length} register batch${pendingBatches.length === 1 ? '' : 'es'}` : ''}${pendingBatches.length && uploadedEvidenceCount ? ' + ' : ''}${uploadedEvidenceCount ? `${uploadedEvidenceCount} additional document${uploadedEvidenceCount === 1 ? '' : 's'}` : ''}.` : 'Nothing to submit for this period yet — generate registers or upload an additional document.'}</p>
-            <button type="button" onClick={() => void submitAll()} disabled={busy || missingEvidence.length > 0 || (!pendingBatches.length && !uploadedEvidenceCount)} className="h-10 px-5 rounded-lg bg-[#073B67] text-white text-sm font-bold flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-40">{busy ? 'Submitting…' : (pendingBatches.length || uploadedEvidenceCount) ? 'Submit' : 'Nothing to submit'}</button>
+            {docsBusy ? (
+              <p className="text-xs text-gray-400 py-3">Loading required documents…</p>
+            ) : additionalDocs.length === 0 ? (
+              <p className="text-xs text-gray-400 py-3">No specific evidence documents configured for this site.</p>
+            ) : (
+              <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-gray-200 text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
+                      <th className="py-2.5 px-3.5">Document Type</th>
+                      <th className="py-2.5 px-3.5">Frequency</th>
+                      <th className="py-2.5 px-3.5">Requirement</th>
+                      <th className="py-2.5 px-3.5">Status</th>
+                      <th className="py-2.5 px-3.5 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 text-xs">
+                    {additionalDocs.map(doc => {
+                      const up = uploads[doc.name];
+                      return (
+                        <tr key={doc.name} className={`hover:bg-slate-50/70 transition-colors ${up?.status === 'Validated' ? 'bg-green-50/20' : doc.mandatory ? 'bg-amber-50/15' : ''}`}>
+                          <td className="py-3 px-3.5 font-semibold text-gray-900">
+                            {doc.name}
+                          </td>
+                          <td className="py-3 px-3.5 text-gray-600 text-[11px]">
+                            {doc.frequency || 'Monthly'}
+                          </td>
+                          <td className="py-3 px-3.5">
+                            {doc.mandatory ? (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">Mandatory</span>
+                            ) : (
+                              <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">Optional</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3.5">
+                            {up ? (
+                              <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                                up.status === 'Validated' ? 'bg-green-100 text-green-800 border border-green-200' : 
+                                up.status === 'Validating' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 
+                                'bg-red-100 text-red-800 border border-red-200'
+                              }`}>
+                                {up.status === 'Validated' ? '✓ Submitted & Validated' : up.status === 'Validating' ? 'Validating…' : 'Errors found'}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100/80 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                                <AlertCircle size={12} /> Pending Submission
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3.5 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <label className="h-7 px-3 rounded-md border border-gray-300 text-xs font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-slate-100 bg-white shadow-xs">
+                                <Upload size={12} className="text-gray-600"/>
+                                {up ? 'Re-upload' : 'Upload'}
+                                <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => uploadEvidence(doc, e.target.files?.[0])}/>
+                              </label>
+                              {up && (
+                                <>
+                                  {up.id != null && (
+                                    <button
+                                      type="button"
+                                      onClick={() => void submitSingleForm(doc.name, up.id)}
+                                      disabled={busy}
+                                      className="h-7 px-3 rounded-md bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] disabled:opacity-40 shadow-xs flex items-center gap-1"
+                                    >
+                                      Submit Form
+                                    </button>
+                                  )}
+                                  <button 
+                                    type="button"
+                                    onClick={() => handleRemoveEvidence(doc.name)} 
+                                    className="text-xs text-red-600 font-semibold hover:underline px-1"
+                                  >
+                                    Remove
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-          {error && tab === 'create' && <p role="alert" className="bss-alert bss-alert-error mt-3">{error}</p>}
+          {error && <p role="alert" className="bss-alert bss-alert-error mt-3">{error}</p>}
         </div>
       </div>
     </section>}
