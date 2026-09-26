@@ -481,11 +481,11 @@ export default function IdentityCardPage() {
                     </div>
                     <div>
                       <label className="block text-[#64748B] font-bold text-[8.5px] tracking-wider mb-0.5">UAN NO.</label>
-                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{(worker.socialSecurity as any)?.uan || (worker as any).details?.socialSecurity?.uan || '—'}</strong>
+                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{(worker.socialSecurity as any)?.epfoUan || (worker as any).details?.socialSecurity?.epfoUan || '—'}</strong>
                     </div>
                     <div>
                       <label className="block text-[#64748B] font-bold text-[8.5px] tracking-wider mb-0.5">ESIC NO.</label>
-                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{(worker.socialSecurity as any)?.esic || (worker as any).details?.socialSecurity?.esic || '—'}</strong>
+                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{(worker.socialSecurity as any)?.esicIp || (worker as any).details?.socialSecurity?.esicIp || '—'}</strong>
                     </div>
                     <div>
                       <label className="block text-[#64748B] font-bold text-[8.5px] tracking-wider mb-0.5">CAMP NO.</label>
