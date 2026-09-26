@@ -150,15 +150,18 @@ export default function ComplianceSubmissionPage() {
     [contractor.complianceBatches, fyKey]);
   const periodBatches = generatedBatches.filter(b => periodOf(b.month, freq) === selectedPeriod);
 
+  // Counts reflect only items that were actually submitted (not merely generated/uploaded).
   const batchCountByFy = useMemo(() => {
     const map: Record<string, number> = {};
-    contractor.complianceBatches.forEach(b => { const k = b.financialYear || ''; map[k] = (map[k] || 0) + 1; });
+    contractor.complianceBatches.filter(b => b.status === 'Submitted')
+      .forEach(b => { const k = b.financialYear || ''; map[k] = (map[k] || 0) + 1; });
     return map;
   }, [contractor.complianceBatches]);
 
   const batchCountByPeriod = useMemo(() => {
     const map: Record<string, number> = {};
-    generatedBatches.forEach(b => { const p = periodOf(b.month, freq); map[p] = (map[p] || 0) + 1; });
+    generatedBatches.filter(b => b.status === 'Submitted')
+      .forEach(b => { const p = periodOf(b.month, freq); map[p] = (map[p] || 0) + 1; });
     return map;
   }, [generatedBatches, freq]);
 
@@ -428,7 +431,7 @@ export default function ComplianceSubmissionPage() {
           <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Financial Year:</span>
           <div className="flex flex-wrap gap-1.5">
             {availableYears.map(yr => {
-              const yrCount = documents.filter(doc => {
+              const yrCount = submittedDocuments.filter(doc => {
                 const fyStr = doc.financialYear || (doc.period?.includes('FY') ? doc.period.slice(doc.period.indexOf('FY')) : '');
                 return (fyStr || availableYears[0]) === yr;
               }).length + (batchCountByFy[yr.replace('FY ', '')] || 0);
@@ -548,7 +551,7 @@ export default function ComplianceSubmissionPage() {
                     <span>{hasRegs ? '✓' : '•'}</span> Registers: {hasRegs ? 'Submitted' : 'Pending'}
                   </p>
                   <p className={`font-semibold flex items-center gap-1 ${submittedFormsCount > 0 ? (totalConfiguredForms && submittedFormsCount < totalConfiguredForms ? 'text-blue-700' : 'text-emerald-700') : 'text-amber-700'}`}>
-                    <span>{submittedFormsCount > 0 ? '✓' : '•'}</span> Forms: {submittedFormsCount}{totalConfiguredForms ? `/${totalConfiguredForms}` : ''} Uploaded
+                    <span>{submittedFormsCount > 0 ? '✓' : '•'}</span> Forms: {submittedFormsCount}{totalConfiguredForms ? `/${totalConfiguredForms}` : ''} Submitted
                   </p>
                 </div>
               </button>
