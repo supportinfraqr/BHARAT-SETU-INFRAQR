@@ -99,6 +99,19 @@ def get_user(access_token: str) -> dict:
     return resp.json()
 
 
+def _json_items(resp, label: str) -> list:
+    """Parse a DigiLocker list endpoint defensively: some endpoints answer 200
+    with an empty/HTML body (e.g. no uploaded files), which must be treated as an
+    empty list rather than crashing the caller with a JSONDecodeError."""
+    try:
+        data = resp.json()
+    except ValueError:
+        raise DigiLockerError(f"{label} returned non-JSON body: {resp.status_code} {resp.text[:200]}")
+    if not isinstance(data, dict):
+        return []
+    return data.get("items") or []
+
+
 def list_issued_documents(access_token: str) -> list:
     resp = requests.get(
         settings.DIGILOCKER_ISSUED_DOCS_URL,
@@ -108,7 +121,7 @@ def list_issued_documents(access_token: str) -> list:
     )
     if resp.status_code != 200:
         raise DigiLockerError(f"issued documents failed: {resp.status_code} {resp.text[:300]}")
-    return resp.json().get("items") or []
+    return _json_items(resp, "issued documents")
 
 
 def list_uploaded_documents(access_token: str) -> list:
@@ -122,7 +135,7 @@ def list_uploaded_documents(access_token: str) -> list:
     )
     if resp.status_code != 200:
         raise DigiLockerError(f"uploaded documents failed: {resp.status_code} {resp.text[:300]}")
-    return resp.json().get("items") or []
+    return _json_items(resp, "uploaded documents")
 
 
 def fetch_eaadhaar(access_token: str) -> str:

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, CheckCircle2, Download, FileCheck2, FileUp, Info, ShieldCheck, Upload, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Download, FileCheck2, FileUp, Info, Lock, ShieldCheck, Upload, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorPortalData } from '@/types/portal';
@@ -235,9 +235,10 @@ export default function ComplianceSubmissionPage() {
         const matched = additionalDocs.find(d => d.name.toLowerCase() === doc.type.toLowerCase() || doc.type.toLowerCase().includes(d.name.toLowerCase()))?.name;
         const key = matched || doc.type;
         if (removedKeys.includes(key) || removedKeys.includes(doc.type)) return;
-        if (next[key] && next[key].id == null) return; // keep a live local entry that has no server id yet
+        if (next[key]?.id != null) return; // keep the live local entry (its numeric upload id) as-is
+        const serverId = Number(doc.id);
         next[key] = {
-          id: typeof doc.id === 'number' ? doc.id : 1,
+          id: Number.isFinite(serverId) ? serverId : undefined,
           accuracy: doc.accuracy ?? 100,
           status: doc.status === 'Returned' ? 'Errors found' : 'Validated',
           findings: doc.findings,
@@ -692,14 +693,18 @@ export default function ComplianceSubmissionPage() {
                           </td>
                           <td className="py-3 px-3.5 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <label className="h-7 px-3 rounded-md border border-gray-300 text-xs font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-slate-100 bg-white shadow-xs">
-                                <Upload size={12} className="text-gray-600"/>
-                                {up ? 'Re-upload' : 'Upload'}
-                                <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => uploadEvidence(doc, e.target.files?.[0])}/>
-                              </label>
-                              {up && (
+                              {!isSubmitted && (
+                                <label className="h-7 px-3 rounded-md border border-gray-300 text-xs font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-slate-100 bg-white shadow-xs">
+                                  <Upload size={12} className="text-gray-600"/>
+                                  {up ? 'Re-upload' : 'Upload'}
+                                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => uploadEvidence(doc, e.target.files?.[0])}/>
+                                </label>
+                              )}
+                              {isSubmitted ? (
+                                <span className="text-[11px] font-semibold text-emerald-700 inline-flex items-center gap-1"><Lock size={12}/> Locked</span>
+                              ) : up && (
                                 <>
-                                  {up.id != null && !isSubmitted && (
+                                  {up.id != null && (
                                     <button
                                       type="button"
                                       onClick={() => void submitSingleForm(doc.name, up.id)}

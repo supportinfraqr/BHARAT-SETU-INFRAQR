@@ -59,9 +59,40 @@ def worker_documents(request):
     # replaced (or deleted). Every other document — including Aadhaar/PAN/UAN/
     # Education — may be uploaded manually; such uploads remain "Under
     # Verification" and never receive the DigiLocker "Verified" badge.
-    if WorkerDocument.objects.filter(user=user, document=master, auto_generated=True).exists():
-        return Response({"error": "This document is issued by the system and cannot be uploaded or replaced."},
-                        status=status.HTTP_400_BAD_REQUEST)
+    # Require completed Aadhaar verification record before manual document uploads
+    identity = WorkerIdentity.objects.filter(user=user).first()
+    if not identity or not identity.aadhaar:
+        return Response({"error": "You must complete Aadhaar verification before uploading documents."},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    # Perform OCR check to verify the uploaded document belongs to the worker (name matching)
+    worker_name = (identity.name or f"{user.first_name} {user.last_name}").strip()
+    try:
+        file_bytes = file_obj.read()
+        file_obj.seek(0)
+        ocr_text = ocr_client.extract_text(file_bytes, file_obj.name)
+        if ocr_text and worker_name:
+            blob = f"{master.code or ''} {master.document_name or ''}".upper()
+            if "AADHAAR" in blob or "ADHAR" in blob:
+                doc_type_key = "aadhaar"
+            elif "PAN" in blob:
+                doc_type_key = "pan"
+            elif "UAN" in blob or "EPFO" in blob:
+                doc_type_key = "uan"
+            elif "ESIC" in blob:
+                doc_type_key = "esic"
+            else:
+                doc_type_key = "pan"
+            ok, msg = ocr_client.verify_document_text(
+                doc_type=doc_type_key,
+                ocr_text=ocr_text,
+                expected_name=worker_name
+            )
+            if not ok and "Name does not match" in msg:
+                return Response({"error": f"Document name verification failed: Uploaded document does not belong to {worker_name}."},
+                                status=status.HTTP_400_BAD_REQUEST)
+    except Exception as exc:
+        logging.getLogger(__name__).warning("OCR verification skipped/failed during document upload: %s", exc)
 
     WorkerDocument.objects.filter(user=user, document=master).delete()
     doc = WorkerDocument(

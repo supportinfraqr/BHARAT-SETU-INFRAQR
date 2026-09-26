@@ -96,6 +96,10 @@ export default function DocumentsModule() {
   }
 
   const chooseFile = (doc: DocumentRow) => {
+    if (!worker.identity.aadhaarVerified && !worker.identity.aadhaar) {
+      setError('Aadhaar verification record is required before uploading documents. Please complete Aadhaar verification first.');
+      return;
+    }
     setUploadTarget({ code: doc.code, name: doc.name });
     inputRef.current?.click();
   };

@@ -861,22 +861,29 @@ def _sync_document_register(user, master_code, file_bytes, filename, mime=""):
 def _background_fetch_documents(session, access_token, profile, user):
     """Download issued docs in the background; failures recorded per doc so the
     sync response stays fast."""
+    errors = []
     try:
         items = []
+        # Each endpoint is independent and optional — one failing (e.g. the app has
+        # no files.uploadeddocs scope, or DigiLocker answers with an empty body)
+        # must never abort the issued-documents pull.
         for loader in (dl.list_issued_documents, dl.list_uploaded_documents):
             try:
-                items += loader(access_token)
-            except dl.DigiLockerError:
-                pass
+                items += loader(access_token) or []
+            except Exception as exc:
+                errors.append(f"{loader.__name__}: {exc}")
+                logging.getLogger(__name__).warning("DigiLocker %s failed: %s", loader.__name__, exc)
         try:
             _apply_digilocker_documents(user, items)
-        except Exception:
-            pass
+        except Exception as exc:
+            errors.append(f"apply: {exc}")
+            logging.getLogger(__name__).warning("DigiLocker apply failed: %s", exc)
         if (profile.eaadhaar or "").strip().upper() == "Y":
             try:
                 _store_eaadhaar(profile, user, dl.fetch_eaadhaar(access_token))
-            except dl.DigiLockerError:
-                pass
+            except Exception as exc:
+                errors.append(f"eaadhaar: {exc}")
+                logging.getLogger(__name__).warning("DigiLocker eaadhaar failed: %s", exc)
         seen = set()
         for item in items:
             uri = item.get("uri") or ""
@@ -917,9 +924,14 @@ def _background_fetch_documents(session, access_token, profile, user):
                               "issuer": (item.get("issuer") or "")[:300],
                               "doc_date": (item.get("date") or ""), "status": "FAILED",
                               "error_detail": str(exc)[:255]})
+    except Exception as exc:  # never let the background thread die silently
+        errors.append(f"fetch: {exc}")
+        logging.getLogger(__name__).exception("DigiLocker background fetch crashed: %s", exc)
     finally:
+        if errors:
+            session.error = "; ".join(errors)[:500]
         session.status = "COMPLETED"
-        session.save(update_fields=["status", "updated_at"])
+        session.save(update_fields=["status", "error", "updated_at"])
 
 
 class DigiLockerViewSet(viewsets.GenericViewSet):
@@ -1043,7 +1055,7 @@ class DigiLockerViewSet(viewsets.GenericViewSet):
         profile = DigiLockerProfile.objects.filter(
             user_id=session.user_id).first() if session.user_id else None
         data = {"status": session.status}
-        if session.status == "ERROR":
+        if session.error:
             data["error"] = session.error
         if profile:
             data["digilocker_id"] = profile.digilocker_id

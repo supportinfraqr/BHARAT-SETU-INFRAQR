@@ -541,6 +541,11 @@ export type EmployerWorker = {
   compliance: 'Compliant' | 'Expiring' | 'Non-compliant';
   status: 'Active' | 'Inactive';
   verified: boolean;
+  refCode?: string; department?: string; gender?: string; age?: string; category?: string; skills?: string[]; photoUrl?: string;
+  aadhaar?: string; dob?: string; fatherName?: string; bloodGroup?: string;
+  eligibility?: GatePassEligibility;
+  costSheetId?: number | null; costSheet?: string; costSheetName?: string;
+  offeredWage?: number; ctc?: number; costBreakdown?: CostBreakdown;
 };
 
 export type EmployerApproval = {
