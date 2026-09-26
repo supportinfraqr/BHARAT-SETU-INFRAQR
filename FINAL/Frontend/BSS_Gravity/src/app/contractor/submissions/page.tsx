@@ -138,6 +138,7 @@ export default function ComplianceSubmissionPage() {
     [contractor.complianceBatches, createFyKey, month]);
   // Registers already submitted are no longer submittable.
   const pendingBatches = generatedForCreate.filter(b => b.status !== 'Submitted');
+  const uploadedEvidenceCount = additionalDocs.filter(d => uploads[d.name]?.id).length;
 
   // The employer's additional (adopted) documents required for the site — listed
   // independent of generated registers so they can be uploaded anytime.
@@ -211,7 +212,7 @@ export default function ComplianceSubmissionPage() {
 
   async function submitAll() {
     if (missingEvidence.length) { setError(`Upload the mandatory additional documents before submitting: ${missingEvidence.map(d => d.name).join(', ')}.`); return; }
-    if (!pendingBatches.length) return;
+    if (!pendingBatches.length && !uploadedEvidenceCount) return;
     await performSubmit(pendingBatches.map(b => b.id));
   }
 
@@ -395,8 +396,8 @@ export default function ComplianceSubmissionPage() {
           </div>}
 
           <div className="mt-4 flex flex-wrap items-center gap-3 justify-between border-t border-gray-100 pt-4">
-            <p className={`text-xs flex items-center gap-1.5 ${missingEvidence.length ? 'text-orange-700' : 'text-green-700'}`}><FileCheck2 size={14}/>{missingEvidence.length ? `${missingEvidence.length} mandatory additional document${missingEvidence.length === 1 ? '' : 's'} not uploaded — upload to submit.` : pendingBatches.length ? `Ready to submit ${pendingBatches.length} register batch${pendingBatches.length === 1 ? '' : 'es'}${additionalDocs.length ? ' + additional documents' : ''}.` : 'All generated registers for this period have been submitted.'}</p>
-            <button type="button" onClick={() => void submitAll()} disabled={busy || !pendingBatches.length || missingEvidence.length > 0} className="h-10 px-5 rounded-lg bg-[#073B67] text-white text-sm font-bold flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-40">{busy ? 'Submitting…' : pendingBatches.length ? 'Submit' : 'Submitted'}</button>
+            <p className={`text-xs flex items-center gap-1.5 ${missingEvidence.length ? 'text-orange-700' : 'text-green-700'}`}><FileCheck2 size={14}/>{missingEvidence.length ? `${missingEvidence.length} mandatory additional document${missingEvidence.length === 1 ? '' : 's'} not uploaded — upload to submit.` : (pendingBatches.length || uploadedEvidenceCount) ? `Ready to submit ${pendingBatches.length ? `${pendingBatches.length} register batch${pendingBatches.length === 1 ? '' : 'es'}` : ''}${pendingBatches.length && uploadedEvidenceCount ? ' + ' : ''}${uploadedEvidenceCount ? `${uploadedEvidenceCount} additional document${uploadedEvidenceCount === 1 ? '' : 's'}` : ''}.` : 'Nothing to submit for this period yet — generate registers or upload an additional document.'}</p>
+            <button type="button" onClick={() => void submitAll()} disabled={busy || missingEvidence.length > 0 || (!pendingBatches.length && !uploadedEvidenceCount)} className="h-10 px-5 rounded-lg bg-[#073B67] text-white text-sm font-bold flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-40">{busy ? 'Submitting…' : (pendingBatches.length || uploadedEvidenceCount) ? 'Submit' : 'Nothing to submit'}</button>
           </div>
           {error && tab === 'create' && <p role="alert" className="bss-alert bss-alert-error mt-3">{error}</p>}
         </div>
