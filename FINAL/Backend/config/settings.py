@@ -251,7 +251,7 @@ ENTITYLOCKER_USER_URL = os.environ.get(
     "BSS_ENTITYLOCKER_USER_URL",
     "https://entity.digilocker.gov.in/public/oauth2/1/user")
 ENTITYLOCKER_SCOPE = os.environ.get(
-    "BSS_ENTITYLOCKER_SCOPE", "files.issueddocs files.uploadeddocs entitydetails")
+    "BSS_ENTITYLOCKER_SCOPE", "entitydetails")
 ENTITYLOCKER_PURPOSE = os.environ.get("BSS_ENTITYLOCKER_PURPOSE", "verification")
 ENTITYLOCKER_SESSION_TTL_MIN = int(os.environ.get("BSS_ENTITYLOCKER_SESSION_TTL_MIN", "15"))
 
