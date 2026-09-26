@@ -1074,7 +1074,12 @@ class DigiLockerViewSet(viewsets.GenericViewSet):
     @action(detail=False, methods=["get"])
     def documents(self, request):
         docs = DigiLockerDocument.objects.filter(user=request.user).order_by("-created_at")
-        return Response(DigiLockerDocumentSerializer(docs, many=True).data)
+        latest = DigiLockerSession.objects.filter(user=request.user).order_by("-id").first()
+        return Response({
+            "data": DigiLockerDocumentSerializer(docs, many=True).data,
+            "error": (latest.error if latest else "") or "",
+            "status": (latest.status if latest else ""),
+        })
 
 
 # ---------------------------------------------------------------------------

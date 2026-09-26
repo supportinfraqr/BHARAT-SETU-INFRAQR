@@ -189,21 +189,29 @@ export default function WorkerProfilePage() {
   const [digilockerDocs, setDigilockerDocs] = useState<DigiLockerDoc[]>([]);
   const [digilockerStatus, setDigilockerStatus] = useState<'idle' | 'linking' | 'linked' | 'error'>('idle');
   const [digilockerMessage, setDigilockerMessage] = useState('');
+  const [digilockerFetchError, setDigilockerFetchError] = useState('');
   const digilockerBlob = digilockerDocs.map(d => `${d.doctype ?? ''} ${d.file_name ?? ''}`).join(' ').toUpperCase();
+  const digilockerErrorText = digilockerFetchError
+    ? (digilockerFetchError.includes('insufficient_scope')
+        ? 'Linked, but DigiLocker did not grant access to the requested documents (app permissions for issued/uploaded files or e-Aadhaar are not enabled).'
+        : `Linked, but DigiLocker could not share documents: ${digilockerFetchError}`)
+    : '';
   const digilockerKinds = {
     aadhaar: digilockerBlob.includes('AADHAAR') || digilockerBlob.includes('ADHAR'),
     pan: digilockerBlob.includes('PAN'),
     epfo: /EPFO|UAN|PRFND|PASSBOOK|PROVIDENT/.test(digilockerBlob),
   };
 
-  const loadDigilockerDocs = useCallback(async () => {
+  const loadDigilockerDocs = useCallback(async (): Promise<DigiLockerDoc[]> => {
     try {
       const response = await fetch('/api/digilocker/documents', { cache: 'no-store' });
-      if (!response.ok) return;
-      const json = await response.json() as DigiLockerDoc[] | { data?: DigiLockerDoc[] };
+      if (!response.ok) return [];
+      const json = await response.json() as DigiLockerDoc[] | { data?: DigiLockerDoc[]; error?: string };
       const list = Array.isArray(json) ? json : json.data;
       if (Array.isArray(list)) setDigilockerDocs(list);
-    } catch { /* non-fatal */ }
+      setDigilockerFetchError(Array.isArray(json) ? '' : (json.error || ''));
+      return Array.isArray(list) ? list : [];
+    } catch { return []; }
   }, []);
 
   const linkDigiLocker = async () => {
@@ -225,16 +233,24 @@ export default function WorkerProfilePage() {
     const outcome = params.get('digilocker');
     if (outcome === 'linked') {
       setDigilockerStatus('linked');
-      loadDigilockerDocs();
       let tries = 0;
-      const timer = setInterval(() => { tries += 1; loadDigilockerDocs(); if (tries >= 5) clearInterval(timer); }, 3000);
+      const tick = async () => {
+        tries += 1;
+        const list = await loadDigilockerDocs();
+        if ((list?.length ?? 0) > 0 || tries >= 5) {
+          clearInterval(timer);
+          setDigilockerStatus('idle');
+        }
+      };
+      void tick();
+      const timer = setInterval(() => { void tick(); }, 3000);
       return () => clearInterval(timer);
     }
     if (outcome === 'error') {
       setDigilockerStatus('error');
       setDigilockerMessage(params.get('message') || 'DigiLocker linking failed.');
     }
-    loadDigilockerDocs();
+    void loadDigilockerDocs();
   }, [loadDigilockerDocs]);
   
   // Conditional UI State
@@ -1739,6 +1755,9 @@ export default function WorkerProfilePage() {
                       )}
                       {digilockerStatus === 'error' && digilockerMessage && (
                         <p className="text-[12px] text-[#FF3B30] font-semibold mb-2">{digilockerMessage}</p>
+                      )}
+                      {digilockerStatus !== 'linked' && !digilockerDocs.length && digilockerErrorText && (
+                        <p className="text-[12px] text-[#B45309] bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-2">{digilockerErrorText}</p>
                       )}
                       {digilockerDocs.length > 0 ? (
                         <div className="space-y-2 mt-2">
