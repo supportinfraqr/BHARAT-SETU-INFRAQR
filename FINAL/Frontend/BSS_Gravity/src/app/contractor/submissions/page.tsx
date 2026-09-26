@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Download, FileCheck2, FileUp, Plus, ShieldCheck, Upload, X } from 'lucide-react';
+import { CheckCircle2, Download, FileCheck2, FileUp, ShieldCheck, Upload, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorPortalData } from '@/types/portal';
@@ -259,9 +259,6 @@ export default function ComplianceSubmissionPage() {
 
   return <div className="space-y-6 pb-12">
     <header className="bss-page-header flex-col sm:flex-row"><div><p className="bss-eyebrow">Contractor data exchange</p><h1 className="bss-page-title mt-1">Compliance Submission Centre</h1><p className="bss-page-description">Create period-based (Financial Year + Frequency + Period) compliance packages from your generated CLRA registers, submit them, and generate the Compliance Audit Report.</p></div>
-      <div className="flex gap-2">
-        <button type="button" onClick={() => { setTab('create'); setCreateOpen(true); setError(''); setNotice(''); }} className="bss-primary-action"><Plus size={16}/>Create Compliance Document</button>
-      </div>
     </header>
 
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
