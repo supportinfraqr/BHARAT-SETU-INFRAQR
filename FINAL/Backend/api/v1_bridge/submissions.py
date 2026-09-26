@@ -404,6 +404,15 @@ def contractor_compliance_batches(request):
         return Response({"error": "No worker rows found in the master file."},
                         status=status.HTTP_400_BAD_REQUEST)
 
+    # One master file = one site (CLRA registers are generated per site).
+    distinct_sites = sorted({(r.get("site") or "").strip() for r in rows if (r.get("site") or "").strip()})
+    if len(distinct_sites) > 1:
+        shown = ", ".join(distinct_sites[:6]) + ("…" if len(distinct_sites) > 6 else "")
+        return Response(
+            {"error": f"The master file contains {len(distinct_sites)} sites ({shown}). "
+                      "Upload one site per file — CLRA registers are generated per site."},
+            status=status.HTTP_400_BAD_REQUEST)
+
     # State / Site are derived from the uploaded master file when not supplied
     # (the CLRA generation form only asks for Year + Month).
     state = (request.data.get("state") or "").strip()

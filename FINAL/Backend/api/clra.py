@@ -381,6 +381,13 @@ def validate_master(rows, *, state="", month="", year=""):
 
     sites = sorted({(r.get("site") or "").strip() for r in rows if (r.get("site") or "").strip()})
     locations = sorted({(r.get("location") or "").strip() for r in rows if (r.get("location") or "").strip()})
+    # One master file = one site. CLRA registers are generated per site, so a
+    # file mixing sites is rejected.
+    if len(sites) > 1:
+        shown = ", ".join(sites[:6]) + ("…" if len(sites) > 6 else "")
+        errors.append({"row": 0, "field": "site",
+                       "message": f"The master file contains {len(sites)} sites ({shown}). "
+                                  "Upload one site per file — CLRA registers are generated per site."})
     return {
         "errors": errors, "warnings": warnings,
         "rowCount": len(rows), "validRows": valid_rows,
