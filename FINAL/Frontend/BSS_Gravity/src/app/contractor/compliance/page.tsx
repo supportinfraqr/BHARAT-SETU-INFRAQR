@@ -4,7 +4,6 @@ import { CheckCircle2, Download, FileClock, FileSpreadsheet, FileText, Landmark,
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorPortalData } from '@/types/portal';
-import { INDIA_STATES } from '@/data/indiaStates';
 import { exportMatrixToXlsx } from '@/lib/exportXlsx';
 import { openPrintHtml } from '@/lib/documentEngine/render';
 type Row = ContractorPortalData['compliances'][number];
@@ -67,7 +66,7 @@ function periodMonth(period: string): string {
   if (FINANCIAL_PERIODS.includes(period)) return 'March';
   return period;
 }
-const STATES = INDIA_STATES;
+
 
 
 
@@ -96,7 +95,7 @@ export default function ContractorCompliancePage() {
   const [freq, setFreq] = useState<Frequency>('Monthly');
   const [period, setPeriod] = useState<string>(MONTHS[6]);
   const month = periodMonth(period);
-  const [state, setState] = useState(STATES[0]);
+  const [siteName, setSiteName] = useState('');
   const [masterFile, setMasterFile] = useState<File | null>(null);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [includeNonDue, setIncludeNonDue] = useState(false);
@@ -104,6 +103,7 @@ export default function ContractorCompliancePage() {
   const [templates, setTemplates] = useState<Array<{ id:number; state:string; formCode:string; title:string; columns:string[]; fileName:string; hasFile:boolean }>>([]);
   const [strength, setStrength] = useState<{ rcPe?:string; licence?:string; lwf?:string; hra?:string; nhFh?:string; ptFrequency?:string }>({});
   const [adoption, setAdoption] = useState<Record<string, { adopted:boolean; adoptedCount:number; mandatoryCount:number; total:number }>>({});
+  const [siteBoards, setSiteBoards] = useState<Array<{ siteId:number; gated:boolean; adoptedCount:number; total:number }>>([]);
   const [report, setReport] = useState<ValidationReport | null>(null);
   const [batchView, setBatchView] = useState<string | null>(null);
   const [registerRows, setRegisterRows] = useState<RegRow[]>([]);
@@ -117,20 +117,23 @@ export default function ContractorCompliancePage() {
     if (key) (acc[key] ||= []).push(s);
     return acc;
   }, {});
-  // Keep the template-library state within the allowed set (without an effect).
-  const activeState = allowedStates.length && !allowedStates.includes(state) ? allowedStates[0] : state;
+  // The selected site (generation + library are scoped to its state).
+  const activeSite = contractor.sites.find(s => s.name === siteName) ?? contractor.sites[0];
+  const activeState = activeSite?.state || allowedStates[0] || '';
   const activeAdoption = adoption[activeState];
-  const activeAdopted = !!activeAdoption?.adopted;
+  const activeSiteBoard = siteBoards.find(b => String(b.siteId) === String(activeSite?.id));
+  const activeAdopted = activeSiteBoard ? activeSiteBoard.gated : !!activeAdoption?.adopted;
 
   useEffect(() => {
     let active = true;
     void fetch(`/api/contractor/clra/templates?state=${encodeURIComponent(activeState)}`, { cache:'no-store' })
       .then(response => (response.ok ? response.json() : null))
-      .then((body: { rows?: typeof templates; strength?: typeof strength; adoption?: typeof adoption } | null) => {
+      .then((body: { rows?: typeof templates; strength?: typeof strength; adoption?: typeof adoption; sites?: typeof siteBoards } | null) => {
         if (!active || !body) return;
         if (body.rows) setTemplates(body.rows);
         if (body.strength) setStrength(body.strength);
         if (body.adoption) setAdoption(body.adoption);
+        if (body.sites) setSiteBoards(body.sites);
       })
       .catch(() => {});
     return () => { active = false; };
@@ -206,6 +209,7 @@ export default function ContractorCompliancePage() {
     try {
       const form = new FormData();
       form.set('master', masterFile);
+      if (activeSite?.name) form.set('site', activeSite.name);
       form.set('month', month); form.set('year', year);
       const response = await fetch('/api/contractor/clra/validate', { method: 'POST', body: form });
       const result = await response.json().catch(() => ({})) as { data?: ValidationReport; error?: string };
@@ -229,7 +233,7 @@ export default function ContractorCompliancePage() {
     const csv = rows.map(r => r.map(esc).join(',')).join('\r\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
-    a.href = url; a.download = `clra-validation-${month}-${state}.csv`.replace(/\s+/g, '_');
+    a.href = url; a.download = `clra-validation-${month}-${activeState}.csv`.replace(/\s+/g, '_');
     a.click(); URL.revokeObjectURL(url);
   };
 
@@ -240,6 +244,7 @@ export default function ContractorCompliancePage() {
       const form = new FormData();
       form.set('master', masterFile);
       if (signatureFile) form.set('signature', signatureFile);
+      if (activeSite?.name) form.set('site', activeSite.name);
       // Months Jan–Mar belong to the FY that started in the previous calendar year.
       const sendYear = ['January', 'February', 'March'].includes(month) ? String(Number(year) + 1) : year;
       form.set('month', month); form.set('year', sendYear); form.set('frequency', freq);
@@ -388,9 +393,10 @@ export default function ContractorCompliancePage() {
 
       <div className="grid lg:grid-cols-2 gap-5">
       <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">CLRA Register Generation</h2><p className="text-xs text-gray-400 mt-0.5">Upload master data and generate registers based on State / Site / Location.</p></header>
+        <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">CLRA Register Generation</h2><p className="text-xs text-gray-400 mt-0.5">Pick the site, then upload that site&apos;s master data and generate its registers (one site per file).</p></header>
         <div className="p-5 space-y-4">
-          <div className="grid sm:grid-cols-3 gap-3">
+          <div className="grid sm:grid-cols-2 gap-3">
+            <label className="text-xs font-semibold">Site<select value={activeSite?.name || ''} onChange={e => setSiteName(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}</select></label>
             <label className="text-xs font-semibold">Year<select value={year} onChange={e => setYear(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{YEARS.map(y => <option key={y}>{y}</option>)}</select></label>
             <label className="text-xs font-semibold">Frequency<select value={freq} onChange={e => { const f = e.target.value as Frequency; setFreq(f); setPeriod(periodsFor(f)[0]); }} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select></label>
             <label className="text-xs font-semibold">Period<select value={period} onChange={e => setPeriod(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{periodsFor(freq).map(p => <option key={p}>{p}</option>)}</select></label>
@@ -400,8 +406,8 @@ export default function ContractorCompliancePage() {
             <label className="text-xs font-semibold text-gray-600 flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 py-2.5 cursor-pointer"><FileText size={16}/>{signatureFile ? signatureFile.name : 'Choose Signature Upload (optional)'}<input type="file" accept=".png,.jpg,.jpeg,.pdf" className="hidden" onChange={e => setSignatureFile(e.target.files?.[0] ?? null)}/></label>
           </div>
           {!activeAdopted
-            ? <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-800"><strong>{activeState}</strong>: the principal employer has not adopted CLRA register forms yet — uploading/generating is disabled for sites in {activeState} until the employer adopts the forms on their CLRA Registers page.</div>
-            : activeAdoption && <p className="text-[11px] text-emerald-700">{activeState}: employer adopted <strong>{activeAdoption.adoptedCount}</strong> of {activeAdoption.total} form(s), incl. {activeAdoption.mandatoryCount} mandatory.</p>}
+            ? <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-800"><strong>{activeSite?.name || activeState}</strong>: the principal employer has not adopted CLRA register forms for this site yet — uploading/generating is disabled until they adopt the forms on their CLRA Registers page.</div>
+            : <p className="text-[11px] text-emerald-700">{activeSite?.name || activeState}: employer adopted <strong>{activeSiteBoard?.adoptedCount ?? activeAdoption?.adoptedCount ?? 0}</strong> of {activeSiteBoard?.total ?? activeAdoption?.total ?? 0} form(s).</p>}
           {error && tab === 'master' && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
           <div className="flex flex-wrap gap-2">
             <button onClick={downloadMasterTemplate} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5"><Download size={14}/>Download Master Template</button>
@@ -443,8 +449,8 @@ export default function ContractorCompliancePage() {
         <header className="px-5 py-4 border-b border-gray-100 flex flex-wrap justify-between gap-2 items-center">
           <div><h2 className="text-sm font-semibold text-gray-950">Register Template Library — {activeState}</h2><p className="text-xs text-gray-400 mt-0.5">State-wise register templates used to render your registers (one sheet per form).</p></div>
           <div className="flex items-center gap-3">
-            <label className="text-xs font-semibold text-gray-600">State
-              <select value={activeState} onChange={e => setState(e.target.value)} className="ml-2 h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white">{(allowedStates.length ? allowedStates : STATES).map(s => <option key={s}>{s}</option>)}</select>
+            <label className="text-xs font-semibold text-gray-600">Site
+              <select value={activeSite?.name || ''} onChange={e => setSiteName(e.target.value)} className="ml-2 h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white">{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}</select>
             </label>
             <span className="text-xs font-semibold text-gray-500">{templates.length} template{templates.length === 1 ? '' : 's'}</span>
             {activeAdopted
