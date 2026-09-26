@@ -10,6 +10,7 @@ import {
 import { useContractor } from '@/contexts/ContractorContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { CopyButton } from '@/components/ui/CopyButton';
+import EntityLockerGate from '@/components/auth/EntityLockerGate';
 import type { GatePassEligibility } from '@/types/portal';
 
 export default function ContractorDashboardPage() {
@@ -59,6 +60,7 @@ export default function ContractorDashboardPage() {
 
   return (
     <div className="space-y-5 pb-12">
+      <EntityLockerGate role="contractor" />
       {/* Header */}
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>

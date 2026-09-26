@@ -10,11 +10,15 @@ client session, and the verified entity details are kept on the same row.
 from django.db import models
 from django.utils import timezone
 
+from .auth import User
+
 
 class EntityLockerAuth(models.Model):
     STATUS = [("INITIATED", "Initiated"), ("VERIFIED", "Verified"),
               ("FAILED", "Failed"), ("EXPIRED", "Expired")]
 
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name="entitylocker_auths")
     state = models.CharField(max_length=128, unique=True, db_index=True)
     code_verifier = models.CharField(max_length=200)
     role = models.CharField(max_length=20, blank=True, default="contractor")  # contractor / employer

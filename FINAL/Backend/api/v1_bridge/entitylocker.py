@@ -46,8 +46,11 @@ def entitylocker_start(request):
     id_value = str(body.get("idValue") or "").strip()[:60]
     state = secrets.token_urlsafe(24)
     verifier = entitylocker_client.generate_code_verifier()
+    auth_user = request.user if getattr(request.user, "is_authenticated", False) else None
+    if auth_user is not None and getattr(auth_user, "role", "") in settings.ENTITYLOCKER_APPS:
+        role = auth_user.role
     EntityLockerAuth.objects.create(
-        state=state, code_verifier=verifier, role=role, id_type=id_type,
+        user=auth_user, state=state, code_verifier=verifier, role=role, id_type=id_type,
         id_value=id_value, expires_at=_expiry())
     url = entitylocker_client.build_authorize_url(app, state, verifier, id_type=id_type)
     return Response({"data": {"url": url, "state": state, "role": role}}, status=status.HTTP_200_OK)
@@ -71,6 +74,10 @@ def entitylocker_callback(request):
     if auth is None:
         return Response({"verified": False, "error": "Unknown or expired authorization."},
                         status=status.HTTP_404_NOT_FOUND)
+    # Link the verification to the signed-in account when the browser carries the
+    # session (post-login dashboard flow).
+    if auth.user_id is None and getattr(request.user, "is_authenticated", False):
+        auth.user = request.user
     if error:
         auth.status, auth.error = "FAILED", error[:1000]
         auth.save(update_fields=["status", "error", "updated_at"])
@@ -101,7 +108,7 @@ def entitylocker_callback(request):
     auth.email = str(entity.get("email") or "")[:160]
     auth.mobile = str(entity.get("mobile") or "")[:40]
     auth.save(update_fields=["status", "entity_name", "entity_locker_id", "verified_by",
-                             "doi", "email", "mobile", "updated_at"])
+                             "doi", "email", "mobile", "user", "updated_at"])
     return Response({"verified": True, "data": {
         "entityName": auth.entity_name, "verifiedBy": auth.verified_by,
         "entityLockerId": auth.entity_locker_id, "role": auth.role,
@@ -110,4 +117,23 @@ def entitylocker_callback(request):
     }}, status=status.HTTP_200_OK)
 
 
-__all__ = ["entitylocker_start", "entitylocker_callback"]
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def entitylocker_status(request):
+    """Whether the signed-in contractor/employer has EntityLocker-verified an entity."""
+    from bss_core.models import EntityLockerAuth
+    if getattr(request.user, "role", "") not in ("contractor", "employer"):
+        return Response({"data": {"applicable": False}}, status=status.HTTP_200_OK)
+    row = (EntityLockerAuth.objects.filter(user=request.user, status="VERIFIED")
+           .order_by("-updated_at").first())
+    return Response({"data": {
+        "applicable": True, "verified": bool(row),
+        "entityName": row.entity_name if row else "",
+        "verifiedBy": row.verified_by if row else "",
+        "entityLockerId": row.entity_locker_id if row else "",
+        "role": request.user.role,
+    }}, status=status.HTTP_200_OK)
+
+
+__all__ = ["entitylocker_start", "entitylocker_callback", "entitylocker_status"]

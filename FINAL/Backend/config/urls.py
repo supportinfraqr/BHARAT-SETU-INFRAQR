@@ -142,6 +142,7 @@ _v1_patterns = _v1(
     ("contractor/clra/site-documents", v1_bridge.contractor_site_documents, "v1_contractor_site_documents"),
     ("entitylocker/start", v1_bridge.entitylocker_start, "v1_entitylocker_start"),
     ("entitylocker/callback", v1_bridge.entitylocker_callback, "v1_entitylocker_callback"),
+    ("entitylocker/status", v1_bridge.entitylocker_status, "v1_entitylocker_status"),
     ("contractor/attendance/template", v1_bridge.attendance_template, "v1_attendance_template"),
     ("contractor/attendance/upload", v1_bridge.attendance_upload, "v1_attendance_upload"),
     ("contractor/attendance", v1_bridge.attendance_uploaded, "v1_attendance_uploaded"),
