@@ -139,15 +139,15 @@ export default function ComplianceSubmissionPage() {
   // Registers already submitted are no longer submittable.
   const pendingBatches = generatedForCreate.filter(b => b.status !== 'Submitted');
 
-  // The employer's additional (adopted) documents required for the batch's site.
+  // The employer's additional (adopted) documents required for the site — listed
+  // independent of generated registers so they can be uploaded anytime.
   const firstBatch = generatedForCreate[0];
-  const firstBatchId = firstBatch?.id ?? '';
   const firstBatchSite = firstBatch?.site || '';
+  const docsSiteId = String(ctxSiteObj?.id ?? '');
   useEffect(() => {
-    if (!firstBatchId) { setAdditionalDocs([]); return; }
     let active = true;
     setDocsBusy(true);
-    void fetch(`/api/contractor/compliance-batches/${firstBatchId}?site=${encodeURIComponent(firstBatchSite)}`, { cache:'no-store' })
+    void fetch(`/api/contractor/clra/site-documents${docsSiteId ? `?siteId=${encodeURIComponent(docsSiteId)}` : ''}`, { cache:'no-store' })
       .then(response => (response.ok ? response.json() : null))
       .then((body: { data?: { documents?: Array<{ form:string; purpose:string; frequency:string; mandatory:boolean; requiresDocument?:boolean; custom?:boolean; templateId?:number|null }> } } | null) => {
         if (!active) return;
@@ -161,7 +161,7 @@ export default function ComplianceSubmissionPage() {
       .catch(() => { if (active) setAdditionalDocs([]); })
       .finally(() => { if (active) setDocsBusy(false); });
     return () => { active = false; };
-  }, [firstBatchId, firstBatchSite]);
+  }, [docsSiteId, firstBatchSite]);
 
   const missingEvidence = additionalDocs.filter(doc => doc.mandatory && doc.requiresDocument && !(uploads[doc.name]?.status === 'Validated' && uploads[doc.name]?.id));
 

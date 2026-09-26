@@ -139,6 +139,7 @@ _v1_patterns = _v1(
     ("contractor/clra/templates", v1_bridge.contractor_register_templates, "v1_contractor_register_templates"),
     ("contractor/clra/master-template", v1_bridge.clra_master_template, "v1_clra_master_template"),
     ("contractor/clra/validate", v1_bridge.contractor_clra_validate, "v1_contractor_clra_validate"),
+    ("contractor/clra/site-documents", v1_bridge.contractor_site_documents, "v1_contractor_site_documents"),
     ("contractor/attendance/template", v1_bridge.attendance_template, "v1_attendance_template"),
     ("contractor/attendance/upload", v1_bridge.attendance_upload, "v1_attendance_upload"),
     ("contractor/attendance", v1_bridge.attendance_uploaded, "v1_attendance_uploaded"),

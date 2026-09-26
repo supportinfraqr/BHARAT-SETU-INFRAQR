@@ -799,6 +799,69 @@ def compliance_batch_site_documents(request, batch_id):
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
+def contractor_site_documents(request):
+    """Additional (template-less) documents the employer requires for a site.
+
+    Same list as the batch endpoint but **without needing a generated register
+    batch**, so a contractor can see/upload the extra forms even before any CLRA
+    registers are generated for the period. Site defaults to the contractor's
+    first allotted site; ``?siteId=`` narrows it."""
+    from .bindings import _contractor_site_ids
+    from bss_core.models import (CustomFormName, EmployerFormSelection,
+                                 StateFormApplicability)
+    if request.user.role != "contractor":
+        return Response({"error": "Contractors only."}, status=status.HTTP_403_FORBIDDEN)
+    site_ids = _contractor_site_ids(request.user)
+    site_id = (request.query_params.get("siteId") or "").strip()
+    site = (Site.objects.filter(id=site_id, id__in=site_ids).first()
+            if site_id.isdigit() else None)
+    if site is None:
+        site = Site.objects.filter(id__in=site_ids).order_by("id").first()
+    if site is None or not site.state:
+        return Response({"data": {"site": site.site_name if site else "",
+                                  "siteCode": site.site_code if site else "",
+                                  "state": site.state if site else "", "documents": []}},
+                        status=status.HTTP_200_OK)
+    state, employer = site.state, site.employer
+    documents = []
+    if employer is not None:
+        catalog = list(CustomFormName.objects.filter(is_active=True, state__iexact=state,
+                                                     employer__isnull=True).order_by("sort_order", "name"))
+        selections = {s.form_name_id: s for s in EmployerFormSelection.objects.filter(
+            employer=employer, is_active=True, form_name__in=catalog)}
+        for obj in catalog:
+            selection = selections.get(obj.id)
+            if selection is None:
+                continue
+            documents.append({"purpose": obj.name, "form": obj.name, "templateId": None,
+                              "mandatory": bool(selection.is_mandatory), "frequency": obj.frequency,
+                              "outputFormat": "", "custom": True, "scope": "admin",
+                              "requiresDocument": bool(obj.requires_document)})
+        for obj in CustomFormName.objects.filter(is_active=True, state__iexact=state,
+                                                 employer=employer).order_by("sort_order", "name"):
+            documents.append({"purpose": obj.name, "form": obj.name, "templateId": None,
+                              "mandatory": bool(obj.is_mandatory), "frequency": obj.frequency,
+                              "outputFormat": "", "custom": True, "scope": "employer",
+                              "requiresDocument": bool(obj.requires_document)})
+        # Statutory purposes the matrix maps but with no register template yet.
+        from .register_templates import applicable_templates
+        templates_list, _ = applicable_templates(state)
+        by_form = {t.form_code.strip().upper() for t in templates_list}
+        for row in StateFormApplicability.objects.filter(state__iexact=state).order_by("purpose"):
+            label = (row.form_label or "").strip().upper()
+            if not label.startswith("FORM") or label in by_form:
+                continue
+            documents.append({"purpose": row.purpose, "form": row.form_label, "templateId": None,
+                              "mandatory": False, "frequency": "", "outputFormat": "",
+                              "custom": True, "scope": "admin", "requiresDocument": True})
+    return Response({"data": {"site": site.site_name, "siteCode": site.site_code or "",
+                              "state": state, "documents": documents}},
+                    status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def compliance_batch_register(request, batch_id, template_id):
     """Render one register (a State+Form template) from a generated batch."""
     from api import clra
@@ -880,6 +943,7 @@ __all__ = [
     "compliance_batch_summary",
     "contractor_clra_validate",
     "contractor_compliance_batches",
+    "contractor_site_documents",
     "contractor_submissions",
     "submission_file_download",
     "submission_file_serve",
