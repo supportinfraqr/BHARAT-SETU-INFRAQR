@@ -1750,13 +1750,13 @@ export default function WorkerProfilePage() {
                           </span>
                         ))}
                       </div>
-                      {digilockerStatus === 'linked' && (
+                      {digilockerStatus === 'linked' && !digilockerFetchError && (
                         <p className="text-[12px] text-[#2F9E67] font-semibold mb-2">DigiLocker linked — fetching documents…</p>
                       )}
                       {digilockerStatus === 'error' && digilockerMessage && (
                         <p className="text-[12px] text-[#FF3B30] font-semibold mb-2">{digilockerMessage}</p>
                       )}
-                      {digilockerStatus !== 'linked' && !digilockerDocs.length && digilockerErrorText && (
+                      {!digilockerDocs.length && digilockerErrorText && (
                         <p className="text-[12px] text-[#B45309] bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-2">{digilockerErrorText}</p>
                       )}
                       {digilockerDocs.length > 0 ? (
@@ -1774,9 +1774,9 @@ export default function WorkerProfilePage() {
                             </div>
                           ))}
                         </div>
-                      ) : (
+                      ) : !digilockerErrorText ? (
                         <p className="text-[12px] text-gray-400">No DigiLocker documents fetched yet.</p>
-                      )}
+                      ) : null}
                     </div>
                     <div className="flex items-center justify-start md:justify-end min-w-[140px]">
                       <button type="button" onClick={linkDigiLocker} disabled={digilockerStatus === 'linking'} className="bg-sky-600 text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-sky-700 flex items-center gap-2 disabled:opacity-60">
