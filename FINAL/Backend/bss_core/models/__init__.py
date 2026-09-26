@@ -88,6 +88,7 @@ from .learning import (
 from .submissions import SubmissionEvidence
 from .aadhaar import AadhaarChallenge
 from .digilocker import DigiLockerProfile, DigiLockerDocument, DigiLockerSession
+from .entitylocker import EntityLockerAuth
 from .engagement import (
     UserPreference,
     Notification,
@@ -180,6 +181,7 @@ __all__ = [
     "SubmissionEvidence",
     "AadhaarChallenge",
     "DigiLockerProfile", "DigiLockerDocument", "DigiLockerSession",
+    "EntityLockerAuth",
     "UserPreference", "Notification", "AuditLog", "ApprovalQueue",
     "PartyDirector", "PartyStatutoryRegistration", "PartyContact",
     "PartyBank", "PartyContract", "PartyDocument", "PartyConsentDeclaration",

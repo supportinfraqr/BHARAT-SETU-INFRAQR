@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { 
   HardHat, 
   Briefcase, 
@@ -80,19 +80,57 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
 
     setIsCreating(true);
     try {
-      // Simulate real-time EntityLocker Verification response
-      await new Promise(r => setTimeout(r, 600));
-      const mockedOrgName = entityOrgName.trim() || (entityAuthType === "GSTIN" ? "BUILDWELL INFRA PRIVATE LIMITED" : entityAuthType === "MCA21" ? "BHARAT SHRAM CONSTRUCTIONS LTD" : "SHRAM SETU ENTERPRISES CO");
-      setEntityOrgName(mockedOrgName);
-      setIsEntityVerified(true);
-      setNotice(`EntityLocker Verified: ${mockedOrgName} (${val})`);
-      setStep("setup-mpin");
-    } catch {
-      setError("EntityLocker verification failed. Please re-check the number.");
-    } finally {
+      // Persist the draft so it survives the EntityLocker consent redirect.
+      try {
+        sessionStorage.setItem('bss_entity_draft', JSON.stringify({
+          selectedRole, entityAuthType, entityNumber: val,
+        }));
+        sessionStorage.removeItem('bss_entity_result');
+      } catch { /* storage unavailable — continue */ }
+      const response = await fetch('/api/entitylocker/start', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idType: entityAuthType, idValue: val }),
+      });
+      const body = await response.json().catch(() => ({})) as { data?: { url?: string }; error?: string };
+      if (!response.ok || !body.data?.url) throw new Error(body.error || 'EntityLocker could not be started.');
+      window.location.href = body.data.url;   // browser goes to EntityLocker consent
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "EntityLocker verification failed. Please re-check the number.");
       setIsCreating(false);
     }
   };
+
+  // Resume after the EntityLocker consent redirect (?entityVerified=1&entityName=…).
+  /* eslint-disable react-hooks/set-state-in-effect -- one-time resume after the OAuth redirect */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const flag = params.get('entityVerified');
+    if (!flag) return;
+    try {
+      const draft = JSON.parse(sessionStorage.getItem('bss_entity_draft') || 'null') as
+        { selectedRole?: string; entityAuthType?: "GSTIN" | "MCA21" | "PAN"; entityNumber?: string } | null;
+      if (draft) {
+        if (draft.selectedRole) setSelectedRole(draft.selectedRole);
+        if (draft.entityAuthType) setEntityAuthType(draft.entityAuthType);
+        if (draft.entityNumber) setEntityNumber(draft.entityNumber);
+      }
+      if (flag === '1') {
+        const name = params.get('entityName') || '';
+        const by = params.get('verifiedBy') || '';
+        setEntityOrgName(name);
+        setIsEntityVerified(true);
+        setNotice(`EntityLocker Verified: ${name}${by ? ` (${by})` : ''}`);
+        setStep('setup-mpin');
+      } else {
+        setError(params.get('message') || 'EntityLocker verification failed.');
+      }
+      sessionStorage.removeItem('bss_entity_draft');
+    } catch { /* ignore */ }
+    // Strip the query so a refresh doesn't re-trigger.
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSetupUsernameMpin = async () => {
     setError("");

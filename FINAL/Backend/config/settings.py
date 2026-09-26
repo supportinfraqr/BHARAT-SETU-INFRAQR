@@ -217,6 +217,33 @@ DIGILOCKER_DOC_DIR = os.environ.get("DIGILOCKER_DOC_DIR", str(BASE_DIR / "media/
 
 
 # ---------------------------------------------------------------------------
+# DigiLocker EntityLocker OAuth2 (backend-only). Business/entity verification
+# via the Meri Pehchaan Entity Locker (GSTIN / CIN / Udyam / PAN). Credentials
+# come from env only (BSS_ENTITYLOCKER_*).
+# ---------------------------------------------------------------------------
+ENTITYLOCKER_CLIENT_ID = os.environ.get("BSS_ENTITYLOCKER_CLIENT_ID", "")
+ENTITYLOCKER_CLIENT_SECRET = os.environ.get("BSS_ENTITYLOCKER_CLIENT_SECRET", "")
+ENTITYLOCKER_REDIRECT_URI = os.environ.get(
+    "BSS_ENTITYLOCKER_REDIRECT_URI", "http://localhost:3003/Return/EntityLocker")
+ENTITYLOCKER_AUTHORIZE_URL = os.environ.get(
+    "BSS_ENTITYLOCKER_AUTHORIZE_URL",
+    "https://entity.digilocker.gov.in/public/oauth2/1/authorize")
+ENTITYLOCKER_TOKEN_URL = os.environ.get(
+    "BSS_ENTITYLOCKER_TOKEN_URL",
+    "https://entity.digilocker.gov.in/public/oauth2/1/token")
+ENTITYLOCKER_ENTITY_URL = os.environ.get(
+    "BSS_ENTITYLOCKER_ENTITY_URL",
+    "https://entity.digilocker.gov.in/public/oauth2/1/entity")
+ENTITYLOCKER_USER_URL = os.environ.get(
+    "BSS_ENTITYLOCKER_USER_URL",
+    "https://entity.digilocker.gov.in/public/oauth2/1/user")
+ENTITYLOCKER_SCOPE = os.environ.get(
+    "BSS_ENTITYLOCKER_SCOPE", "files.issueddocs files.uploadeddocs entitydetails")
+ENTITYLOCKER_PURPOSE = os.environ.get("BSS_ENTITYLOCKER_PURPOSE", "verification")
+ENTITYLOCKER_SESSION_TTL_MIN = int(os.environ.get("BSS_ENTITYLOCKER_SESSION_TTL_MIN", "15"))
+
+
+# ---------------------------------------------------------------------------
 # Aadhaar oKYC (Sandbox.co.in, backend-only). Ported from the EesassinErp
 # integration; credentials come from BSS_AADHAAR_* env vars (.env / compose).
 # NEVER commit real keys.

@@ -140,6 +140,8 @@ _v1_patterns = _v1(
     ("contractor/clra/master-template", v1_bridge.clra_master_template, "v1_clra_master_template"),
     ("contractor/clra/validate", v1_bridge.contractor_clra_validate, "v1_contractor_clra_validate"),
     ("contractor/clra/site-documents", v1_bridge.contractor_site_documents, "v1_contractor_site_documents"),
+    ("entitylocker/start", v1_bridge.entitylocker_start, "v1_entitylocker_start"),
+    ("entitylocker/callback", v1_bridge.entitylocker_callback, "v1_entitylocker_callback"),
     ("contractor/attendance/template", v1_bridge.attendance_template, "v1_attendance_template"),
     ("contractor/attendance/upload", v1_bridge.attendance_upload, "v1_attendance_upload"),
     ("contractor/attendance", v1_bridge.attendance_uploaded, "v1_attendance_uploaded"),
