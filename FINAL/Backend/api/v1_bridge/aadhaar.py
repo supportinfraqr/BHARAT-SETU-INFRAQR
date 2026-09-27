@@ -178,7 +178,7 @@ def aadhaar_otp(request):
             # Already-generated / rate-limited: reuse a recent reference if we
             # have one (the OTP was already delivered), else ask them to wait.
             msg = str(exc)
-            fallback = _reuse_recent(15, msg)
+            fallback = _reuse_recent(24 * 60, msg)
             if fallback is not None:
                 return fallback
             rate_limited = (sb_status == 429 or "try after" in msg.lower()
@@ -193,7 +193,7 @@ def aadhaar_otp(request):
     if result.get("code") != 200 or not ref_id:
         msg = str((result.get("data") or {}).get("message") or "").strip() or \
             "Aadhaar verification service is currently experiencing delays."
-        fallback = _reuse_recent(15, msg)
+        fallback = _reuse_recent(24 * 60, msg)
         if fallback is not None:
             return fallback
         return Response({"error": msg}, status=status.HTTP_429_TOO_MANY_REQUESTS)
