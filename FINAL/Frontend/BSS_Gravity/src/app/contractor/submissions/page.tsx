@@ -660,20 +660,17 @@ export default function ComplianceSubmissionPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-gray-200 text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
-                      <th className="py-2.5 px-3">No</th>
                       <th className="py-2.5 px-3">Document Name</th>
                       <th className="py-2.5 px-3">Type</th>
                       <th className="py-2.5 px-3">Frequency</th>
                       <th className="py-2.5 px-3">Mandatory</th>
                       <th className="py-2.5 px-3">Required Format</th>
                       <th className="py-2.5 px-3">Note</th>
-                      <th className="py-2.5 px-3">Upload</th>
-                      <th className="py-2.5 px-3">View</th>
-                      <th className="py-2.5 px-3">Status</th>
+                      <th className="py-2.5 px-3">Submit</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-xs">
-                    {additionalDocs.map((doc, index) => {
+                    {additionalDocs.map(doc => {
                       const up = uploads[doc.name];
                       const isSubmitted = submittedNames.has(doc.name);
                       const submittedRow = isSubmitted
@@ -681,8 +678,7 @@ export default function ComplianceSubmissionPage() {
                         : undefined;
                       const viewHref = up?.id != null ? `/api/portal/uploads/${up.id}` : submittedRow?.id ? `/api/contractor/submissions/${submittedRow.id}/file` : '';
                       return (
-                        <tr key={doc.name} className={`hover:bg-slate-50/70 transition-colors ${up?.status === 'Validated' ? 'bg-green-50/20' : doc.mandatory ? 'bg-amber-50/15' : ''}`}>
-                          <td className="py-3 px-3 text-gray-400 font-semibold">{index + 1}</td>
+                        <tr key={doc.name} className={`align-top hover:bg-slate-50/70 transition-colors ${up?.status === 'Validated' ? 'bg-green-50/20' : doc.mandatory ? 'bg-amber-50/15' : ''}`}>
                           <td className="py-3 px-3 font-semibold text-gray-900">{doc.name}</td>
                           <td className="py-3 px-3">
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">{doc.type || '—'}</span>
@@ -699,60 +695,40 @@ export default function ComplianceSubmissionPage() {
                           </td>
                           <td className="py-3 px-3 text-gray-600 text-[11px]">{doc.requiredFormat || '—'}</td>
                           <td className="py-3 px-3 text-gray-500 text-[11px] max-w-[220px]" title={doc.note || ''}>{doc.note || '—'}</td>
-                          <td className="py-3 px-3 text-right">
-                            <div className="flex flex-wrap items-center justify-end gap-2">
-                              {!isSubmitted && (
-                                <label className="h-7 px-3 rounded-md border border-gray-300 text-xs font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-slate-100 bg-white shadow-xs">
-                                  <Upload size={12} className="text-gray-600"/>
-                                  {up ? 'Re-upload' : 'Upload'}
-                                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => uploadEvidence(doc, e.target.files?.[0])}/>
-                                </label>
-                              )}
-                              {isSubmitted ? (
-                                <span className="text-[11px] font-semibold text-emerald-700 inline-flex items-center gap-1"><Lock size={12}/> Locked</span>
-                              ) : up && (
-                                <>
-                                  {up.id != null && (
-                                    <button
-                                      type="button"
-                                      onClick={() => void submitSingleForm(doc.name, up.id)}
-                                      disabled={busy}
-                                      className="h-7 px-3 rounded-md bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] disabled:opacity-40 shadow-xs flex items-center gap-1"
-                                    >
-                                      Submit Form
-                                    </button>
-                                  )}
-                                  <button 
+                          <td className="py-3 px-3">
+                            {isSubmitted ? (
+                              <div className="flex flex-col gap-1">
+                                <span className="text-[11px] font-semibold text-emerald-700 inline-flex items-center gap-1"><Lock size={12}/> Submitted</span>
+                                {viewHref && <a href={viewHref} target="_blank" rel="noreferrer" className="text-[11px] text-blue-700 font-semibold hover:underline">View</a>}
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <label className="h-7 px-3 rounded-md border border-gray-300 text-xs font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-slate-100 bg-white shadow-xs">
+                                    <Upload size={12} className="text-gray-600"/>
+                                    {up?.id != null ? 'Re-upload' : 'Upload'}
+                                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => uploadEvidence(doc, e.target.files?.[0])}/>
+                                  </label>
+                                  <button
                                     type="button"
-                                    onClick={() => handleRemoveEvidence(doc.name)} 
-                                    className="text-xs text-red-600 font-semibold hover:underline px-1"
-                                  >
-                                    Remove
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-3 px-3">
-                            {viewHref ? (
-                              <a href={viewHref} target="_blank" rel="noreferrer" className="text-blue-700 font-semibold text-xs inline-flex items-center gap-1 hover:underline">View</a>
-                            ) : (
-                              <span className="text-gray-300 text-xs">—</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-3">
-                            {up ? (
-                              <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                                up.status === 'Validated' ? 'bg-green-100 text-green-800 border border-green-200' :
-                                up.status === 'Validating' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                                'bg-red-100 text-red-800 border border-red-200'
-                              }`}>
-                                {up.status === 'Validated' ? (isSubmitted ? '✓ Submitted' : '✓ Validated · press Submit') : up.status === 'Validating' ? 'Validating…' : 'Errors found'}
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100/80 border border-amber-200 px-2.5 py-0.5 rounded-full">
-                                <AlertCircle size={12} /> Pending Submission
-                              </span>
+                                    onClick={() => up?.id != null && void submitSingleForm(doc.name, up.id)}
+                                    disabled={busy || up?.id == null}
+                                    className="h-7 px-3 rounded-md bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] disabled:opacity-40 shadow-xs"
+                                  >Submit</button>
+                                  {up?.id != null && (
+                                    <button type="button" onClick={() => handleRemoveEvidence(doc.name)} className="text-[11px] text-red-600 font-semibold hover:underline">Remove</button>
+                                  )}
+                                </div>
+                                {up?.status === 'Validating' ? (
+                                  <span className="text-[10px] font-bold text-blue-700">Validating…</span>
+                                ) : up?.status === 'Errors found' ? (
+                                  <button type="button" onClick={() => setViewErrors({ name: doc.name, findings: up.findings ?? [] })} className="text-left text-[10px] font-bold text-red-700 hover:underline">Errors found — view findings</button>
+                                ) : up?.status === 'Validated' ? (
+                                  <span className="text-[10px] font-bold text-green-700">Validated — ready to submit</span>
+                                ) : (
+                                  <span className="text-[10px] font-medium text-amber-700">Pending submission</span>
+                                )}
+                              </div>
                             )}
                           </td>
                         </tr>

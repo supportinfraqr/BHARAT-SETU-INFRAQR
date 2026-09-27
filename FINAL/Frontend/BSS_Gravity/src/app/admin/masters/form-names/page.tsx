@@ -158,7 +158,7 @@ export default function AdminFormNamesPage() {
         <p className="text-[11px] text-gray-400">Catalog forms are non-mandatory — employers choose which to apply and whether they are mandatory for their contractors.</p>
         {error && <p className="text-xs text-red-700">{error}</p>}
       </div>
-      <footer className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2"><button type="button" onClick={() => setShowAdd(false)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button><button type="button" onClick={() => void add()} disabled={busy || !name.trim()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Adding…' : 'Add form'}</button></footer>
+      <footer className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2"><button type="button" onClick={() => setShowAdd(false)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button><button type="button" onClick={() => void add()} disabled={busy || !name.trim()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Submitting…' : 'Submit'}</button></footer>
     </section></div>}
   </div>;
 }
