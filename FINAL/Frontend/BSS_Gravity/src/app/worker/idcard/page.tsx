@@ -189,6 +189,11 @@ export default function IdentityCardPage() {
   };
   const currentDate = formatCardDate(worker.employment.idCardIssueDate) || fallbackIssue.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const validTill = formatCardDate(worker.employment.idCardValidityTill) || fallbackValidity.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  // Site colour drives the card's top band (front & back). Falls back to a
+  // neutral band when the site has no colour set.
+  const siteColour = (worker.employment.siteDetails?.colour || '').trim() || '#F47A32';
+  const employerName = worker.employment.employer || '—';
+  const siteCode = worker.employment.siteDetails?.code || '—';
 
   const gatePasses = worker.gatePasses ?? [];
   const issuedPass = gatePasses[0];
@@ -430,6 +435,9 @@ export default function IdentityCardPage() {
               {/* Bridge watermark (login-page background) */}
               <img aria-hidden="true" src="/login-bg.jpg" className="absolute z-0 inset-0 w-full h-full object-cover object-bottom opacity-[0.22] pointer-events-none" alt="" />
 
+              {/* Site-colour upper boundary */}
+              <div aria-hidden="true" className="relative z-20 h-2 w-full shrink-0" style={{ background: siteColour }} />
+
               {/* Dark Header */}
               <div className="bg-[#07182b] text-white text-center pt-3 px-4 pb-0 relative z-10">
                 <div className="flex items-center justify-center gap-2.5 mb-0.5">
@@ -443,8 +451,10 @@ export default function IdentityCardPage() {
                     <div className="text-[8.5px] font-bold text-slate-400 tracking-[1.2px] uppercase mt-0.5">EMPLOYMENT CARD</div>
                   </div>
                 </div>
-                <div className="text-[10.5px] font-bold text-slate-300 my-1 mb-2.5 uppercase tracking-wide">
-                  {worker.employment.employer || (worker as any).details?.employment?.employer || 'ADANI INFRA PVT LTD'}
+                <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-[8.5px] font-bold text-slate-200 my-1 mb-2.5 uppercase tracking-wide">
+                  <span><span className="text-slate-500">Employer:</span> {employerName}</span>
+                  <span className="text-slate-500">·</span>
+                  <span><span className="text-slate-500">Site Code:</span> {siteCode}</span>
                 </div>
 
                 {/* 3-Color Line */}
@@ -545,15 +555,12 @@ export default function IdentityCardPage() {
               {/* Bridge watermark (login-page background) */}
               <img aria-hidden="true" src="/login-bg.jpg" className="absolute z-0 inset-0 w-full h-full object-cover object-bottom opacity-[0.22] pointer-events-none" alt="" />
 
-              {/* Top Bar with E-Shram & BOCW Numbers & Tricolour strip */}
-              <div className="relative h-[42px] bg-[#050505] text-white flex items-center justify-between px-5 font-mono font-extrabold text-[12px] tracking-wider z-10">
-                <span>E-SHRAM: {(worker.socialSecurity as any)?.eShramNo || (worker.socialSecurity as any)?.eShramRegNo || (worker as any).details?.socialSecurity?.eShramNo || '—'}</span>
-                <span>BOCW: {(worker.socialSecurity as any)?.bocwRegNumber || (worker.socialSecurity as any)?.bocwRegNo || (worker as any).details?.socialSecurity?.bocwRegNumber || '—'}</span>
-                <div className="flex h-[4px] absolute bottom-0 left-0 right-0">
-                  <div className="flex-1 bg-[#FF9933]" />
-                  <div className="flex-1 bg-white" />
-                  <div className="flex-1 bg-[#138808]" />
-                </div>
+              {/* Site-colour upper boundary + brand tricolour */}
+              <div aria-hidden="true" className="relative z-20 h-2 w-full shrink-0" style={{ background: siteColour }} />
+              <div className="relative z-10 flex h-[4px] w-full shrink-0">
+                <div className="flex-1 bg-[#FF9933]" />
+                <div className="flex-1 bg-white" />
+                <div className="flex-1 bg-[#138808]" />
               </div>
 
               {/* Back Content */}

@@ -63,6 +63,7 @@ def _worker_employment_section(user, identity):
     site_location = ""
     medical_officer = ""
     officer_contact = ""
+    site_colour = ""
 
     if binding:
         if binding.site:
@@ -72,6 +73,7 @@ def _worker_employment_section(user, identity):
             site_location = getattr(site, "location", "") or ""
             medical_officer = getattr(site, "medical_officer", "") or ""
             officer_contact = getattr(site, "officer_contact", "") or ""
+            site_colour = getattr(site, "assign_color", "") or ""
         if binding.contractor:
             cp = getattr(binding.contractor, "contractor_profile", None)
             contractor_name = _org_name(binding.contractor)
@@ -155,6 +157,7 @@ def _worker_employment_section(user, identity):
             "medicalOfficer": medical_officer,
             "officerContact": officer_contact,
             "state": site_state,
+            "colour": site_colour,
         }
     }
 

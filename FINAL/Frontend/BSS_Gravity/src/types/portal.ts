@@ -59,7 +59,7 @@ export type WorkerRecord = {
     costBreakdown?: CostBreakdown;
     contractorDetails?: { name: string; code: string; contact: string; email: string; lin: string; state?: string; address?: string };
     employerDetails?: { name: string; code: string; industry: string; email: string; lin: string; state?: string; address?: string };
-    siteDetails?: { name: string; code: string; location: string; medicalOfficer: string; officerContact: string; state?: string };
+    siteDetails?: { name: string; code: string; location: string; medicalOfficer: string; officerContact: string; state?: string; colour?: string };
   };
   compliance: {
     siteInduction: boolean;

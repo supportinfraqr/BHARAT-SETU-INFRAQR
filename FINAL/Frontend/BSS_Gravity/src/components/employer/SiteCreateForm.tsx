@@ -399,6 +399,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   const [startDate, setStartDate] = useState(String(initial?.site_start_date ?? ''));
   const [endDate, setEndDate] = useState(String(initial?.expected_end_date ?? ''));
   const [status, setStatus] = useState(String(initial?.site_status ?? 'Active'));
+  const [colour, setColour] = useState(String(initial?.assign_color ?? '#F47A32'));
   const [geography, setGeography] = useState<Record<string, Record<string, { city: string; pins: string[] }[]>>>({});
   const [tab, setTab] = useState(FORM_SECTIONS[0].title);
   const section = useMemo(() => FORM_SECTIONS.find(s => s.title === tab) ?? FORM_SECTIONS[0], [tab]);
@@ -435,6 +436,14 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     if (place.state) setState(place.state);
   }
 
+  // Auto-generate a unique site code from the name/city plus random entropy
+  // (the backend also guarantees uniqueness on save).
+  function autoSiteCode() {
+    const base = (name.trim() || location.trim() || 'SITE').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5) || 'SITE';
+    const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
+    setCode(`${base}-${rand}`);
+  }
+
   // Mandatory = everything except the optional "Additional details" section.
   // The Register/Save button stays disabled until all are filled, and an empty
   // mandatory field shows a red border.
@@ -463,6 +472,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     payload.startDate = startDate;
     payload.endDate = endDate;
     payload.status = status || 'Active';
+    payload.assign_color = colour;
     if (geo) {
       payload.latitude = String(geo.lat);
       payload.longitude = String(geo.lng);
@@ -498,7 +508,19 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto flex-1">
           <div className="grid sm:grid-cols-2 gap-4">
             <label className="text-xs font-semibold text-gray-700">Site name <span className="text-red-500">*</span><input required value={name} onChange={e => setName(e.target.value)} className={fieldCls} /></label>
-            <label className="text-xs font-semibold text-gray-700">Site code <span className="text-red-500">*</span><input required value={code} onChange={e => setCode(e.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-gray-700">Site code <span className="text-red-500">*</span>
+              <div className="flex gap-2">
+                <input required value={code} onChange={e => setCode(e.target.value)} className={fieldCls} />
+                <button type="button" onClick={autoSiteCode} title="Auto-generate a unique site code" className="mt-1 h-10 px-3 rounded-lg border border-gray-200 bg-gray-50 text-[11px] font-bold text-gray-700 hover:bg-gray-100 shrink-0">Auto</button>
+              </div>
+            </label>
+            <label className="text-xs font-semibold text-gray-700">Site colour
+              <div className="mt-1 flex items-center gap-3">
+                <input type="color" value={colour} onChange={e => setColour(e.target.value)} className="h-10 w-16 rounded-lg border border-gray-200 bg-white p-1 cursor-pointer" />
+                <span className="text-xs font-mono text-gray-500">{colour.toUpperCase()}</span>
+                <span className="text-[10px] text-gray-400">Shows as the top band on the worker&apos;s ID card.</span>
+              </div>
+            </label>
             <label className="text-xs font-semibold text-gray-700">City / location <span className="text-red-500">*</span><input list="site-city-options" value={location} onChange={event => setLocation(event.target.value)} className={fieldCls} /></label>
             <label className="text-xs font-semibold text-gray-700">State (auto-filled from map if you pin) <span className="text-red-500">*</span><select required value={state} onChange={event => setState(event.target.value)} className={`${fieldCls} bg-white`}><option value="">Select state</option>{stateOptions.map(s => <option key={s} value={s}>{s}</option>)}</select></label>
             <datalist id="site-city-options">{cityOptions.map(city => <option key={city} value={city} />)}</datalist>
