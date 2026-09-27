@@ -820,8 +820,7 @@ def contractor_site_documents(request):
     registers are generated for the period. Site defaults to the contractor's
     first allotted site; ``?siteId=`` narrows it."""
     from .bindings import _contractor_site_ids
-    from bss_core.models import (CustomFormName, EmployerFormSelection,
-                                 StateFormApplicability)
+    from bss_core.models import CustomFormName, EmployerFormSelection
     if request.user.role != "contractor":
         return Response({"error": "Contractors only."}, status=status.HTTP_403_FORBIDDEN)
     site_ids = _contractor_site_ids(request.user)
@@ -868,18 +867,9 @@ def contractor_site_documents(request):
                               "requiresDocument": bool(obj.requires_document),
                               "type": "Employer", "requiredFormat": _required_format(obj.requires_document),
                               "note": obj.description})
-        # Statutory purposes the matrix maps but with no register template yet.
-        from .register_templates import applicable_templates
-        templates_list, _ = applicable_templates(state)
-        by_form = {t.form_code.strip().upper() for t in templates_list}
-        for row in StateFormApplicability.objects.filter(state__iexact=state).order_by("purpose"):
-            label = (row.form_label or "").strip().upper()
-            if not label.startswith("FORM") or label in by_form:
-                continue
-            documents.append({"purpose": row.purpose, "form": row.form_label, "templateId": None,
-                              "mandatory": False, "frequency": "", "outputFormat": "",
-                              "custom": True, "scope": "admin", "requiresDocument": True,
-                              "type": "Statutory", "requiredFormat": _required_format(True), "note": ""})
+        # Only the ad-hoc form names above are "additional forms". The statutory
+        # matrix (FORM II, FORM VII, …) is the register side — generated or not —
+        # and must never be listed here, or registers appear twice on the page.
     return Response({"data": {"site": site.site_name, "siteCode": site.site_code or "",
                               "state": state, "documents": documents}},
                     status=status.HTTP_200_OK)
