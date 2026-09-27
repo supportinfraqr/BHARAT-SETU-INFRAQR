@@ -254,8 +254,9 @@ def employer_contractor_sap_sync(request, contractor_id):
                         status=status.HTTP_403_FORBIDDEN)
 
     profile, _ = ContractorProfile.objects.get_or_create(user=contractor)
-    # Creation stamps registered_at and consent_date together; SAP's own
-    # consent_date, applied below, still overwrites if it supplies one.
+    # Creating the profile stamps registered_at and consent_date together.
+    # SAP never supplies consent_date (see sap_client._NON_SAP_FIELDS), so the
+    # two stay aligned.
     _record_contractor_membership(profile, contractor)
     cfg = sap_client.resolve_config(user)
     identifier = str(request.data.get("identifier") or profile.contractor_code

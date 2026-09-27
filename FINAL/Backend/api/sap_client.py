@@ -69,9 +69,15 @@ SAP_FIELD_MAP: list[tuple[str, str, tuple[str, ...]]] = [
 ]
 
 DATE_FIELDS = {"incorporation_date", "agm_date", "balance_sheet_date",
-               "licence_valid_from", "licence_valid_to", "consent_date"}
+               "licence_valid_from", "licence_valid_to"}
 DECIMAL_FIELDS = {"authorized_capital", "paid_up_capital"}
 INT_FIELDS = {"members_count"}
+
+# Fields SAP must never write. consent_date is stamped the moment the BSS
+# profile is created and kept equal to registered_at, so an external system
+# must not be able to set or move it. Excluded here so it cannot arrive even
+# through a per-employer fieldMapping override.
+_NON_SAP_FIELDS = {"consent_date"}
 
 
 def _norm(value) -> str:
@@ -135,10 +141,14 @@ def map_sap_record(record: dict, overrides: dict | None = None) -> dict:
     flat = {_norm(k): v for k, v in (record or {}).items() if k}
     extra: dict[str, tuple[str, ...]] = {}
     for bss_field, sap_fields in (overrides or {}).items():
+        if bss_field in _NON_SAP_FIELDS:
+            continue
         names = [sap_fields] if isinstance(sap_fields, str) else list(sap_fields or [])
         extra[bss_field] = tuple(_norm(n) for n in names)
     out: dict = {}
     for field, _label, aliases in SAP_FIELD_MAP:
+        if field in _NON_SAP_FIELDS:
+            continue
         for alias in extra.get(field, ()) + aliases + B1_FIELD_ALIASES.get(field, ()):
             if alias in flat and str(flat[alias]).strip() != "":
                 coerced = _coerce(field, flat[alias])
