@@ -10,13 +10,7 @@ import {
   Landmark, 
   ArrowRight,
   Fingerprint,
-  RefreshCw,
-  Building,
-  KeyRound,
-  Lock,
-  UserCheck,
-  CheckCircle2,
-  FileCheck
+  RefreshCw
 } from "lucide-react";
 import LanguageSelector from "./LanguageSelector";
 import { ResendOtp } from "@/components/auth/ResendOtp";
@@ -40,98 +34,14 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   const [aadhaar, setAadhaar] = useState("");
   const [aadhaarOtp, setAadhaarOtp] = useState("");
   const [aadhaarRef, setAadhaarRef] = useState("");
-  
-  // EntityLocker state for Contractor & Employer
-  const [entityAuthType, setEntityAuthType] = useState<"GSTIN" | "MCA21" | "PAN">("GSTIN");
-  const [entityNumber, setEntityNumber] = useState("");
-  const [entityOrgName, setEntityOrgName] = useState("");
-  const [isEntityVerified, setIsEntityVerified] = useState(false);
 
-  // Set up Username and MPIN state
-  const [username, setUsername] = useState("");
-  const [mpin, setMpin] = useState("");
-  const [confirmMpin, setConfirmMpin] = useState("");
-
-  const [step, setStep] = useState<"entity-locker" | "setup-mpin" | "details" | "otp" | "aadhaar" | "aadhaar-otp">("entity-locker");
+  const [step, setStep] = useState<"details" | "otp" | "aadhaar" | "aadhaar-otp">("details");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
 
-  const isOrgRole = ['Contractor', 'Employer'].includes(selectedRole);
   const isSelfService = ['Worker', 'Contractor', 'Employer'].includes(selectedRole);
-
-  const handleEntityLockerVerify = () => {
-    setError(""); setNotice("");
-    const val = entityNumber.trim().toUpperCase();
-    if (!val) {
-      return setError(`Please enter a valid ${entityAuthType} number.`);
-    }
-
-    if (entityAuthType === "GSTIN" && !/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}$/.test(val)) {
-      return setError("Invalid GSTIN format. Example: 27AAAAA0000A1Z5");
-    }
-    if (entityAuthType === "MCA21" && !/^[LU]\d{5}[A-Z]{2}\d{4}[PLC]{3}\d{6}$/.test(val)) {
-      return setError("Invalid MCA21 CIN format. Example: L12345MH2020PLC123456");
-    }
-    if (entityAuthType === "PAN" && !/^[A-Z]{3}[CFFHLAJPT]{1}[A-Z]{1}\d{4}[A-Z]{1}$/.test(val)) {
-      return setError("Invalid Company PAN format. Example: ABCDE1234F");
-    }
-
-    // The number is captured now; the organisation is verified for real with the
-    // Government Entity Locker after first login (the dashboard gate), since the
-    // EntityLocker consent requires a signed-in session.
-    setIsEntityVerified(true);
-    setNotice("Continue — you'll verify your organisation with EntityLocker after your first login.");
-    setStep("setup-mpin");
-  };
-
-  const handleSetupUsernameMpin = async () => {
-    setError("");
-    const userTrim = username.trim();
-    if (userTrim.length < 4) return setError("Username must be at least 4 characters.");
-    if (!/^\d{4,6}$/.test(mpin)) return setError("MPIN must be 4 to 6 digits.");
-    if (mpin !== confirmMpin) return setError("MPIN and Confirm MPIN do not match.");
-    if (!agreedToTerms) return setError("You must accept the terms and privacy policy.");
-
-    setIsCreating(true);
-    try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          role: selectedRole,
-          contact: userTrim,
-          otp: "111111", // Auto-validated for EntityLocker onboarded accounts
-          acceptedTerms: agreedToTerms,
-          entityAuthType,
-          entityNumber: entityNumber.trim().toUpperCase(),
-          entityOrgName,
-          username: userTrim,
-          mpin,
-        })
-      });
-      const result = (await response.json()) as { bssId?: string; redirectTo?: string; error?: string };
-      if (!response.ok || !result.bssId) throw new Error(result.error || `${selectedRole} Registration failed.`);
-      
-      // Save session MPIN if endpoint available
-      await fetch('/api/auth/mpin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'set', mpin })
-      }).catch(() => null);
-
-      setNotice("Account created successfully! Redirecting...");
-      setTimeout(() => {
-        router.replace(selectedRole === "Employer" ? "/employer/dashboard" : "/contractor/dashboard");
-        router.refresh();
-      }, 600);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Setup failed.");
-    } finally {
-      setIsCreating(false);
-    }
-  };
 
   const sendRegisterOtp = async () => {
     const response = await fetch('/api/auth/session', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'request-otp', mode:'register', role:selectedRole, identifier:contact }) });
@@ -156,7 +66,12 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
       const response = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role:selectedRole, contact, otp, acceptedTerms:agreedToTerms }) });
       const result = (await response.json()) as { bssId?: string; redirectTo?:string; error?: string };
       if (!response.ok || !result.bssId) throw new Error(result.error || `${selectedRole} ID could not be issued.`);
-      router.replace(result.redirectTo ?? "/");
+      // Contractor/Employer keep landing on their dashboard (as before); other
+      // roles follow the API-provided destination.
+      const destination = selectedRole === "Employer" ? "/employer/dashboard"
+        : selectedRole === "Contractor" ? "/contractor/dashboard"
+        : (result.redirectTo ?? "/");
+      router.replace(destination);
       router.refresh();
     } catch (issuanceError) { setError(issuanceError instanceof Error ? issuanceError.message : "Registration could not be completed."); }
     finally { setIsCreating(false); }
@@ -228,7 +143,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
                 key={r.id} 
                 onClick={() => { 
                   setSelectedRole(r.id); 
-                  setStep(['Contractor', 'Employer'].includes(r.id) ? "entity-locker" : "details"); 
+                  setStep("details"); 
                   setError(""); setNotice(""); setOtp(""); 
                 }}
                 className={`cursor-pointer flex flex-col items-center justify-center p-2 rounded-xl border transition-all duration-200 ${
@@ -251,189 +166,8 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
         {/* DETAILS SECTION */}
         <div className="flex-1">
 
-          {/* CONTRACTOR / EMPLOYER ENTITYLOCKER REGISTRATION */}
-          {isOrgRole && step === "entity-locker" && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-50/80 border border-blue-100">
-                <Building className="h-5 w-5 text-[#1E3A8A] shrink-0" />
-                <div>
-                  <p className="text-xs font-bold text-[#1E3A8A]">EntityLocker Business Verification</p>
-                  <p className="text-[10.5px] text-gray-600">Register {selectedRole} using official Government Organization Credentials.</p>
-                </div>
-              </div>
-
-              {/* THREE ENTITY OPTIONS */}
-              <div>
-                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Select Entity Verification Document</label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setEntityAuthType("GSTIN")}
-                    className={`px-2 py-2 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 ${
-                      entityAuthType === "GSTIN"
-                        ? "bg-[#1E3A8A] text-white border-[#1E3A8A] shadow-sm"
-                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-                    }`}
-                  >
-                    <FileCheck size={14} />
-                    <span>GSTN Number</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEntityAuthType("MCA21")}
-                    className={`px-2 py-2 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 ${
-                      entityAuthType === "MCA21"
-                        ? "bg-[#1E3A8A] text-white border-[#1E3A8A] shadow-sm"
-                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-                    }`}
-                  >
-                    <Building size={14} />
-                    <span>MCA21 (CIN)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEntityAuthType("PAN")}
-                    className={`px-2 py-2 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 ${
-                      entityAuthType === "PAN"
-                        ? "bg-[#1E3A8A] text-white border-[#1E3A8A] shadow-sm"
-                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-                    }`}
-                  >
-                    <BadgeCheck size={14} />
-                    <span>Company PAN</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* INPUT VALUE */}
-              <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase mb-1 block">
-                  Enter {entityAuthType === "GSTIN" ? "15-Digit GSTN Number" : entityAuthType === "MCA21" ? "21-Digit Corporate Identity Number (CIN)" : "10-Digit Company PAN Card"}
-                </label>
-                <input
-                  type="text"
-                  value={entityNumber}
-                  onChange={e => setEntityNumber(e.target.value.toUpperCase())}
-                  placeholder={entityAuthType === "GSTIN" ? "e.g. 27AAAAA0000A1Z5" : entityAuthType === "MCA21" ? "e.g. L12345MH2020PLC123456" : "e.g. ABCDE1234F"}
-                  className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] tracking-wide font-mono uppercase font-semibold text-gray-800 focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10 outline-none"
-                />
-              </div>
-
-              {error && <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
-
-              <button
-                type="button"
-                onClick={handleEntityLockerVerify}
-                disabled={isCreating || !entityNumber.trim()}
-                className="w-full text-white bg-[#1E3A8A] hover:bg-[#152960] rounded-[12px] px-3.5 py-2.5 text-[13px] font-bold flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
-              >
-                {isCreating ? "Verifying with EntityLocker…" : `Verify ${entityAuthType} & Continue`}
-                <ArrowRight size={16} />
-              </button>
-
-              <p className="text-[11px] text-gray-400 text-center">Powered by API Setu · EntityLocker Business Gateway</p>
-            </div>
-          )}
-
-          {/* STEP 2 FOR CONTRACTOR & EMPLOYER: SET UP MPIN & USERNAME */}
-          {isOrgRole && step === "setup-mpin" && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-800">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                <div>
-                  <p className="text-xs font-bold">Entity Verified: {entityOrgName}</p>
-                  <p className="text-[10.5px] text-emerald-700">{entityAuthType}: {entityNumber}</p>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 space-y-3">
-                <p className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
-                  <UserCheck size={16} className="text-[#1E3A8A]" />
-                  Set up Username and Secure MPIN
-                </p>
-
-                {/* USERNAME */}
-                <div>
-                  <label className="text-[11px] font-bold text-gray-500 uppercase block mb-1">Create Username</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={username}
-                      onChange={e => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
-                      placeholder="e.g. buildwell_admin"
-                      className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2 text-xs font-semibold text-gray-800 focus:ring-2 focus:ring-[#1E3A8A]/20 outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* MPIN */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[11px] font-bold text-gray-500 uppercase block mb-1">Create MPIN (4-6 digits)</label>
-                    <input
-                      type="password"
-                      inputMode="numeric"
-                      maxLength={6}
-                      value={mpin}
-                      onChange={e => setMpin(e.target.value.replace(/\D/g, ''))}
-                      placeholder="4-6 Digits"
-                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-center tracking-[0.3em] font-bold text-xs focus:ring-2 focus:ring-[#1E3A8A]/20 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-gray-500 uppercase block mb-1">Confirm MPIN</label>
-                    <input
-                      type="password"
-                      inputMode="numeric"
-                      maxLength={6}
-                      value={confirmMpin}
-                      onChange={e => setConfirmMpin(e.target.value.replace(/\D/g, ''))}
-                      placeholder="Re-enter"
-                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-center tracking-[0.3em] font-bold text-xs focus:ring-2 focus:ring-[#1E3A8A]/20 outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {error && <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
-              {notice && <p role="status" className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-2.5">{notice}</p>}
-
-              <div className="flex items-start gap-2 pt-1">
-                <input 
-                  type="checkbox" 
-                  id="terms-org"
-                  checked={agreedToTerms}
-                  onChange={(e) => setAgreedToTerms(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 text-[#1E3A8A] rounded border-gray-300 focus:ring-[#1E3A8A] cursor-pointer"
-                />
-                <label htmlFor="terms-org" className="text-xs text-gray-500 leading-snug cursor-pointer">
-                  I accept the <a href="/policy" target="_blank" className="text-[#1E3A8A] hover:underline">Privacy Policy</a> and <a href="/terms" target="_blank" className="text-[#1E3A8A] hover:underline">Terms & Conditions</a>.
-                </label>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setStep("entity-locker")}
-                  className="px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50"
-                >
-                  ‹ Change Details
-                </button>
-                <button
-                  type="button"
-                  disabled={!agreedToTerms || isCreating || !username || mpin.length < 4 || mpin !== confirmMpin}
-                  onClick={handleSetupUsernameMpin}
-                  className="flex-1 bg-[#1E3A8A] hover:bg-[#152960] text-white rounded-xl px-3.5 py-2.5 text-xs font-bold flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
-                >
-                  {isCreating ? "Setting up Account…" : `Complete Setup & Login`}
-                  <KeyRound size={15} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* WORKER / STANDARD MOBILE REGISTRATION */}
-          {!isOrgRole && (step === "details" || step === "otp") && (
+          {/* STANDARD MOBILE REGISTRATION */}
+          {(step === "details" || step === "otp") && (
             <div className="flex flex-col gap-3">
               <input 
                 type="text" 
@@ -487,7 +221,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
           )}
 
           {/* WORKER AADHAAR eKYC */}
-          {!isOrgRole && (step === "aadhaar" || step === "aadhaar-otp") && (
+          {selectedRole === "Worker" && (step === "aadhaar" || step === "aadhaar-otp") && (
             <div className="flex flex-col gap-3">
               <input 
                 type="text" 
@@ -539,7 +273,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
           )}
 
           {/* ALTERNATIVE LOGIN FOR WORKERS */}
-          {!isOrgRole && (step === "details" || step === "otp") && (
+          {selectedRole === "Worker" && (step === "details" || step === "otp") && (
             <>
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
