@@ -435,11 +435,8 @@ export default function IdentityCardPage() {
               {/* Bridge watermark (login-page background) */}
               <img aria-hidden="true" src="/login-bg.jpg" className="absolute z-0 inset-0 w-full h-full object-cover object-bottom opacity-[0.22] pointer-events-none" alt="" />
 
-              {/* Site-colour upper boundary */}
-              <div aria-hidden="true" className="relative z-20 h-2 w-full shrink-0" style={{ background: siteColour }} />
-
-              {/* Dark Header */}
-              <div className="bg-[#07182b] text-white text-center pt-3 px-4 pb-0 relative z-10">
+              {/* Coloured Header — uses the linked site's colour */}
+              <div className="text-white text-center pt-3 px-4 pb-0 relative z-10" style={{ background: siteColour }}>
                 <div className="flex items-center justify-center gap-2.5 mb-0.5">
                   <div className="w-9 h-9 bg-white border border-slate-200 rounded-lg p-1 flex items-center justify-center shadow-xs">
                     <img src="/bss-original-logo.png" alt="BSS Logo" className="w-full h-full object-contain" />

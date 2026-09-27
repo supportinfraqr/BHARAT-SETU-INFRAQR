@@ -436,13 +436,20 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     if (place.state) setState(place.state);
   }
 
-  // Auto-generate a unique site code from the name/city plus random entropy
-  // (the backend also guarantees uniqueness on save).
-  function autoSiteCode() {
-    const base = (name.trim() || location.trim() || 'SITE').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5) || 'SITE';
-    const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
-    setCode(`${base}-${rand}`);
+  // Site code format: SITE-XXXXX (auto-generated and locked). The backend also
+  // guarantees uniqueness on save.
+  function makeSiteCode() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
+    let suffix = '';
+    for (let i = 0; i < 5; i += 1) suffix += alphabet[Math.floor(Math.random() * alphabet.length)];
+    return `SITE-${suffix}`;
   }
+
+  // Auto-fill the locked site code for a brand-new site.
+  useEffect(() => {
+    queueMicrotask(() => { if (!initial && !code) setCode(makeSiteCode()); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- generate once on mount
+  }, []);
 
   // Mandatory = everything except the optional "Additional details" section.
   // The Register/Save button stays disabled until all are filled, and an empty
@@ -510,8 +517,8 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
             <label className="text-xs font-semibold text-gray-700">Site name <span className="text-red-500">*</span><input required value={name} onChange={e => setName(e.target.value)} className={fieldCls} /></label>
             <label className="text-xs font-semibold text-gray-700">Site code <span className="text-red-500">*</span>
               <div className="flex gap-2">
-                <input required value={code} onChange={e => setCode(e.target.value)} className={fieldCls} />
-                <button type="button" onClick={autoSiteCode} title="Auto-generate a unique site code" className="mt-1 h-10 px-3 rounded-lg border border-gray-200 bg-gray-50 text-[11px] font-bold text-gray-700 hover:bg-gray-100 shrink-0">Auto</button>
+                <input required readOnly value={code} title="Auto-generated site code (locked)" className={fieldCls + ' bg-gray-100 text-gray-500 cursor-not-allowed'} />
+                <button type="button" onClick={() => setCode(makeSiteCode())} title="Regenerate the site code" className="mt-1 h-10 px-3 rounded-lg border border-gray-200 bg-gray-50 text-[11px] font-bold text-gray-700 hover:bg-gray-100 shrink-0">Auto</button>
               </div>
             </label>
             <label className="text-xs font-semibold text-gray-700">Site colour
