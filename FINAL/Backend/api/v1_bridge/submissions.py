@@ -807,6 +807,11 @@ def compliance_batch_site_documents(request, batch_id):
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
+def _required_format(requires_document):
+    """"Required Format" column: what the contractor must upload for a form."""
+    return "PDF / JPEG / PNG" if requires_document else "Submission only"
+
+
 def contractor_site_documents(request):
     """Additional (template-less) documents the employer requires for a site.
 
@@ -851,14 +856,18 @@ def contractor_site_documents(request):
             documents.append({"purpose": obj.name, "form": obj.name, "templateId": None,
                               "mandatory": bool(selection.is_mandatory), "frequency": obj.frequency,
                               "outputFormat": "", "custom": True, "scope": "admin",
-                              "requiresDocument": bool(obj.requires_document)})
+                              "requiresDocument": bool(obj.requires_document),
+                              "type": "Admin", "requiredFormat": _required_format(obj.requires_document),
+                              "note": obj.description})
         for obj in (CustomFormName.objects.filter(is_active=True, state__iexact=state,
                                                   employer=employer)
                     .filter(Q(site=site) | Q(site__isnull=True)).order_by("sort_order", "name")):
             documents.append({"purpose": obj.name, "form": obj.name, "templateId": None,
                               "mandatory": bool(obj.is_mandatory), "frequency": obj.frequency,
                               "outputFormat": "", "custom": True, "scope": "employer",
-                              "requiresDocument": bool(obj.requires_document)})
+                              "requiresDocument": bool(obj.requires_document),
+                              "type": "Employer", "requiredFormat": _required_format(obj.requires_document),
+                              "note": obj.description})
         # Statutory purposes the matrix maps but with no register template yet.
         from .register_templates import applicable_templates
         templates_list, _ = applicable_templates(state)
@@ -869,7 +878,8 @@ def contractor_site_documents(request):
                 continue
             documents.append({"purpose": row.purpose, "form": row.form_label, "templateId": None,
                               "mandatory": False, "frequency": "", "outputFormat": "",
-                              "custom": True, "scope": "admin", "requiresDocument": True})
+                              "custom": True, "scope": "admin", "requiresDocument": True,
+                              "type": "Statutory", "requiredFormat": _required_format(True), "note": ""})
     return Response({"data": {"site": site.site_name, "siteCode": site.site_code or "",
                               "state": state, "documents": documents}},
                     status=status.HTTP_200_OK)
