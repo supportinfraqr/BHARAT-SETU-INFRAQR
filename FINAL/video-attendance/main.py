@@ -43,6 +43,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--camera", default=None, metavar="NAME",
                    help="run one entry from config 'cameras:' (multi-CCTV; "
                         "own source, web port, db file, snapshot folder)")
+    p.add_argument("--site", default=None, metavar="SITE",
+                   help="tag every row with this BSS site (id/slug) so the "
+                        "dashboard can show attendance for one site")
     p.add_argument("--antispoof", dest="antispoof",
                    action=argparse.BooleanOptionalAction, default=None,
                    help="force the anti-spoof gate on/off for this run "
@@ -210,7 +213,7 @@ def main() -> int:
         snapshots_dir = os.path.join(paths["snapshots"], cam_name)
     else:
         snapshots_dir = paths["snapshots"]
-    db = Database(pg_cfg, camera=cam_name)
+    db = Database(pg_cfg, camera=cam_name, site=args.site)
     db.conn.execute("UPDATE sightings SET ts_end=%s WHERE ts_end IS NULL", (time.time(),))
     db.commit()
 

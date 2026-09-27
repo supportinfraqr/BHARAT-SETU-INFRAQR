@@ -15,4 +15,3 @@ tools/ffmpeg-*/
 tools/mediamtx/
 *.exe
 *.zip
-tests/assets/*.mp4

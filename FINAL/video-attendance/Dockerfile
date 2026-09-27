@@ -24,4 +24,5 @@ RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/wh
 COPY . .
 
 ENV BTP_PG_SCHEMA=attendance
-CMD ["python", "main.py", "--no-display"]
+EXPOSE 80
+CMD ["python", "controller.py"]

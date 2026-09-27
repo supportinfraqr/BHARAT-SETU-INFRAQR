@@ -37,12 +37,18 @@ services:
       BTP_PG_PASSWORD: ${BTP_PG_PASSWORD}
       BTP_PG_SCHEMA: attendance
       BTP_DATABASE_URL: postgresql://btp:${BTP_PG_PASSWORD}@db:5432/btp
+      # Control plane (BSS backend -> here)
+      CONTROL_TOKEN: ${CONTROL_TOKEN:?set CONTROL_TOKEN in deploy/.env}
+      ALLOWED_CLIENTS: ${ALLOWED_CLIENTS:-}
+      # Fallback source when a start request carries none. Bundle test video
+      # while there are no cameras.
+      DEFAULT_SOURCE: ${DEFAULT_SOURCE:-tests/assets/cctv_sim.mp4}
+    ports:
+      - "80:80"
     volumes:
       - snapshots:/app/data/snapshots
       - deepface:/root/.deepface
       - ultralytics:/root/.config/Ultralytics
-    command:
-      ["python", "main.py", "--no-display", "--source", "${BTP_SOURCE:-rtsp://127.0.0.1:8554/cctv}"]
 
 volumes:
   pgdata:

@@ -10,6 +10,7 @@ pyyaml
 onnxruntime     # passive anti-spoofing (MiniFASNetV2 ONNX, CPU)
 psycopg[binary] # Postgres driver (replaces sqlite3)
 faiss-cpu       # indexed vector search for the face gallery (exact at this scale)
+flask           # session controller HTTP API (controller.py)
 
 # torch / torchvision are intentionally NOT listed here. Install the CPU wheels
 # BEFORE this file so pip doesn't pull ~5 GB of CUDA libs — and so torch's triton

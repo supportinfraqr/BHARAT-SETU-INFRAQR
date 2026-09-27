@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS sightings (
     track_id       INTEGER,
     name           TEXT,
     camera         TEXT,
+    site           TEXT,
     ts_start       DOUBLE PRECISION NOT NULL,
     ts_end         DOUBLE PRECISION,
     age_estimate   INTEGER,
@@ -45,6 +46,7 @@ CREATE TABLE IF NOT EXISTS sightings (
 CREATE TABLE IF NOT EXISTS presence_intervals (
     id       SERIAL PRIMARY KEY,
     camera   TEXT,
+    site     TEXT,
     ts_start DOUBLE PRECISION NOT NULL,
     ts_end   DOUBLE PRECISION NOT NULL,
     present  INTEGER NOT NULL
@@ -61,6 +63,7 @@ CREATE TABLE IF NOT EXISTS code_scans (
     id            SERIAL PRIMARY KEY,
     ts            DOUBLE PRECISION NOT NULL,
     camera        TEXT,
+    site          TEXT,
     payload       TEXT NOT NULL,
     symbology     TEXT,
     matched_label TEXT,
@@ -114,12 +117,13 @@ def pg_params(pg: dict) -> dict:
 
 
 class Database:
-    def __init__(self, pg: dict, camera: Optional[str] = None):
+    def __init__(self, pg: dict, camera: Optional[str] = None, site: Optional[str] = None):
         import psycopg
 
         self.params = pg_params(pg or {})
         self.schema = resolve_schema(pg or {})
         self.camera = camera
+        self.site = site
         self.ensure_database(self.params)
         self.conn = psycopg.connect(**self.params)
         if self.schema:
@@ -131,6 +135,9 @@ class Database:
         self._ensure_column("sightings", "camera", "TEXT")
         self._ensure_column("code_scans", "camera", "TEXT")
         self._ensure_column("presence_intervals", "camera", "TEXT")
+        self._ensure_column("sightings", "site", "TEXT")
+        self._ensure_column("code_scans", "site", "TEXT")
+        self._ensure_column("presence_intervals", "site", "TEXT")
         self.conn.commit()
 
     def _ensure_column(self, table: str, column: str, ddl: str) -> None:
@@ -231,8 +238,8 @@ class Database:
 
     def start_sighting(self, track_id: int, person_id: Optional[int], name: Optional[str]) -> int:
         cur = self.conn.execute(
-            "INSERT INTO sightings(track_id, person_id, name, camera, ts_start) VALUES(%s, %s, %s, %s, %s) RETURNING id",
-            (track_id, person_id, name, self.camera, time.time()),
+            "INSERT INTO sightings(track_id, person_id, name, camera, site, ts_start) VALUES(%s, %s, %s, %s, %s, %s) RETURNING id",
+            (track_id, person_id, name, self.camera, self.site, time.time()),
         )
         sid = cur.fetchone()[0]
         self.conn.commit()
@@ -262,8 +269,8 @@ class Database:
 
     def insert_presence_interval(self, ts_start: float, ts_end: float, present: bool) -> None:
         self.conn.execute(
-            "INSERT INTO presence_intervals(camera, ts_start, ts_end, present) VALUES(%s, %s, %s, %s)",
-            (self.camera, ts_start, ts_end, 1 if present else 0),
+            "INSERT INTO presence_intervals(camera, site, ts_start, ts_end, present) VALUES(%s, %s, %s, %s, %s)",
+            (self.camera, self.site, ts_start, ts_end, 1 if present else 0),
         )
 
     def add_known_code(self, label: str, value: str) -> int:
@@ -292,9 +299,9 @@ class Database:
         snapshot_path: Optional[str],
     ) -> None:
         self.conn.execute(
-            """INSERT INTO code_scans(ts, camera, payload, symbology, matched_label, match_score, snapshot_path)
-               VALUES(%s, %s, %s, %s, %s, %s, %s)""",
-            (time.time(), self.camera, payload, symbology, matched_label, match_score, snapshot_path),
+            """INSERT INTO code_scans(ts, camera, site, payload, symbology, matched_label, match_score, snapshot_path)
+               VALUES(%s, %s, %s, %s, %s, %s, %s, %s)""",
+            (time.time(), self.camera, self.site, payload, symbology, matched_label, match_score, snapshot_path),
         )
         self.conn.commit()
 
