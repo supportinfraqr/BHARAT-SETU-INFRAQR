@@ -492,6 +492,10 @@ def _footer_lines_from_html(html_text, template, rows, context):
     return lines
 
 
+# A printed day range like "1…… 31" — digits either side of dots/ellipsis/dashes.
+_DAY_RANGE_RE = re.compile(r"\d+\s*[\u2026.\u2014\u2013\-]{2,}\s*\d+")
+
+
 def _write_template_sheet(wb, template, rows, context=None):
     columns = [str(c) for c in (template.get("columns") or [])]
     if not columns:
@@ -506,6 +510,20 @@ def _write_template_sheet(wb, template, rows, context=None):
     # rule …], Key:value header lines) then the data grid. No added title/form/
     # state rows, no branding, no dates — nothing the source doesn't have.
     header_lines = _header_lines_from_html(template.get("html"), template, rows, context)
+    footer_lines = _footer_lines_from_html(template.get("html"), template, rows, context)
+    # A day-range line like "1…… 31" is the sub-header of the "Dates" column (the
+    # source muster roll prints it under that heading, matching the master file's
+    # Day1…Day31). Lift it out of the footer and render it under the column header
+    # instead of below the data.
+    dates_col = next((i for i, c in enumerate(columns, start=1) if "date" in c.lower()), None)
+    sub_header = ""
+    if dates_col:
+        for line in list(footer_lines):
+            if _DAY_RANGE_RE.search(line):
+                sub_header = line
+                footer_lines.remove(line)
+                break
+
     row_cursor = 1
     for idx, line in enumerate(header_lines):
         cell = ws.cell(row=row_cursor, column=1, value=line)
@@ -524,15 +542,23 @@ def _write_template_sheet(wb, template, rows, context=None):
         cell = ws.cell(row=table_row, column=col, value=label)
         cell.font = Font(bold=True)
         cell.alignment = Alignment(horizontal="center", wrap_text=True)
+
+    data_start = table_row + 1
+    if sub_header:
+        cell = ws.cell(row=data_start, column=dates_col, value=sub_header)
+        cell.font = Font(name="Calibri", size=9, bold=False, color="1E293B")
+        cell.alignment = Alignment(horizontal="center")
+        data_start += 1
+
     for i, row in enumerate(rows, start=1):
         for col, key in enumerate(mapping, start=1):
             value = resolve_cell(key, row, context, index=i)
             if value is not None:
-                ws.cell(row=table_row + i, column=col, value=value)
+                ws.cell(row=data_start + i - 1, column=col, value=value)
     # Declaration / footer lines (e.g. "No fine imposed during the month of …")
     # rendered below the table with the period tokens resolved.
-    footer_cursor = table_row + len(rows) + 1
-    for line in _footer_lines_from_html(template.get("html"), template, rows, context):
+    footer_cursor = data_start + len(rows)
+    for line in footer_lines:
         cell = ws.cell(row=footer_cursor, column=1, value=line)
         cell.font = Font(size=10, italic=True)
         if len(columns) > 1:
