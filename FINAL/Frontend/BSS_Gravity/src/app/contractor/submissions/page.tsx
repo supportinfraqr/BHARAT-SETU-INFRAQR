@@ -428,8 +428,17 @@ export default function ComplianceSubmissionPage() {
     {tab === 'submissions' && <div className="space-y-4">
       {/* Filters Card */}
       <div className="bg-white p-4 rounded-2xl border border-gray-200 space-y-3.5 shadow-sm">
-        {/* Registration-Based Financial Year Filter Tabs */}
+        {/* Site Filter */}
         <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Site:</span>
+          <select value={siteFilter} onChange={e => setSiteFilter(e.target.value)} className="h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white font-semibold">
+            <option value="all">All Sites</option>
+            {contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}
+          </select>
+        </div>
+
+        {/* Registration-Based Financial Year Filter Tabs */}
+        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-100">
           <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Financial Year:</span>
           <div className="flex flex-wrap gap-1.5">
             {availableYears.map(yr => {
@@ -464,15 +473,6 @@ export default function ComplianceSubmissionPage() {
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Site Filter */}
-        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-100">
-          <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Site:</span>
-          <select value={siteFilter} onChange={e => setSiteFilter(e.target.value)} className="h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white font-semibold">
-            <option value="all">All Sites</option>
-            {contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}
-          </select>
         </div>
 
         {/* Period Filter Tabs */}
