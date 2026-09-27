@@ -457,6 +457,12 @@ export type EmployerSubmission = {
   submittedAt: string;
   status: 'Pending review' | 'Verified' | 'Rejected';
   source?: 'evidence' | 'register' | 'submission';
+  kind?: 'register' | 'form';
+  financialYear?: string;
+  month?: string;
+  frequency?: string;
+  mandatory?: boolean;
+  documentType?: string;
   batchId?: string;
   hasFile?: boolean;
 };

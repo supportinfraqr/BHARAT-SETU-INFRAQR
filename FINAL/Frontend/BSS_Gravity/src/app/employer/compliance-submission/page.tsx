@@ -3,30 +3,33 @@
 import { useMemo, useState } from 'react';
 import { CheckCircle2, Clock3, FileCheck2 } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
+import BatchDrilldown from '@/components/compliance/BatchDrilldown';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerSubmission } from '@/types/portal';
 
 const MONTHS = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
 
-/** Submissions carry a free-text period like "September 2026-27" (evidence) or
- *  "September 2026" (register). Pull the month and the financial year out of it. */
-function parsePeriod(period: string): { month: string; fy: string } {
-  const text = (period || '').trim();
-  const month = text.match(/^([A-Za-z]+)/)?.[1] ?? '';
+/** The financial-year key ("2026-27") for a submission, from its stored year or
+ *  parsed out of the free-text period ("September 2026-27" / "September 2026"). */
+function fyKey(row: EmployerSubmission): string {
+  const stored = (row.financialYear || '').replace(/^FY\s*/i, '').trim();
+  if (stored) return stored;
+  const text = (row.period || '').trim();
   const range = text.match(/(20\d{2})\s*[-–]\s*(\d{2,4})/);
-  if (range) {
-    const end = range[2].length === 2 ? range[2] : range[2].slice(-2);
-    return { month, fy: `FY ${range[1]}-${end}` };
-  }
+  if (range) return `${range[1]}-${range[2].length === 2 ? range[2] : range[2].slice(-2)}`;
   const year = text.match(/(20\d{2})/);
+  const month = (row.month || text.match(/^([A-Za-z]+)/)?.[1] || '').trim();
   if (year) {
-    // Jan–Mar belong to the financial year that began the previous April.
     const idx = MONTHS.findIndex(m => m.toLowerCase() === month.toLowerCase());
     const y = Number(year[1]);
     const endYear = idx >= 9 ? y : y + 1;
-    return { month, fy: `FY ${endYear - 1}-${String(endYear).slice(-2)}` };
+    return `${endYear - 1}-${String(endYear).slice(-2)}`;
   }
-  return { month, fy: '' };
+  return '';
+}
+
+function monthOf(row: EmployerSubmission): string {
+  return (row.month || row.period?.match(/^([A-Za-z]+)/)?.[1] || '').trim();
 }
 
 export default function EmployerComplianceSubmissionPage() {
@@ -36,21 +39,32 @@ export default function EmployerComplianceSubmissionPage() {
   const [notice, setNotice] = useState('');
   const [siteFilter, setSiteFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
+  const [freqFilter, setFreqFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState('all');
+  const [batchView, setBatchView] = useState<string | null>(null);
 
   const years = useMemo(() => {
     const set = new Set<string>();
-    employer.submissions.forEach(s => { const { fy } = parsePeriod(s.period); if (fy) set.add(fy); });
+    employer.submissions.forEach(s => { const k = fyKey(s); if (k) set.add(k); });
     return Array.from(set).sort().reverse();
   }, [employer.submissions]);
 
-  const rows = useMemo(() => employer.submissions.filter(s => {
-    const { month, fy } = parsePeriod(s.period);
+  const frequencies = useMemo(() => {
+    const set = new Set<string>();
+    employer.submissions.forEach(s => { if (s.kind === 'form' && s.frequency) set.add(s.frequency); });
+    return Array.from(set);
+  }, [employer.submissions]);
+
+  const filtered = useMemo(() => employer.submissions.filter(s => {
     if (siteFilter !== 'all' && !s.site.split(',').map(x => x.trim()).includes(siteFilter)) return false;
-    if (yearFilter !== 'all' && fy !== yearFilter) return false;
-    if (periodFilter !== 'all' && month !== periodFilter) return false;
+    if (yearFilter !== 'all' && fyKey(s) !== yearFilter) return false;
+    if (freqFilter !== 'all' && (s.frequency || '') !== freqFilter) return false;
+    if (periodFilter !== 'all' && monthOf(s) !== periodFilter) return false;
     return true;
-  }), [employer.submissions, siteFilter, yearFilter, periodFilter]);
+  }), [employer.submissions, siteFilter, yearFilter, freqFilter, periodFilter]);
+
+  const registers = filtered.filter(s => s.kind === 'register');
+  const forms = filtered.filter(s => s.kind === 'form');
 
   async function review(row: EmployerSubmission, status: 'Verified' | 'Rejected') {
     setBusy(true);
@@ -77,23 +91,41 @@ export default function EmployerComplianceSubmissionPage() {
     }
   }
 
-  const columns: DataColumn<EmployerSubmission>[] = [
-    { id:'contractor', header:'Contractor', value:row => row.contractor, render:row => <div><strong className="text-gray-900">{row.contractor || '—'}</strong>{row.contractorId && <p className="font-mono text-[10px] text-gray-400">{row.contractorId}</p>}</div> },
+  const contractorCell = (row: EmployerSubmission) => <div><strong className="text-gray-900">{row.contractor || '—'}</strong>{row.contractorId && <p className="font-mono text-[10px] text-gray-400">{row.contractorId}</p>}</div>;
+  const statusCell = (row: EmployerSubmission) => <Status value={row.status}/>;
+  const actionCell = (row: EmployerSubmission) => row.status === 'Pending review'
+    ? <div className="flex gap-3"><button disabled={busy} onClick={() => review(row, 'Verified')} className="text-green-700 font-semibold hover:underline whitespace-nowrap">Mark Accepted</button><button disabled={busy} onClick={() => review(row, 'Rejected')} className="text-red-700 font-semibold hover:underline">Reject</button></div>
+    : <span className="text-gray-400">No action</span>;
+
+  const registerColumns: DataColumn<EmployerSubmission>[] = [
+    { id:'contractor', header:'Contractor', value:row => row.contractor, render:contractorCell },
     { id:'site', header:'Site', value:row => row.site },
     { id:'period', header:'Period', value:row => row.period },
-    { id:'type', header:'Compliance type', value:row => row.type, render:row => <div><strong className="text-gray-900">{row.type}</strong>{row.source === 'evidence' && <button type="button" disabled={busy} onClick={() => viewEvidence(row)} className="block text-[11px] text-blue-600 hover:underline mt-0.5">View evidence</button>}{row.source === 'submission' && row.batchId && <a href={`/api/employer/compliance-batches/${row.batchId}/file`} className="block text-[11px] text-blue-600 hover:underline mt-0.5">Download registers</a>}</div> },
+    { id:'type', header:'Registers', value:row => row.type, render:row => <div><strong className="text-gray-900">{row.type}</strong>{row.batchId && <div className="flex items-center gap-3 mt-0.5"><button type="button" onClick={() => setBatchView(row.batchId as string)} className="text-[11px] text-blue-600 font-semibold hover:underline">View documents</button><a href={`/api/employer/compliance-batches/${row.batchId}/file`} className="text-[11px] text-blue-600 hover:underline">Download registers</a></div>}</div> },
     { id:'submitted', header:'Submitted', value:row => row.submittedAt.slice(0, 10) },
-    { id:'status', header:'Status', value:row => row.status, render:row => <Status value={row.status}/> },
-    { id:'actions', header:'Action', filterable:false, value:row => row.status, render:row => row.status === 'Pending review' ? <div className="flex gap-3"><button disabled={busy} onClick={() => review(row, 'Verified')} className="text-green-700 font-semibold hover:underline">Mark Accepted</button><button disabled={busy} onClick={() => review(row, 'Rejected')} className="text-red-700 font-semibold hover:underline">Reject</button></div> : <span className="text-gray-400">No action</span> },
+    { id:'status', header:'Status', value:row => row.status, render:statusCell },
+    { id:'actions', header:'Action', filterable:false, value:row => row.status, render:actionCell },
   ];
 
-  const pending = rows.filter(item => item.status === 'Pending review');
-  const verified = rows.filter(item => item.status === 'Verified').length;
+  const formColumns: DataColumn<EmployerSubmission>[] = [
+    { id:'contractor', header:'Contractor', value:row => row.contractor, render:contractorCell },
+    { id:'site', header:'Site', value:row => row.site },
+    { id:'type', header:'Document Name', value:row => row.type, render:row => <div><strong className="text-gray-900">{row.type}</strong>{row.source === 'evidence' && <button type="button" disabled={busy} onClick={() => viewEvidence(row)} className="block text-[11px] text-blue-600 hover:underline mt-0.5">View evidence</button>}</div> },
+    { id:'frequency', header:'Frequency', value:row => row.frequency || '—' },
+    { id:'mandatory', header:'Mandatory', value:row => row.mandatory ? 'Yes' : 'No', render:row => row.mandatory ? <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">Mandatory</span> : <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">Optional</span> },
+    { id:'period', header:'Period', value:row => row.period },
+    { id:'submitted', header:'Submitted', value:row => row.submittedAt.slice(0, 10) },
+    { id:'status', header:'Status', value:row => row.status, render:statusCell },
+    { id:'actions', header:'Action', filterable:false, value:row => row.status, render:actionCell },
+  ];
+
+  const pending = filtered.filter(item => item.status === 'Pending review');
+  const verified = filtered.filter(item => item.status === 'Verified').length;
 
   return <div className="space-y-6">
-    <header><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Governance controls</p><h1 className="text-2xl font-bold mt-1">Compliance Submission</h1><p className="text-sm text-gray-500 mt-1">Review statutory, wage, and safety evidence submitted by connected contractors. Marking a submission accepted verifies it for the contractor.</p></header>
+    <header><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Governance controls</p><h1 className="text-2xl font-bold mt-1">Compliance Submission</h1><p className="text-sm text-gray-500 mt-1">Review the CLRA registers and additional forms submitted by connected contractors. Marking a submission accepted verifies it for the contractor.</p></header>
 
-    <div className="grid grid-cols-3 gap-3"><Metric label="Submissions" value={rows.length} icon={FileCheck2} tone="bg-blue-50 text-blue-700"/><Metric label="Pending review" value={pending.length} icon={Clock3} tone="bg-orange-50 text-orange-700"/><Metric label="Accepted" value={verified} icon={CheckCircle2} tone="bg-green-50 text-green-700"/></div>
+    <div className="grid grid-cols-3 gap-3"><Metric label="Submissions" value={filtered.length} icon={FileCheck2} tone="bg-blue-50 text-blue-700"/><Metric label="Pending review" value={pending.length} icon={Clock3} tone="bg-orange-50 text-orange-700"/><Metric label="Accepted" value={verified} icon={CheckCircle2} tone="bg-green-50 text-green-700"/></div>
 
     {/* Filters — same shape as the contractor submissions page */}
     <div className="bg-white p-4 rounded-2xl border border-gray-200 space-y-3.5 shadow-sm">
@@ -109,9 +141,17 @@ export default function EmployerComplianceSubmissionPage() {
         <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Financial Year:</span>
         <div className="flex flex-wrap gap-1.5">
           <button onClick={() => setYearFilter('all')} className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${yearFilter === 'all' ? 'bg-[#073B67] text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>All Years</button>
-          {years.map(yr => <button key={yr} onClick={() => setYearFilter(yr)} className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${yearFilter === yr ? 'bg-[#073B67] text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{yr}</button>)}
+          {years.map(yr => <button key={yr} onClick={() => setYearFilter(yr)} className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${yearFilter === yr ? 'bg-[#073B67] text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>FY {yr}</button>)}
         </div>
       </div>
+
+      {frequencies.length > 0 && <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-100">
+        <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Frequency:</span>
+        <div className="flex flex-wrap gap-1.5">
+          <button onClick={() => setFreqFilter('all')} className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${freqFilter === 'all' ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>All</button>
+          {frequencies.map(f => <button key={f} onClick={() => setFreqFilter(f)} className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${freqFilter === f ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{f}</button>)}
+        </div>
+      </div>}
 
       <div className="flex items-center gap-3 pt-3 border-t border-gray-100 overflow-x-auto">
         <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Period:</span>
@@ -124,9 +164,13 @@ export default function EmployerComplianceSubmissionPage() {
 
     {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">{error}</p>}
     {notice && <p role="status" className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl p-3">{notice}</p>}
-    <EnterpriseDataTable title="Contractor compliance submissions" rows={rows} columns={columns} rowKey={row => row.id} filename="employer-compliance-submissions"/>
+
+    <EnterpriseDataTable title={`1 · CLRA Registers (${registers.length})`} rows={registers} columns={registerColumns} rowKey={row => row.id} filename="employer-clra-registers"/>
+    <EnterpriseDataTable title={`2 · Additional Forms (${forms.length})`} rows={forms} columns={formColumns} rowKey={row => row.id} filename="employer-additional-forms"/>
+
+    {batchView && <BatchDrilldown batchId={batchView} role="employer" onClose={() => setBatchView(null)} />}
   </div>;
 }
 
-function Status({ value }: { value: EmployerSubmission['status'] }) { const tone = value === 'Verified' ? 'bg-green-50 text-green-700' : value === 'Pending review' ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'; return <span className={`px-2 py-1 rounded text-[10px] font-semibold ${tone}`}>{value}</span>; }
+function Status({ value }: { value: EmployerSubmission['status'] }) { const tone = value === 'Verified' ? 'bg-green-50 text-green-700' : value === 'Pending review' ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'; return <span className={`px-2 py-1 rounded text-[10px] font-semibold whitespace-nowrap ${tone}`}>{value === 'Verified' ? 'Accepted' : value}</span>; }
 function Metric({ label, value, icon:Icon, tone }: { label:string; value:number; icon:typeof FileCheck2; tone:string }) { return <div className="bg-white border border-gray-200 rounded-xl p-4"><span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon size={16}/></span><strong className="block text-2xl mt-2">{value}</strong><p className="text-xs text-gray-500">{label}</p></div>; }
