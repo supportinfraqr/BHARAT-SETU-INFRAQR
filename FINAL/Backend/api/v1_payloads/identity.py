@@ -211,8 +211,12 @@ def build_identity_verify(bss_id, viewer=None):
             return None
         relationship = _contractor_relationship(cp.user, viewer)
 
-        # Member of BSS since
-        member_dt = getattr(cp.user, "date_joined", None) or getattr(cp, "consent_date", None)
+        # "Member of BSS since": the date they accepted BSS membership. Falls
+        # back to the profile creation timestamp, which for contractors
+        # registered before consent was recorded is derived from the earliest
+        # binding we can actually evidence. Left blank when neither exists —
+        # an absent date is better than an invented one on a statutory record.
+        member_dt = cp.consent_date or cp.registered_at
         bss_member_since = _dts(member_dt) if member_dt else ""
         if bss_member_since and "T" in bss_member_since:
             bss_member_since = bss_member_since.split("T")[0]
