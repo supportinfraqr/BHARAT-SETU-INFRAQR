@@ -54,7 +54,7 @@ export function getGovernmentPortal(session: PortalSession): Promise<GovernmentP
   });
 }
 
-export async function mutatePortal<T>(session: PortalSession, resource: string, init: RequestInit): Promise<T> {
+export async function mutatePortal<T>(session: PortalSession, resource: string, init: RequestInit, options: { timeoutMs?: number } = {}): Promise<T> {
   const config = getRuntimeConfig();
-  return upstreamRequest<T>(config.apiBaseUrl, `/v1/${portalRolePath(session.role)}/${resource}`, session, init);
+  return upstreamRequest<T>(config.apiBaseUrl, `/v1/${portalRolePath(session.role)}/${resource}`, session, init, options);
 }

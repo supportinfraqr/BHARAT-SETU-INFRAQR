@@ -28,6 +28,7 @@ export async function POST(request: Request) {
       '/v1/auth/aadhaar/verify',
       null,
       { method: 'POST', body: JSON.stringify(body) },
+      { timeoutMs: 45_000 },
     );
 
     await createSession({ subject: result.subject, role: 'Worker', sessionId: result.sessionId, accessToken: result.accessToken });

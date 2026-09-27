@@ -64,16 +64,19 @@ const RETRY_BACKOFF_MS = [1000, 2000, 3000, 4000]; // ~10s total coverage
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export async function upstreamRequest<T>(baseUrl: string | undefined, path: string, session: PortalSession | null, init: RequestInit = {}): Promise<T> {
+export async function upstreamRequest<T>(baseUrl: string | undefined, path: string, session: PortalSession | null, init: RequestInit = {}, options: { timeoutMs?: number } = {}): Promise<T> {
   const config = assertRuntimeConfigured();
   if (!baseUrl) throw new UpstreamError('The upstream service is not configured.', 503);
   const method = (init.method ?? 'GET').toUpperCase();
   const idempotent = method === 'GET' || method === 'HEAD';
+  // Callers may extend the timeout for slow upstreams (e.g. UIDAI/Sandbox
+  // Aadhaar calls), bounded by the configured ceiling.
+  const timeoutMs = Math.min(options.timeoutMs ?? config.requestTimeoutMs, 60_000);
   let attempt = 0;
   for (;;) {
     attempt += 1;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), config.requestTimeoutMs);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const headers = buildUpstreamHeaders(session, init);
       headers.set('Accept', 'application/json');

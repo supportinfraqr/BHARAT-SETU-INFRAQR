@@ -20,6 +20,7 @@ export async function POST(request: Request) {
       '/v1/auth/aadhaar/otp',
       null,
       { method: 'POST', body: JSON.stringify({ aadhaar: body.aadhaar }) },
+      { timeoutMs: 45_000 },
     );
     return NextResponse.json(result, { status: 200 });
   } catch (error) {

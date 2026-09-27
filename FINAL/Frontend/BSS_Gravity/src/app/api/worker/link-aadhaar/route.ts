@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const result = await mutatePortal(session, 'link-aadhaar', {
       method: 'POST',
       body: JSON.stringify({ aadhaar, referenceId: body.referenceId, otp: body.otp }),
-    });
+    }, { timeoutMs: 45_000 });
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
     return apiError(error, 'Aadhaar verification could not be completed.');

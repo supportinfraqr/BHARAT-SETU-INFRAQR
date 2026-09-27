@@ -52,8 +52,17 @@ def _error_message(resp) -> str:
     return (resp.text or "").strip()[:200] or f"HTTP {resp.status_code}"
 
 
+# Cache the Sandbox access token so we don't re-authenticate on every call
+# (auth + OTP used to add ~3-4s each request and push past the proxy timeout).
+_TOKEN_CACHE = {"token": "", "expires_at": 0.0}
+_TOKEN_TTL_SECONDS = 30 * 60
+
+
 def get_access_token() -> str:
     """POST /authenticate with the API key pair -> data.access_token."""
+    now = time.time()
+    if _TOKEN_CACHE["token"] and now < _TOKEN_CACHE["expires_at"]:
+        return _TOKEN_CACHE["token"]
     resp = _post_with_retry(
         f"{settings.AADHAAR_BASE_URL}/authenticate",
         headers={
@@ -68,6 +77,8 @@ def get_access_token() -> str:
     token = (data.get("data") or {}).get("access_token")
     if not token:
         raise SandboxError(f"authenticate response missing access_token: {resp.text[:300]}")
+    _TOKEN_CACHE["token"] = token
+    _TOKEN_CACHE["expires_at"] = now + _TOKEN_TTL_SECONDS
     return token
 
 
