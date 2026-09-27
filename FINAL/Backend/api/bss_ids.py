@@ -152,3 +152,18 @@ def new_bss_employer_code():
 def new_bss_site_code():
     """Random-looking 16-char site identifier, e.g. BSS-S6YQ2M9X4RTA."""
     return _allocate(ROLE_PREFIX["site"])
+
+
+# Letter reference prefixes: A = appointment letter, R = releasing (experience).
+LETTER_PREFIX = {"appointment": "A", "experience": "R"}
+
+
+def letter_bss_id(binding_id, letter_type):
+    """A stable ``BSS-A`` / ``BSS-R`` + 11-character reference for a letter.
+
+    Derived from the binding id through the same reversible mask every entity
+    id uses, so the appointment and releasing letters for one binding share an
+    11-character suffix and re-rendering never changes the printed reference.
+    """
+    letter = LETTER_PREFIX.get(letter_type, "R")
+    return f"BSS-{letter}{_mask(int(binding_id))}"
