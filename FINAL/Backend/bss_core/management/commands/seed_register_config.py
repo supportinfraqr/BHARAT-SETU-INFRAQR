@@ -226,14 +226,32 @@ def _calculation_rules(fields):
 
 
 class Command(BaseCommand):
-    help = "Seed admin register field mappings + calculation rules (idempotent)."
+    help = ("Restore the canonical CLRA register library. Default mode: add field "
+            "mappings + calculation rules for the seeded columns (idempotent, "
+            "never deletes). With --reset: reproduce the EXACT default library "
+            "(templates + field mappings + calculation rules) recorded in "
+            "bss_core/seeds/register_defaults.py — create missing, update changed, "
+            "prune extras — so every environment ends up identical.")
 
     def add_arguments(self, parser):
         parser.add_argument("--reset", action="store_true",
-                            help="Overwrite existing mappings/rules for the seeded columns.")
+                            help="Reproduce the exact default library from the "
+                                 "code snapshot (prunes templates/mappings/rules "
+                                 "not in the defaults).")
 
     def handle(self, *args, **options):
         reset = options["reset"]
+        if reset:
+            counters = self._restore_defaults()
+            self.stdout.write(self.style.SUCCESS(
+                f"Register library restored to defaults — templates: "
+                f"{counters['created']} new / {counters['updated']} updated / "
+                f"{counters['pruned']} pruned · mappings: {counters['mappings_new']} new / "
+                f"{counters['mappings_updated']} updated / {counters['mappings_deleted']} deleted · "
+                f"rules: {counters['rules_new']} new / {counters['rules_updated']} updated / "
+                f"{counters['rules_deleted']} deleted · mandatory marked: {counters['mandatory']}"))
+            return
+
         mappings_created = mappings_updated = rules_created = rules_updated = 0
         mandatory_marked = 0
 
@@ -252,11 +270,6 @@ class Command(BaseCommand):
                         template=template, column=column, field_key=key)
                     mapped[column] = key
                     mappings_created += 1
-                elif reset and row.field_key != key:
-                    row.field_key = key
-                    row.save(update_fields=["field_key"])
-                    mapped[column] = key
-                    mappings_updated += 1
                 else:
                     mapped[column] = row.field_key
 
@@ -271,10 +284,6 @@ class Command(BaseCommand):
                     RegisterCalculationRule.objects.create(
                         template=template, target_field=target, label=label, formula=formula)
                     rules_created += 1
-                elif reset and (rule.formula != formula or rule.label != label):
-                    rule.formula, rule.label = formula, label
-                    rule.save(update_fields=["formula", "label"])
-                    rules_updated += 1
 
             # Mark the standard statutory registers as Mandatory (admin-editable).
             if not template.is_mandatory and _form_roman(template.form_code) in MANDATORY_FORMS:
@@ -286,3 +295,92 @@ class Command(BaseCommand):
             f"Register config seeded — mappings: {mappings_created} new / "
             f"{mappings_updated} updated · rules: {rules_created} new / "
             f"{rules_updated} updated · mandatory marked: {mandatory_marked}"))
+
+    def _restore_defaults(self):
+        """Reproduce the exact default library from the code snapshot."""
+        try:
+            from bss_core.seeds import register_defaults as DEFAULTS
+        except ImportError:
+            raise CommandError(
+                "bss_core/seeds/register_defaults.py not found; run "
+                "`python manage.py dump_register_defaults` first.")
+        c = {"created": 0, "updated": 0, "pruned": 0,
+             "mappings_new": 0, "mappings_updated": 0, "mappings_deleted": 0,
+             "rules_new": 0, "rules_updated": 0, "rules_deleted": 0,
+             "mandatory": 0}
+
+        entries = [(e, (e["state"], e["purpose"], e["form_code"])) for e in DEFAULTS.TEMPLATES]
+        if not entries:
+            raise CommandError("register_defaults.py snapshot is empty.")
+        by_key = {key: e for e, key in entries}
+        existing = {(t.state, t.purpose, t.form_code): t
+                    for t in RegisterTemplate.objects.all()}
+        templates_by_key = {}
+
+        for key, e in by_key.items():
+            t = existing.get(key)
+            updates = {"title": e["title"], "act": e["act"],
+                       "html": e["html"], "columns": e["columns"]}
+            if t is None:
+                RegisterTemplate.objects.create(
+                    state=key[0], purpose=key[1], form_code=key[2], **updates)
+                c["created"] += 1
+            else:
+                changed = [f for f, val in updates.items()
+                           if getattr(t, f) != val]
+                if changed:
+                    for f in changed:
+                        setattr(t, f, updates[f])
+                    t.save(update_fields=changed)
+                    c["updated"] += 1
+            templates_by_key[key] = t
+
+        for key, t in existing.items():
+            if key not in by_key:
+                t.delete()
+                c["pruned"] += 1
+
+        for key, e in by_key.items():
+            t = templates_by_key[key]
+            if not t.is_mandatory and _form_roman(t.form_code) in MANDATORY_FORMS:
+                t.is_mandatory = True
+                t.save(update_fields=["is_mandatory"])
+                c["mandatory"] += 1
+
+            have = {m.column: m for m in t.field_mappings.all()}
+            for column, field_key in e["field_mappings"].items():
+                row = have.get(column)
+                if row is None:
+                    RegisterFieldMapping.objects.create(
+                        template=t, column=column, field_key=field_key)
+                    c["mappings_new"] += 1
+                elif row.field_key != field_key:
+                    row.field_key = field_key
+                    row.save(update_fields=["field_key"])
+                    c["mappings_updated"] += 1
+            for column, row in have.items():
+                if column not in e["field_mappings"]:
+                    row.delete()
+                    c["mappings_deleted"] += 1
+
+            want = {(r["target"], r["label"], r["formula"])
+                    for r in e["calculation_rules"]}
+            have_rules = {(r.target_field, r.label, r.formula): r
+                          for r in t.calculation_rules.all()}
+            for triple, row in have_rules.items():
+                if triple not in want:
+                    row.delete()
+                    c["rules_deleted"] += 1
+            remaining = {r.target_field: r for r in t.calculation_rules.all()}
+            for target, label, formula in want:
+                row = remaining.get(target)
+                if row is None:
+                    RegisterCalculationRule.objects.create(
+                        template=t, target_field=target, label=label, formula=formula)
+                    c["rules_new"] += 1
+                elif row.label != label or row.formula != formula:
+                    row.label, row.formula = label, formula
+                    row.save(update_fields=["label", "formula"])
+                    c["rules_updated"] += 1
+
+        return c
