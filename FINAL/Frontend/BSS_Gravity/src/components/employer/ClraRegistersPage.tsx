@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
-import { Building2, CheckCircle2, Loader2, Plus, ShieldCheck, X } from 'lucide-react';
+import { Building2, CheckCircle2, Copy, Loader2, Plus, ShieldCheck, X } from 'lucide-react';
 
 type RegisterForm = {
   id: number; formCode: string; title: string;
@@ -186,6 +186,88 @@ export default function ClraRegistersPage() {
     finally { setBusy(false); }
   }
 
+  async function copyToStateSites() {
+    if (!board) return;
+    const sameStateSites = boards.filter(b => b.state.toLowerCase() === board.state.toLowerCase());
+    const targetSites = sameStateSites.filter(b => b.siteId !== board.siteId);
+    if (!targetSites.length) {
+      setError(`No other sites registered in ${board.state} to copy to.`);
+      return;
+    }
+    if (!window.confirm(`Copy register adoptions & additional forms of "${board.siteName}" to all ${targetSites.length} other site(s) in ${board.state}?`)) return;
+
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const activeSelectedTemplateIds = selection[board.siteId] ?? [];
+      const activeDraft = siteDraft(board.siteId);
+
+      // Copy registers and additional forms for each site in this state
+      for (const target of targetSites) {
+        // 1. Copy CLRA registers selection
+        const resReg = await fetch('/api/employer/register-templates', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ siteId: target.siteId, templateIds: activeSelectedTemplateIds }),
+        });
+        if (!resReg.ok) {
+          const body = await resReg.json().catch(() => ({})) as { error?: string };
+          throw new Error(body.error ?? `Registers copy failed for ${target.siteName}.`);
+        }
+
+        // 2. Copy staged or active extra catalog form selections
+        for (const [formId, cState] of Object.entries(activeDraft.catalog)) {
+          await fetch('/api/employer/form-names', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ formNameId: Number(formId), siteId: target.siteId, selected: cState.selected, mandatory: cState.mandatory }),
+          });
+        }
+        for (const f of extraForms.filter(ef => ef.scope === 'admin')) {
+          if (!(f.id in activeDraft.catalog)) {
+            const isSel = catalogIsSelected(f);
+            const isMan = catalogIsMandatory(f);
+            if (isSel || isMan) {
+              await fetch('/api/employer/form-names', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ formNameId: f.id, siteId: target.siteId, selected: isSel, mandatory: isMan }),
+              });
+            }
+          }
+        }
+
+        // 3. Copy employer's custom extra forms to target site
+        const existingEmployerForms = extraForms.filter(f => f.scope === 'employer' && !activeDraft.removes.includes(f.id));
+        for (const ef of existingEmployerForms) {
+          await fetch('/api/employer/form-names', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              state: board.state, siteId: target.siteId, name: ef.name,
+              mandatory: ef.mandatory, frequency: ef.frequency,
+              requiresDocument: ef.requiresDocument, description: ef.description,
+              ocrCheckpoints: ef.ocrCheckpoints ?? [],
+            }),
+          });
+        }
+        for (const add of activeDraft.adds) {
+          await fetch('/api/employer/form-names', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              state: board.state, siteId: target.siteId, name: add.name,
+              mandatory: add.mandatory, frequency: add.frequency,
+              requiresDocument: add.requiresDocument, description: add.description,
+              ocrCheckpoints: add.ocrCheckpoints ?? [],
+            }),
+          });
+        }
+      }
+
+      await load();
+      setNotice(`Successfully copied register adoptions and forms from "${board.siteName}" to all ${targetSites.length} site(s) in ${board.state}.`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Copying to state sites failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const loadExtra = useCallback(async () => {
     const board = boards.find(b => b.siteId === active);
     const state = board?.state ?? '';
@@ -309,6 +391,7 @@ export default function ClraRegistersPage() {
           <header className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
             <div><h2 className="text-sm font-semibold text-gray-950 flex items-center gap-2"><ShieldCheck size={16} className="text-[#073B67]"/>{board.siteName} · {board.state}</h2><p className="text-xs text-gray-400 mt-0.5">Set the registers and additional forms for this site, then hit <strong>Save adoption</strong> to store both together. Contractors at the site see the ticked registers (plus every <span className="font-semibold text-red-700">Mandatory</span> one) and the forms below.</p></div>
             <div className="flex items-center gap-2">
+              <button type="button" onClick={() => void copyToStateSites()} disabled={busy || boards.filter(b => b.state.toLowerCase() === board.state.toLowerCase()).length <= 1} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40 inline-flex items-center gap-1.5" title={`Copy active site forms and register adoptions to all sites in ${board.state}`}><Copy size={13}/>Copy to all sites of this state</button>
               <button type="button" onClick={() => selectAll(board.forms)} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600">Select all</button>
               <button type="button" onClick={clearOptional} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600">Clear optional</button>
               <button type="button" onClick={() => void revokeSite()} disabled={busy || !board.gated} className="h-9 px-3 rounded-lg border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-40">Remove adoption</button>

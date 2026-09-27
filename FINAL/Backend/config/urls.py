@@ -126,6 +126,7 @@ _v1_patterns = _v1(
     ("employer/register-templates", v1_bridge.employer_register_templates, "v1_employer_register_templates"),
     ("employer/sap/config", v1_bridge.employer_sap_config, "v1_employer_sap_config"),
     ("admin/form-names", v1_bridge.admin_form_names, "v1_admin_form_names"),
+    ("admin/form-names/copy-all-states", v1_bridge.admin_copy_all_states, "v1_admin_form_names_copy_all_states"),
     ("admin/form-names/<int:form_id>", v1_bridge.admin_form_name_detail, "v1_admin_form_name_detail"),
     ("employer/form-names", v1_bridge.employer_form_names, "v1_employer_form_names"),
     ("employer/form-names/<int:form_id>", v1_bridge.employer_form_name_detail, "v1_employer_form_name_detail"),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Plus, X } from 'lucide-react';
+import { Copy, Loader2, Plus, X } from 'lucide-react';
 import { INDIA_STATES } from '@/data/indiaStates';
 
 type Checkpoint = { key?: string; type: string; label: string; value?: string; required?: boolean };
@@ -36,6 +36,23 @@ export default function AdminFormNamesPage() {
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- reload when state changes
   useEffect(() => { void load(); }, [load]);
+
+  async function copyToAllStates() {
+    if (!rows.length) return;
+    if (!window.confirm(`Copy all ${rows.length} catalog forms from ${state} to all other Indian states?`)) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const response = await fetch('/api/admin/form-names/copy-all-states', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceState: state }),
+      });
+      const body = await response.json().catch(() => ({})) as { message?: string; error?: string };
+      if (!response.ok) throw new Error(body.error ?? 'Catalog forms could not be copied.');
+      setNotice(body.message ?? `Copied forms from ${state} to all states.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Forms could not be copied.'); }
+    finally { setBusy(false); }
+  }
 
   function resetCheckpoints() {
     setSelectedCps({}); setCustomKeyword('');
@@ -90,6 +107,7 @@ export default function AdminFormNamesPage() {
           <label className="text-xs font-semibold text-gray-600">State
             <select value={state} onChange={e => setState(e.target.value)} className="ml-2 h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white">{INDIA_STATES.map(s => <option key={s}>{s}</option>)}</select>
           </label>
+          <button type="button" onClick={() => void copyToAllStates()} disabled={busy || !rows.length} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 inline-flex items-center gap-1.5" title={`Copy all catalog forms of ${state} to all states`}><Copy size={13}/>Copy to all states</button>
           <button type="button" onClick={() => { setShowAdd(true); setError(''); }} className="h-9 px-3 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1.5"><Plus size={14}/>Add form</button>
         </div>
       </header>

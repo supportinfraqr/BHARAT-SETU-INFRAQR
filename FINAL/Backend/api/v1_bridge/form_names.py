@@ -130,6 +130,51 @@ def admin_form_name_detail(request, form_id):
     return Response({"ok": True}, status=status.HTTP_200_OK)
 
 
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def admin_copy_all_states(request):
+    """BSS Admin: copy catalog forms from a source state to all other Indian states."""
+    from bss_core.models import CustomFormName
+    from bss_core.seeders.states import INDIA_STATES
+    if request.user.role not in ("bss_admin", "admin"):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    source_state = (request.data.get("sourceState") or "").strip()
+    if not source_state:
+        return Response({"error": "sourceState is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    source_forms = list(CustomFormName.objects.filter(employer__isnull=True, is_active=True, state__iexact=source_state))
+    if not source_forms:
+        return Response({"error": f"No active catalog forms found for {source_state}."}, status=status.HTTP_404_NOT_FOUND)
+
+    copied_count = 0
+    target_states = [s for s in INDIA_STATES if s.lower() != source_state.lower()]
+    for target in target_states:
+        for sf in source_forms:
+            _, created = CustomFormName.objects.get_or_create(
+                employer=None, site=None, state=target, name=sf.name,
+                defaults={
+                    "is_mandatory": sf.is_mandatory,
+                    "requires_document": sf.requires_document,
+                    "frequency": sf.frequency,
+                    "description": sf.description,
+                    "ocr_checkpoints": list(sf.ocr_checkpoints or []),
+                    "sort_order": sf.sort_order,
+                    "created_by": sf.created_by,
+                },
+            )
+            if created:
+                copied_count += 1
+
+    return Response({
+        "ok": True,
+        "copiedCount": copied_count,
+        "targetStateCount": len(target_states),
+        "sourceFormCount": len(source_forms),
+        "message": f"Copied {len(source_forms)} form(s) from {source_state} to {len(target_states)} states ({copied_count} new entries created)."
+    }, status=status.HTTP_200_OK)
+
+
 @api_view(["GET", "POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -205,5 +250,5 @@ def employer_form_name_detail(request, form_id):
     return Response({"ok": True}, status=status.HTTP_200_OK)
 
 
-__all__ = ["admin_form_names", "admin_form_name_detail",
+__all__ = ["admin_form_names", "admin_form_name_detail", "admin_copy_all_states",
            "employer_form_names", "employer_form_name_detail"]
