@@ -371,6 +371,7 @@ export type ContractorPortalData = {
   bindingRequests: ContractorBindingRequest[];
   registers: ContractorRegister[];
   complianceBatches: ContractorComplianceBatch[];
+  complianceStateSummary?: Array<{ state: string; month: string; year: string; sites: number; employees: number }>;
   auditReports: ContractorAuditReport[];
   recentActivities?: Array<{ title: string; time: string; type: string }>;
   grievances: ContractorGrievance[];

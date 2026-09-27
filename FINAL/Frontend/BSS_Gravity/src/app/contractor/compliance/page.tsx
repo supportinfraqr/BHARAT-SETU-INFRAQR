@@ -299,6 +299,18 @@ export default function ContractorCompliancePage() {
     return acc;
   }, {});
 
+  // State + period rollup (sites · employees) over every batch, newest first.
+  const stateSummary = useMemo(() => {
+    const rows = contractor.complianceStateSummary ?? [];
+    return [...rows].sort((a, b) => {
+      const ay = Number(a.year) || 0, by = Number(b.year) || 0;
+      if (ay !== by) return by - ay;
+      const am = MONTHS.indexOf(a.month), bm = MONTHS.indexOf(b.month);
+      if (am !== bm) return bm - am;
+      return a.state.localeCompare(b.state);
+    });
+  }, [contractor.complianceStateSummary]);
+
   const registerLibColumns: DataColumn<RegRow>[] = [
     { id:'state', header:'State', value:r => r.state },
     { id:'form', header:'Form No.', value:r => r.formCode, render:r => <span className="font-mono text-blue-700 font-semibold">{r.formCode}</span> },
@@ -408,6 +420,32 @@ export default function ContractorCompliancePage() {
           </div>
         )}
       </div>
+
+      {stateSummary.length > 0 && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">State-wise Summary</h2><p className="text-xs text-gray-400 mt-0.5">Sites and employees per state, for each period.</p></header>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-gray-200 text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
+                <th className="py-2.5 px-4">State</th>
+                <th className="py-2.5 px-4">Period</th>
+                <th className="py-2.5 px-4">Sites</th>
+                <th className="py-2.5 px-4">Employees</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-xs">
+              {stateSummary.map((row, i) => (
+                <tr key={`${row.state}-${row.month}-${row.year}-${i}`} className="hover:bg-slate-50/70">
+                  <td className="py-2.5 px-4 font-semibold text-gray-900">{row.state || '—'}</td>
+                  <td className="py-2.5 px-4 text-gray-600">{row.month} {row.year}</td>
+                  <td className="py-2.5 px-4 font-bold text-[#073B67]">{row.sites}</td>
+                  <td className="py-2.5 px-4 text-gray-700">{row.employees}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>}
 
       <div className="grid lg:grid-cols-2 gap-5">
       <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">

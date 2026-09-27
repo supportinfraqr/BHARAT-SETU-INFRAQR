@@ -993,6 +993,21 @@ def _contractor_compliance_batches(user):
     return [_contractor_compliance_batch_row(b) for b in qs]
 
 
+def _contractor_compliance_state_summary(user):
+    """State + period rollup over *every* generated batch (not just the latest 20
+    sent as `complianceBatches`): how many sites and how many employees per
+    (state, month, year). Powers the state-wise summary above the batch table."""
+    from django.db.models import Count, Sum
+    if not hasattr(user, "compliance_batches"):
+        return []
+    rows = (user.compliance_batches
+            .values("state", "month", "year")
+            .annotate(sites=Count("site", distinct=True), employees=Sum("employee_count")))
+    return [{"state": _d(r["state"]), "month": _d(r["month"]), "year": _d(r["year"]),
+             "sites": r["sites"] or 0, "employees": r["employees"] or 0}
+            for r in rows]
+
+
 def _contractor_audit_report_row(r):
     items = [
         {"act": _d(i.act), "form": _d(i.form_number), "nature": _d(i.nature),
@@ -1247,6 +1262,7 @@ def build_contractor_portal(user):
         "bindingRequests": _contractor_binding_requests(user),
         "registers": _contractor_registers(user),
         "complianceBatches": _contractor_compliance_batches(user),
+        "complianceStateSummary": _contractor_compliance_state_summary(user),
         "auditReports": _contractor_audit_reports(user),
         "recentActivities": _contractor_recent_activities(user),
         "grievances": _contractor_grievances(user),
