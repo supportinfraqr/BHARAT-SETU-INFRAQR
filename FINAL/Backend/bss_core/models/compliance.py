@@ -69,6 +69,9 @@ class RegisterTemplate(models.Model):
     # Statutory metadata (absorbed from the RegisterDocumentMaster master).
     criticality = models.CharField(max_length=20, blank=True)
     is_mandatory = models.BooleanField(default=False)
+    # OCR verification checklist for a manually-uploaded register, same shape as
+    # CustomFormName.ocr_checkpoints: [{"type","label","value","required"}].
+    ocr_checkpoints = models.JSONField(default=list, blank=True)
     source_format = models.CharField(max_length=10, blank=True)  # xlsx / xls / docx
     # Per-template output: registers export XLSX, forms export PDF. Blank =
     # derive from template_type (register -> xlsx, otherwise -> pdf).
@@ -588,7 +591,9 @@ class ComplianceBatch(models.Model):
     """A generated statutory-register batch (CLRA) for a contractor at a site for a
     period, produced from an uploaded compliance master file."""
 
-    STATUS = [("GENERATED", "Generated"), ("PENDING", "Pending"), ("FAILED", "Failed")]
+    STATUS = [("GENERATED", "Generated"), ("PENDING", "Pending"), ("FAILED", "Failed"),
+              ("SUBMITTED", "Submitted"), ("VERIFIED", "Verified"), ("RETURNED", "Returned"),
+              ("SUPERSEDED", "Superseded")]
 
     contractor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="compliance_batches")
     site = models.ForeignKey("Site", on_delete=models.SET_NULL, null=True, blank=True,
@@ -607,6 +612,10 @@ class ComplianceBatch(models.Model):
     rows_count = models.IntegerField(default=0)
     notes = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=20, choices=STATUS, default="GENERATED")
+    # When a site+period is regenerated, the previous batch is kept for audit but
+    # marked SUPERSEDED and points at the batch that replaced it.
+    superseded_by = models.ForeignKey("self", null=True, blank=True,
+                                      on_delete=models.SET_NULL, related_name="supersedes")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

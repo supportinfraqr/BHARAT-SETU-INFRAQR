@@ -155,10 +155,16 @@ def _handle_compliances(user, body, method):
         site = Site.objects.filter(site_name__iexact=str(body.get("site") or "").strip()).first()
         if site is None:
             site = Site.objects.filter(id__in=_contractor_site_ids(user)).order_by("id").first()
+        month = str(body.get("month") or "")[:20]
+        year = str(body.get("year") or "")[:4]
+        # One current register per site + period: supersede the previous ones.
+        existing = list(ComplianceBatch.objects
+                        .filter(contractor=user, site=site, month=month, year=year)
+                        .exclude(status__in=["SUPERSEDED", "SUBMITTED", "VERIFIED"]))
         batch = ComplianceBatch.objects.create(
             contractor=user, site=site,
             financial_year=str(body.get("financialYear") or "")[:12],
-            month=str(body.get("month") or "")[:20], year=str(body.get("year") or "")[:4],
+            month=month, year=year,
             state=str(body.get("state") or "")[:60],
             employee_count=WorkerContractorBinding.objects.filter(
                 contractor=user, binding_status="ACCEPTED").count(),
@@ -167,6 +173,10 @@ def _handle_compliances(user, body, method):
             generated_by=payloads._party_name(user),
             status="GENERATED",
         )
+        for old in existing:
+            old.status = "SUPERSEDED"
+            old.superseded_by = batch
+            old.save(update_fields=["status", "superseded_by", "updated_at"])
         return payloads._contractor_compliance_batch_row(batch)
 
     if kind in ("submit", "finalsubmit", "final-submit"):
@@ -187,6 +197,13 @@ def _handle_compliances(user, body, method):
         # Stamp the submitted evidence rows with the package's Unique No. so the
         # listing can track them (Unique No. + Days Left) like the old app.
         submissions.update(unique_no=report.unique_no, status="PENDING")
+        # A "hard submit" overrides failed OCR — keep that on record per document.
+        force = str(body.get("force") or "").lower() in ("1", "true", "yes")
+        if force:
+            for s in SubmissionEvidence.objects.filter(user=user, id__in=upload_ids):
+                if s.validation_findings or s.checkpoint_results:
+                    s.forced_submit = True
+                    s.save(update_fields=["forced_submit"])
         # Mark the included generated register batches as submitted so they can
         # no longer be re-submitted from the Create tab.
         if batch_ids:

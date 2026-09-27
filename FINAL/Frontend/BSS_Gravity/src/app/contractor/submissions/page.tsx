@@ -9,6 +9,8 @@ import type { ContractorPortalData } from '@/types/portal';
 
 type DocumentRow = ContractorPortalData['submissions']['documents'][number] & { fileName?: string; checksum?: string };
 type CheckpointResult = { key:string; label:string; type:string; required:boolean; passed:boolean; detail:string };
+type OcrCheckpoint = { key?: string; type: string; label: string; value?: string; required?: boolean };
+type DocRowUI = { name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; type: string; requiredFormat: string; note: string; ocrCheckpoints?: OcrCheckpoint[] };
 type EvidenceUpload = { id?: number; accuracy: number; status: 'Validating' | 'Validated' | 'Errors found'; findings?: string[]; noOcr?: boolean; checkpoints?: CheckpointResult[] };
 type Tab = 'submissions' | 'create';
 
@@ -188,12 +190,12 @@ export default function ComplianceSubmissionPage() {
     [createFreq, fy, bindingFY, bindingMonthIdx]);
 
   const [uploads, setUploads] = useState<Record<string, EvidenceUpload>>({});
-  const [additionalDocs, setAdditionalDocs] = useState<Array<{ name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; type: string; requiredFormat: string; note: string }>>([]);
+  const [additionalDocs, setAdditionalDocs] = useState<DocRowUI[]>([]);
   const [docsBusy, setDocsBusy] = useState(false);
   // CLRA registers: use the auto-generated batch, or upload the state's register
   // forms manually.
   const [clraMode, setClraMode] = useState<'generated' | 'manual'>('generated');
-  const [registerForms, setRegisterForms] = useState<Array<{ name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; type: string; requiredFormat: string; note: string }>>([]);
+  const [registerForms, setRegisterForms] = useState<DocRowUI[]>([]);
   const [registersBusy, setRegistersBusy] = useState(false);
 
   const rawDocuments = contractor.submissions.documents as DocumentRow[];
@@ -309,11 +311,11 @@ export default function ComplianceSubmissionPage() {
     setDocsBusy(true);
     void fetch(`/api/contractor/clra/site-documents${docsSiteId ? `?siteId=${encodeURIComponent(docsSiteId)}` : ''}`, { cache:'no-store' })
       .then(response => (response.ok ? response.json() : null))
-      .then((body: { data?: { documents?: Array<{ form:string; purpose:string; frequency:string; mandatory:boolean; requiresDocument?:boolean; custom?:boolean; templateId?:number|null; type?:string; requiredFormat?:string; note?:string }> } } | null) => {
+      .then((body: { data?: { documents?: Array<{ form:string; purpose:string; frequency:string; mandatory:boolean; requiresDocument?:boolean; custom?:boolean; templateId?:number|null; type?:string; requiredFormat?:string; note?:string; ocrCheckpoints?: OcrCheckpoint[] }> } } | null) => {
         if (!active) return;
         const docs = (body?.data?.documents || [])
           .filter(doc => doc.custom || !doc.templateId)
-          .map(doc => ({ name: doc.form || doc.purpose, frequency: doc.custom ? (doc.frequency || '') : '', mandatory: !!doc.mandatory, requiresDocument: doc.custom ? doc.requiresDocument !== false : true, type: doc.type || '', requiredFormat: doc.requiredFormat || '', note: doc.note || '' }));
+          .map(doc => ({ name: doc.form || doc.purpose, frequency: doc.custom ? (doc.frequency || '') : '', mandatory: !!doc.mandatory, requiresDocument: doc.custom ? doc.requiresDocument !== false : true, type: doc.type || '', requiredFormat: doc.requiredFormat || '', note: doc.note || '', ocrCheckpoints: doc.ocrCheckpoints || [] }));
         setAdditionalDocs(docs);
       })
       .catch(() => { if (active) setAdditionalDocs([]); })
@@ -328,7 +330,7 @@ export default function ComplianceSubmissionPage() {
     setRegistersBusy(true);
     void fetch(`/api/contractor/clra/templates${docsSiteId ? `?siteId=${encodeURIComponent(docsSiteId)}` : ''}`, { cache:'no-store' })
       .then(response => (response.ok ? response.json() : null))
-      .then((body: { rows?: Array<{ formCode:string; title:string; frequency?:string; isMandatory?:boolean }> } | null) => {
+      .then((body: { rows?: Array<{ formCode:string; title:string; frequency?:string; isMandatory?:boolean; ocrCheckpoints?: OcrCheckpoint[] }> } | null) => {
         if (!active) return;
         setRegisterForms((body?.rows || []).map(r => ({
           name: `${r.formCode || 'Register'}${r.title ? ` — ${r.title}` : ''}`,
@@ -338,6 +340,7 @@ export default function ComplianceSubmissionPage() {
           type: 'CLRA Register',
           requiredFormat: 'PDF / JPEG / PNG',
           note: '',
+          ocrCheckpoints: r.ocrCheckpoints || [],
         })));
       })
       .catch(() => { if (active) setRegisterForms([]); })
@@ -470,7 +473,7 @@ export default function ComplianceSubmissionPage() {
     } finally { setBusy(false); }
   }
 
-  async function submitSingleForm(docName: string, uploadId?: number) {
+  async function submitSingleForm(docName: string, uploadId?: number, force = false) {
     if (!uploadId) return;
     setBusy(true); setError(''); setNotice('');
     const siteObj = activeSiteObj;
@@ -480,12 +483,12 @@ export default function ComplianceSubmissionPage() {
     try {
       const response = await fetch('/api/portal/compliances', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: 'submit', employer: empName, site: subSiteName, period: `${createPeriod} ${fy.replace('FY ', '')}`, financialYear: fy, state: stName, month, location: '', complianceType: docName, docName, uploadIds: [uploadId], batchIds: [] }),
+        body: JSON.stringify({ kind: 'submit', employer: empName, site: subSiteName, period: `${createPeriod} ${fy.replace('FY ', '')}`, financialYear: fy, state: stName, month, location: '', complianceType: docName, docName, uploadIds: [uploadId], batchIds: [], force }),
       });
       const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['auditReports'][number]; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error ?? 'Document could not be submitted.');
       replaceContractor({ ...contractor, auditReports: [result.data, ...contractor.auditReports] });
-      setNotice(`Submitted successfully! Ref No: ${result.data.uniqueNo} (${docName}).`);
+      setNotice(`Submitted successfully! Ref No: ${result.data.uniqueNo} (${docName})${force ? ' — submitted despite OCR issues' : ''}.`);
       void refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Document could not be submitted.');
@@ -518,7 +521,7 @@ export default function ComplianceSubmissionPage() {
 
   // Shared table for "additional forms" and, in manual mode, the CLRA register
   // forms the contractor uploads themselves.
-  const renderDocsTable = (docs: Array<{ name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; type: string; requiredFormat: string; note: string }>) => (
+  const renderDocsTable = (docs: DocRowUI[]) => (
     <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
       <table className="w-full text-left border-collapse">
         <thead>
@@ -529,6 +532,7 @@ export default function ComplianceSubmissionPage() {
             <th className="py-2.5 px-3">Mandatory</th>
             <th className="py-2.5 px-3">Required Format</th>
             <th className="py-2.5 px-3">Note</th>
+            <th className="py-2.5 px-3">OCR Checklist</th>
             <th className="py-2.5 px-3">Submit</th>
           </tr>
         </thead>
@@ -556,6 +560,20 @@ export default function ComplianceSubmissionPage() {
                 </td>
                 <td className="py-3 px-3 text-gray-600 text-[11px]">{doc.requiredFormat || '—'}</td>
                 <td className="py-3 px-3 text-gray-500 text-[11px] max-w-[220px]" title={doc.note || ''}>{doc.note || '—'}</td>
+                <td className="py-3 px-3">
+                  {(doc.ocrCheckpoints?.length ?? 0) === 0 ? (
+                    <span className="text-gray-300 text-[11px]">—</span>
+                  ) : (
+                    <ul className="space-y-0.5 text-[10px]">
+                      {(doc.ocrCheckpoints ?? []).map((cp, i) => {
+                        const res = up?.checkpoints?.find(r => (cp.key && r.key === cp.key) || r.label === cp.label);
+                        const mark = res ? (res.passed ? '✓' : '✗') : '•';
+                        const tone = res ? (res.passed ? 'text-green-700' : 'text-red-700 font-semibold') : 'text-gray-400';
+                        return <li key={i} className={`${tone} flex items-start gap-1`} title={res?.detail || cp.label}><span>{mark}</span><span>{cp.label}</span></li>;
+                      })}
+                    </ul>
+                  )}
+                </td>
                 <td className="py-3 px-3">
                   {locked ? (
                     <div className="flex flex-col gap-1">
@@ -586,7 +604,12 @@ export default function ComplianceSubmissionPage() {
                       {up?.status === 'Validating' ? (
                         <span className="text-[10px] font-bold text-blue-700">Validating…</span>
                       ) : up?.status === 'Errors found' ? (
-                        <button type="button" onClick={() => setViewErrors({ name: doc.name, findings: up.findings ?? [] })} className="text-left text-[10px] font-bold text-red-700 hover:underline">Errors found — view findings</button>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button type="button" onClick={() => setViewErrors({ name: doc.name, findings: up.findings ?? [] })} className="text-left text-[10px] font-bold text-red-700 hover:underline">Errors found — view findings</button>
+                          {up?.id != null && (
+                            <button type="button" onClick={() => void submitSingleForm(doc.name, up.id, true)} disabled={busy} className="h-6 px-2 rounded-md border border-red-300 text-[10px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-40">Submit anyway</button>
+                          )}
+                        </div>
                       ) : up?.status === 'Validated' ? (
                         <span className="text-[10px] font-bold text-green-700">Validated — ready to submit</span>
                       ) : (

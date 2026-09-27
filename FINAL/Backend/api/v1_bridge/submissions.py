@@ -104,17 +104,32 @@ def _submissions(request):
     accuracy = None
     findings = []
     checkpoint_results = []
+    checkpoints = []
     if file_obj:
         checksum = payloads.sha256_checksum(file_obj)
-        # Additional (non-template) forms can carry an OCR verification checklist
-        # configured for the form name; verify against it when present.
-        from bss_core.models import CustomFormName
-        form = None
-        form_key = document_type or ftype
+        # A document can carry an OCR verification checklist: additional forms
+        # from the form name (CustomFormName), manual CLRA register uploads from
+        # the register template (RegisterTemplate).
+        from bss_core.models import CustomFormName, RegisterTemplate
+        form_key = (document_type or ftype).strip()
+        form_name = form_key
         if form_key:
             form = (CustomFormName.objects.filter(is_active=True, name__iexact=form_key)
                     .filter(Q(state__iexact=state) | Q(state="")).first())
-        has_checkpoints = bool(form and form.ocr_checkpoints)
+            if form and form.ocr_checkpoints:
+                checkpoints = list(form.ocr_checkpoints)
+                form_name = form.name
+            else:
+                template = (RegisterTemplate.objects.filter(is_active=True)
+                            .filter(Q(form_code__iexact=form_key) | Q(title__iexact=form_key)).first())
+                if template is None:
+                    # Manual register uploads send "<form code> — <title>".
+                    code = form_key.replace("\u2014", "-").split(" - ")[0].strip()
+                    template = RegisterTemplate.objects.filter(is_active=True, form_code__iexact=code).first()
+                if template and template.ocr_checkpoints:
+                    checkpoints = list(template.ocr_checkpoints)
+                    form_name = template.title or template.form_code
+        has_checkpoints = bool(checkpoints)
         if has_checkpoints or not no_ocr:
             ocr_text = None
             try:
@@ -129,10 +144,10 @@ def _submissions(request):
                     pass
             if has_checkpoints:
                 accuracy, checkpoint_results, findings = ocr_client.verify_checkpoints(
-                    form.ocr_checkpoints, ocr_text or "",
+                    checkpoints, ocr_text or "",
                     context={"contractor": payloads._party_name(user), "employer": employer,
                              "site": site, "month": month, "year": year, "period": period,
-                             "worker": "", "form_name": form.name})
+                             "worker": "", "form_name": form_name})
             else:
                 accuracy, findings = compliance.validate_evidence(file_obj, ftype, ocr_text=ocr_text)
 
@@ -192,6 +207,7 @@ def _submissions(request):
             "accuracy": accuracy,
             "noOcr": no_ocr,
             "checkpoints": checkpoint_results,
+            "requiredCheckpoints": checkpoints,
             "validated": no_ocr or (accuracy is not None and accuracy >= 100),
             "findings": findings,
         }
@@ -338,8 +354,9 @@ def _handle_submission_review(user, body):
         if len(parts) != 4:
             raise PortalMutationError("Submission not found.", 404)
         _, cid, year, month = parts
-        batches = ComplianceBatch.objects.filter(
-            contractor_id=cid, year=year, month=month, site__employer=user)
+        batches = (ComplianceBatch.objects
+                   .filter(contractor_id=cid, year=year, month=month, site__employer=user)
+                   .exclude(status="SUPERSEDED"))
         if not batches.exists():
             raise PortalMutationError("Submission not found.", 404)
         if decision == "VERIFIED":
@@ -489,8 +506,18 @@ def contractor_compliance_batches(request):
             failures.append(f"No register template is due for {state} (site \u201c{site.site_name}\u201d) "
                             f"in {month} {year}.")
             continue
+        # One current register per site + period. A submitted/verified register
+        # cannot be regenerated (that would erase the employer's review); anything
+        # else for this site+period is superseded by the new one.
+        existing = list(ComplianceBatch.objects
+                        .filter(contractor=user, site=site, month=month[:20], year=year[:4])
+                        .exclude(status="SUPERSEDED"))
+        if any(str(b.status).upper() in ("SUBMITTED", "VERIFIED") for b in existing):
+            failures.append(f"A register for \u201c{site.site_name}\u201d {month} {year} is already "
+                            f"submitted or verified \u2014 it cannot be regenerated.")
+            continue
         plans.append({"site": site, "state": state, "rows": group_rows,
-                      "templates": selected, "skipped": skipped})
+                      "templates": selected, "skipped": skipped, "supersede": existing})
 
     if failures:
         return Response({"error": " ".join(failures), "failures": failures},
@@ -543,6 +570,11 @@ def contractor_compliance_batches(request):
             signature.seek(0)
             batch.signature_file.save(os.path.basename(signature.name or "signature"), signature, save=False)
         batch.save()
+        # Supersede the previous current register(s) for this site+period.
+        for old in plan.get("supersede", []):
+            old.status = "SUPERSEDED"
+            old.superseded_by = batch
+            old.save(update_fields=["status", "superseded_by", "updated_at"])
         created.append(payloads._contractor_compliance_batch_row(batch))
 
     return Response({"data": created}, status=status.HTTP_201_CREATED)
@@ -866,7 +898,7 @@ def contractor_site_documents(request):
                               "outputFormat": "", "custom": True, "scope": "admin",
                               "requiresDocument": bool(obj.requires_document),
                               "type": "Admin", "requiredFormat": _required_format(obj.requires_document),
-                              "note": obj.description})
+                              "note": obj.description, "ocrCheckpoints": list(obj.ocr_checkpoints or [])})
         for obj in (CustomFormName.objects.filter(is_active=True, state__iexact=state,
                                                   employer=employer)
                     .filter(Q(site=site) | Q(site__isnull=True)).order_by("sort_order", "name")):
@@ -875,7 +907,7 @@ def contractor_site_documents(request):
                               "outputFormat": "", "custom": True, "scope": "employer",
                               "requiresDocument": bool(obj.requires_document),
                               "type": "Employer", "requiredFormat": _required_format(obj.requires_document),
-                              "note": obj.description})
+                              "note": obj.description, "ocrCheckpoints": list(obj.ocr_checkpoints or [])})
         # Only the ad-hoc form names above are "additional forms". The statutory
         # matrix (FORM II, FORM VII, …) is the register side — generated or not —
         # and must never be listed here, or registers appear twice on the page.

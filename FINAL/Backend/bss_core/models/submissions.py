@@ -42,6 +42,9 @@ class SubmissionEvidence(models.Model):
     # [{"key":"signature","label":"Signature","required":true,"passed":true,"detail":"..."}].
     checkpoint_results = models.JSONField(default=list, blank=True)
     status = models.CharField(max_length=20, choices=STATUS, default="PENDING")
+    # True when the contractor chose to submit despite failed OCR checkpoints —
+    # kept so the override is on record alongside the validation findings.
+    forced_submit = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
