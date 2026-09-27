@@ -36,6 +36,59 @@ def _throttle_aadhaar(aadhaar, seconds=60):
         expires_at=now + timedelta(seconds=wait))
 
 
+# ---------------------------------------------------------------------------
+# Account-wide circuit breaker. Sandbox rate-limits our whole API key (not just
+# one Aadhaar), so a per-Aadhaar cooldown lets a *new* number straight through
+# and keeps the account throttle alive. These sentinel rows gate every Aadhaar
+# OTP request app-wide: "THROTTLED" = account cooling down; "CALL" = time of the
+# last Sandbox OTP call (for a global minimum interval between calls).
+# ---------------------------------------------------------------------------
+
+_GLOBAL_OTP_KEY = "__global_aadhaar_otp__"
+
+
+def _fmt_wait(seconds):
+    seconds = max(1, int(seconds))
+    if seconds >= 60:
+        mins, secs = divmod(seconds, 60)
+        return f"{mins} min" if secs == 0 else f"{mins} min {secs:02d}s"
+    return f"{seconds}s"
+
+
+def _global_cooldown_remaining():
+    now = timezone.now()
+    row = (AadhaarChallenge.objects
+           .filter(aadhaar_number=_GLOBAL_OTP_KEY, status="THROTTLED", expires_at__gt=now)
+           .order_by("-expires_at").first())
+    return max(1, int((row.expires_at - now).total_seconds())) if row else 0
+
+
+def _open_global_cooldown(seconds=None):
+    now = timezone.now()
+    base = seconds or settings.AADHAAR_GLOBAL_COOLDOWN_SEC
+    recent = AadhaarChallenge.objects.filter(
+        aadhaar_number=_GLOBAL_OTP_KEY, status="THROTTLED",
+        created_at__gte=now - timedelta(hours=6)).count()
+    wait = min(base * (2 ** min(recent, 2)), 60 * 60)  # 15m → 30m → 60m
+    AadhaarChallenge.objects.create(aadhaar_number=_GLOBAL_OTP_KEY, status="THROTTLED",
+                                    expires_at=now + timedelta(seconds=wait))
+
+
+def _global_min_interval_remaining():
+    last = (AadhaarChallenge.objects
+            .filter(aadhaar_number=_GLOBAL_OTP_KEY, status="CALL")
+            .order_by("-created_at").first())
+    if not last:
+        return 0
+    interval = settings.AADHAAR_MIN_INTERVAL_SEC
+    elapsed = (timezone.now() - last.created_at).total_seconds()
+    return max(0, int(interval - elapsed)) if elapsed < interval else 0
+
+
+def _mark_global_call():
+    AadhaarChallenge.objects.create(aadhaar_number=_GLOBAL_OTP_KEY, status="CALL")
+
+
 def _parse_dob(value):
     if not value:
         return None
@@ -159,12 +212,21 @@ def aadhaar_otp(request):
         return Response({"error": "Enter a valid 12-digit Aadhaar number"},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    # Short-circuit during the cooldown so repeated clicks don't keep calling
-    # Sandbox (each call was resetting UIDAI's 45s window, so it never cleared).
+    # Account-wide circuit breaker: Sandbox rate-limits our whole API key, so
+    # once it throttles any Aadhaar we pause every Aadhaar OTP request for a
+    # cooling window (a new number must not slip through and keep it alive).
+    global_wait = _global_cooldown_remaining()
+    if global_wait:
+        return Response(
+            {"error": f"Aadhaar OTP service is cooling down (UIDAI/Sandbox rate limit). Please try again in {_fmt_wait(global_wait)}.",
+             "retryAfterSeconds": global_wait},
+            status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+    # Per-Aadhaar cooldown.
     remaining = _aadhaar_throttle_remaining(aadhaar)
     if remaining:
         return Response(
-            {"error": f"An OTP was requested for this Aadhaar a moment ago. Please wait {remaining} seconds before requesting another.",
+            {"error": f"An OTP was requested for this Aadhaar a moment ago. Please wait {_fmt_wait(remaining)} before requesting another.",
              "retryAfterSeconds": remaining},
             status=status.HTTP_429_TOO_MANY_REQUESTS)
 
@@ -208,6 +270,15 @@ def aadhaar_otp(request):
     if live is not None:
         return live
 
+    # Global minimum interval between Sandbox calls (burst protection).
+    gap = _global_min_interval_remaining()
+    if gap:
+        return Response(
+            {"error": f"Please wait {_fmt_wait(gap)} before requesting another Aadhaar OTP.",
+             "retryAfterSeconds": gap},
+            status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+    _mark_global_call()
     try:
         result = aadhaar_client.generate_otp(aadhaar)
     except aadhaar_client.SandboxError as exc:
@@ -223,9 +294,11 @@ def aadhaar_otp(request):
                             or "already" in msg.lower())
             if rate_limited:
                 _throttle_aadhaar(aadhaar, 60)
+                _open_global_cooldown()
+                g = _global_cooldown_remaining()
                 return Response(
-                    {"error": "An OTP was recently sent to this Aadhaar. Please wait about a minute before requesting another.",
-                     "retryAfterSeconds": 60},
+                    {"error": f"Aadhaar OTP is cooling down (UIDAI/Sandbox rate limit). Please try again in {_fmt_wait(g)}.",
+                     "retryAfterSeconds": g},
                     status=status.HTTP_429_TOO_MANY_REQUESTS)
             return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"error": f"Aadhaar (UIDAI) service is temporarily unavailable — {str(exc)}. Please try again later."},
@@ -239,9 +312,11 @@ def aadhaar_otp(request):
         if fallback is not None:
             return fallback
         _throttle_aadhaar(aadhaar, 60)
+        _open_global_cooldown()
+        g = _global_cooldown_remaining()
         return Response(
-            {"error": "An OTP was recently sent to this Aadhaar. Please wait about a minute before requesting another.",
-             "retryAfterSeconds": 60},
+            {"error": f"Aadhaar OTP is cooling down (UIDAI/Sandbox rate limit). Please try again in {_fmt_wait(g)}.",
+             "retryAfterSeconds": g},
             status=status.HTTP_429_TOO_MANY_REQUESTS)
 
     challenge = AadhaarChallenge.objects.create(
