@@ -437,21 +437,14 @@ export default function IdentityCardPage() {
 
               {/* Coloured Header — uses the linked site's colour */}
               <div className="text-white text-center pt-3 px-4 pb-0 relative z-10" style={{ background: siteColour }}>
-                <div className="flex items-center justify-center gap-2.5 mb-0.5">
+                <div className="flex items-center justify-center gap-2.5 mb-1.5">
                   <div className="w-9 h-9 bg-white border border-slate-200 rounded-lg p-1 flex items-center justify-center shadow-xs">
                     <img src="/bss-original-logo.png" alt="BSS Logo" className="w-full h-full object-contain" />
                   </div>
                   <div className="text-left">
-                    <h1 className="text-[16px] font-extrabold m-0 leading-none tracking-tight">
-                      <span className="text-white">Bharat</span><span className="text-[#FF9933]">Shram</span><span className="text-[#2F9E67]">Setu</span>
-                    </h1>
-                    <div className="text-[8.5px] font-bold text-slate-400 tracking-[1.2px] uppercase mt-0.5">EMPLOYMENT CARD</div>
+                    <div className="text-[13px] font-extrabold leading-tight tracking-tight">{employerName}</div>
+                    <div className="text-[9px] font-mono font-bold text-white/90 tracking-[0.08em] mt-0.5">{siteCode}</div>
                   </div>
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-[8.5px] font-bold text-slate-200 my-1 mb-2.5 uppercase tracking-wide">
-                  <span><span className="text-slate-500">Employer:</span> {employerName}</span>
-                  <span className="text-slate-500">·</span>
-                  <span><span className="text-slate-500">Site Code:</span> {siteCode}</span>
                 </div>
 
                 {/* 3-Color Line */}
@@ -565,27 +558,27 @@ export default function IdentityCardPage() {
                 {/* Contractor Section */}
                 <div className="border border-slate-300 border-l-[3px] border-l-[#153C71] bg-white p-2 rounded-md shadow-2xs">
                   <h3 className="m-0 text-[#153C71] text-[11px] font-extrabold mb-0.5">Contractor Details</h3>
-                  <div className="text-[10.5px] font-extrabold text-slate-900">{worker.employment.contractor || (worker as any).details?.employment?.contractor || 'BuildWell Contractors Pvt Ltd'}</div>
+                  <div className="text-[10.5px] font-extrabold text-slate-900">{worker.employment.contractor || '—'}</div>
                   <div className="flex justify-between items-center text-slate-600 text-[8.5px] mt-0.5">
-                    <span>Contractor ID: <b className="text-slate-900">{worker.employment.contractorDetails?.code || (worker.employment as any).contractorCode || 'BSS-C0000000004'}</b></span>
-                    <span>Contact: <b className="text-slate-900">{worker.employment.contractorDetails?.contact || (worker.employment as any).contractorContact || '4444444444'}</b></span>
+                    <span>Contractor ID: <b className="text-slate-900">{worker.employment.contractorDetails?.code || '—'}</b></span>
+                    <span>Contact: <b className="text-slate-900">{worker.employment.contractorDetails?.contact || '—'}</b></span>
                   </div>
                 </div>
 
                 {/* Site Section */}
                 <div className="border border-slate-300 border-l-[3px] border-l-[#153C71] bg-white p-2 rounded-md shadow-2xs">
                   <h3 className="m-0 text-[#153C71] text-[11px] font-extrabold mb-0.5">Site Details</h3>
-                  <div className="text-[10.5px] font-extrabold text-slate-900">{worker.employment.site || (worker as any).details?.employment?.site || 'Demo Metro Site'}</div>
+                  <div className="text-[10.5px] font-extrabold text-slate-900">{worker.employment.site || '—'}</div>
                   <div className="flex justify-between items-center text-slate-600 text-[8.5px] mt-0.5">
-                    <span>{worker.employment.siteDetails?.location || (worker as any).details?.address?.current || 'Sector 21, Navi Mumbai'}</span>
-                    <span>Site ID: <b className="text-slate-900">{worker.employment.siteDetails?.code || (worker.employment as any).siteCode || 'DEMO-SITE-001'}</b></span>
+                    <span>{worker.employment.siteDetails?.location || '—'}</span>
+                    <span>Site ID: <b className="text-slate-900">{worker.employment.siteDetails?.code || '—'}</b></span>
                   </div>
                 </div>
 
                 {/* Supervisor Section */}
                 <div className="border border-slate-300 border-l-[3px] border-l-[#153C71] bg-white p-2 rounded-md shadow-2xs">
                   <h3 className="m-0 text-[#153C71] text-[11px] font-extrabold mb-0.5">Supervisor Detail</h3>
-                  <div className="text-[10.5px] font-extrabold text-slate-900">{(worker.employment as any).supervisorName || (worker.employment.siteDetails as any)?.manager || 'Site Supervisor'}</div>
+                  <div className="text-[10.5px] font-extrabold text-slate-900">{(worker.employment as any).supervisorName || (worker.employment.siteDetails as any)?.manager || '—'}</div>
                   <div className="text-slate-600 text-[8.5px] mt-0.5">
                     <span>Contact No.: <b className="text-slate-900">{(worker.employment as any).supervisorContact || '—'}</b></span>
                   </div>
@@ -595,14 +588,14 @@ export default function IdentityCardPage() {
                 <div className="grid grid-cols-2 gap-2 my-0.5">
                   <div className="bg-[#FFF3F3] border border-rose-200 border-l-[3px] border-l-rose-600 p-2 rounded-lg text-[8px] relative">
                     <div className="text-rose-600 font-extrabold text-[8.5px] mb-1">☎ EMERGENCY CONTACT</div>
-                    <div className="text-slate-700">Name: <b className="text-slate-900">{(worker as any).emergencyContact?.name || (worker as any).details?.emergency?.name || 'Family Contact'}</b></div>
-                    <div className="text-slate-700">Number: <b className="text-slate-900">{(worker as any).emergencyContact?.number || (worker as any).details?.emergency?.number || '—'}</b></div>
-                    <div className="text-slate-700">Relation: <b className="text-slate-900">{(worker as any).emergencyContact?.relation || (worker as any).details?.emergency?.relation || 'Relative'}</b></div>
+                    <div className="text-slate-700">Name: <b className="text-slate-900">{worker.identity.emergencyContactName || '—'}</b></div>
+                    <div className="text-slate-700">Number: <b className="text-slate-900">{worker.identity.emergencyContactNumber || '—'}</b></div>
+                    <div className="text-slate-700">Relation: <b className="text-slate-900">{worker.identity.emergencyContactRelation || '—'}</b></div>
                   </div>
 
                   <div className="bg-[#FFF3F3] border border-rose-200 border-l-[3px] border-l-rose-600 p-2 rounded-lg text-[8px] relative">
                     <div className="text-rose-600 font-extrabold text-[8.5px] mb-1">♦ BLOOD GROUP</div>
-                    <span className="absolute top-1.5 right-2 text-[18px] font-black text-rose-600">{(worker.identity as any).bloodGroup || (worker as any).details?.bloodGroup || 'O+'}</span>
+                    <span className="absolute top-1.5 right-2 text-[18px] font-black text-rose-600">{worker.personal.bloodGroup || '—'}</span>
                     <div className="text-slate-500 text-[7.5px] mt-4">In case of emergency please contact</div>
                   </div>
                 </div>
