@@ -134,9 +134,18 @@ def _contractor_sites(user):
     """Sites allotted to the contractor by an employer (APPROVED on an ACCEPTED
     contractor↔employer binding). A contractor never owns a site — these are the
     employer's sites that were allotted to them."""
-    site_ids = set(ContractorSiteAllotment.objects.filter(
-        binding__contractor=user, binding__binding_status="ACCEPTED", status="APPROVED"
-    ).values_list("site_id", flat=True))
+    allotments = (ContractorSiteAllotment.objects
+                  .filter(binding__contractor=user, binding__binding_status="ACCEPTED",
+                          status="APPROVED"))
+    # Earliest approval of each allotment — when the contractor was given the
+    # site. Drives the Financial Year list so it starts at the site, not the
+    # employer binding or incorporation.
+    allotted_on = {}
+    for a in allotments:
+        when = a.approved_at or a.created_at
+        if when and (a.site_id not in allotted_on or when < allotted_on[a.site_id]):
+            allotted_on[a.site_id] = when
+    site_ids = set(allotted_on)
     sites = Site.objects.filter(id__in=site_ids)
     rows = []
     for s in sites:
@@ -150,6 +159,7 @@ def _contractor_sites(user):
             "workers": WorkerContractorBinding.objects.filter(
                 contractor=user, site=s, binding_status="ACCEPTED").count(),
             "compliance": _site_compliance_pct(user, s),
+            "boundSince": _dts(allotted_on.get(s.id)) or "",
             "data": _site_scalar_data(s),
         })
     return rows

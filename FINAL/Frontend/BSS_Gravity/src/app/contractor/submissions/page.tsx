@@ -85,6 +85,10 @@ export default function ComplianceSubmissionPage() {
   // any employer when showing all sites). The year list starts here so years
   // before the contractor joined the site are never offered.
   const bindingSince = useMemo(() => {
+    if (siteFilter !== 'all') {
+      const site = contractor.sites.find(s => s.name === siteFilter);
+      if (site?.boundSince) return site.boundSince.slice(0, 10);
+    }
     const names = siteFilter === 'all'
       ? contractor.employers.map(e => e.name)
       : contractor.sites.filter(s => s.name === siteFilter).map(s => s.employer);
