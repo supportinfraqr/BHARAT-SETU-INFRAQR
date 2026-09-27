@@ -151,7 +151,7 @@ def aadhaar_otp(request):
                           created_at__gte=now - timedelta(minutes=window_minutes))
                   .exclude(reference_id__isnull=True).exclude(reference_id="")
                   .exclude(status__in=["VERIFIED", "FAILED"])
-                  .order_by("-created_at").first())
+                  .order_by("-expires_at", "-created_at").first())
         if recent is None:
             return None
         expires = recent.expires_at or (recent.created_at + timedelta(minutes=settings.AADHAAR_OTP_TTL_MIN))
@@ -198,17 +198,13 @@ def aadhaar_otp(request):
             return fallback
         return Response({"error": msg}, status=status.HTTP_429_TOO_MANY_REQUESTS)
 
-    challenge = AadhaarChallenge.objects.filter(
-        aadhaar_number=aadhaar, status__in=["INITIATED", "OTP_SENT"]).first()
-    if challenge is None:
-        challenge = AadhaarChallenge.objects.create(
-            aadhaar_number=aadhaar, consent=bool(body.get("consent", True)))
-    challenge.reference_id = str(ref_id)
-    challenge.status = "OTP_SENT"
-    challenge.expires_at = timezone.now() + timedelta(minutes=settings.AADHAAR_OTP_TTL_MIN)
-    challenge.response_json = json.dumps(result, default=str)
-    challenge.save(update_fields=["reference_id", "status", "expires_at",
-                                  "response_json", "updated_at"])
+    challenge = AadhaarChallenge.objects.create(
+        aadhaar_number=aadhaar,
+        consent=bool(body.get("consent", True)),
+        reference_id=str(ref_id),
+        status="OTP_SENT",
+        expires_at=timezone.now() + timedelta(minutes=settings.AADHAAR_OTP_TTL_MIN),
+        response_json=json.dumps(result, default=str))
 
     return Response({
         "referenceId": challenge.reference_id,
