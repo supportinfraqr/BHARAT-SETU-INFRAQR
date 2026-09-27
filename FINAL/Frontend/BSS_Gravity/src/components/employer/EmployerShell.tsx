@@ -24,7 +24,6 @@ const sitesGroup = { key:'nav.sites', icon:LayoutDashboard, items:[
   ['nav.siteOverview','/employer/site-overview'],
 ] };
 const complianceGroup = { key:'nav.compliance', icon:ClipboardCheck, items:[
-  ['CLRA Registers','/employer/clra-registers'],
   ['nav.complianceSubmission','/employer/compliance-submission'],
 ] };
 const qrGroup = { key:'nav.qrSystem', icon:Network, items:[
@@ -109,6 +108,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
             {profile && <div className="absolute right-0 top-full mt-2 w-60 bg-white border border-gray-200 rounded-xl shadow-xl p-1">
               <div className="p-3 border-b border-gray-100"><p className="font-semibold text-sm">{employer.identity.company}</p><p className="text-xs text-gray-500 font-mono mt-0.5">{employer.identity.bssId}</p></div>
               <Link href="/employer/profile" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-gray-50"><Settings size={16}/>{t('nav.profile')}</Link>
+              <Link href="/employer/clra-registers" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-gray-50"><ClipboardCheck size={16}/>Registers Adoption</Link>
               <Link href="/employer/templates" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-gray-50"><FileText size={16}/>{t('nav.templates')}</Link>
               <Link href="/employer/settings" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-gray-50"><Settings size={16}/>{t('nav.settings')}</Link>
               <SignOutButton className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 rounded-lg hover:bg-red-50"/>
@@ -120,6 +120,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
       {mobile && <nav aria-label={t('nav.mobile')} className="bss-mobile-menu absolute top-16 w-full bg-white border-b border-gray-200 shadow-xl p-4">
         {mobileItems.map(item => <Link key={`${item[0]}-${item[1]}`} href={item[1]} onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-gray-50">{t(item[0])}</Link>)}
         <Link href="/employer/profile" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-gray-50">{t('nav.profile')}</Link>
+        <Link href="/employer/clra-registers" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-gray-50">Registers Adoption</Link>
         <Link href="/employer/templates" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-gray-50">{t('nav.templates')}</Link>
         <Link href="/employer/settings" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-gray-50">{t('nav.settings')}</Link>
         <SignOutButton className="w-full flex items-center gap-2 px-4 py-3 text-red-600"/>
