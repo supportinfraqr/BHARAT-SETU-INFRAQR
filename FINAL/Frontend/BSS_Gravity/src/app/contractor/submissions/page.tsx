@@ -183,7 +183,7 @@ export default function ComplianceSubmissionPage() {
   const [fy, setFy] = useState(availableYears[0] || 'FY 2026-27');
   const [createFreq, setCreateFreq] = useState<Frequency>('Monthly');
   const [createPeriod, setCreatePeriod] = useState<string>(MONTHS[5]);
-  const [viewErrors, setViewErrors] = useState<{ name: string; findings: string[] } | null>(null);
+  const [viewErrors, setViewErrors] = useState<{ name: string; findings: string[]; uploadId?: number } | null>(null);
 
   const visibleCreatePeriods = useMemo(
     () => clampPeriods(periodsFor(createFreq), fy, bindingFY, bindingMonthIdx),
@@ -605,7 +605,7 @@ export default function ComplianceSubmissionPage() {
                         <span className="text-[10px] font-bold text-blue-700">Validating…</span>
                       ) : up?.status === 'Errors found' ? (
                         <div className="flex flex-wrap items-center gap-2">
-                          <button type="button" onClick={() => setViewErrors({ name: doc.name, findings: up.findings ?? [] })} className="text-left text-[10px] font-bold text-red-700 hover:underline">Errors found — view findings</button>
+                          <button type="button" onClick={() => setViewErrors({ name: doc.name, findings: up.findings ?? [], uploadId: up.id })} className="text-left text-[10px] font-bold text-red-700 hover:underline">Errors found — view reasons</button>
                           {up?.id != null && (
                             <button type="button" onClick={() => void submitSingleForm(doc.name, up.id, true)} disabled={busy} className="h-6 px-2 rounded-md border border-red-300 text-[10px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-40">Submit anyway</button>
                           )}
@@ -945,8 +945,19 @@ export default function ComplianceSubmissionPage() {
 
     {viewErrors && <div className="fixed inset-0 z-[85] bg-black/50 grid place-items-center p-4" onMouseDown={e => { if (e.target === e.currentTarget) setViewErrors(null); }}>
       <section role="dialog" aria-modal="true" className="w-full max-w-lg bg-white rounded-2xl shadow-xl">
-        <header className="p-5 border-b border-gray-100 flex justify-between items-start gap-3"><div><h2 className="font-semibold text-gray-950">Validation findings</h2><p className="text-xs text-gray-500 mt-1">{viewErrors.name}</p></div><button type="button" onClick={() => setViewErrors(null)} className="w-11 h-11 -mr-2 -mt-2 grid place-items-center rounded-lg hover:bg-gray-50" aria-label="Close"><X/></button></header>
-        <ul className="p-5 space-y-2 text-sm text-gray-700">{viewErrors.findings.map((f, i) => <li key={i} className="flex gap-2"><span className="text-orange-500">•</span>{f}</li>)}</ul>
+        <header className="p-5 border-b border-gray-100 flex justify-between items-start gap-3"><div><h2 className="font-semibold text-gray-950">Why this upload failed</h2><p className="text-xs text-gray-500 mt-1">{viewErrors.name}</p></div><button type="button" onClick={() => setViewErrors(null)} className="w-11 h-11 -mr-2 -mt-2 grid place-items-center rounded-lg hover:bg-gray-50" aria-label="Close"><X/></button></header>
+        {viewErrors.findings.length
+          ? <ul className="p-5 space-y-2 text-sm text-gray-700">{viewErrors.findings.map((f, i) => <li key={i} className="flex gap-2"><span className="text-red-500">•</span>{f}</li>)}</ul>
+          : <p className="p-5 text-sm text-gray-500">No specific reason recorded.</p>}
+        {viewErrors.uploadId != null && (
+          <footer className="px-5 py-4 border-t border-gray-100 flex items-center justify-between gap-2">
+            <p className="text-[11px] text-gray-400">Overriding records the failed checks against this document.</p>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setViewErrors(null)} className="h-9 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Close</button>
+              <button type="button" disabled={busy} onClick={() => { const id = viewErrors.uploadId; const name = viewErrors.name; setViewErrors(null); void submitSingleForm(name, id, true); }} className="h-9 px-4 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700 disabled:opacity-40">Submit anyway</button>
+            </div>
+          </footer>
+        )}
       </section>
     </div>}
 

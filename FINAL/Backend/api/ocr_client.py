@@ -452,8 +452,10 @@ def verify_checkpoints(checkpoints, ocr_text, context=None):
         passed, detail = _evaluate_checkpoint(ctype, value, upper, squashed, context or {})
         results.append({"key": str(cp.get("key") or ctype), "label": label, "type": ctype,
                         "required": required, "passed": passed, "detail": detail})
-        findings.append(("Verified: " if passed else "Missing: ") + label
-                        + (": " + detail if not passed else ""))
+        # Findings carry only the reasons a check failed — passed checks are in
+        # `results`, so the UI shows exactly why an upload was rejected.
+        if not passed:
+            findings.append(f"{label}: {detail}" if detail else label)
     total = len(results)
     passed_count = sum(1 for r in results if r["passed"])
     accuracy = round((passed_count / total) * 100, 2) if total else 100.0
