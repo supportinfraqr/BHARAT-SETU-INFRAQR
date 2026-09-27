@@ -2803,3 +2803,168 @@ summary,
             font-size: 21px;
         }
 }
+
+
+/* ============================================================
+   LOGIN LAYOUT FIX — vertically centred + fully responsive
+   (appended last so it wins the cascade over the legacy rules)
+   ============================================================ */
+
+html:has(.newLoginPage) {
+    height: auto;
+    scroll-behavior: smooth;
+}
+
+.newLoginPage {
+    min-height: 100svh;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.newLoginMain {
+    min-height: 0;
+    height: auto;
+    overflow: visible;
+}
+
+/* Desktop: vertically centre the auth card next to the hero */
+.newLoginContent {
+    align-items: center;
+    justify-content: center;
+    gap: 72px;
+    padding-top: 0;
+    min-height: 0;
+}
+
+.newLoginFormWrap {
+    align-self: center;
+    width: 100%;
+    max-width: 540px;
+    margin-inline: auto;
+}
+
+/* ---- Tablets & small laptops: stack hero above the card ---- */
+@media (max-width: 1024px) {
+    .newLoginMain {
+        padding: 20px 20px 28px;
+    }
+
+    .newLoginContent {
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 26px;
+        padding-top: 4px;
+        width: 100%;
+    }
+
+    .newLoginHero {
+        width: 100%;
+        max-width: 680px;
+        align-items: center;
+        text-align: center;
+        min-height: 0;
+        height: auto;
+    }
+
+    .newLoginBrandRow {
+        justify-content: center;
+    }
+
+    .newLoginTagline {
+        justify-content: center;
+    }
+
+    .newLoginHeroHeading h2 {
+        max-width: 680px;
+    }
+
+    /* Let the marketing rows wrap instead of overflowing */
+    .newLoginFeatureRow {
+        flex-wrap: wrap;
+        row-gap: 18px;
+    }
+
+    .newLoginFeatureDivider {
+        display: none;
+    }
+
+    .newLoginStatsBanner {
+        flex-wrap: wrap;
+        row-gap: 12px;
+        border-radius: 22px;
+    }
+
+    .newLoginStatsDivider {
+        display: none;
+    }
+
+    .newLoginFormWrap {
+        max-width: 540px;
+    }
+}
+
+/* ---- Phones ---- */
+@media (max-width: 640px) {
+    .newLoginMain {
+        padding: 16px 14px 24px;
+    }
+
+    .newLoginBrandLogo {
+        height: 60px;
+    }
+
+    .newLoginBrandTitle {
+        font-size: 34px;
+    }
+
+    .newLoginTagline span {
+        display: none;
+    }
+
+    .newLoginTagline p {
+        font-size: 14px;
+    }
+
+    .newLoginHeroHeading h2 {
+        font-size: 15px;
+    }
+
+    .newLoginFeatureBox {
+        width: calc(50% - 12px);
+    }
+
+    .newLoginStatsBanner {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 14px;
+        padding: 14px 16px;
+        border-radius: 18px;
+    }
+
+    .newLoginStatsItem {
+        gap: 10px;
+    }
+
+    .newLoginStatsContent h4 {
+        font-size: 14px;
+    }
+
+    .newLoginStatsContent p {
+        font-size: 10px;
+    }
+
+    .newLoginFormWrap {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 400px) {
+    .newLoginBrandLogo {
+        height: 52px;
+    }
+
+    .newLoginBrandTitle {
+        font-size: 28px;
+    }
+}

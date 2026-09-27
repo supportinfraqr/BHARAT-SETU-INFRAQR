@@ -276,7 +276,7 @@ export default function OriginalLoginPage() {
             </div>
 
             {/* FLIP CONTAINER */}
-            <div className="perspective-1000 w-full max-w-[540px] mx-auto relative z-10">
+            <div className="newLoginFormWrap perspective-1000 w-full max-w-[540px] mx-auto relative z-10">
               <div className={`relative w-full transition-transform duration-700 preserve-3d grid ${isFlipped ? 'rotate-y-180' : ''}`}>
                 
                 {/* FRONT FACE (LOGIN) */}
