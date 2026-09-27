@@ -526,6 +526,12 @@ def _employer_submissions(user):
             "submittedAt": _dts(ev.created_at),
             "status": _submission_review_label(ev.status),
             "source": "evidence",
+            "kind": "form",
+            "financialYear": _d(ev.financial_year),
+            "month": _d(ev.month),
+            "frequency": _d(ev.frequency),
+            "mandatory": bool(ev.is_mandatory),
+            "documentType": _d(ev.document_type),
         })
     for c in user.compliance_docs.all()[:20] if hasattr(user, "compliance_docs") else []:
         rows.append({
@@ -535,6 +541,9 @@ def _employer_submissions(user):
             "period": _d(c.period), "submittedAt": _dts(c.updated_at),
             "status": _submission_review_label(c.status),
             "source": "register",
+            "kind": "register",
+            "financialYear": "", "month": "", "frequency": "",
+            "mandatory": True, "documentType": "",
         })
 
     # Contractor CLRA register submissions for THIS employer's sites, grouped as
@@ -568,6 +577,12 @@ def _employer_submissions(user):
             "submittedAt": _dts(latest) if latest else "",
             "status": status,
             "source": "submission",
+            "kind": "register",
+            "financialYear": _d(batches[0].financial_year),
+            "month": _d(month),
+            "frequency": "Monthly",
+            "mandatory": True,
+            "documentType": "CLRA Registers",
             "batchId": str(batches[0].id),
             "hasFile": any(bool(x.generated_file) for x in batches),
         })

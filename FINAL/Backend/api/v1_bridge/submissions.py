@@ -673,13 +673,27 @@ def _batch_master_rows(batch):
         return []
 
 
+def _visible_batch(user, batch_id):
+    """A ComplianceBatch the caller may inspect: their own as the contractor, or
+    one generated for a site they own as the principal employer."""
+    from bss_core.models import ComplianceBatch
+    batch = (ComplianceBatch.objects.select_related("site", "site__employer")
+             .filter(pk=batch_id).first())
+    if batch is None:
+        return None
+    if batch.contractor_id == user.id:
+        return batch
+    if batch.site and batch.site.employer_id == user.id:
+        return batch
+    return None
+
+
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def compliance_batch_summary(request, batch_id):
     """State/Site-wise drill-down of a generated batch."""
-    from bss_core.models import ComplianceBatch
-    batch = ComplianceBatch.objects.filter(pk=batch_id, contractor=request.user).first()
+    batch = _visible_batch(request.user, batch_id)
     if batch is None:
         return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
     rows = _batch_master_rows(batch)
@@ -701,8 +715,8 @@ def compliance_batch_summary(request, batch_id):
 @permission_classes([IsAuthenticated])
 def compliance_batch_site_documents(request, batch_id):
     """Documents applicable to one site of a batch: employer mapping + state templates."""
-    from bss_core.models import ComplianceBatch, EmployerDocumentMapping
-    batch = ComplianceBatch.objects.filter(pk=batch_id, contractor=request.user).first()
+    from bss_core.models import EmployerDocumentMapping
+    batch = _visible_batch(request.user, batch_id)
     if batch is None:
         return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
     site_name = (request.query_params.get("site") or "").strip()
@@ -881,8 +895,8 @@ def contractor_site_documents(request):
 def compliance_batch_register(request, batch_id, template_id):
     """Render one register (a State+Form template) from a generated batch."""
     from api import clra
-    from bss_core.models import ComplianceBatch, RegisterTemplate
-    batch = ComplianceBatch.objects.filter(pk=batch_id, contractor=request.user).first()
+    from bss_core.models import RegisterTemplate
+    batch = _visible_batch(request.user, batch_id)
     if batch is None:
         return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
     template = RegisterTemplate.objects.filter(pk=template_id).first()
@@ -898,7 +912,7 @@ def compliance_batch_register(request, batch_id, template_id):
          "calculationRules": [{"targetField": r.target_field, "formula": r.formula}
                               for r in template.calculation_rules.all()]},
         rows,
-        contractor=payloads._party_name(request.user),
+        contractor=payloads._party_name(batch.contractor),
         employer=employer_name,
         site=(batch.site.site_name if batch.site else ""),
         site_code=(batch.site.site_code if batch.site else ""),
@@ -919,8 +933,8 @@ def compliance_batch_register_export(request, batch_id, template_id):
     from django.http import FileResponse
 
     from api import clra
-    from bss_core.models import ComplianceBatch, RegisterTemplate
-    batch = ComplianceBatch.objects.filter(pk=batch_id, contractor=request.user).first()
+    from bss_core.models import RegisterTemplate
+    batch = _visible_batch(request.user, batch_id)
     if batch is None:
         return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
     template = RegisterTemplate.objects.filter(pk=template_id).first()
@@ -932,7 +946,7 @@ def compliance_batch_register_export(request, batch_id, template_id):
     rows = _batch_master_rows(batch)
     employer_name = payloads._org_name(batch.site.employer) if (batch.site and batch.site.employer) else ""
     context = clra.backend_context(
-        contractor=payloads._party_name(request.user), employer=employer_name,
+        contractor=payloads._party_name(batch.contractor), employer=employer_name,
         site=(batch.site.site_name if batch.site else ""),
         site_code=(batch.site.site_code if batch.site else ""), state=batch.state,
         month=batch.month, year=batch.year, financial_year=batch.financial_year,
