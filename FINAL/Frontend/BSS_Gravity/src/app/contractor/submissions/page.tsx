@@ -626,7 +626,7 @@ export default function ComplianceSubmissionPage() {
         </div>
 
         <div>
-          <p className="text-xs font-extrabold uppercase tracking-wider text-gray-500 mb-2">1. System-Generated CLRA Registers ({createPeriod} {fy.replace('FY ', '')})</p>
+          <p className="text-xs font-extrabold uppercase tracking-wider text-gray-500 mb-2">1 · CLRA Registers <span className="text-gray-400">(auto-generated)</span></p>
           {generatedForCreate.length
             ? <div className="space-y-2 mb-6">{generatedForCreate.map(b => (
                 <div key={b.id} className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 flex items-center gap-3">
@@ -641,7 +641,7 @@ export default function ComplianceSubmissionPage() {
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-extrabold uppercase tracking-wider text-gray-500">
-                2. Required Evidence Documents ({submittedEvidenceCount}/{additionalDocs.length} Submitted
+                2 · Additional Forms ({submittedEvidenceCount}/{additionalDocs.length} Submitted
                 {totalMandatoryDocsCount > 0 ? ` · ${uploadedMandatoryCount}/${totalMandatoryDocsCount} Mandatory` : ''})
               </p>
               {isPartialSubmission && (
