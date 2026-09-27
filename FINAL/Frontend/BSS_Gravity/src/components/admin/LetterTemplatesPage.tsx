@@ -55,9 +55,10 @@ const LETTER_TOKENS: StudioToken[] = [
 /** BSS branding is appointment-only; Form XV is a statutory government form. */
 const UNBRANDED_TYPES = new Set(["EXPERIENCE"]);
 function defaultLogoFor(letterType?: string, current?: string): string {
-  const existing = (current ?? "").trim();
-  if (existing) return existing;
-  return UNBRANDED_TYPES.has((letterType ?? "").toUpperCase()) ? "" : DEFAULT_LETTER_LOGO;
+  // Unbranded types are always blank: a stale logo on a statutory Form XV row
+  // must be dropped, not carried forward into the preview or a save.
+  if (UNBRANDED_TYPES.has((letterType ?? "").toUpperCase())) return "";
+  return (current ?? "").trim() || DEFAULT_LETTER_LOGO;
 }
 
 const BLANK_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><style>

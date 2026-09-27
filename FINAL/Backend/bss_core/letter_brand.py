@@ -123,11 +123,13 @@ def ensure_logo_url(value, letter_type: str = "APPOINTMENT",
                     with_logo: bool | None = None) -> str:
     """Return the template's logo URL, or the hosted BSS default.
 
-    Blank for unbranded types (statutory Form XV) so no logo is introduced.
+    Always blank for unbranded types (statutory Form XV), discarding whatever
+    was passed in: a stale logo left on a Form XV row must be removed, not
+    preserved, or the statutory certificate renders a BSS logo.
     """
     text = (value or "").strip()
     if not wants_logo(letter_type, with_logo):
-        return text
+        return ""
     return text or DEFAULT_LOGO_URL
 
 

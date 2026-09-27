@@ -188,14 +188,25 @@ def _cell_td(text, width: str = "") -> str:
     return f'<td style="{style}">{text}</td>'
 
 
-def _block_table(headers: list, row: list, cls: str = "") -> str:
-    """Bordered single-row table used by the optional block tokens."""
+def _cells(cells: list) -> str:
+    return "".join(_cell_td(c[0], c[1]) if isinstance(c, tuple) else _cell_td(c)
+                   for c in cells)
+
+
+def _block_table(headers: list, row, cls: str = "") -> str:
+    """Bordered table used by the optional block tokens.
+
+    ``row`` may be a single list of cells, or a list of such lists for a
+    multi-row table. A cell is text, or a ``(text, width%)`` tuple.
+    """
     cls_attr = f' class="{cls}"' if cls else ""
     th = "".join(_cell(h[0], h[1]) if isinstance(h, tuple) else _cell(h) for h in headers)
-    td = "".join(_cell_td(c[0], c[1]) if isinstance(c, tuple) else _cell_td(c) for c in row)
+    if not isinstance(row, (list, tuple)) or (row and not isinstance(row[0], (list, tuple))):
+        row = [row]
+    body = "".join(f"<tr>{_cells(r)}</tr>" for r in row)
     return (f'<table{cls_attr} style="width:100%;border-collapse:collapse;margin:12px 0;'
             f'font-size:10px;text-align:center;border:1px solid #334155">'
-            f"<thead><tr>{th}</tr></thead><tbody><tr>{td}</tr></tbody></table>")
+            f"<thead><tr>{th}</tr></thead><tbody>{body}</tbody></table>")
 
 
 def _letter_tokens(binding, letter_type: str, logo_url: str = "") -> dict:
