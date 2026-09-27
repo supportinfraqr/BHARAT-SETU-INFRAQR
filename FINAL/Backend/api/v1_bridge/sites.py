@@ -414,7 +414,7 @@ def _employer_set_gate_pass_dates(user, body):
         if gp is None:
             gp = WorkerGatePass.objects.create(
                 worker=binding.worker, site=binding.site, gate_pass_type=gp_type,
-                gate_pass_no=f"{gp_type}-{uuid.uuid4().hex[:8].upper()}",
+                gate_pass_no=payloads._auto_gate_pass_no(binding.worker, gp_type),
                 status="ACTIVE", issued_by=user, source="MANUAL")
     else:
         gp = WorkerGatePass.objects.filter(pk=int(row_id or 0), site__employer=user).first()
@@ -673,7 +673,7 @@ def _handle_gate_pass(user, body):
             continue
         gp = WorkerGatePass.objects.create(
             worker=worker, site=binding.site, gate_pass_type=gp_type,
-            gate_pass_no=f"{gp_type}-{uuid.uuid4().hex[:8].upper()}",
+            gate_pass_no=payloads._auto_gate_pass_no(worker, gp_type),
             status="PENDING", issued_by=user, source="CONTRACTOR_GATE_PASS")
         created.append(gp)
     out = [payloads._contractor_gate_pass_row(g) for g in created]

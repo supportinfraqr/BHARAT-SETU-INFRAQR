@@ -214,8 +214,8 @@ def _letter_tokens(binding, letter_type: str, logo_url: str = "") -> dict:
     as {{token}} (or {{ token }}) — values are HTML-escaped by the facts helpers."""
     w = _worker_facts(binding.worker)
     p = _party_facts(binding)
-    ref_prefix = {"appointment": "APPT"}.get(letter_type, "EXP")
-    ref = f"BSS/{ref_prefix}/{binding.id:05d}"
+    ref_prefix = "A" if letter_type == "appointment" else "R"
+    ref = f"BSS-{ref_prefix}-{binding.id:05d}"
     issue = _fmt(binding.accepted_at or binding.created_at)
     # Form XV asks for the period of employment, which ends on the relieving date.
     relieving = _fmt(getattr(binding, "unbound_at", None) or binding.accepted_at
@@ -355,8 +355,8 @@ def render_letter(binding, letter_type: str) -> str:
             letter_type)
     w = _worker_facts(binding.worker)
     p = _party_facts(binding)
-    ref_prefix = {"appointment": "APPT"}.get(letter_type, "EXP")
-    ref = f"BSS/{ref_prefix}/{binding.id:05d}"
+    ref_prefix = "A" if letter_type == "appointment" else "R"
+    ref = f"BSS-{ref_prefix}-{binding.id:05d}"
     issue = _fmt(binding.accepted_at or binding.created_at)
     wage = _money(_offered_wage(binding))
     cost_sheet_html = _cost_sheet_section(getattr(binding, "cost_sheet", None),
