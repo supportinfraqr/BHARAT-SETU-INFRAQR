@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, CheckCircle2, Download, FileSpreadsheet, Upload } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
@@ -43,6 +43,11 @@ export default function ContractorAttendancePage() {
   const [camNotice, setCamNotice] = useState('');
   const [camDetections, setCamDetections] = useState<Array<{ id: number; name: string | null; tsStart: number }>>([]);
   const [camMarked, setCamMarked] = useState(0);
+  const [camStream, setCamStream] = useState<MediaStream | null>(null);
+  const [camLive, setCamLive] = useState(false);
+  const [camFrameNames, setCamFrameNames] = useState<Array<{ name: string; known: boolean }>>([]);
+  const camVideoRef = useRef<HTMLVideoElement>(null);
+  const camCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const sites = contractor.sites;
 
@@ -128,6 +133,73 @@ export default function ContractorAttendancePage() {
       setError(reason instanceof Error ? reason.message : 'Camera action failed.');
     } finally { setCamBusy(false); }
   }
+
+  async function startLiveCamera() {
+    const siteId = camSiteId || String(sites[0]?.id ?? '');
+    if (!siteId) { setError('Select a site first.'); return; }
+    setCamSiteId(siteId); setError(''); setCamNotice('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false,
+      });
+      setCamStream(stream);
+      setCamLive(true);
+      setCamNotice('Live camera on — frames are checked against enrolled workers for this site.');
+    } catch {
+      setError('Could not access the camera. Check your browser camera permission.');
+    }
+  }
+
+  function stopLiveCamera() {
+    setCamLive(false);
+    setCamFrameNames([]);
+    setCamStream(prev => { prev?.getTracks().forEach(track => track.stop()); return null; });
+  }
+
+  useEffect(() => {
+    if (camStream && camVideoRef.current) {
+      camVideoRef.current.srcObject = camStream;
+      void camVideoRef.current.play().catch(() => {});
+    }
+  }, [camStream]);
+
+  // Stop the webcam when leaving the page so the light never lingers.
+  useEffect(() => () => { camStream?.getTracks().forEach(track => track.stop()); }, [camStream]);
+
+  // While live, capture a frame every few seconds and let the pipeline
+  // recognise who is in front of the camera (marking their attendance).
+  useEffect(() => {
+    if (!camLive) return;
+    let active = true;
+    const tick = async () => {
+      const video = camVideoRef.current, canvas = camCanvasRef.current;
+      if (!video || !canvas || !video.videoWidth) return;
+      const scale = Math.min(1, 640 / video.videoWidth);
+      canvas.width = Math.round(video.videoWidth * scale);
+      canvas.height = Math.round(video.videoHeight * scale);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const image = canvas.toDataURL('image/jpeg', 0.7);
+      try {
+        const response = await fetch('/api/contractor/attendance/camera', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ siteId: Number(camSiteId || sites[0]?.id || 0), action: 'frame', image }),
+        });
+        const body = await response.json().catch(() => ({})) as {
+          data?: { sightings: Array<{ id: number; name: string | null; tsStart: number }>; markedToday: number; frame?: { detections?: Array<{ name: string; known: boolean }> } };
+        };
+        if (active && body.data) {
+          setCamDetections(body.data.sightings ?? []);
+          setCamMarked(body.data.markedToday ?? 0);
+          setCamFrameNames(body.data.frame?.detections ?? []);
+        }
+      } catch { /* transient; retry next tick */ }
+    };
+    void tick();
+    const timer = setInterval(tick, 2500);
+    return () => { active = false; clearInterval(timer); };
+  }, [camLive, camSiteId, sites]);
 
   const columns: DataColumn<AttendanceRow>[] = [
     { id: 'date', header: 'Date', value: r => r.date, render: r => displayDate(r.date) },
@@ -220,6 +292,32 @@ export default function ContractorAttendancePage() {
                   <span className="text-slate-500">{new Date((d.tsStart || 0) * 1000).toLocaleTimeString()}</span>
                 </li>
               ))}</ul>}
+        </div>
+      </div>
+
+      {/* Live camera on this device feeding attendance */}
+      <div className="bg-slate-950/70 rounded-xl border border-slate-800 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Live camera (this device) — feeds attendance</span>
+          {!camLive
+            ? <button type="button" onClick={() => void startLiveCamera()} className="h-8 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-[11px] font-extrabold">Open camera</button>
+            : <button type="button" onClick={stopLiveCamera} className="h-8 px-3 rounded-lg bg-red-500 hover:bg-red-600 text-white text-[11px] font-extrabold">Close camera</button>}
+        </div>
+        <div className="grid md:grid-cols-2 gap-4 items-start">
+          <div className="relative rounded-lg overflow-hidden border border-slate-700 bg-black aspect-video">
+            <video ref={camVideoRef} playsInline muted className="w-full h-full object-cover" />
+            {!camLive && <div className="absolute inset-0 grid place-items-center text-slate-500 text-xs">Camera off</div>}
+          </div>
+          <div className="space-y-2">
+            <p className="text-[11px] text-slate-300">Now in frame:</p>
+            {camFrameNames.length === 0
+              ? <p className="text-[11px] text-slate-500">No face detected yet.</p>
+              : <ul className="space-y-1">{camFrameNames.map((d, i) => (
+                  <li key={i} className={`text-[11px] font-semibold ${d.known ? 'text-emerald-300' : 'text-amber-300'}`}>{d.known ? `✓ ${d.name}` : 'Unknown face'}</li>
+                ))}</ul>}
+            <p className="text-[11px] text-slate-400">Workers marked today: <strong className="text-emerald-300">{camMarked}</strong></p>
+            <canvas ref={camCanvasRef} className="hidden" />
+          </div>
         </div>
       </div>
     </section>

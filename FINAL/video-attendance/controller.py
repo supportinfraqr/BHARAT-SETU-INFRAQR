@@ -23,7 +23,7 @@ import sys
 import threading
 import time
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 
 from src.database import Database
 
@@ -210,6 +210,89 @@ def detections():
         return jsonify(sightings=sightings, codeScans=qr)
     finally:
         db.close()
+
+
+_engine_lock = threading.Lock()
+_engine = None
+
+
+def _face_engine():
+    """Lazy singleton face engine (loads DeepFace models + the gallery once)."""
+    global _engine
+    if _engine is None:
+        with _engine_lock:
+            if _engine is None:
+                from src.face_engine import FaceEngine
+                cfg = _load_config()
+                db = _db()
+                gallery = db.load_gallery(cfg["face"]["recognition_model"])
+                _engine = (FaceEngine(cfg, gallery, db=db), db)
+                print(f"[controller] face engine ready (gallery {len(gallery)})", flush=True)
+    return _engine
+
+
+def _decode_image(data_url: str):
+    import base64
+
+    import cv2
+    import numpy as np
+
+    raw = data_url.split(",", 1)[1] if data_url.strip().startswith("data:") else data_url
+    try:
+        buf = np.frombuffer(base64.b64decode(raw), np.uint8)
+    except Exception:
+        return None
+    return cv2.imdecode(buf, cv2.IMREAD_COLOR)
+
+
+@app.post("/frame")
+def frame():
+    """Recognise faces in one browser-captured frame; record a sighting for
+    every known person so the site dashboard can mark their attendance."""
+    if not _authorized():
+        return jsonify(error="unauthorized"), 401
+    body = request.get_json(silent=True) or {}
+    site = str(body.get("site") or "").strip()
+    image = body.get("image") or ""
+    if not site or not image:
+        return jsonify(error="site and image are required"), 400
+    img = _decode_image(str(image))
+    if img is None:
+        return jsonify(error="could not decode image"), 400
+
+    engine, db = _face_engine()
+    try:
+        observations = engine.recognize_frame(img)
+    except Exception as exc:
+        return jsonify(error=f"recognition failed: {exc}"), 500
+
+    from src.annotate import save_snapshot
+    snap_root = _load_config().get("paths", {}).get("snapshots", "data/snapshots")
+    detections = []
+    for obs in observations:
+        known = bool(obs.name and obs.name != "Unknown")
+        snapshot = None
+        if known:
+            snapshot = save_snapshot(img, os.path.join(snap_root, site))
+            sid = db.start_sighting(0, obs.person_id, obs.name)
+            db.end_sighting(sid, snapshot)
+            db.commit()
+        detections.append({"name": obs.name, "known": known,
+                           "distance": obs.distance, "snapshot": snapshot})
+    return jsonify(site=site, count=len(detections), detections=detections)
+
+
+@app.get("/snapshot")
+def snapshot():
+    """Serve a captured snapshot (only files under the snapshots root)."""
+    if not _authorized():
+        return jsonify(error="unauthorized"), 401
+    path = request.args.get("path", "")
+    root = os.path.abspath(_load_config().get("paths", {}).get("snapshots", "data/snapshots"))
+    full = os.path.abspath(path)
+    if not full.startswith(root + os.sep) or not os.path.isfile(full):
+        return jsonify(error="not found"), 404
+    return send_file(full)
 
 
 if __name__ == "__main__":

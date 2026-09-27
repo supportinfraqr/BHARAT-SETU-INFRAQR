@@ -71,6 +71,11 @@ def session_for(site_key):
     return next((s for s in list_sessions() if str(s.get("site")) == key), None)
 
 
+def recognize_frame(site_key, image):
+    """Send one browser-captured frame (base64 jpeg) for recognition."""
+    return _request("POST", "/frame", {"site": str(site_key), "image": image}, timeout=30)
+
+
 def detections(site_key, since=None, limit=50):
     params = {"site": str(site_key), "limit": int(limit)}
     if since:

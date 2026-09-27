@@ -441,6 +441,7 @@ def attendance_camera_session(request):
         site_id = body.get("siteId")
         action = str(body.get("action") or "status").strip().lower()
         source = body.get("source")
+        image = body.get("image")
 
     site = _controllable_site(request.user, site_id)
     if site is None:
@@ -448,18 +449,21 @@ def attendance_camera_session(request):
                         status=status.HTTP_403_FORBIDDEN)
 
     key = _site_key(site)
+    frame_result = None
     try:
         if action == "start":
             control.start_session(key, source=source)
         elif action == "stop":
             control.stop_session(key)
+        elif action == "frame" and image:
+            frame_result = control.recognize_frame(key, image)
         session = control.session_for(key)
         payload = control.detections(key, limit=50)
     except control.AttendanceControlError as exc:
         return Response({"error": str(exc)}, status=exc.status_code)
 
     running = bool(session and session.get("active"))
-    marked = _sync_attendance(site, payload) if (action == "sync" and running) else None
+    marked = _sync_attendance(site, payload) if (action in ("sync", "frame") and (running or action == "frame")) else None
 
     return Response({"data": {
         "siteId": site.id,
@@ -469,6 +473,7 @@ def attendance_camera_session(request):
         "session": session,
         "sightings": payload.get("sightings", []),
         "codeScans": payload.get("codeScans", []),
+        "frame": frame_result,
         "marked": marked,
         "markedToday": _attendance_marked_today(site),
     }}, status=status.HTTP_200_OK)

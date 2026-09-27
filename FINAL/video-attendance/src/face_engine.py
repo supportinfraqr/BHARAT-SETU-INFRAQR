@@ -255,6 +255,44 @@ class FaceEngine:
             embedding=np.array(rep["embedding"], dtype=np.float32),
         )
 
+    def recognize_frame(self, frame: np.ndarray, estimate_age: bool = False) -> List["FaceObservation"]:
+        """Detect + recognise every face in a full frame (browser/snapshot feed).
+        Unlike process_crop this takes the whole image and lets the detector
+        locate faces anywhere, then matches each embedding against the gallery."""
+        if frame is None or frame.size == 0:
+            return []
+        try:
+            reps = self._DeepFace.represent(
+                img_path=frame,
+                model_name=self.model_name,
+                detector_backend=self.detector_backend,
+                enforce_detection=False,
+            )
+        except Exception:
+            return []
+        out: List[FaceObservation] = []
+        fh, fw = frame.shape[:2]
+        for rep in reps or []:
+            area = rep.get("facial_area", {}) or {}
+            x = max(0, int(area.get("x", 0)))
+            y = max(0, int(area.get("y", 0)))
+            w, h = int(area.get("w", 0)), int(area.get("h", 0))
+            if min(w, h) < self.auto_min_face_px:
+                continue
+            if self.min_blur > 0:
+                bx2, by2 = min(fw, x + w), min(fh, y + h)
+                if bx2 > x and by2 > y:
+                    gray = cv2.cvtColor(frame[y:by2, x:bx2], cv2.COLOR_BGR2GRAY)
+                    if float(cv2.Laplacian(gray, cv2.CV_64F).var()) < self.min_blur:
+                        continue
+            embedding = np.array(rep["embedding"], dtype=np.float32)
+            pid, name, dist = self._match(embedding)
+            out.append(FaceObservation(
+                name=name, person_id=pid, distance=dist, age=None,
+                face_box=(x, y, x + w, y + h), embedding=embedding,
+            ))
+        return out
+
     def _estimate_age(self, face_img: np.ndarray) -> Optional[int]:
         try:
             results = self._DeepFace.analyze(

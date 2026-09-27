@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     assertTrustedMutation(request);
     const session = await requireApiSession('Contractor');
     const config = getRuntimeConfig();
-    const body = await readJsonObject(request, 8_000);
+    const body = await readJsonObject(request, 3_000_000);
     const result = await upstreamRequest(config.apiBaseUrl, '/v1/contractor/attendance/camera', session, {
       method: 'POST',
       body: JSON.stringify(body),
