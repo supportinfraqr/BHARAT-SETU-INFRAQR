@@ -155,6 +155,12 @@ def aadhaar_otp(request):
         if recent is None:
             return None
         expires = recent.expires_at or (recent.created_at + timedelta(minutes=settings.AADHAAR_OTP_TTL_MIN))
+        # Never hand back a reference whose OTP has already lapsed — otherwise
+        # the user is sent to an OTP screen with a reference Sandbox reports as
+        # expired. If there is no valid one we let the caller report the
+        # rate-limit so the user waits for a fresh OTP instead.
+        if expires <= now:
+            return None
         payload = {
             "referenceId": recent.reference_id,
             "expiresIn": max(0, int((expires - now).total_seconds())),
