@@ -13,6 +13,23 @@ def _sanitize_aadhaar(value):
     return digits if _AADHAAR_RE.match(digits) else None
 
 
+def _aadhaar_throttle_remaining(aadhaar):
+    """Seconds left on the per-Aadhaar OTP cooldown (0 when none)."""
+    now = timezone.now()
+    row = (AadhaarChallenge.objects
+           .filter(aadhaar_number=aadhaar, status="THROTTLED", expires_at__gt=now)
+           .order_by("-expires_at").first())
+    return max(1, int((row.expires_at - now).total_seconds())) if row else 0
+
+
+def _throttle_aadhaar(aadhaar, seconds=60):
+    """Block further Sandbox OTP calls for this Aadhaar for a short window so a
+    burst of retries cannot keep resetting UIDAI's cooldown."""
+    AadhaarChallenge.objects.create(
+        aadhaar_number=aadhaar, status="THROTTLED",
+        expires_at=timezone.now() + timedelta(seconds=seconds))
+
+
 def _parse_dob(value):
     if not value:
         return None
@@ -136,6 +153,15 @@ def aadhaar_otp(request):
         return Response({"error": "Enter a valid 12-digit Aadhaar number"},
                         status=status.HTTP_400_BAD_REQUEST)
 
+    # Short-circuit during the cooldown so repeated clicks don't keep calling
+    # Sandbox (each call was resetting UIDAI's 45s window, so it never cleared).
+    remaining = _aadhaar_throttle_remaining(aadhaar)
+    if remaining:
+        return Response(
+            {"error": f"An OTP was requested for this Aadhaar a moment ago. Please wait {remaining} seconds before requesting another.",
+             "retryAfterSeconds": remaining},
+            status=status.HTTP_429_TOO_MANY_REQUESTS)
+
     def _reuse_recent(window_minutes, message=""):
         """Return a recent OTP reference so a repeated request reuses the OTP
         already delivered instead of tripping Sandbox's rate limit.
@@ -189,9 +215,13 @@ def aadhaar_otp(request):
                 return fallback
             rate_limited = (sb_status == 429 or "try after" in msg.lower()
                             or "already" in msg.lower())
-            return Response({"error": msg},
-                            status=status.HTTP_429_TOO_MANY_REQUESTS if rate_limited
-                            else status.HTTP_400_BAD_REQUEST)
+            if rate_limited:
+                _throttle_aadhaar(aadhaar, 60)
+                return Response(
+                    {"error": "An OTP was recently sent to this Aadhaar. Please wait about a minute before requesting another.",
+                     "retryAfterSeconds": 60},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS)
+            return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"error": f"Aadhaar (UIDAI) service is temporarily unavailable — {str(exc)}. Please try again later."},
                         status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
@@ -202,7 +232,11 @@ def aadhaar_otp(request):
         fallback = _reuse_recent(24 * 60, msg)
         if fallback is not None:
             return fallback
-        return Response({"error": msg}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        _throttle_aadhaar(aadhaar, 60)
+        return Response(
+            {"error": "An OTP was recently sent to this Aadhaar. Please wait about a minute before requesting another.",
+             "retryAfterSeconds": 60},
+            status=status.HTTP_429_TOO_MANY_REQUESTS)
 
     challenge = AadhaarChallenge.objects.create(
         aadhaar_number=aadhaar,

@@ -17,7 +17,8 @@ class SandboxError(Exception):
 
 # Sandbox returns 503 ("Source system unavailable") / 5xx for transient upstream
 # (UIDAI) outages. These are retryable, so we retry a few times before failing.
-_RETRY_STATUS = {429, 500, 502, 503, 504}
+# 429 is deliberately NOT retried — retrying a rate-limit only extends it.
+_RETRY_STATUS = {500, 502, 503, 504}
 
 
 def _post_with_retry(url, *, json=None, headers=None, timeout=20, attempts=3):
