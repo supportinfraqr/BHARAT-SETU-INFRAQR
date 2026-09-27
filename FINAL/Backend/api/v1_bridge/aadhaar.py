@@ -55,6 +55,11 @@ def _fmt_wait(seconds):
     return f"{seconds}s"
 
 
+def _fmt_mins(seconds):
+    """Whole minutes, rounded up (never '0 mins')."""
+    return max(1, (int(seconds) + 59) // 60)
+
+
 def _global_cooldown_remaining():
     now = timezone.now()
     row = (AadhaarChallenge.objects
@@ -266,7 +271,7 @@ def aadhaar_otp(request):
     global_wait = _global_cooldown_remaining()
     if global_wait:
         return Response(
-            {"error": f"Aadhaar OTP service is cooling down (UIDAI/Sandbox rate limit). Please try again in {_fmt_wait(global_wait)}.",
+            {"error": f"Aadhaar OTP service is cooling down. Please try again in {_fmt_mins(global_wait)} mins.",
              "retryAfterSeconds": global_wait},
             status=status.HTTP_429_TOO_MANY_REQUESTS)
 
@@ -297,7 +302,7 @@ def aadhaar_otp(request):
                 _open_global_cooldown()
                 g = _global_cooldown_remaining()
                 return Response(
-                    {"error": f"Aadhaar OTP is cooling down (UIDAI/Sandbox rate limit). Please try again in {_fmt_wait(g)}.",
+                    {"error": f"Aadhaar OTP service is cooling down. Please try again in {_fmt_mins(g)} mins.",
                      "retryAfterSeconds": g},
                     status=status.HTTP_429_TOO_MANY_REQUESTS)
             return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
@@ -315,7 +320,7 @@ def aadhaar_otp(request):
         _open_global_cooldown()
         g = _global_cooldown_remaining()
         return Response(
-            {"error": f"Aadhaar OTP is cooling down (UIDAI/Sandbox rate limit). Please try again in {_fmt_wait(g)}.",
+            {"error": f"Aadhaar OTP service is cooling down. Please try again in {_fmt_mins(g)} mins.",
              "retryAfterSeconds": g},
             status=status.HTTP_429_TOO_MANY_REQUESTS)
 
