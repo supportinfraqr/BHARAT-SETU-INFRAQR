@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CheckCircle2, Download, FileCheck2, FileUp, Info, Lock, ShieldCheck, Upload, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
+import BatchDrilldown from '@/components/compliance/BatchDrilldown';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorPortalData } from '@/types/portal';
 
@@ -80,6 +81,7 @@ export default function ComplianceSubmissionPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [siteFilter, setSiteFilter] = useState('all');
+  const [batchView, setBatchView] = useState<string | null>(null);
 
   // Earliest binding the contractor has with the selected site's employer (or with
   // any employer when showing all sites). The year list starts here so years
@@ -651,6 +653,7 @@ export default function ComplianceSubmissionPage() {
                 <div key={b.id} className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 flex items-center gap-3">
                   <span className="flex-1 min-w-0"><strong className="block text-xs text-gray-900">{b.state} · {b.site || b.siteCode}</strong><span className="block text-[10px] text-gray-400 mt-0.5">{b.month} {b.year} · {b.notes}</span></span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${b.status === 'Submitted' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>{b.status === 'Submitted' ? 'Submitted' : 'Generated · Ready'}</span>
+                  <button type="button" onClick={() => setBatchView(String(b.id))} className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold flex items-center gap-1.5 flex-shrink-0 hover:bg-white">View documents</button>
                   {b.hasFile && <a href={`/api/portal/compliance-batches/${b.id}`} download className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold flex items-center gap-1.5 flex-shrink-0 hover:bg-white"><Download size={12}/>Download</a>}
                   {b.status !== 'Submitted' && <button type="button" onClick={() => void submitBatch(b.id)} disabled={busy} className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold flex items-center gap-1.5 flex-shrink-0 hover:bg-[#062D4F] disabled:opacity-40"><FileUp size={12}/>Submit</button>}
                 </div>
@@ -769,6 +772,8 @@ export default function ComplianceSubmissionPage() {
         <ul className="p-5 space-y-2 text-sm text-gray-700">{viewErrors.findings.map((f, i) => <li key={i} className="flex gap-2"><span className="text-orange-500">•</span>{f}</li>)}</ul>
       </section>
     </div>}
+
+    {batchView && <BatchDrilldown batchId={batchView} role="contractor" onClose={() => setBatchView(null)} />}
   </div>;
 }
 
