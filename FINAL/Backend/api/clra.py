@@ -431,23 +431,39 @@ def _header_lines_from_html(html_text, template, rows, context):
     text, with data placeholders resolved — so the register's printed preamble
     (title, ``[See rule …]``, Key:value header lines) appears in the generated
     Excel register exactly as in the source, with nothing extra added."""
-    if not html_text:
-        return []
-    text = str(html_text)
-    table_idx = text.lower().find("<table")
-    head = text[:table_idx] if table_idx != -1 else text
     lines = []
-    for match in _DOC_LINE_RE.finditer(head):
-        inner = render_doc_body(match.group(2), rows, context)
-        for token, source in _META_TOKEN_SOURCES.items():
-            inner = inner.replace("{{" + token + "}}", str((context or {}).get(source, "")))
-        inner = inner.replace("{{ACT}}", str(template.get("act", "")))
-        inner = inner.replace("{{TITLE}}", str(template.get("title", "")))
-        inner = inner.replace("{{FORM_CODE}}", str(template.get("formCode", "")))
-        plain = _TAG_RE.sub("", inner)
-        plain = re.sub(r"\s+", " ", unescape(plain).replace("\xa0", " ")).strip()
-        if plain and re.search(r"[A-Za-z0-9]", plain):
-            lines.append(plain)
+    if html_text:
+        text = str(html_text)
+        table_idx = text.lower().find("<table")
+        head = text[:table_idx] if table_idx != -1 else text
+        for match in _DOC_LINE_RE.finditer(head):
+            inner = render_doc_body(match.group(2), rows, context)
+            for token, source in _META_TOKEN_SOURCES.items():
+                inner = inner.replace("{{" + token + "}}", str((context or {}).get(source, "")))
+            inner = inner.replace("{{ACT}}", str(template.get("act", "")))
+            inner = inner.replace("{{TITLE}}", str(template.get("title", "")))
+            inner = inner.replace("{{FORM_CODE}}", str(template.get("formCode", "")))
+            plain = _TAG_RE.sub("", inner)
+            plain = re.sub(r"\s+", " ", unescape(plain).replace("\xa0", " ")).strip()
+            if plain and re.search(r"[A-Za-z0-9]", plain):
+                lines.append(plain)
+
+    if not lines:
+        form_code = template.get("formCode") or ""
+        title = template.get("title") or ""
+        act = template.get("act") or ""
+        heading = f"Form No. {form_code}".strip() if form_code else title
+        if heading:
+            lines.append(heading)
+        if act:
+            lines.append(f"[{act}]")
+        if title and title != heading:
+            lines.append(title)
+        if context:
+            c_name = context.get("contractor") or ""
+            p_name = context.get("employer") or ""
+            lines.append(f"Name and Address of Contractor : {c_name}    Name and Address of Principal Employer : {p_name}")
+
     return lines
 
 
@@ -491,8 +507,13 @@ def _write_template_sheet(wb, template, rows, context=None):
     # state rows, no branding, no dates — nothing the source doesn't have.
     header_lines = _header_lines_from_html(template.get("html"), template, rows, context)
     row_cursor = 1
-    for line in header_lines:
-        ws.cell(row=row_cursor, column=1, value=line).font = Font(size=10)
+    for idx, line in enumerate(header_lines):
+        cell = ws.cell(row=row_cursor, column=1, value=line)
+        if idx == 0:
+            cell.font = Font(name="Calibri", size=11, bold=True, color="000000")
+        else:
+            cell.font = Font(name="Calibri", size=10, bold=False, color="1E293B")
+        cell.alignment = Alignment(horizontal="left", vertical="center")
         if len(columns) > 1:
             ws.merge_cells(start_row=row_cursor, start_column=1,
                            end_row=row_cursor, end_column=len(columns))
