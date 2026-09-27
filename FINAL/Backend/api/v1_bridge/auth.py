@@ -273,6 +273,9 @@ def _register_account(request, role):
             profile = ContractorProfile.objects.create(
                 user=user, contractor_name="", contractor_code=bss_ids.new_bss_contractor_code(),
                 approval_status="PENDING", mobile=mobile)
+            # acceptedTerms is already required above, so consent is genuinely
+            # given here — stamp it so "Member of BSS since" has a real source.
+            _record_contractor_membership(profile, user, consent_given=True)
             bss_id = profile.contractor_code
         else:  # employer
             profile = EmployerProfile.objects.create(

@@ -398,6 +398,10 @@ class Command(BaseCommand):
             elif not prof.contractor_code:
                 prof.contractor_code = bss_ids.new_bss_contractor_code()
                 prof.save(update_fields=["contractor_code"])
+            from api.v1_bridge.common import _record_contractor_membership
+            _record_contractor_membership(
+                prof, user, consent_given=True,
+                source="Demo Seed", registered_by="Demo Data Seeder")
             _set_mobile(user, phone, DEMO_MPIN)
             self.stdout.write(f"contractor {phone}  {prof.contractor_code}  {name}")
 

@@ -126,6 +126,10 @@ class ContractorProfile(models.Model):
     attendance_method = models.CharField(max_length=40, blank=True)
     payroll_method = models.CharField(max_length=40, blank=True)
     consent_date = models.DateField(null=True, blank=True)
+    # When the contractor profile was created on BSS. Distinct from
+    # consent_date: the profile can exist before terms are accepted, and this
+    # is the audit trail for "created", not "consented".
+    registered_at = models.DateTimeField(null=True, blank=True)
     registration_source = models.CharField(max_length=80, blank=True)
     registered_by = models.CharField(max_length=120, blank=True)
     risk_rating = models.CharField(max_length=20, blank=True)

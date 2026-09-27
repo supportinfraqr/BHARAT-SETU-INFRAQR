@@ -218,6 +218,52 @@ def _record_registration_consent(user, source="Self Registered via App",
     return obj
 
 
+def _record_contractor_membership(profile, user, consent_given=True,
+                                  source="Self Registered via App",
+                                  registered_by="Contractor Self-Service (BSS App)",
+                                  ip_address=""):
+    """Stamp the BSS membership record on a contractor profile.
+
+    Mirrors the worker path (``_record_registration_consent``), which the
+    contractor flow was missing — so ``consent_date`` was never written and the
+    QR-scan "Member of BSS since" row could never render.
+
+    ``registered_at`` is the profile-creation timestamp and is stamped whether or
+    not consent was captured. ``consent_date`` is only written when consent was
+    genuinely given, and never overwritten once set, so a later SAP sync or
+    admin edit that supplies the real consent date still wins.
+
+    Also writes a PartyConsentDeclaration so the acceptance is auditable
+    (declaration type, channel and timestamp) rather than being a bare date.
+    """
+    now = timezone.now()
+    changed = []
+    if profile.registered_at is None:
+        profile.registered_at = now
+        changed.append("registered_at")
+    if consent_given and profile.consent_date is None:
+        profile.consent_date = now.date()
+        changed.append("consent_date")
+    if not profile.registration_source:
+        profile.registration_source = source
+        changed.append("registration_source")
+    if not profile.registered_by:
+        profile.registered_by = registered_by
+        changed.append("registered_by")
+    if changed:
+        profile.save(update_fields=changed)
+
+    if consent_given:
+        try:
+            from bss_core.models import PartyConsentDeclaration
+            PartyConsentDeclaration.objects.get_or_create(
+                party_type="contractor", party_user=user, declaration="TERMS",
+                defaults={"accepted": True, "ip_address": ip_address or ""})
+        except Exception:  # audit aid only — never block sign-up
+            logger.exception("contractor consent declaration not recorded for user %s", user.pk)
+    return profile
+
+
 def _create_notification(user, title, body, notif_type="APPROVAL", link=""):
     """Helper to persist a Notification record for a targeted user."""
     if not user:
@@ -630,6 +676,7 @@ __all__ = [
     "_rate_limit",
     "_otp_send_allowed",
     "_record_registration_consent",
+    "_record_contractor_membership",
     "_user_mobile",
     "_verify_credential",
     "_verify_login_otp",

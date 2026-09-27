@@ -262,6 +262,11 @@ def _process_contractors(rows):
             UserCredential.objects.create(user=user, identity_type="mobile", identity_value=mobile,
                                           is_primary=True, verified=True)
         profile, _ = ContractorProfile.objects.get_or_create(user=user)
+        # Admin-registered contractors did not consent on-platform, so only the
+        # creation timestamp is stamped; consent_date stays for SAP/manual entry.
+        _record_contractor_membership(
+            profile, user, consent_given=False,
+            source="Admin Bulk Register", registered_by="Admin")
         for field, key in (("contractor_name", "name"), ("trade_name", "trade_name"),
                            ("constitution", "constitution"), ("cin", "cin"), ("gstin", "gstin"),
                            ("pan_no", "pan"), ("clra_licence_no", "clra_licence_no"),
