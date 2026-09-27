@@ -15,6 +15,8 @@ export default function AdminFormNamesPage() {
   const [customKeyword, setCustomKeyword] = useState('');
   const [name, setName] = useState('');
   const [frequency, setFrequency] = useState('');
+  const [requiresDocument, setRequiresDocument] = useState(true);
+  const [description, setDescription] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -50,11 +52,11 @@ export default function AdminFormNamesPage() {
     try {
       const response = await fetch('/api/admin/form-names', {
         method:'POST', headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ state, name: formName, frequency: frequency.trim(), ocrCheckpoints }),
+        body: JSON.stringify({ state, name: formName, frequency: frequency.trim(), requiresDocument, description: description.trim(), ocrCheckpoints }),
       });
       const body = await response.json().catch(() => ({})) as { error?:string };
       if (!response.ok) throw new Error(body.error ?? 'The form could not be added.');
-      setName(''); setFrequency(''); resetCheckpoints(); setShowAdd(false);
+      setName(''); setFrequency(''); setRequiresDocument(true); setDescription(''); resetCheckpoints(); setShowAdd(false);
       await load();
       setNotice(`Added “${formName}” to the ${state} catalog.`);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'The form could not be added.'); }
@@ -94,7 +96,34 @@ export default function AdminFormNamesPage() {
       <div className="p-5">
         {loading ? <p className="flex items-center gap-2 text-sm text-gray-500 py-6"><Loader2 size={16} className="animate-spin"/>Loading…</p>
           : rows.length
-            ? <ul className="divide-y divide-gray-100 rounded-xl border border-gray-100 overflow-hidden">{rows.map(f => <li key={f.id} className="flex items-center justify-between gap-3 px-3 py-2 text-xs"><span className="text-gray-800">{f.name}{f.frequency && <span className="ml-2 text-gray-400">{f.frequency}</span>}{f.ocrCheckpoints?.length ? <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{f.ocrCheckpoints.length} OCR check{f.ocrCheckpoints.length === 1 ? '' : 's'}</span> : null}</span><button type="button" onClick={() => void remove(f.id)} className="text-gray-400 hover:text-red-600" aria-label="Remove"><X size={14}/></button></li>)}</ul>
+            ? <div className="overflow-x-auto"><table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-gray-200 text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
+                    <th className="py-2.5 px-3 w-12">No</th>
+                    <th className="py-2.5 px-3">Document Name</th>
+                    <th className="py-2.5 px-3">Type</th>
+                    <th className="py-2.5 px-3">Frequency</th>
+                    <th className="py-2.5 px-3">Mandatory</th>
+                    <th className="py-2.5 px-3">Required Format</th>
+                    <th className="py-2.5 px-3">Note</th>
+                    <th className="py-2.5 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-xs">
+                  {rows.map((f, i) => (
+                    <tr key={f.id} className="hover:bg-slate-50/70">
+                      <td className="py-2.5 px-3 text-gray-400 font-semibold">{i + 1}</td>
+                      <td className="py-2.5 px-3 font-semibold text-gray-900">{f.name}{f.ocrCheckpoints?.length ? <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{f.ocrCheckpoints.length} OCR check{f.ocrCheckpoints.length === 1 ? '' : 's'}</span> : null}</td>
+                      <td className="py-2.5 px-3"><span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">Admin</span></td>
+                      <td className="py-2.5 px-3 text-gray-600">{f.frequency || '—'}</td>
+                      <td className="py-2.5 px-3"><span className="text-[10px] font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">Optional</span></td>
+                      <td className="py-2.5 px-3 text-gray-600">{f.requiresDocument === false ? 'Submission only' : 'PDF / JPEG / PNG'}</td>
+                      <td className="py-2.5 px-3 text-gray-500 max-w-[240px]" title={f.description}>{f.description || '—'}</td>
+                      <td className="py-2.5 px-3 text-right"><button type="button" onClick={() => void remove(f.id)} className="text-gray-400 hover:text-red-600" aria-label="Remove"><X size={14}/></button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
             : <p className="text-xs text-gray-400">No catalog forms for {state} yet.</p>}
       </div>
     </section>
@@ -104,6 +133,8 @@ export default function AdminFormNamesPage() {
       <div className="p-5 space-y-3">
         <label className="block text-xs font-semibold text-gray-700">Form name *<input value={name} onChange={e => setName(e.target.value)} autoFocus placeholder="e.g., Police Verification" className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm"/></label>
         <label className="block text-xs font-semibold text-gray-700">Frequency<select value={frequency} onChange={e => setFrequency(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-2 text-sm bg-white"><option value="">—</option>{['Monthly', 'Quarterly', 'Half Yearly', 'Yearly', 'One-time'].map(f => <option key={f}>{f}</option>)}</select></label>
+        <label className="block text-xs font-semibold text-gray-700">Required format<select value={requiresDocument ? 'upload' : 'submission'} onChange={e => setRequiresDocument(e.target.value === 'upload')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-2 text-sm bg-white"><option value="upload">PDF / JPEG / PNG (document upload)</option><option value="submission">Submission only (no file)</option></select></label>
+        <label className="block text-xs font-semibold text-gray-700">Note<input value={description} onChange={e => setDescription(e.target.value)} placeholder="Optional guidance shown to contractors" className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm"/></label>
         <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3">
           <p className="text-[11px] font-bold uppercase tracking-wider text-blue-900">Verification checkpoints (OCR)</p>
           <p className="mt-0.5 text-[11px] text-gray-500">Tick what the uploaded document must contain — verified by OCR when the contractor uploads it. <em>Signature/seal are matched by their printed label, not the handwriting.</em></p>

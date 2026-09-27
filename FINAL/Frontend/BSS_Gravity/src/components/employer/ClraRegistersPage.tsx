@@ -15,7 +15,7 @@ type SiteBoard = {
 type Checkpoint = { key?: string; type: string; label: string; value?: string; required?: boolean };
 type ExtraForm = { id: number; state: string; name: string; mandatory: boolean; requiresDocument: boolean; frequency: string; description: string; scope: string; selected?: boolean; ocrCheckpoints?: Checkpoint[] };
 type ExtraDraft = {
-  adds: { name: string; frequency: string; mandatory: boolean; ocrCheckpoints: Checkpoint[] }[];
+  adds: { name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; description: string; ocrCheckpoints: Checkpoint[] }[];
   removes: number[];
   catalog: Record<number, { selected: boolean; mandatory: boolean }>;
 };
@@ -40,6 +40,8 @@ export default function ClraRegistersPage() {
   const [efName, setEfName] = useState('');
   const [efMandatory, setEfMandatory] = useState(false);
   const [efFrequency, setEfFrequency] = useState('');
+  const [efRequiresDocument, setEfRequiresDocument] = useState(true);
+  const [efDescription, setEfDescription] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [cpCatalog, setCpCatalog] = useState<Checkpoint[]>([]);
   const [selectedCps, setSelectedCps] = useState<Record<string, { checked: boolean; required: boolean }>>({});
@@ -128,7 +130,7 @@ export default function ClraRegistersPage() {
     for (const add of draft.adds) {
       const response = await fetch('/api/employer/form-names', {
         method:'POST', headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ state: site?.state ?? '', siteId, name: add.name, mandatory: add.mandatory, frequency: add.frequency, ocrCheckpoints: add.ocrCheckpoints ?? [] }),
+        body: JSON.stringify({ state: site?.state ?? '', siteId, name: add.name, mandatory: add.mandatory, frequency: add.frequency, requiresDocument: add.requiresDocument, description: add.description, ocrCheckpoints: add.ocrCheckpoints ?? [] }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({})) as { error?:string };
@@ -223,10 +225,10 @@ export default function ClraRegistersPage() {
       ...current,
       [board.siteId]: {
         ...draft,
-        adds: [...draft.adds, { name, frequency: efFrequency.trim(), mandatory: efMandatory, ocrCheckpoints }],
+        adds: [...draft.adds, { name, frequency: efFrequency.trim(), mandatory: efMandatory, requiresDocument: efRequiresDocument, description: efDescription.trim(), ocrCheckpoints }],
       },
     }));
-    setEfName(''); setEfMandatory(false); setEfFrequency(''); setSelectedCps({}); setCustomKeyword('');
+    setEfName(''); setEfMandatory(false); setEfFrequency(''); setEfRequiresDocument(true); setEfDescription(''); setSelectedCps({}); setCustomKeyword('');
     setShowAddForm(false);
     setError('');
     setNotice(`“${name}” staged for ${board.siteName} — saved with the next Save adoption.`);
@@ -341,11 +343,11 @@ export default function ClraRegistersPage() {
                 {(() => {
                   const draft = siteDraft(board.siteId);
                   const rows = [
-                    ...extraForms.filter(f => f.scope === 'employer' && !draft.removes.includes(f.id)).map(f => ({ key: `e-${f.id}`, name: f.name, mandatory: f.mandatory, frequency: f.frequency, pending: false, ocrCount: f.ocrCheckpoints?.length ?? 0, cancel: () => stageRemoveExtraForm(f.id) })),
-                    ...draft.adds.map(a => ({ key: `n-${a.name}`, name: a.name, mandatory: a.mandatory, frequency: a.frequency, pending: true, ocrCount: a.ocrCheckpoints?.length ?? 0, cancel: () => cancelStagedAdd(a.name) })),
+                    ...extraForms.filter(f => f.scope === 'employer' && !draft.removes.includes(f.id)).map(f => ({ key: `e-${f.id}`, name: f.name, mandatory: f.mandatory, frequency: f.frequency, requiresDocument: f.requiresDocument, description: f.description, pending: false, ocrCount: f.ocrCheckpoints?.length ?? 0, cancel: () => stageRemoveExtraForm(f.id) })),
+                    ...draft.adds.map(a => ({ key: `n-${a.name}`, name: a.name, mandatory: a.mandatory, frequency: a.frequency, requiresDocument: a.requiresDocument, description: a.description, pending: true, ocrCount: a.ocrCheckpoints?.length ?? 0, cancel: () => cancelStagedAdd(a.name) })),
                   ];
                   return rows.length
-                    ? <ul className="divide-y divide-gray-100 rounded-xl border border-gray-100 overflow-hidden">{rows.map(r => <li key={r.key} className="flex items-center justify-between gap-3 px-3 py-2 text-xs"><span className="text-gray-800">{r.name}{r.pending && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">New</span>}{r.ocrCount > 0 && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{r.ocrCount} OCR check{r.ocrCount === 1 ? '' : 's'}</span>}{r.mandatory && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700">Mandatory</span>}{r.frequency && <span className="ml-2 text-gray-400">{r.frequency}</span>}</span><button type="button" onClick={r.cancel} className="text-gray-400 hover:text-red-600" aria-label="Remove"><X size={14}/></button></li>)}</ul>
+                    ? <ul className="divide-y divide-gray-100 rounded-xl border border-gray-100 overflow-hidden">{rows.map(r => <li key={r.key} className="flex items-center justify-between gap-3 px-3 py-2 text-xs"><span className="text-gray-800">{r.name}{r.pending && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">New</span>}{r.ocrCount > 0 && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{r.ocrCount} OCR check{r.ocrCount === 1 ? '' : 's'}</span>}{r.mandatory ? <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700">Mandatory</span> : <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">Optional</span>}{r.frequency && <span className="ml-2 text-gray-400">{r.frequency}</span>}{r.requiresDocument === false && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">Submission only</span>}{r.description && <span className="ml-2 text-gray-400" title={r.description}>{r.description}</span>}</span><button type="button" onClick={r.cancel} className="text-gray-400 hover:text-red-600" aria-label="Remove"><X size={14}/></button></li>)}</ul>
                     : <p className="text-[11px] text-gray-400">None yet — use <strong>Add form</strong>.</p>;
                 })()}
               </div>
@@ -374,6 +376,8 @@ export default function ClraRegistersPage() {
       <div className="p-5 space-y-3">
         <label className="block text-xs font-semibold text-gray-700">Form name *<input value={efName} onChange={e => setEfName(e.target.value)} autoFocus placeholder="e.g., Police Verification" className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm"/></label>
         <label className="block text-xs font-semibold text-gray-700">Frequency<select value={efFrequency} onChange={e => setEfFrequency(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-2 text-sm bg-white"><option value="">—</option>{['Monthly', 'Quarterly', 'Half Yearly', 'Yearly', 'One-time'].map(f => <option key={f}>{f}</option>)}</select></label>
+        <label className="block text-xs font-semibold text-gray-700">Required format<select value={efRequiresDocument ? 'upload' : 'submission'} onChange={e => setEfRequiresDocument(e.target.value === 'upload')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-2 text-sm bg-white"><option value="upload">PDF / JPEG / PNG (document upload)</option><option value="submission">Submission only (no file)</option></select></label>
+        <label className="block text-xs font-semibold text-gray-700">Note<input value={efDescription} onChange={e => setEfDescription(e.target.value)} placeholder="Optional guidance shown to contractors" className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm"/></label>
         <label className="flex items-center gap-2 text-xs font-semibold text-gray-700"><input type="checkbox" checked={efMandatory} onChange={e => setEfMandatory(e.target.checked)} className="accent-[#073B67] w-4 h-4"/>Mandatory</label>
         {cpCatalog.length > 0 && <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3">
           <p className="text-[11px] font-bold uppercase tracking-wider text-blue-900">Verification checkpoints (OCR)</p>
