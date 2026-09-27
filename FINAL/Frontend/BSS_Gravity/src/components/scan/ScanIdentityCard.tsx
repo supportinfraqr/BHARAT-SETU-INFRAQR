@@ -11,8 +11,8 @@ export type ScanVerifyData = {
   bssId?: string;
   verified?: boolean;
   bssMemberSince?: string;
+  consentDate?: string;
   bindingDate?: string;
-  contractorJoinedDate?: string;
   identity?: {
     name?: string; bssId?: string; photoUrl?: string; company?: string;
     gender?: string; age?: number | string; bloodGroup?: string;
@@ -20,7 +20,7 @@ export type ScanVerifyData = {
     aadhaarVerified?: boolean; panVerified?: boolean;
     mobileMasked?: string; aadhaarMasked?: string; location?: string;
     availableForWork?: boolean; verified?: boolean;
-    bssMemberSince?: string; bindingDate?: string; contractorJoinedDate?: string;
+    bssMemberSince?: string; consentDate?: string; bindingDate?: string;
   };
   employment?: {
     status?: string; contractor?: string; employer?: string; site?: string;
@@ -47,7 +47,7 @@ export type ScanVerifyData = {
       address?: string; state?: string; district?: string; lin?: string; cin?: string;
       clraLicence?: string; operatingStates?: string; pan?: string; gstin?: string;
       sites?: string[]; contractors?: number; workers?: number;
-      bssMemberSince?: string; bindingDate?: string; contractorJoinedDate?: string;
+      bssMemberSince?: string; consentDate?: string; bindingDate?: string;
     };
   };
 };
@@ -121,7 +121,13 @@ export default function ScanIdentityCard({ data }: { data: ScanVerifyData }) {
         <Field label="Languages" value={skills.languages} />
         <Field label="Availability" value={id.availableForWork ? "Available for work" : ""} />
         <Field label="Member of BSS since" value={data.bssMemberSince || id.bssMemberSince || data.details?.org?.bssMemberSince} />
-        <Field label="Binding date" value={data.bindingDate || id.bindingDate || data.contractorJoinedDate || id.contractorJoinedDate || data.details?.org?.bindingDate || data.details?.org?.contractorJoinedDate} />
+        <Field label="Consent accepted" value={data.consentDate || id.consentDate || data.details?.org?.consentDate} />
+        {extended ? (
+          <Field
+            label={relationship === "self" ? "First binding on BSS since" : "Bound to you since"}
+            value={data.bindingDate || id.bindingDate || data.details?.org?.bindingDate}
+          />
+        ) : null}
       </dl>
 
       <div className="flex flex-wrap gap-1.5">
@@ -168,8 +174,6 @@ export default function ScanIdentityCard({ data }: { data: ScanVerifyData }) {
                 <Field label="Operating states" value={d.org.operatingStates} />
                 <Field label="Workers" value={d.org.workers ? String(d.org.workers) : ""} />
                 <Field label="Contractors" value={d.org.contractors ? String(d.org.contractors) : ""} />
-                <Field label="Member of BSS since" value={d.org.bssMemberSince || data.bssMemberSince || id.bssMemberSince} />
-                <Field label="Binding date" value={d.org.bindingDate || d.org.contractorJoinedDate || data.bindingDate || id.bindingDate || data.contractorJoinedDate} />
                 <Field label="Registered address" value={d.org.address} />
               </Section>
               {(d.org.sites ?? []).length > 0 && (

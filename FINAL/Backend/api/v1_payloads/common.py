@@ -176,6 +176,19 @@ def _dts(value):
     return str(value)
 
 
+def _date_str(value):
+    """A date/datetime as a plain ``YYYY-MM-DD`` string, or ``""`` when absent.
+
+    Use for anything the UI renders as a calendar date. Unlike :func:`_dts` it
+    drops the time component and never returns ``None``, so callers can hand the
+    result straight to a template without a null check.
+    """
+    text = _dts(value)
+    if not text:
+        return ""
+    return text.split("T")[0]
+
+
 def _num(value, default=0):
     if value is None:
         return default
@@ -326,6 +339,7 @@ __all__ = [
     "_bss_employer_code",
     "_bss_worker_code",
     "_d",
+    "_date_str",
     "_dts",
     "_f",
     "_get_identity",

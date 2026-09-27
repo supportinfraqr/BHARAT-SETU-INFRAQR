@@ -9,7 +9,7 @@ type WorkerVerifyData = {
   employment?: { status?: string };
   skills?: { primary?: { name?: string; level?: string; experienceYears?: string } };
 };
-type ContractorVerifyData = { id?: number; name?: string; company?: string; bssId?: string; verified?: boolean };
+type ContractorVerifyData = { id?: number; name?: string; company?: string; bssId?: string; verified?: boolean; bssMemberSince?: string; consentDate?: string; bindingDate?: string; identity?: { bssMemberSince?: string; consentDate?: string; bindingDate?: string } };
 
 export default function VerifyPage({ params }: { params: Promise<{ bssId: string }> }) {
   const { bssId } = use(params);
@@ -99,16 +99,22 @@ export default function VerifyPage({ params }: { params: Promise<{ bssId: string
                     <dt className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Company / Trade name</dt>
                     <dd className="font-semibold text-gray-800 mt-0.5">{data?.company || '—'}</dd>
                   </div>
-                  {((data as any)?.bssMemberSince || (data as any)?.identity?.bssMemberSince) && (
+                  {((data as ContractorVerifyData)?.bssMemberSince || data?.identity?.bssMemberSince) && (
                     <div>
                       <dt className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Member of BSS since</dt>
-                      <dd className="font-semibold text-gray-800 mt-0.5">{(data as any).bssMemberSince || (data as any).identity?.bssMemberSince}</dd>
+                      <dd className="font-semibold text-gray-800 mt-0.5">{data.bssMemberSince || data.identity?.bssMemberSince}</dd>
                     </div>
                   )}
-                  {((data as any)?.bindingDate || (data as any)?.contractorJoinedDate || (data as any)?.identity?.bindingDate) && (
+                  {((data as ContractorVerifyData)?.consentDate || data?.identity?.consentDate) && (
                     <div>
-                      <dt className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Binding Date / Contractor Joined Date</dt>
-                      <dd className="font-semibold text-gray-800 mt-0.5">{(data as any).bindingDate || (data as any).contractorJoinedDate || (data as any).identity?.bindingDate}</dd>
+                      <dt className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Consent accepted</dt>
+                      <dd className="font-semibold text-gray-800 mt-0.5">{data.consentDate || data.identity?.consentDate}</dd>
+                    </div>
+                  )}
+                  {((data as ContractorVerifyData)?.bindingDate || data?.identity?.bindingDate) && (
+                    <div>
+                      <dt className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Bound to you since</dt>
+                      <dd className="font-semibold text-gray-800 mt-0.5">{data.bindingDate || data.identity?.bindingDate}</dd>
                     </div>
                   )}
                 </dl>
