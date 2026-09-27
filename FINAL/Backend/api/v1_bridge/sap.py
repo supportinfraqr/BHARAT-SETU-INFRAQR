@@ -254,9 +254,9 @@ def employer_contractor_sap_sync(request, contractor_id):
                         status=status.HTTP_403_FORBIDDEN)
 
     profile, _ = ContractorProfile.objects.get_or_create(user=contractor)
-    # Creation timestamp only: SAP supplies its own consent_date, which must
-    # not be overwritten by a local "now".
-    _record_contractor_membership(profile, contractor, consent_given=False)
+    # Creation stamps registered_at and consent_date together; SAP's own
+    # consent_date, applied below, still overwrites if it supplies one.
+    _record_contractor_membership(profile, contractor)
     cfg = sap_client.resolve_config(user)
     identifier = str(request.data.get("identifier") or profile.contractor_code
                      or getattr(contractor, "bss_id", "") or "").strip()
@@ -574,8 +574,7 @@ def employer_sap_bulk_sync(request):
                 raise RuntimeError("SAP record had no recognisable contractor fields.")
             profile, _ = ContractorProfile.objects.get_or_create(user_id=cid)
             # get_or_create keyed on user_id — re-fetch to stamp the timestamp.
-            _record_contractor_membership(profile, User.objects.get(pk=cid),
-                                          consent_given=False)
+            _record_contractor_membership(profile, User.objects.get(pk=cid))
             for field, value in mapped.items():
                 if hasattr(profile, field):
                     setattr(profile, field, value)

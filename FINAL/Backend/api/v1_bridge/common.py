@@ -218,32 +218,34 @@ def _record_registration_consent(user, source="Self Registered via App",
     return obj
 
 
-def _record_contractor_membership(profile, user, consent_given=True,
-                                  source="Self Registered via App",
+def _record_contractor_membership(profile, user, source="Self Registered via App",
                                   registered_by="Contractor Self-Service (BSS App)",
                                   ip_address=""):
-    """Stamp the BSS membership record on a contractor profile.
+    """Stamp the BSS membership record when a contractor profile is created.
 
-    Mirrors the worker path (``_record_registration_consent``), which the
-    contractor flow was missing — so ``consent_date`` was never written and the
-    QR-scan "Member of BSS since" row could never render.
+    ``registered_at`` and ``consent_date`` are both written from a single
+    ``now``, so a contractor who is given a BSS profile has the two agree
+    exactly — creating the profile is the point at which consent is recorded,
+    whether the profile came from self-service, an admin bulk import, a site
+    default or SAP.
 
-    ``registered_at`` is the profile-creation timestamp and is stamped whether or
-    not consent was captured. ``consent_date`` is only written when consent was
-    genuinely given, and never overwritten once set, so a later SAP sync or
-    admin edit that supplies the real consent date still wins.
+    Only runs on creation (``registered_at`` unset) and never overwrites an
+    existing value, so a real consent date supplied by SAP — applied after this
+    call — or entered by an admin still wins, and re-saving an old profile does
+    not rewrite its history.
 
     Also writes a PartyConsentDeclaration so the acceptance is auditable
     (declaration type, channel and timestamp) rather than being a bare date.
     """
     now = timezone.now()
     changed = []
-    if profile.registered_at is None:
+    creating = profile.registered_at is None
+    if creating:
         profile.registered_at = now
         changed.append("registered_at")
-    if consent_given and profile.consent_date is None:
-        profile.consent_date = now.date()
-        changed.append("consent_date")
+        if profile.consent_date is None:
+            profile.consent_date = now.date()
+            changed.append("consent_date")
     if not profile.registration_source:
         profile.registration_source = source
         changed.append("registration_source")
@@ -253,7 +255,7 @@ def _record_contractor_membership(profile, user, consent_given=True,
     if changed:
         profile.save(update_fields=changed)
 
-    if consent_given:
+    if creating:
         try:
             from bss_core.models import PartyConsentDeclaration
             PartyConsentDeclaration.objects.get_or_create(

@@ -255,8 +255,8 @@ def _handle_default_site(user, body):
     site_id = body.get("siteId")
     if user.role == "contractor":
         prof, _ = ContractorProfile.objects.get_or_create(user=user)
-        # Creation timestamp only — this path records no consent.
-        _record_contractor_membership(prof, user, consent_given=False)
+        # Creating the profile stamps registered_at and consent_date together.
+        _record_contractor_membership(prof, user)
         allowed = _contractor_site_ids(user)
     elif user.role == "employer":
         prof, _ = EmployerProfile.objects.get_or_create(user=user)

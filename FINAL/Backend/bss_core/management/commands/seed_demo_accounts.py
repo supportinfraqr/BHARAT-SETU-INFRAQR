@@ -400,7 +400,7 @@ class Command(BaseCommand):
                 prof.save(update_fields=["contractor_code"])
             from api.v1_bridge.common import _record_contractor_membership
             _record_contractor_membership(
-                prof, user, consent_given=True,
+                prof, user,
                 source="Demo Seed", registered_by="Demo Data Seeder")
             _set_mobile(user, phone, DEMO_MPIN)
             self.stdout.write(f"contractor {phone}  {prof.contractor_code}  {name}")
