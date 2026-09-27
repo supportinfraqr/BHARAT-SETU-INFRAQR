@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronLeft, ChevronRight, Copy, Eye, Loader2, Pencil, Plus, Save, Trash2, Wand2, X } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Copy, Eye, FileClock, Loader2, Pencil, Plus, Save, Trash2, Wand2, X } from "lucide-react";
 import EnterpriseDataTable, { type DataColumn } from "@/components/worker/EnterpriseDataTable";
 import { INDIA_STATES } from "@/data/indiaStates";
 
@@ -112,6 +112,7 @@ export default function CostSheetTemplatesPage() {
   const [notice, setNotice] = useState("");
   const [draft, setDraft] = useState<Template | null>(null);
   const [cleanSnapshot, setCleanSnapshot] = useState("");
+  const [savedPrompt, setSavedPrompt] = useState<{ draft: Template; step: number; savedAt?: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<CostPreview | null>(null);
   const [previewWage, setPreviewWage] = useState('');
@@ -256,14 +257,17 @@ useEffect(() => {
   }, [draft, previewWage]);
 
   // Autosave the in-progress draft so closing the form / refreshing never
-  // loses work — applies to every step of the builder.
+  // loses work — applies to every step of the builder. A pristine draft (e.g.
+  // a fresh "Create new" with no edits) is NOT saved, so it won't later prompt
+  // "You have an unsaved template".
   useEffect(() => {
     if (!draft) return;
+    if (JSON.stringify(draft) === cleanSnapshot) return;
     const timer = setTimeout(() => {
       try { window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ draft, step, savedAt: Date.now() })); } catch {}
     }, 400);
     return () => clearTimeout(timer);
-  }, [draft, step]);
+  }, [draft, step, cleanSnapshot]);
 
   // Restore a saved in-progress draft on load so the builder reopens where it
   // was left off.
@@ -284,12 +288,12 @@ useEffect(() => {
     queueMicrotask(restore);
   }, []);
 
-  function readSavedDraft(): { draft: Template; step: number } | null {
+  function readSavedDraft(): { draft: Template; step: number; savedAt?: number } | null {
     try {
       const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
       if (!raw) return null;
-      const saved = JSON.parse(raw) as { draft?: Template; step?: number };
-      return saved?.draft ? { draft: saved.draft, step: saved.step || 1 } : null;
+      const saved = JSON.parse(raw) as { draft?: Template; step?: number; savedAt?: number };
+      return saved?.draft ? { draft: saved.draft, step: saved.step || 1, savedAt: saved.savedAt } : null;
     } catch { return null; }
   }
   function clearSavedDraft() {
@@ -317,16 +321,25 @@ useEffect(() => {
     setCleanSnapshot(JSON.stringify(next));
   }
 
-  // New template: resume a saved in-progress draft, or discard it on request.
+  // New template: if an unsaved draft exists, show the in-app resume card so
+  // the user chooses to continue it or start fresh — no browser alert.
   function startNewTemplate() {
     const saved = readSavedDraft();
     if (!saved) { openDraft(makeEmpty()); return; }
-    if (window.confirm("You have an unsaved template draft. Discard it and start a new template?")) {
-      clearSavedDraft();
-      openDraft(makeEmpty());
-    } else {
-      openDraft(saved.draft, saved.step);
-    }
+    setSavedPrompt(saved);
+  }
+
+  function resumeSavedDraft() {
+    if (!savedPrompt) return;
+    const saved = savedPrompt;
+    setSavedPrompt(null);
+    openDraft(saved.draft, saved.step);
+  }
+
+  function discardAndCreateNew() {
+    clearSavedDraft();
+    setSavedPrompt(null);
+    openDraft(makeEmpty());
   }
 
   async function save() {
@@ -430,6 +443,33 @@ useEffect(() => {
 
     {loading ? <p className="flex items-center gap-2 text-sm text-gray-500 py-10"><Loader2 size={16} className="animate-spin"/>Loading templates…</p>
       : <EnterpriseDataTable title="Cost sheet templates" rows={rows} columns={columns} rowKey={r => String(r.id)} filename="cost-sheet-templates"/>}
+
+    {savedPrompt && <div className="fixed inset-0 z-[95] bg-black/50 grid place-items-center p-4" role="presentation">
+      <section role="dialog" aria-modal="true" aria-label="Unsaved template draft" className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden">
+        <header className="px-5 py-4 border-b border-gray-100 flex items-start gap-3">
+          <span className="w-9 h-9 grid place-items-center rounded-full bg-amber-50 text-amber-600 shrink-0"><FileClock size={18}/></span>
+          <div className="flex-1">
+            <h2 className="font-semibold text-gray-950">You have an unsaved template</h2>
+            <p className="text-xs text-gray-500 mt-0.5">A draft you were working on is saved in this browser. Continue it, or start a new template instead.</p>
+          </div>
+          <button onClick={() => setSavedPrompt(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button>
+        </header>
+        <div className="px-5 py-4">
+          <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
+            <p className="text-xs font-semibold text-gray-800">{savedPrompt.draft.name?.trim() || "Untitled template"}</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              {savedPrompt.draft.code ? <span className="font-mono">{savedPrompt.draft.code} · </span> : null}
+              Step {savedPrompt.step} of 3
+              {savedPrompt.savedAt ? ` · saved ${new Date(savedPrompt.savedAt).toLocaleString('en-IN')}` : ""}
+            </p>
+          </div>
+        </div>
+        <footer className="px-5 py-4 border-t border-gray-100 flex items-center justify-end gap-2">
+          <button onClick={discardAndCreateNew} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50">Create new</button>
+          <button onClick={resumeSavedDraft} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F]">Continue with this template</button>
+        </footer>
+      </section>
+    </div>}
 
     {draft && <div className="fixed inset-0 z-[90] bg-black/50 grid place-items-center p-4" role="presentation">
       <section role="dialog" aria-modal="true" aria-label="Cost sheet template builder" className="bg-white w-full max-w-3xl max-h-[92vh] rounded-2xl overflow-hidden flex flex-col">
