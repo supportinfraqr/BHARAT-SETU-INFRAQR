@@ -267,14 +267,11 @@ def aadhaar_verify(request):
     data = result.get("data") or {}
     if result.get("code") != 200 or data.get("message") != "Aadhaar Card Exists":
         msg = str(data.get("message") or "").strip() or "Aadhaar verification failed. Check the OTP and try again."
-        # Sandbox reports a bad/expired OTP as HTTP 200 with this message. Mark
-        # the challenge expired so a resend issues a fresh OTP instead of the
-        # reuse path handing back the same dead reference.
-        if "invalid otp" in msg.lower() or "expired" in msg.lower():
-            challenge.status = "EXPIRED"
-            challenge.save(update_fields=["status", "updated_at"])
-            return Response({"error": "Invalid or expired OTP. Tap 'Resend OTP' to get a new one."},
-                            status=status.HTTP_400_BAD_REQUEST)
+        # A wrong OTP must NOT permanently kill the challenge: the user may have
+        # mistyped, and marking it expired also blocks the reuse path, so the
+        # Sandbox rate-limit then leaves them stuck on "OTP expired". Only fail
+        # it once the attempt budget is exhausted — genuinely expired OTPs are
+        # already handled by the local expiry check above.
         if challenge.otp_attempts >= challenge.max_attempts:
             challenge.status = "FAILED"
             challenge.save(update_fields=["status", "updated_at"])
