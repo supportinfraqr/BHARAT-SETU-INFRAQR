@@ -55,16 +55,38 @@ class Command(BaseCommand):
             model = getattr(bss_models, model_name)
             for obj in model.objects.all():
                 current = (getattr(obj, field) or "").strip()
-                if not current or bss_ids.is_canonical_id(current, role):
+                if not current:
+                    continue
+                # Only a value that is not a BSS identifier at all needs a new
+                # one. Codes that merely predate the current 11-char suffix are
+                # still valid BSS IDs and must never be churned.
+                if bss_ids.is_bss_style_id(current):
                     continue
                 rows.append((role, model_name, field, allocator_name, obj, current))
 
+        # Advisory only: report format drift without offering to rewrite it.
+        drifted = 0
+        for role, model_name, field, _allocator_name in TARGETS:
+            if options["role"] and options["role"] != role:
+                continue
+            model = getattr(bss_models, model_name)
+            for obj in model.objects.all():
+                current = (getattr(obj, field) or "").strip()
+                if (current and bss_ids.is_bss_style_id(current)
+                        and not bss_ids.is_canonical_id(current, role)):
+                    drifted += 1
+
+        if drifted:
+            self.stdout.write(f"  note: {drifted} code(s) use an older suffix length "
+                              f"but are valid BSS IDs — left untouched.")
+
         if not rows:
-            self.stdout.write(self.style.SUCCESS("No legacy BSS codes found — nothing to do."))
+            self.stdout.write(self.style.SUCCESS(
+                "No legacy BSS codes found — nothing to do."))
             return
 
         self.stdout.write(self.style.WARNING(
-            f"{len(rows)} row(s) use a non-canonical BSS code:"))
+            f"{len(rows)} row(s) are not BSS identifiers at all:"))
         for role, _model, _field, _alloc, obj, current in rows:
             label = getattr(obj, "contractor_name", None) or getattr(obj, "user", None)
             self.stdout.write(f"  {role:<11} {current:<14} -> {role}  {label}")

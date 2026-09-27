@@ -113,6 +113,7 @@ _v1_patterns = _v1(
     ("admin/letter-templates", v1_bridge.admin_letter_templates, "v1_admin_letter_templates"),
     ("admin/letter-templates/<int:template_id>", v1_bridge.admin_letter_template_detail, "v1_admin_letter_template_detail"),
     ("admin/letter-templates/<int:template_id>/copy-all-states", v1_bridge.admin_copy_template_to_all_states, "v1_admin_copy_template_to_all_states"),
+    ("admin/letter-templates/restore-defaults", v1_bridge.admin_restore_letter_defaults, "v1_admin_restore_letter_defaults"),
     ("letter-templates", v1_bridge.letter_templates_catalog, "v1_letter_templates_catalog"),
     ("payroll/workspace", v1_bridge.payroll_workspace, "v1_payroll_workspace"),
     ("payroll/setup", v1_bridge.payroll_setup, "v1_payroll_setup"),

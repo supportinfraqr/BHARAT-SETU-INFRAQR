@@ -22,6 +22,8 @@ Charset: uppercase A-Z, 2-9. ``I``, ``O``, ``0`` and ``1`` are excluded because
 they look identical to other chars on scanned cards / readable codes.
 """
 
+import re
+
 from django.db import transaction
 
 try:
@@ -93,6 +95,24 @@ def _allocate(prefix, *, exclude_ids=()):
         if not _identifier_taken(candidate, exclude_ids=exclude_ids):
             return candidate
     raise RuntimeError("Unable to allocate a unique BSS identifier.")
+
+
+# Any recognised BSS identifier: the role prefix plus an alphanumeric suffix.
+# Deliberately looser than is_canonical_id() — older accounts were issued
+# 10-char suffixes before the current 11-char masked format, and those are
+# perfectly valid BSS IDs that must not be churned.
+_BSS_STYLE_RE = re.compile(r"^BSS-[WCES][A-Z0-9]{9,12}$")
+
+
+def is_bss_style_id(value) -> bool:
+    """True when *value* looks like a BSS identifier at all.
+
+    This is the safe test for "does this row need migrating?": only values that
+    are not BSS-style (e.g. a legacy ``V-100234`` contractor code) should ever
+    be re-issued. Use :func:`is_canonical_id` to report format drift, never as
+    a reason to rewrite a working ID.
+    """
+    return bool(_BSS_STYLE_RE.match((value or "").strip()))
 
 
 def is_canonical_id(value, role: str | None = None) -> bool:

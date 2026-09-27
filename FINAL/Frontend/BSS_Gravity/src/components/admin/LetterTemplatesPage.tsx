@@ -45,103 +45,24 @@ const LETTER_TOKENS: StudioToken[] = [
   { value: '{{logoUrl}}', label: 'Logo (header)', group: 'Branding' },
 ];
 
-const FORM_XV_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><style>
-  * { box-sizing: border-box; }
-  body { margin:0; background:#fff; color:#111827; font-family: "Noto Sans", Arial, sans-serif; }
-  .page { width:794px; max-width:100%; margin:0 auto; padding:32px 44px; font-size:12px; }
-  .header-block { text-align:center; font-weight:bold; margin-bottom:20px; text-transform:uppercase; line-height:1.4; }
-  .header-block .form-title { font-size:16px; letter-spacing:0.5px; }
-  .header-block .rule-title { font-size:12px; color:#475569; font-weight:normal; text-transform:none; }
-  .header-block .sub-title { font-size:14px; color:#0f172a; margin-top:2px; text-decoration:underline; }
-  .field-row { font-size:12px; margin:7px 0; line-height:1.6; border-bottom:1px dotted #94a3b8; padding-bottom:3px; display:flex; justify-content:space-between; }
-  .field-label { font-weight:600; color:#334155; }
-  .field-val { color:#0f172a; font-weight:bold; }
-  table.xv-table { width:100%; border-collapse:collapse; margin:20px 0 10px 0; font-size:11px; text-align:center; border:1px solid #334155; }
-  table.xv-table th, table.xv-table td { border:1px solid #334155; padding:6px 4px; vertical-align:middle; }
-  table.xv-table th { background:#f1f5f9; color:#0f172a; font-weight:bold; }
-  table.xv-table tr.col-nums td { background:#e2e8f0; font-weight:600; font-size:10px; color:#475569; }
-  .sign { display:flex; justify-content:space-between; gap:12px; margin:46px 0 6px; }
-  .sign > div { width:40%; text-align:center; font-size:11px; }
-  .sign .line { border-top:1px solid #4b5563; margin-top:40px; padding-top:5px; font-weight:600; }
-  .foot { margin-top:24px; border-top:1px solid #e5e7eb; padding-top:6px; font-size:10px; color:#6b7280; text-align:center; }
+// Starter HTML for a brand-new template.
+//
+// The appointment letter and the statutory Form XV live in exactly one place —
+// the backend snapshot bss_core/seeds/letter_defaults.py, served back by
+// /api/admin/letter-templates. This page reuses the all-India default row as
+// the starter rather than keeping a hand-maintained copy, which used to drift
+// away from the seeded templates.
+/** BSS branding is appointment-only; Form XV is a statutory government form. */
+const UNBRANDED_TYPES = new Set(["EXPERIENCE"]);
+function defaultLogoFor(letterType?: string, current?: string): string {
+  const existing = (current ?? "").trim();
+  if (existing) return existing;
+  return UNBRANDED_TYPES.has((letterType ?? "").toUpperCase()) ? "" : DEFAULT_LETTER_LOGO;
+}
+
+const BLANK_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><style>
+  .page { max-width:100%; margin:0; padding:0; }
 </style></head><body><div class="page">
-<div class="header-block">
-  <div class="form-title">FORM XV</div>
-  <div class="rule-title">[See Rule 77]</div>
-  <div class="sub-title">Service Certificate</div>
-</div>
-
-<div class="field-row"><span class="field-label">Name and address of Contractor:</span><span class="field-val">{{contractorName}}, {{contractorAddress}}</span></div>
-<div class="field-row"><span class="field-label">Name and address of the establishment in/under which contract is carried on:</span><span class="field-val">{{employerName}}, {{siteAddress}}</span></div>
-<div class="field-row"><span class="field-label">Nature and location of work:</span><span class="field-val">{{department}}, {{siteName}}</span></div>
-<div class="field-row"><span class="field-label">Name and address of the workman:</span><span class="field-val">{{workerName}}, {{address}}</span></div>
-<div class="field-row"><span class="field-label">Age or Date of Birth:</span><span class="field-val">{{dob}}</span></div>
-<div class="field-row"><span class="field-label">Identification Marks:</span><span class="field-val">{{identificationMarks}}</span></div>
-<div class="field-row"><span class="field-label">Father’s / Husband’s Name:</span><span class="field-val">{{fatherName}}</span></div>
-<div class="field-row"><span class="field-label">Name and address of Principal Employer:</span><span class="field-val">{{employerName}}, {{siteAddress}}</span></div>
-
-{{formXVTable}}
-
-<div class="sign">
-  <div><div class="line">{{workerName}}</div><div>Signature of Workman</div></div>
-  <div><div class="line">{{contractorName}}</div><div>Signature of Contractor / Authorized Signatory</div></div>
-</div>
-<div class="foot">Form XV Service Certificate under Rule 77, Contract Labour (Regulation &amp; Abolition) Rules, 1971</div>
-</div></body></html>`;
-
-const LETTER_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><style>
-  * { box-sizing: border-box; }
-  body { margin:0; background:#fff; color:#111827; font-family: "Noto Sans", Arial, sans-serif; }
-  .page { width:794px; max-width:100%; margin:0 auto; padding:32px 44px; }
-  .brand { display:flex; align-items:center; gap:12px; border-bottom:3px solid #073B67; padding-bottom:10px; margin-bottom:6px; }
-  .brand img { height:44px; }
-  .brand strong { color:#073B67; font-size:18px; display:block; }
-  .brand span { font-size:10px; color:#6b7280; letter-spacing:1.6px; text-transform:uppercase; }
-  h1 { text-align:center; color:#073B67; font-size:20px; letter-spacing:1.4px; margin:16px 0 4px; border-bottom:2px double #F47A32; padding-bottom:8px; text-transform:uppercase; }
-  .meta { display:flex; justify-content:space-between; font-size:12px; color:#374151; margin:10px 0 18px; }
-  h3 { color:#073B67; font-size:13px; margin:16px 0 6px; border-bottom:1px solid #d1d5db; padding-bottom:4px; }
-  p { font-size:12.5px; line-height:1.65; text-align:justify; }
-  .kv { width:100%; border-collapse:collapse; font-size:12.5px; margin:4px 0; }
-  .kv td { border:1px solid #9aa4b2; padding:5px 8px; vertical-align:top; }
-  .kv td:first-child { background:#F0F4FA; color:#073B67; width:34%; font-weight:600; }
-  .sign { display:flex; justify-content:space-between; gap:12px; margin:46px 0 6px; }
-  .sign > div { width:30%; text-align:center; font-size:11px; }
-  .sign .line { border-top:1px solid #4b5563; margin-top:36px; padding-top:5px; font-weight:600; }
-  .sign .id { font-size:10px; color:#6b7280; font-family:monospace; margin-top:2px; }
-  .foot { margin-top:18px; border-top:1px solid #e5e7eb; padding-top:6px; font-size:10px; color:#6b7280; text-align:center; }
-  /* Logo header — table layout because WeasyPrint ignores flexbox in PDFs. */
-  .bss-letter-brand { display:table; width:100%; border-bottom:2.5px solid #073B67; padding-bottom:5px; margin-bottom:8px; }
-  .bss-letter-brand .brand-left, .bss-letter-brand .brand-title { display:table-cell; vertical-align:middle; }
-  .bss-letter-brand .brand-left { width:46px; }
-  .bss-letter-brand .brand-logo { height:34px; width:auto; max-width:46px; vertical-align:middle; margin-right:8px; }
-  .bss-letter-brand .brand-title strong { color:#073B67; font-size:15px; display:block; }
-  .bss-letter-brand .brand-title span { display:block; font-size:8.5px; color:#6b7280; letter-spacing:1.2px; text-transform:uppercase; }
-</style></head><body><div class="page">
-<div class="brand bss-letter-brand"><div class="brand-left"><img src="{{logoUrl}}" alt="Bharat Shram Setu" class="brand-logo"/></div><div class="brand-title"><strong>Bharat Shram Setu</strong><span>One Worker · One Identity · One Future</span></div></div>
-<h1>{{letterTitle}}</h1>
-<div class="meta"><span>Ref No.: {{refNo}}</span><span>Date: {{issueDate}}</span></div>
-<p>Dear {{workerName}},</p>
-<p>With reference to your engagement, we are pleased to appoint you on the terms set out below, at the project site of <strong>{{employerName}}</strong> through <strong>{{contractorName}}</strong>.</p>
-<h3>A. Employer &amp; Site</h3>
-<table class="kv"><tr><td>Contractor / Service Provider</td><td>{{contractorName}} ({{contractorBssId}})</td></tr><tr><td>Principal Employer</td><td>{{employerName}} ({{employerBssId}})</td></tr><tr><td>Site</td><td>{{siteName}}</td></tr></table>
-<h3>B. Worker Particulars &amp; Cost Structure</h3>
-<table class="kv">
-  <tr><td>Name</td><td>{{workerName}}</td></tr>
-  <tr><td>BSS Worker ID</td><td>{{workerBssId}}</td></tr>
-  <tr><td>Date of Joining</td><td>{{doj}}</td></tr>
-  <tr><td>Designation</td><td>{{designation}}</td></tr>
-  <tr><td>Cost Sheet Attached</td><td>{{costSheetName}} ({{costSheetCode}})</td></tr>
-  <tr><td>Gross Monthly Wage</td><td>{{wage}}</td></tr>
-  <tr><td>Total Monthly CTC</td><td>{{ctc}}</td></tr>
-</table>
-<h3>C. Detailed Salary &amp; CTC Breakdown</h3>
-{{salaryBreakdownTable}}
-<div class="sign">
-  <div><div class="line">{{workerName}}</div><div>Worker Signature</div><div class="id">ID: {{workerBssId}}</div></div>
-  <div><div class="line">{{contractorName}}</div><div>Contractor Signatory</div><div class="id">ID: {{contractorBssId}}</div></div>
-  <div><div class="line">{{employerName}}</div><div>Principal Employer Signatory</div><div class="id">ID: {{employerBssId}}</div></div>
-</div>
-<div class="foot">Generated by Bharat Shram Setu · bharatshramsetu.com</div>
 </div></body></html>`;
 
 // Sample values used only for the live preview (not saved).
@@ -241,10 +162,9 @@ const SAMPLE: Record<string, string> = {
   `,
 };
 
-function renderPreview(htmlText: string, logoUrl: string): string {
+function renderPreview(htmlText: string, logoUrl: string, letterType?: string): string {
   let out = htmlText || '';
-  const defaultLogo = DEFAULT_LETTER_LOGO;
-  const effectiveLogo = logoUrl && logoUrl.trim() ? logoUrl : defaultLogo;
+  const effectiveLogo = defaultLogoFor(letterType, logoUrl);
   const values: Record<string, string> = { ...SAMPLE, logoUrl: effectiveLogo };
   
   // Replace tokens with flexibility for whitespace (e.g. {{ logoUrl }}, {{logoUrl}}, {{ workerName }})
@@ -269,6 +189,20 @@ export default function LetterTemplatesPage() {
   function stateTypeTaken(state: string, letterType: string, excludeId?: number) {
     return rows.some(r => r.id !== excludeId && r.letterType === letterType
       && (r.state || "").toLowerCase() === (state || "").toLowerCase());
+  }
+
+  /** Editor tokens for a type — the logo token is appointment-only. */
+  function letterTokensFor(letterType?: string) {
+    if (UNBRANDED_TYPES.has((letterType ?? "").toUpperCase())) {
+      return LETTER_TOKENS.filter(t => t.value !== "{{logoUrl}}");
+    }
+    return LETTER_TOKENS;
+  }
+
+  /** Starter for a new template: the all-India default row for that type. */
+  function starterHtmlFor(letterType: string) {
+    const allIndia = rows.find(r => r.letterType === letterType && !r.state && r.html);
+    return allIndia?.html || BLANK_STARTER_HTML;
   }
 
   function firstFreeStateType(): { state: string; letterType: LetterTemplate['letterType'] } {
@@ -396,7 +330,7 @@ export default function LetterTemplatesPage() {
               state: free.state,
               active: true,
               html: "",
-              logoUrl: DEFAULT_LETTER_LOGO,
+              logoUrl: defaultLogoFor(free.letterType),
               name: `${free.state} — ${typeLabel}`
             });
             setError("");
@@ -470,7 +404,7 @@ export default function LetterTemplatesPage() {
                           {t.active ? <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-700">Active</span>
                             : <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Inactive</span>}
                           <button disabled={busy} onClick={() => void copyToAllStates(t)} title="Copy this template to all states without a template" className="h-8 px-3 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-indigo-100 disabled:opacity-50"><Copy size={12} />Copy to All States</button>
-                          <button onClick={() => setEdit({ ...t, logoUrl: t.logoUrl || DEFAULT_LETTER_LOGO })} className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-gray-50"><Pencil size={12} />Edit</button>
+                          <button onClick={() => setEdit({ ...t, logoUrl: defaultLogoFor(t.letterType, t.logoUrl) })} className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-gray-50"><Pencil size={12} />Edit</button>
                           <button onClick={() => setConfirmDelete(t)} className="h-8 px-3 rounded-lg border border-red-200 text-[11px] font-semibold text-red-600 inline-flex items-center gap-1 hover:bg-red-50"><Trash2 size={12} />Delete</button>
                         </div>
                       </div>
@@ -513,7 +447,8 @@ export default function LetterTemplatesPage() {
 
           <label className="flex items-center gap-2 text-xs text-gray-700"><input type="checkbox" checked={edit.active ?? true} onChange={e => setEdit(v => ({ ...v, active: e.target.checked }))} className="accent-[#073B67]" />Active</label>
 
-          {/* Logo */}
+          {/* Logo — appointment letters only; Form XV is a statutory form. */}
+          {!(edit.letterType ?? "").toUpperCase().startsWith("EXPERIENCE") && (
           <div className="rounded-xl border border-gray-100 p-3 space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-semibold text-gray-600">Logo (letter header)</p>
@@ -521,23 +456,24 @@ export default function LetterTemplatesPage() {
             </div>
             <div className="flex items-center gap-3">
               <div className="w-16 h-16 rounded-lg border border-gray-200 grid place-items-center overflow-hidden bg-white flex-shrink-0">
-                {(edit.logoUrl || DEFAULT_LETTER_LOGO) ? <img src={edit.logoUrl || DEFAULT_LETTER_LOGO} alt="logo preview" className="max-w-full max-h-full object-contain" /> : <span className="text-[9px] text-gray-300">No logo</span>}
+                {defaultLogoFor(edit.letterType, edit.logoUrl) ? <img src={defaultLogoFor(edit.letterType, edit.logoUrl)} alt="logo preview" className="max-w-full max-h-full object-contain" /> : <span className="text-[9px] text-gray-300">No logo</span>}
               </div>
               <div className="flex-1 space-y-2 min-w-0">
-                <input value={edit.logoUrl ?? DEFAULT_LETTER_LOGO} onChange={e => setEdit(v => ({ ...v, logoUrl: e.target.value }))} placeholder="Logo URL (https://…/logo.png) or upload" className={input} />
+                <input value={edit.logoUrl ?? ""} onChange={e => setEdit(v => ({ ...v, logoUrl: e.target.value }))} placeholder="Logo URL (https://…/logo.png) or upload" className={input} />
                 <label className="inline-flex h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold items-center gap-1 cursor-pointer hover:bg-gray-50"><Upload size={12} />Upload logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={e => { onLogo(e.target.files?.[0]); e.target.value = ""; }} /></label>
               </div>
             </div>
             <p className="text-[10px] text-gray-400">Insert <code className="font-mono">{`{{logoUrl}}`}</code> where the logo should appear (e.g. inside the header).</p>
           </div>
+          )}
 
           <DocumentStudioEditor
             key={`${edit.id || 'new'}-${edit.letterType || 'APPOINTMENT'}`}
             value={edit.html ?? ""}
             onChange={html => setEdit(v => ({ ...v, html }))}
-            tokens={LETTER_TOKENS}
-            renderPreview={html => renderPreview(html, edit.logoUrl || DEFAULT_LETTER_LOGO)}
-            defaultHtml={edit.letterType === "EXPERIENCE" ? FORM_XV_STARTER_HTML : LETTER_STARTER_HTML}
+            tokens={letterTokensFor(edit.letterType)}
+            renderPreview={html => renderPreview(html, edit.logoUrl || "", edit.letterType)}
+            defaultHtml={starterHtmlFor(edit.letterType || "APPOINTMENT")}
           />
         </div>
         <footer className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2"><button onClick={() => setEdit(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button><button disabled={busy || !edit.name?.trim() || stateTypeTaken(edit.state ?? "", edit.letterType ?? "APPOINTMENT", edit.id)} onClick={() => void save()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? "Saving…" : "Save template"}</button></footer>

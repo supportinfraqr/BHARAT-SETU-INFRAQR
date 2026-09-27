@@ -94,6 +94,7 @@ EXPERIENCE_STYLE = """
   .sign { display:table; width:100%; margin:26px 0 4px; page-break-inside:avoid; }
   .sign-col { display:table-cell; width:50%; text-align:center; font-size:9px; vertical-align:top; }
   .sign .line { border-top:1px solid #4b5563; width:80%; margin:26px auto 3px; padding-top:3px; font-weight:600; }
+  .sign .id { font-size:8.5px; color:#6b7280; font-family:monospace; margin-top:1px; }
   .foot { margin-top:10px; border-top:1px solid #e5e7eb; padding-top:4px; font-size:8.5px; color:#6b7280; text-align:center; }
 """
 
@@ -114,8 +115,8 @@ EXPERIENCE_HTML = f"""<!doctype html><html><head><meta charset="utf-8"/>
 <div class="field-row"><span class="field-label">Name and address of Principal Employer:</span><br/><span class="field-val">{{{{employerName}}}}, {{{{siteAddress}}}}</span></div>
 {{{{formXVTable}}}}
 <div class="sign">
-  <div class="sign-col"><div class="line">{{{{workerName}}}}</div><div>Signature of Workman</div></div>
-  <div class="sign-col"><div class="line">{{{{contractorName}}}}</div><div>Signature of Contractor / Authorized Signatory</div></div>
+  <div class="sign-col"><div class="line">{{{{workerName}}}}</div><div>Signature of Workman</div><div class="id">BSS ID: {{{{workerBssId}}}}</div></div>
+  <div class="sign-col"><div class="line">{{{{contractorName}}}}</div><div>Signature of Contractor / Authorized Signatory</div><div class="id">BSS ID: {{{{contractorBssId}}}}</div></div>
 </div>
 <div class="foot">Generated under Central Contract Labour (Regulation &amp; Abolition) Rules, 1971</div>
 </div></body></html>"""

@@ -35,7 +35,35 @@ PRINT_CSS = """
   @page { size: A4; margin: 12mm 14mm; }
   .page { width:auto; max-width:100%; margin:0; padding:0; }
   table, img { max-width:100%; }
+  .sign .id, .sign-col .id { font-size:8.5pt; color:#6b7280; font-family:monospace; margin-top:2px; }
 """
+
+# Form XV signature block must carry the worker's and contractor's BSS ID
+# alongside the name. (anchor, replacement, token that marks it as done)
+_SIGN_ID_PATCHES = (
+    ("<div>Signature of Workman</div>",
+     '<div>Signature of Workman</div><div class="id">BSS ID: {{workerBssId}}</div>',
+     "{{workerBssId}}"),
+    ("<div>Signature of Contractor / Authorized Signatory</div>",
+     '<div>Signature of Contractor / Authorized Signatory</div>'
+     '<div class="id">BSS ID: {{contractorBssId}}</div>',
+     "{{contractorBssId}}"),
+)
+
+# The seeded Form XV footer credited BSS. Form XV is a statutory government
+# certificate, so the footer now cites only the rule it is issued under.
+_LEGACY_FOOTERS = (
+    "Generated under Central Contract Labour (Regulation &amp; Abolition) Rules"
+    " &middot; Bharat Shram Setu",
+    "Generated under Central Contract Labour (Regulation &amp; Abolition) Rules"
+    " &middot; Bharat Shram Setu",
+    "Generated under Central Contract Labour (Regulation &amp; Abolition) Rules"
+    " · Bharat Shram Setu",
+    "Generated under Central Contract Labour (Regulation &amp; Abolition) Rules, 1971"
+    " · Bharat Shram Setu",
+)
+_STATUTORY_FOOTER = ("Form XV Service Certificate under Rule 77, Contract Labour "
+                     "(Regulation &amp; Abolition) Rules, 1971")
 
 # BSS brand row — appointment letters only. Table layout because WeasyPrint
 # ignores flexbox; explicit logo height so a portrait PNG cannot blow out the row.
@@ -70,6 +98,18 @@ _FIRST_BLOCK_RE = re.compile(r"<(?:div|table|h1|h3|p)\b", re.I)
 _BRAND_BLOCK_RE = re.compile(
     r'<div class="(?:brand bss-letter-brand|bss-letter-brand brand)">.*?</div>\s*</div>',
     re.I | re.S)
+
+
+def strip_injected_css(html_text: str) -> str:
+    """Return *html_text* without any stylesheet we previously injected.
+
+    Used when snapshotting templates to code: the injected block is derived from
+    ``PRINT_CSS`` / ``BRAND_CSS``, so storing it would make the snapshot stale
+    as soon as those change. The restore re-applies it.
+    """
+    if not html_text:
+        return html_text
+    return _INJECTED_RE.sub("", html_text)
 
 
 def wants_logo(letter_type: str, with_logo: bool | None = None) -> bool:
@@ -120,6 +160,29 @@ def _mark_brand_row(out: str) -> str:
     return re.sub(r'<div\s+class\s*=\s*"brand"[^>]*>', repl, out, count=1, flags=re.I)
 
 
+def _ensure_sign_ids(out: str) -> str:
+    """Add the BSS ID line under each name in a Form XV signature block.
+
+    Idempotent: a template that already carries the token is left alone, and a
+    template without the expected caption is simply skipped.
+    """
+    for anchor, replacement, token in _SIGN_ID_PATCHES:
+        if token in out or anchor not in out:
+            continue
+        out = out.replace(anchor, replacement, 1)
+    return out
+
+
+def _neutralise_footer(out: str) -> str:
+    """Replace a BSS-credited Form XV footer with the statutory citation."""
+    if _STATUTORY_FOOTER in out:
+        return out
+    for legacy in _LEGACY_FOOTERS:
+        if legacy in out:
+            return out.replace(legacy, _STATUTORY_FOOTER, 1)
+    return out
+
+
 def ensure_letter_html(html_text: str, letter_type: str = "APPOINTMENT",
                        with_logo: bool | None = None) -> str:
     """Return template HTML with a safe A4 page box, plus BSS branding when allowed.
@@ -152,8 +215,11 @@ def ensure_letter_html(html_text: str, letter_type: str = "APPOINTMENT",
         # 3. Existing brand rows need the marker class for our overrides to win.
         out = _mark_brand_row(out)
     else:
-        # Unbranded types: drop any BSS brand row we previously injected.
+        # Unbranded types: drop any BSS brand row we previously injected, and make
+        # sure the Form XV signature block identifies both signatories by BSS ID.
         out = _BRAND_BLOCK_RE.sub("", out)
+        out = _ensure_sign_ids(out)
+        out = _neutralise_footer(out)
 
     # 4. Replace any previously-injected stylesheet with the current one.
     out = _INJECTED_RE.sub("", out)
