@@ -8,7 +8,6 @@ import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerSubmission } from '@/types/portal';
 
 const MONTHS = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
-const FREQUENCIES = ['Monthly', 'Quarterly', 'Half Yearly', 'Yearly'];
 
 /** The financial-year key ("2026-27") for a submission, from its stored year or
  *  parsed out of the free-text period ("September 2026-27" / "September 2026"). */
@@ -48,6 +47,13 @@ export default function EmployerComplianceSubmissionPage() {
     const set = new Set<string>();
     employer.submissions.forEach(s => { const k = fyKey(s); if (k) set.add(k); });
     return Array.from(set).sort().reverse();
+  }, [employer.submissions]);
+
+  // Only the frequencies that actually occur are offered — never a fixed list.
+  const frequencies = useMemo(() => {
+    const set = new Set<string>();
+    employer.submissions.forEach(s => { if (s.frequency) set.add(s.frequency); });
+    return Array.from(set).sort();
   }, [employer.submissions]);
 
   const filtered = useMemo(() => employer.submissions.filter(s => {
@@ -142,13 +148,13 @@ export default function EmployerComplianceSubmissionPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-100">
+      {frequencies.length > 0 && <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-100">
         <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Frequency:</span>
         <div className="flex flex-wrap gap-1.5">
           <button onClick={() => setFreqFilter('all')} className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${freqFilter === 'all' ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>All</button>
-          {FREQUENCIES.map(f => <button key={f} onClick={() => setFreqFilter(f)} className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${freqFilter === f ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{f}</button>)}
+          {frequencies.map(f => <button key={f} onClick={() => setFreqFilter(f)} className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${freqFilter === f ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{f}</button>)}
         </div>
-      </div>
+      </div>}
 
       <div className="flex items-center gap-3 pt-3 border-t border-gray-100 overflow-x-auto">
         <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Period:</span>
