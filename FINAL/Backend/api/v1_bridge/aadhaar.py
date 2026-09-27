@@ -44,7 +44,7 @@ def _throttle_aadhaar(aadhaar, seconds=60):
 # last Sandbox OTP call (for a global minimum interval between calls).
 # ---------------------------------------------------------------------------
 
-_GLOBAL_OTP_KEY = "__global_aadhaar_otp__"
+_GLOBAL_OTP_KEY = "__global_otp__"
 
 
 def _fmt_wait(seconds):
