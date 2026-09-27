@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Copy, Download, Eye, Pencil } from 'lucide-react';
+import { DEFAULT_LETTER_LOGO, LETTER_LOGO_IMG } from '@/lib/letterBrand';
 
 export type StudioToken = { value: string; label: string; group?: string };
 
@@ -57,8 +58,10 @@ export default function DocumentStudioEditor({
 
   function highlightTokensForCanvas(html: string): string {
     if (!html) return '';
+    // Swap the {{logoUrl}} token for the real URL so the WYSIWYG canvas shows the logo.
+    let out = html.replace(/src=["']\{\{\s*logoUrl\s*\}\}["']/gi, `src="${DEFAULT_LETTER_LOGO}" data-token="logoUrl"`);
     // Colorize plain {{token}} text into high-contrast pill badges in Word Canvas
-    return html.replace(/<span[^>]*contenteditable=["']false["'][^>]*>(\{\{[^}]+\}\})<\/span>|(\{\{[^}]+\}\})/gi, (match, badgeToken, rawToken) => {
+    return out.replace(/<span[^>]*contenteditable=["']false["'][^>]*>(\{\{[^}]+\}\})<\/span>|(\{\{[^}]+\}\})/gi, (match, badgeToken, rawToken) => {
       const tok = badgeToken || rawToken;
       if (!tok || tok.toLowerCase().includes('logourl')) return match;
       return `<span style="background:#0284c7;color:#ffffff;padding:2px 7px;border-radius:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:700;letter-spacing:0.3px;display:inline-block;vertical-align:baseline;box-shadow:0 1px 2px rgba(0,0,0,0.1);" contenteditable="false">${tok}</span>`;
@@ -128,8 +131,18 @@ export default function DocumentStudioEditor({
   }
 
   function cleanHtmlForExport(html: string): string {
+    if (!html) return '';
     // Strip contenteditable token badge wrappers: <span ... contenteditable="false">{{token}}</span> -> {{token}}
-    return html.replace(/<span[^>]*contenteditable=["']false["'][^>]*>(\{\{[^}]+\}\})<\/span>/gi, '$1');
+    let out = html.replace(/<span[^>]*contenteditable=["']false["'][^>]*>(\{\{[^}]+\}\})<\/span>/gi, '$1');
+    // Restore the {{logoUrl}} token so the renderer supplies the live logo URL.
+    out = out.replace(
+      new RegExp(`src=["']${DEFAULT_LETTER_LOGO.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`, 'gi'),
+      'src="{{logoUrl}}"'
+    );
+    out = out.replace(/src=["']\/bss-original-logo\.png["']/gi, 'src="{{logoUrl}}"');
+    // Drop the editor-only marker attribute added for canvas rendering.
+    out = out.replace(/\s+data-token=["']logoUrl["']/gi, '');
+    return out;
   }
 
   function badgeHtml(tok: string): string {
@@ -156,7 +169,7 @@ export default function DocumentStudioEditor({
       restoreSelection();
       const sel = window.getSelection();
       if (tok.toLowerCase().includes('logourl')) {
-        cmd('insertHTML', `<img src="{{logoUrl}}" alt="Logo" style="max-height:50px;width:auto;display:inline-block;vertical-align:middle;margin:4px 8px 4px 0;" />&nbsp;`);
+        cmd('insertHTML', `${LETTER_LOGO_IMG}&nbsp;`);
         return;
       }
       const range = activeCaret();

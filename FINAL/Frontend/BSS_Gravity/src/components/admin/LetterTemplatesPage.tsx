@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Copy, Loader2, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 import { INDIA_STATES } from "@/data/indiaStates";
+import { DEFAULT_LETTER_LOGO } from "@/lib/letterBrand";
 import DocumentStudioEditor, { type StudioToken } from "@/components/admin/DocumentStudioEditor";
 
 type LetterTemplate = {
@@ -47,7 +48,7 @@ const LETTER_TOKENS: StudioToken[] = [
 const FORM_XV_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><style>
   * { box-sizing: border-box; }
   body { margin:0; background:#fff; color:#111827; font-family: "Noto Sans", Arial, sans-serif; }
-  .page { width:794px; margin:0 auto; padding:32px 44px; font-size:12px; }
+  .page { width:794px; max-width:100%; margin:0 auto; padding:32px 44px; font-size:12px; }
   .header-block { text-align:center; font-weight:bold; margin-bottom:20px; text-transform:uppercase; line-height:1.4; }
   .header-block .form-title { font-size:16px; letter-spacing:0.5px; }
   .header-block .rule-title { font-size:12px; color:#475569; font-weight:normal; text-transform:none; }
@@ -85,13 +86,13 @@ const FORM_XV_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/>
   <div><div class="line">{{workerName}}</div><div>Signature of Workman</div></div>
   <div><div class="line">{{contractorName}}</div><div>Signature of Contractor / Authorized Signatory</div></div>
 </div>
-<div class="foot">Generated under Central Contract Labour (Regulation &amp; Abolition) Rules · Bharat Shram Setu</div>
+<div class="foot">Form XV Service Certificate under Rule 77, Contract Labour (Regulation &amp; Abolition) Rules, 1971</div>
 </div></body></html>`;
 
 const LETTER_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><style>
   * { box-sizing: border-box; }
   body { margin:0; background:#fff; color:#111827; font-family: "Noto Sans", Arial, sans-serif; }
-  .page { width:794px; margin:0 auto; padding:32px 44px; }
+  .page { width:794px; max-width:100%; margin:0 auto; padding:32px 44px; }
   .brand { display:flex; align-items:center; gap:12px; border-bottom:3px solid #073B67; padding-bottom:10px; margin-bottom:6px; }
   .brand img { height:44px; }
   .brand strong { color:#073B67; font-size:18px; display:block; }
@@ -108,8 +109,15 @@ const LETTER_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><
   .sign .line { border-top:1px solid #4b5563; margin-top:36px; padding-top:5px; font-weight:600; }
   .sign .id { font-size:10px; color:#6b7280; font-family:monospace; margin-top:2px; }
   .foot { margin-top:18px; border-top:1px solid #e5e7eb; padding-top:6px; font-size:10px; color:#6b7280; text-align:center; }
+  /* Logo header — table layout because WeasyPrint ignores flexbox in PDFs. */
+  .bss-letter-brand { display:table; width:100%; border-bottom:2.5px solid #073B67; padding-bottom:5px; margin-bottom:8px; }
+  .bss-letter-brand .brand-left, .bss-letter-brand .brand-title { display:table-cell; vertical-align:middle; }
+  .bss-letter-brand .brand-left { width:46px; }
+  .bss-letter-brand .brand-logo { height:34px; width:auto; max-width:46px; vertical-align:middle; margin-right:8px; }
+  .bss-letter-brand .brand-title strong { color:#073B67; font-size:15px; display:block; }
+  .bss-letter-brand .brand-title span { display:block; font-size:8.5px; color:#6b7280; letter-spacing:1.2px; text-transform:uppercase; }
 </style></head><body><div class="page">
-<div class="brand"><img src="{{logoUrl}}" alt="logo"/><div><strong>Bharat Shram Setu</strong><span>One Worker · One Identity · One Future</span></div></div>
+<div class="brand bss-letter-brand"><div class="brand-left"><img src="{{logoUrl}}" alt="Bharat Shram Setu" class="brand-logo"/></div><div class="brand-title"><strong>Bharat Shram Setu</strong><span>One Worker · One Identity · One Future</span></div></div>
 <h1>{{letterTitle}}</h1>
 <div class="meta"><span>Ref No.: {{refNo}}</span><span>Date: {{issueDate}}</span></div>
 <p>Dear {{workerName}},</p>
@@ -235,7 +243,7 @@ const SAMPLE: Record<string, string> = {
 
 function renderPreview(htmlText: string, logoUrl: string): string {
   let out = htmlText || '';
-  const defaultLogo = '/bss-original-logo.png';
+  const defaultLogo = DEFAULT_LETTER_LOGO;
   const effectiveLogo = logoUrl && logoUrl.trim() ? logoUrl : defaultLogo;
   const values: Record<string, string> = { ...SAMPLE, logoUrl: effectiveLogo };
   
@@ -388,7 +396,7 @@ export default function LetterTemplatesPage() {
               state: free.state,
               active: true,
               html: "",
-              logoUrl: "",
+              logoUrl: DEFAULT_LETTER_LOGO,
               name: `${free.state} — ${typeLabel}`
             });
             setError("");
@@ -434,12 +442,12 @@ export default function LetterTemplatesPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       {!appt && (
-                        <button onClick={() => { setEdit({ letterType: "APPOINTMENT", state: stateGroup, active: true, html: "", logoUrl: "", name: `${stateGroup} — Appointment Letter` }); setError(""); }} className="h-7 px-2.5 rounded-lg border border-blue-200 text-blue-700 bg-blue-50 text-[11px] font-semibold flex items-center gap-1 hover:bg-blue-100">
+                        <button onClick={() => { setEdit({ letterType: "APPOINTMENT", state: stateGroup, active: true, html: "", logoUrl: DEFAULT_LETTER_LOGO, name: `${stateGroup} — Appointment Letter` }); setError(""); }} className="h-7 px-2.5 rounded-lg border border-blue-200 text-blue-700 bg-blue-50 text-[11px] font-semibold flex items-center gap-1 hover:bg-blue-100">
                           <Plus size={12} />Add Appointment
                         </button>
                       )}
                       {!rel && (
-                        <button onClick={() => { setEdit({ letterType: "EXPERIENCE", state: stateGroup, active: true, html: "", logoUrl: "", name: `${stateGroup} — Experience Letter` }); setError(""); }} className="h-7 px-2.5 rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 text-[11px] font-semibold flex items-center gap-1 hover:bg-emerald-100">
+                        <button onClick={() => { setEdit({ letterType: "EXPERIENCE", state: stateGroup, active: true, html: "", logoUrl: "", name: `${stateGroup} — Form XV Service Certificate (Releasing Letter)` }); setError(""); }} className="h-7 px-2.5 rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 text-[11px] font-semibold flex items-center gap-1 hover:bg-emerald-100">
                           <Plus size={12} />Add Releasing
                         </button>
                       )}
@@ -462,7 +470,7 @@ export default function LetterTemplatesPage() {
                           {t.active ? <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-700">Active</span>
                             : <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Inactive</span>}
                           <button disabled={busy} onClick={() => void copyToAllStates(t)} title="Copy this template to all states without a template" className="h-8 px-3 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-indigo-100 disabled:opacity-50"><Copy size={12} />Copy to All States</button>
-                          <button onClick={() => setEdit({ ...t })} className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-gray-50"><Pencil size={12} />Edit</button>
+                          <button onClick={() => setEdit({ ...t, logoUrl: t.logoUrl || DEFAULT_LETTER_LOGO })} className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-gray-50"><Pencil size={12} />Edit</button>
                           <button onClick={() => setConfirmDelete(t)} className="h-8 px-3 rounded-lg border border-red-200 text-[11px] font-semibold text-red-600 inline-flex items-center gap-1 hover:bg-red-50"><Trash2 size={12} />Delete</button>
                         </div>
                       </div>
@@ -513,10 +521,10 @@ export default function LetterTemplatesPage() {
             </div>
             <div className="flex items-center gap-3">
               <div className="w-16 h-16 rounded-lg border border-gray-200 grid place-items-center overflow-hidden bg-white flex-shrink-0">
-                {edit.logoUrl ? <img src={edit.logoUrl} alt="logo preview" className="max-w-full max-h-full object-contain" /> : <span className="text-[9px] text-gray-300">No logo</span>}
+                {(edit.logoUrl || DEFAULT_LETTER_LOGO) ? <img src={edit.logoUrl || DEFAULT_LETTER_LOGO} alt="logo preview" className="max-w-full max-h-full object-contain" /> : <span className="text-[9px] text-gray-300">No logo</span>}
               </div>
               <div className="flex-1 space-y-2 min-w-0">
-                <input value={(edit.logoUrl ?? "").startsWith("data:") ? "" : (edit.logoUrl ?? "")} onChange={e => setEdit(v => ({ ...v, logoUrl: e.target.value }))} placeholder="Logo URL (https://…/logo.png) or upload" className={input} />
+                <input value={edit.logoUrl ?? DEFAULT_LETTER_LOGO} onChange={e => setEdit(v => ({ ...v, logoUrl: e.target.value }))} placeholder="Logo URL (https://…/logo.png) or upload" className={input} />
                 <label className="inline-flex h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold items-center gap-1 cursor-pointer hover:bg-gray-50"><Upload size={12} />Upload logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={e => { onLogo(e.target.files?.[0]); e.target.value = ""; }} /></label>
               </div>
             </div>
@@ -528,7 +536,7 @@ export default function LetterTemplatesPage() {
             value={edit.html ?? ""}
             onChange={html => setEdit(v => ({ ...v, html }))}
             tokens={LETTER_TOKENS}
-            renderPreview={html => renderPreview(html, edit.logoUrl ?? "")}
+            renderPreview={html => renderPreview(html, edit.logoUrl || DEFAULT_LETTER_LOGO)}
             defaultHtml={edit.letterType === "EXPERIENCE" ? FORM_XV_STARTER_HTML : LETTER_STARTER_HTML}
           />
         </div>

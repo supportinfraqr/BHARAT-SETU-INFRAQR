@@ -9,6 +9,7 @@ placeholders (see ``_letter_tokens``).
 from django.db import IntegrityError
 from .common import *
 from .admin_console import log_audit
+from bss_core import letter_brand
 
 
 def _row(t):
@@ -18,8 +19,11 @@ def _row(t):
         "state": payloads._d(t.state),
         "letterType": t.letter_type,
         "letterTypeLabel": t.get_letter_type_display(),
-        "html": t.html or "",
-        "logoUrl": t.logo_url or "",
+        # ensure_letter_html is non-persisting: the admin preview shows exactly
+        # what the generated PDF gets, including the page-box fix. Branding is
+        # omitted for statutory types (Form XV).
+        "html": letter_brand.ensure_letter_html(t.html or "", t.letter_type),
+        "logoUrl": letter_brand.ensure_logo_url(t.logo_url, t.letter_type),
         "active": t.is_active,
         "updatedAt": payloads._dts(t.updated_at),
     }

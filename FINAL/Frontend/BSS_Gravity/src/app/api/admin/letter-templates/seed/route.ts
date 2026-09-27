@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 const FORM_XV_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><style>
   * { box-sizing: border-box; }
   body { margin:0; background:#fff; color:#111827; font-family: "Noto Sans", Arial, sans-serif; }
-  .page { width:794px; margin:0 auto; padding:32px 44px; font-size:12px; }
+  .page { width:794px; max-width:100%; margin:0 auto; padding:32px 44px; font-size:12px; }
   .header-block { text-align:center; font-weight:bold; margin-bottom:20px; text-transform:uppercase; line-height:1.4; }
   .header-block .form-title { font-size:16px; letter-spacing:0.5px; }
   .header-block .rule-title { font-size:12px; color:#475569; font-weight:normal; text-transform:none; }
@@ -48,13 +48,13 @@ const FORM_XV_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/>
   <div><div class="line">{{workerName}}</div><div>Signature of Workman</div></div>
   <div><div class="line">{{contractorName}}</div><div>Signature of Contractor / Authorized Signatory</div></div>
 </div>
-<div class="foot">Generated under Central Contract Labour (Regulation &amp; Abolition) Rules · Bharat Shram Setu</div>
+<div class="foot">Form XV Service Certificate under Rule 77, Contract Labour (Regulation &amp; Abolition) Rules, 1971</div>
 </div></body></html>`;
 
 const APPOINTMENT_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><style>
   * { box-sizing: border-box; }
   body { margin:0; background:#fff; color:#111827; font-family: "Noto Sans", Arial, sans-serif; }
-  .page { width:794px; margin:0 auto; padding:32px 44px; }
+  .page { width:794px; max-width:100%; margin:0 auto; padding:32px 44px; }
   .brand { display:flex; align-items:center; gap:12px; border-bottom:3px solid #073B67; padding-bottom:10px; margin-bottom:6px; }
   .brand img { height:44px; }
   .brand strong { color:#073B67; font-size:18px; display:block; }

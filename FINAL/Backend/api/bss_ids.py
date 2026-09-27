@@ -95,6 +95,25 @@ def _allocate(prefix, *, exclude_ids=()):
     raise RuntimeError("Unable to allocate a unique BSS identifier.")
 
 
+def is_canonical_id(value, role: str | None = None) -> bool:
+    """True when *value* is a well-formed masked BSS identifier.
+
+    ``role`` narrows the accepted prefix ("worker"/"contractor"/"employer"/
+    "site"); omit it to accept any role. Used to spot legacy pre-BSS codes
+    (e.g. ``V-100234``) that predate this allocator.
+    """
+    text = (value or "").strip()
+    roles = [role] if role else list(ROLE_PREFIX)
+    for name in roles:
+        prefix = ROLE_PREFIX.get(name)
+        if not prefix or not text.startswith(prefix):
+            continue
+        suffix = text[len(prefix):]
+        if len(suffix) == ID_SUFFIX_LENGTH and set(suffix) <= ID_ALPHABET_SET:
+            return True
+    return False
+
+
 def new_bss_worker_id():
     """Random-looking 16-char worker identifier, e.g. BSS-W7KQ2M9X4RTPA."""
     return _allocate(ROLE_PREFIX["worker"])

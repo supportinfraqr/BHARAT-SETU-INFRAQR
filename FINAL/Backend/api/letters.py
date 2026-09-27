@@ -11,6 +11,7 @@ import html
 
 from django.core.files.base import ContentFile
 
+from bss_core import letter_brand
 from bss_core.models import (
     WorkerAddressMobility,
     WorkerDocument,
@@ -26,6 +27,16 @@ LETTER_NAMES = {"appointment": "Appointment Letter", "experience": "Experience L
 
 def _e(value) -> str:
     return html.escape(str(value or ""))
+
+
+def _dash(value) -> str:
+    """Escaped value, or an em dash when the field has no data.
+
+    Statutory forms (Form XV) read badly with silently blank fields, so any
+    missing scalar is shown as a dash rather than left empty.
+    """
+    text = _e(value).strip()
+    return text or "—"
 
 
 def _fmt(value) -> str:
@@ -121,24 +132,32 @@ def _party_facts(binding) -> dict:
 
 
 _STYLE = """
+  @page {
+    size: A4;
+    margin: 15mm 15mm 15mm 15mm;
+  }
   * { box-sizing: border-box; }
-  body { margin:0; background:#fff; color:#111827; font-family: "Noto Sans", Arial, sans-serif; }
-  .page { width:794px; margin:0 auto; padding:32px 44px; }
-  .brand { display:flex; align-items:center; gap:12px; border-bottom:3px solid #073B67; padding-bottom:10px; margin-bottom:6px; }
-  .brand strong { color:#073B67; font-size:18px; letter-spacing:.3px; display:block; }
-  .brand span { font-size:10px; color:#6b7280; letter-spacing:1.6px; text-transform:uppercase; }
-  h1 { text-align:center; color:#073B67; font-size:20px; letter-spacing:1.4px; margin:16px 0 4px; border-bottom:2px double #F47A32; padding-bottom:8px; text-transform:uppercase; }
-  .meta { display:flex; justify-content:space-between; font-size:12px; color:#374151; margin:10px 0 18px; }
-  h3 { color:#073B67; font-size:13px; margin:16px 0 6px; border-bottom:1px solid #d1d5db; padding-bottom:4px; }
-  p, li { font-size:12.5px; line-height:1.65; text-align:justify; }
-  .kv { width:100%; border-collapse:collapse; font-size:12.5px; margin:4px 0; }
-  .kv td { border:1px solid #9aa4b2; padding:5px 8px; vertical-align:top; }
+  body { margin:0; background:#fff; color:#111827; font-family: "Noto Sans", Arial, sans-serif; font-size: 11px; }
+  .page { width:100%; margin:0 auto; }
+  .brand { display:table; width:100%; border-bottom:3px solid #073B67; padding-bottom:8px; margin-bottom:6px; }
+  .brand-left { display:table-cell; vertical-align:middle; }
+  .brand-right { display:table-cell; text-align:right; vertical-align:middle; }
+  .brand strong { color:#073B67; font-size:16px; letter-spacing:.3px; display:block; }
+  .brand span { font-size:9px; color:#6b7280; letter-spacing:1.4px; text-transform:uppercase; }
+  h1 { text-align:center; color:#073B67; font-size:17px; letter-spacing:1px; margin:12px 0 4px; border-bottom:2px double #F47A32; padding-bottom:6px; text-transform:uppercase; }
+  .meta { display:table; width:100%; font-size:11px; color:#374151; margin:8px 0 12px; }
+  .meta-left { display:table-cell; text-align:left; }
+  .meta-right { display:table-cell; text-align:right; }
+  h3 { color:#073B67; font-size:12px; margin:12px 0 4px; border-bottom:1px solid #d1d5db; padding-bottom:3px; page-break-after:avoid; }
+  p, li { font-size:11px; line-height:1.5; margin:6px 0; text-align:justify; }
+  .kv { width:100%; border-collapse:collapse; font-size:11px; margin:4px 0 10px; page-break-inside:avoid; }
+  .kv td { border:1px solid #9aa4b2; padding:4px 7px; vertical-align:top; }
   .kv td:first-child { background:#F0F4FA; color:#073B67; width:34%; font-weight:600; }
-  .sign { display:flex; justify-content:space-between; margin:46px 8px 6px; }
-  .sign > div { width:220px; text-align:center; font-size:12px; }
-  .sign .line { border-top:1px solid #4b5563; margin-top:36px; padding-top:5px; font-weight:600; }
-  .foot { margin-top:18px; border-top:1px solid #e5e7eb; padding-top:6px; font-size:10px; color:#6b7280; text-align:center; }
-  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  .sign { display:table; width:100%; margin:32px 0 6px; page-break-inside:avoid; }
+  .sign-col { display:table-cell; width:33.33%; text-align:center; font-size:10px; vertical-align:top; }
+  .sign .line { border-top:1px solid #4b5563; width:80%; margin:30px auto 4px; padding-top:4px; font-weight:600; }
+  .sign .id { font-size:9px; color:#6b7280; font-family:monospace; margin-top:2px; }
+  .foot { margin-top:14px; border-top:1px solid #e5e7eb; padding-top:6px; font-size:9px; color:#6b7280; text-align:center; }
 """
 
 
@@ -154,6 +173,31 @@ def _shell(title: str, body: str) -> str:
     )
 
 
+def _cell(text, width: str = "") -> str:
+    """One bordered table cell; ``width`` is an optional CSS percentage."""
+    style = "padding:4px;border:1px solid #334155"
+    if width:
+        style += f";width:{width}"
+    return f'<th style="{style}">{text}</th>'
+
+
+def _cell_td(text, width: str = "") -> str:
+    style = "padding:5px;border:1px solid #334155"
+    if width:
+        style += f";width:{width}"
+    return f'<td style="{style}">{text}</td>'
+
+
+def _block_table(headers: list, row: list, cls: str = "") -> str:
+    """Bordered single-row table used by the optional block tokens."""
+    cls_attr = f' class="{cls}"' if cls else ""
+    th = "".join(_cell(h[0], h[1]) if isinstance(h, tuple) else _cell(h) for h in headers)
+    td = "".join(_cell_td(c[0], c[1]) if isinstance(c, tuple) else _cell_td(c) for c in row)
+    return (f'<table{cls_attr} style="width:100%;border-collapse:collapse;margin:12px 0;'
+            f'font-size:10px;text-align:center;border:1px solid #334155">'
+            f"<thead><tr>{th}</tr></thead><tbody><tr>{td}</tr></tbody></table>")
+
+
 def _letter_tokens(binding, letter_type: str, logo_url: str = "") -> dict:
     """Values injected into an admin-authored HTML template. Tokens are written
     as {{token}} (or {{ token }}) — values are HTML-escaped by the facts helpers."""
@@ -162,6 +206,9 @@ def _letter_tokens(binding, letter_type: str, logo_url: str = "") -> dict:
     ref_prefix = {"appointment": "APPT"}.get(letter_type, "EXP")
     ref = f"BSS/{ref_prefix}/{binding.id:05d}"
     issue = _fmt(binding.accepted_at or binding.created_at)
+    # Form XV asks for the period of employment, which ends on the relieving date.
+    relieving = _fmt(getattr(binding, "unbound_at", None) or binding.accepted_at
+                     or binding.created_at)
     wage = _money(_offered_wage(binding))
 
     # Cost Sheet facts
@@ -185,30 +232,73 @@ def _letter_tokens(binding, letter_type: str, logo_url: str = "") -> dict:
     # Detailed Salary & CTC Breakdown Table
     salary_table = _cost_sheet_section(cs, cb)
 
+    # Statutory Form XV period-of-employment table.
+    form_xv_table = _block_table(
+        headers=[("Sl. No.", "6%"), "Total period for which employed",
+                 ("Nature of work done", "24%"),
+                 ("Rate of wages (with particulars of unit in case of piece-work)", "40%"),
+                 ("Remarks", "18%")],
+        row=["1", f"{_dash(w['doj'])} &ndash; {_dash(relieving)}",
+             _dash(w["department"]), f"{_dash(wage)} per month", "Satisfactory service"],
+        cls="xv-table")
+
+    # Employment grid (contractor / employer / site).
+    employment_grid = _block_table(
+        headers=["Particulars", "Details"],
+        row=[["Contractor / Service Provider",
+              f"{p['contractor']} ({_dash(p['contractorBss'])})"],
+             ["Principal Employer", f"{p['employer']} ({_dash(employer_bss_id)})"],
+             ["Project Site & Address", f"{_dash(p['site'])}, {_dash(p['siteAddr'])}"]])
+    employment_grid = employment_grid.replace(
+        '<th style="padding:4px;border:1px solid #334155">Particulars</th>',
+        '<th style="padding:4px;border:1px solid #334155;background:#F0F4FA;'
+        'color:#073B67;text-align:left;width:35%">Particulars</th>').replace(
+        '<th style="padding:4px;border:1px solid #334155">Details</th>',
+        '<th style="padding:4px;border:1px solid #334155;text-align:left">Details</th>')
+
+    # Relieving clearance checklist.
+    relieving_clearance = _block_table(
+        headers=["Clearance Category", "Status", "Remarks"],
+        row=[["Site Equipment &amp; PPE Assets", "Cleared", "All issued items returned"],
+             ["Full &amp; Final Wage Settlement", "Cleared", "All wages and dues paid"],
+             ["Gate Pass &amp; ID Credentials", "Surrendered", "Identity card surrendered"],
+             ["Notice Period &amp; Conduct", "Satisfactory", "Good conduct during service"]])
+
     return {
         "letterTitle": _e(LETTER_NAMES.get(letter_type, "Letter")),
         "refNo": _e(ref),
         "issueDate": _e(issue),
-        "workerName": w["name"], "workerBssId": w["bssId"], "fatherName": w["father"],
-        "dob": w["dob"], "gender": w["gender"], "mobile": w["mobile"], "address": w["address"],
-        "designation": w["designation"], "department": w["department"], "doj": w["doj"],
+        "workerName": w["name"], "workerBssId": w["bssId"],
+        "fatherName": _dash(w["father"]),
+        "dob": w["dob"], "gender": _dash(w["gender"]), "mobile": _dash(w["mobile"]),
+        "address": _dash(w["address"]),
+        # No identification-marks field exists on the worker identity record, so
+        # this always renders as a dash until one is added.
+        "identificationMarks": _dash(w.get("identificationMarks", "")),
+        "designation": _dash(w["designation"]), "department": _dash(w["department"]),
+        "doj": w["doj"],
         "wage": _e(wage),
         "costSheetCode": _e(cs_code),
         "costSheetName": _e(cs_name),
         "costSheetCategory": _e(cs_cat),
         "costSheetGrade": _e(cs_grade),
+        # Block-level tokens stay blank when there is nothing to show.
         "costSheetSection": salary_table,
         "salaryBreakdownTable": salary_table,
+        "formXVTable": form_xv_table,
+        "employmentGridTable": employment_grid,
+        "relievingClearanceTable": relieving_clearance,
+        "relievingDate": _dash(relieving),
         "ctc": _money(ctc_val),
         "epfEmployer": _money(epf_val),
         "esicEmployer": _money(esic_val),
         "netTakeHome": _money(takehome_val),
-        "contractorName": p["contractor"], "contractorBssId": p["contractorBss"],
-        "contractorAddress": p["contractorAddr"],
+        "contractorName": p["contractor"], "contractorBssId": _dash(p["contractorBss"]),
+        "contractorAddress": _dash(p["contractorAddr"]),
         "employerName": p["employer"],
-        "employerBssId": employer_bss_id,
-        "siteName": p["site"], "siteAddress": p["siteAddr"],
-        "logoUrl": logo_url or "",
+        "employerBssId": _dash(employer_bss_id),
+        "siteName": _dash(p["site"]), "siteAddress": _dash(p["siteAddr"]),
+        "logoUrl": letter_brand.ensure_logo_url(logo_url, letter_type),
     }
 
 
@@ -235,8 +325,11 @@ def _resolve_letter_template(binding, letter_type: str):
             .exclude(html="").order_by("-updated_at").first())
 
 
-def _render_template_html(html_text: str, tokens: dict) -> str:
-    out = html_text
+def _render_template_html(html_text: str, tokens: dict, letter_type: str = "APPOINTMENT") -> str:
+    # Normalise the page box first (older templates hardcode a 794px width that
+    # overflows the PDF page box). Branding is skipped for statutory types such
+    # as EXPERIENCE, which must stay free of any BSS logo or wordmark.
+    out = letter_brand.ensure_letter_html(html_text, letter_type)
     for key, value in tokens.items():
         out = out.replace("{{" + key + "}}", value).replace("{{ " + key + " }}", value)
     return out
@@ -247,7 +340,8 @@ def render_letter(binding, letter_type: str) -> str:
     if template is not None:
         return _render_template_html(
             template.html,
-            _letter_tokens(binding, letter_type, getattr(template, "logo_url", "") or ""))
+            _letter_tokens(binding, letter_type, getattr(template, "logo_url", "") or ""),
+            letter_type)
     w = _worker_facts(binding.worker)
     p = _party_facts(binding)
     ref_prefix = {"appointment": "APPT"}.get(letter_type, "EXP")

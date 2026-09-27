@@ -1,0 +1,168 @@
+"""Letter page box + optional BSS branding.
+
+Every letter needs a safe A4 page box. The built-in templates hardcode
+``.page { width:794px }`` — the full A4 width at 96dpi — while WeasyPrint
+applies a non-zero default ``@page`` margin, so the fixed-width block overflowed
+the page box and was clipped down the right-hand edge. ``PRINT_CSS`` pins an
+explicit page box and drops the pixel width so the layout is page-driven.
+
+BSS branding (logo + wordmark header) is **appointment letters only**. The
+experience / releasing letter is the statutory Form XV service certificate
+under Rule 77 of the Contract Labour (Regulation & Abolition) Rules, so it must
+not carry a BSS logo or wordmark. Pass ``with_logo=False`` (the default for
+``EXPERIENCE``) to keep the page box fix while leaving the document unbranded.
+
+``ensure_letter_html()`` applies both concerns, and ``ensure_logo_url()``
+supplies the hosted default only where branding is wanted. Both are idempotent,
+so they are safe at render time, at API-serialisation time and as a backfill.
+"""
+
+from __future__ import annotations
+
+import re
+
+DEFAULT_LOGO_URL = "https://login.bharatshramsetu.com/bss-brand/bharatshramsetu-logo.png"
+
+# Letter types that must never receive BSS branding (statutory government format).
+UNBRANDED_LETTER_TYPES = {"EXPERIENCE"}
+
+# Bump when the CSS changes so previously-injected stylesheets get replaced.
+_CSS_MARKER = "bss-letter-css-v3"
+_INJECTED_RE = re.compile(r"<style[^>]*>\s*bss-letter-css[^<]*</style>", re.I)
+
+# Layout safety — applied to every letter, branded or not.
+PRINT_CSS = """
+  @page { size: A4; margin: 12mm 14mm; }
+  .page { width:auto; max-width:100%; margin:0; padding:0; }
+  table, img { max-width:100%; }
+"""
+
+# BSS brand row — appointment letters only. Table layout because WeasyPrint
+# ignores flexbox; explicit logo height so a portrait PNG cannot blow out the row.
+BRAND_CSS = """
+  .bss-letter-brand { display:table; width:100%; border-bottom:2.5px solid #073B67;
+                      padding-bottom:5px; margin-bottom:8px; }
+  .bss-letter-brand .brand-left, .bss-letter-brand .brand-title { display:table-cell; vertical-align:middle; }
+  .bss-letter-brand .brand-left { width:46px; }
+  .bss-letter-brand .brand-logo { height:34px; width:auto; max-width:46px;
+                                  vertical-align:middle; margin-right:8px; }
+  .bss-letter-brand .brand-title strong { color:#073B67; font-size:15px; letter-spacing:.3px; display:block; }
+  .bss-letter-brand .brand-title span { display:block; font-size:8.5px; color:#6b7280;
+                                        letter-spacing:1.2px; text-transform:uppercase; }
+"""
+
+BRAND_BLOCK = (
+    '<div class="brand bss-letter-brand">'
+    '<div class="brand-left">'
+    '<img src="{{logoUrl}}" alt="Bharat Shram Setu" class="brand-logo"/>'
+    "</div>"
+    '<div class="brand-title"><strong>Bharat Shram Setu</strong>'
+    "<span>One Worker · One Identity · One Future</span></div>"
+    "</div>"
+)
+
+_IMG_RE = re.compile(r"<img\b[^>]*>", re.I)
+_CLASS_RE = re.compile(r'class\s*=\s*"([^"]*)"', re.I)
+_HEAD_RE = re.compile(r"</head\s*>|<body[^>]*>", re.I)
+_PAGE_RE = re.compile(r'<div\s+class\s*=\s*"page"[^>]*>', re.I)
+_FIRST_BLOCK_RE = re.compile(r"<(?:div|table|h1|h3|p)\b", re.I)
+# Matches the exact block we inject, so it can be removed again on request.
+_BRAND_BLOCK_RE = re.compile(
+    r'<div class="(?:brand bss-letter-brand|bss-letter-brand brand)">.*?</div>\s*</div>',
+    re.I | re.S)
+
+
+def wants_logo(letter_type: str, with_logo: bool | None = None) -> bool:
+    """Whether this letter type may carry BSS branding."""
+    if with_logo is not None:
+        return bool(with_logo)
+    return (letter_type or "").strip().upper() not in UNBRANDED_LETTER_TYPES
+
+
+def ensure_logo_url(value, letter_type: str = "APPOINTMENT",
+                    with_logo: bool | None = None) -> str:
+    """Return the template's logo URL, or the hosted BSS default.
+
+    Blank for unbranded types (statutory Form XV) so no logo is introduced.
+    """
+    text = (value or "").strip()
+    if not wants_logo(letter_type, with_logo):
+        return text
+    return text or DEFAULT_LOGO_URL
+
+
+def _is_logo_img(tag: str) -> bool:
+    return "logourl" in tag.lower() or "bharatshramsetu-logo" in tag.lower()
+
+
+def _size_logo_img(tag: str) -> str:
+    """Ensure the logo <img> carries the brand-logo class (print-safe sizing)."""
+    found = _CLASS_RE.search(tag)
+    if found is None:
+        return tag.replace("<img", '<img class="brand-logo"', 1)
+    classes = found.group(1).split()
+    if "brand-logo" in classes:
+        return tag
+    return tag.replace(found.group(0), f'class="{" ".join(classes + ["brand-logo"])}"', 1)
+
+
+def _mark_brand_row(out: str) -> str:
+    """Add the marker class to an existing brand row so our CSS applies."""
+    def repl(match: re.Match) -> str:
+        tag = match.group(0)
+        if not _CLASS_RE.search(tag):
+            return tag.replace('class="', 'class="bss-letter-brand ', 1)
+        if "bss-letter-brand" in tag:
+            return tag
+        return _CLASS_RE.sub(
+            lambda m: f'class="bss-letter-brand {m.group(1)}"', tag, count=1)
+
+    return re.sub(r'<div\s+class\s*=\s*"brand"[^>]*>', repl, out, count=1, flags=re.I)
+
+
+def ensure_letter_html(html_text: str, letter_type: str = "APPOINTMENT",
+                       with_logo: bool | None = None) -> str:
+    """Return template HTML with a safe A4 page box, plus BSS branding when allowed.
+
+    ``with_logo`` defaults to False for statutory types such as ``EXPERIENCE``
+    (Form XV), so those never gain a BSS logo or wordmark. Idempotent: re-running
+    on already-upgraded HTML changes nothing.
+    """
+    if not html_text or not html_text.strip():
+        return html_text
+
+    out = html_text
+    brand = wants_logo(letter_type, with_logo)
+
+    if brand:
+        # 1. Logo <img> must be size-constrained, or a portrait logo blows up the header.
+        out = _IMG_RE.sub(lambda m: _size_logo_img(m.group(0)) if _is_logo_img(m.group(0))
+                          else m.group(0), out)
+
+        # 2. Templates with no logo block at all get one injected.
+        if "{{logoUrl}}" not in out and DEFAULT_LOGO_URL not in out:
+            page = _PAGE_RE.search(out)
+            if page is not None:
+                out = out[:page.end()] + "\n" + BRAND_BLOCK + out[page.end():]
+            else:
+                first = _FIRST_BLOCK_RE.search(out)
+                if first is not None:
+                    out = out[:first.start()] + BRAND_BLOCK + "\n" + out[first.start():]
+
+        # 3. Existing brand rows need the marker class for our overrides to win.
+        out = _mark_brand_row(out)
+    else:
+        # Unbranded types: drop any BSS brand row we previously injected.
+        out = _BRAND_BLOCK_RE.sub("", out)
+
+    # 4. Replace any previously-injected stylesheet with the current one.
+    out = _INJECTED_RE.sub("", out)
+    css = PRINT_CSS + (BRAND_CSS if brand else "")
+    style = f"<style>{_CSS_MARKER}\n{css}</style>"
+    head = _HEAD_RE.search(out)
+    if head is not None:
+        out = out[:head.start()] + style + out[head.start():]
+    else:
+        out = style + out
+
+    return out
