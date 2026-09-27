@@ -137,20 +137,27 @@ def aadhaar_otp(request):
                         status=status.HTTP_400_BAD_REQUEST)
 
     def _reuse_recent(window_minutes, message=""):
-        """Return a still-recent OTP reference so a repeated request reuses the
-        OTP already delivered instead of tripping Sandbox's rate limit."""
+        """Return a still-valid OTP reference so a repeated request reuses the
+        OTP already delivered instead of tripping Sandbox's rate limit.
+
+        A reference whose OTP TTL has already lapsed is never reused — handing
+        it back would make the user's next verify fail with "OTP expired".
+        """
+        now = timezone.now()
         recent = (AadhaarChallenge.objects
                   .filter(aadhaar_number=aadhaar,
                           status__in=["INITIATED", "OTP_SENT"],
-                          created_at__gte=timezone.now() - timedelta(minutes=window_minutes))
+                          created_at__gte=now - timedelta(minutes=window_minutes))
                   .exclude(reference_id__isnull=True).exclude(reference_id="")
                   .order_by("-created_at").first())
         if recent is None:
             return None
         expires = recent.expires_at or (recent.created_at + timedelta(minutes=settings.AADHAAR_OTP_TTL_MIN))
+        if expires <= now:
+            return None
         payload = {
             "referenceId": recent.reference_id,
-            "expiresIn": max(0, int((expires - timezone.now()).total_seconds())),
+            "expiresIn": max(0, int((expires - now).total_seconds())),
             "reused": True,
         }
         if message:
