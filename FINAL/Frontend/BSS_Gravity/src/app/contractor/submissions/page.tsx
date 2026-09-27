@@ -183,6 +183,11 @@ export default function ComplianceSubmissionPage() {
   const [uploads, setUploads] = useState<Record<string, EvidenceUpload>>({});
   const [additionalDocs, setAdditionalDocs] = useState<Array<{ name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; type: string; requiredFormat: string; note: string }>>([]);
   const [docsBusy, setDocsBusy] = useState(false);
+  // CLRA registers: use the auto-generated batch, or upload the state's register
+  // forms manually.
+  const [clraMode, setClraMode] = useState<'generated' | 'manual'>('generated');
+  const [registerForms, setRegisterForms] = useState<Array<{ name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; type: string; requiredFormat: string; note: string }>>([]);
+  const [registersBusy, setRegistersBusy] = useState(false);
 
   const rawDocuments = contractor.submissions.documents as DocumentRow[];
   const documents = useMemo(() => scoped(rawDocuments, row => row.employer), [scoped, rawDocuments]);
@@ -308,6 +313,30 @@ export default function ComplianceSubmissionPage() {
       .finally(() => { if (active) setDocsBusy(false); });
     return () => { active = false; };
   }, [docsSiteId]);
+
+  // The site's adopted CLRA register forms, for the "Upload manually" option.
+  useEffect(() => {
+    if (clraMode !== 'manual') return;
+    let active = true;
+    setRegistersBusy(true);
+    void fetch(`/api/contractor/clra/templates${docsSiteId ? `?siteId=${encodeURIComponent(docsSiteId)}` : ''}`, { cache:'no-store' })
+      .then(response => (response.ok ? response.json() : null))
+      .then((body: { rows?: Array<{ formCode:string; title:string; frequency?:string; isMandatory?:boolean }> } | null) => {
+        if (!active) return;
+        setRegisterForms((body?.rows || []).map(r => ({
+          name: `${r.formCode || 'Register'}${r.title ? ` — ${r.title}` : ''}`,
+          frequency: r.frequency || 'Monthly',
+          mandatory: !!r.isMandatory,
+          requiresDocument: true,
+          type: 'CLRA Register',
+          requiredFormat: 'PDF / JPEG / PNG',
+          note: '',
+        })));
+      })
+      .catch(() => { if (active) setRegisterForms([]); })
+      .finally(() => { if (active) setRegistersBusy(false); });
+    return () => { active = false; };
+  }, [clraMode, docsSiteId]);
 
   const [removedKeys, setRemovedKeys] = useState<string[]>([]);
 
@@ -479,6 +508,93 @@ export default function ComplianceSubmissionPage() {
       ) 
     },
   ];
+
+  // Shared table for "additional forms" and, in manual mode, the CLRA register
+  // forms the contractor uploads themselves.
+  const renderDocsTable = (docs: Array<{ name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; type: string; requiredFormat: string; note: string }>) => (
+    <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="bg-slate-50 border-b border-gray-200 text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
+            <th className="py-2.5 px-3">Document Name</th>
+            <th className="py-2.5 px-3">Type</th>
+            <th className="py-2.5 px-3">Frequency</th>
+            <th className="py-2.5 px-3">Mandatory</th>
+            <th className="py-2.5 px-3">Required Format</th>
+            <th className="py-2.5 px-3">Note</th>
+            <th className="py-2.5 px-3">Submit</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100 text-xs">
+          {docs.map(doc => {
+            const up = uploads[doc.name];
+            const isSubmitted = submittedNames.has(doc.name);
+            const submittedRow = isSubmitted
+              ? submittedDocuments.find(d => d.type?.toLowerCase() === doc.name.toLowerCase() || d.type?.toLowerCase().includes(doc.name.toLowerCase()))
+              : undefined;
+            const viewHref = up?.id != null ? `/api/portal/uploads/${up.id}` : submittedRow?.id ? `/api/contractor/submissions/${submittedRow.id}/file` : '';
+            const isReturned = isSubmitted && submittedRow?.status === 'Returned';
+            const locked = isSubmitted && !isReturned;
+            return (
+              <tr key={doc.name} className={`align-top hover:bg-slate-50/70 transition-colors ${up?.status === 'Validated' ? 'bg-green-50/20' : doc.mandatory ? 'bg-amber-50/15' : ''}`}>
+                <td className="py-3 px-3 font-semibold text-gray-900">{doc.name}</td>
+                <td className="py-3 px-3"><span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">{doc.type || '—'}</span></td>
+                <td className="py-3 px-3 text-gray-600 text-[11px]">{doc.frequency || 'Monthly'}</td>
+                <td className="py-3 px-3">
+                  {doc.mandatory ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">Mandatory</span>
+                  ) : (
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">Optional</span>
+                  )}
+                </td>
+                <td className="py-3 px-3 text-gray-600 text-[11px]">{doc.requiredFormat || '—'}</td>
+                <td className="py-3 px-3 text-gray-500 text-[11px] max-w-[220px]" title={doc.note || ''}>{doc.note || '—'}</td>
+                <td className="py-3 px-3">
+                  {locked ? (
+                    <div className="flex flex-col gap-1">
+                      <span className={`text-[11px] font-semibold inline-flex items-center gap-1 ${submittedRow?.status === 'Verified' ? 'text-green-700' : 'text-emerald-700'}`}>
+                        <Lock size={12}/> {submittedRow?.status === 'Verified' ? 'Verified' : 'Submitted'}
+                      </span>
+                      {viewHref && <a href={viewHref} target="_blank" rel="noreferrer" className="text-[11px] text-blue-700 font-semibold hover:underline">View</a>}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-1.5">
+                      {isReturned && <span className="text-[10px] font-bold text-red-700">Returned — re-upload to resubmit</span>}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label className="h-7 px-3 rounded-md border border-gray-300 text-xs font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-slate-100 bg-white shadow-xs">
+                          <Upload size={12} className="text-gray-600"/>
+                          {up?.id != null ? 'Re-upload' : 'Upload'}
+                          <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => uploadEvidence(doc, e.target.files?.[0])}/>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => up?.id != null && void submitSingleForm(doc.name, up.id)}
+                          disabled={busy || up?.id == null}
+                          className="h-7 px-3 rounded-md bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] disabled:opacity-40 shadow-xs"
+                        >Submit</button>
+                        {up?.id != null && (
+                          <button type="button" onClick={() => handleRemoveEvidence(doc.name)} className="text-[11px] text-red-600 font-semibold hover:underline">Remove</button>
+                        )}
+                      </div>
+                      {up?.status === 'Validating' ? (
+                        <span className="text-[10px] font-bold text-blue-700">Validating…</span>
+                      ) : up?.status === 'Errors found' ? (
+                        <button type="button" onClick={() => setViewErrors({ name: doc.name, findings: up.findings ?? [] })} className="text-left text-[10px] font-bold text-red-700 hover:underline">Errors found — view findings</button>
+                      ) : up?.status === 'Validated' ? (
+                        <span className="text-[10px] font-bold text-green-700">Validated — ready to submit</span>
+                      ) : (
+                        <span className="text-[10px] font-medium text-amber-700">Pending submission</span>
+                      )}
+                    </div>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
 
   return <div className="space-y-6 pb-12">
     {/* Clean Top Header */}
@@ -746,17 +862,32 @@ export default function ComplianceSubmissionPage() {
         </div>
 
         <div>
-          <p className="text-xs font-extrabold uppercase tracking-wider text-gray-500 mb-2">1 · CLRA Registers <span className="text-gray-400">(auto-generated)</span></p>
-          {generatedForCreate.length
-            ? <div className="space-y-2 mb-6">{generatedForCreate.map(b => (
-                <div key={b.id} className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 flex items-center gap-3">
-                  <span className="flex-1 min-w-0"><strong className="block text-xs text-gray-900">{b.state} · {b.site || b.siteCode}</strong><span className="block text-[10px] text-gray-400 mt-0.5">{b.month} {b.year} · {b.notes}</span></span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${b.status === 'Verified' ? 'bg-green-50 text-green-700 border border-green-200' : b.status === 'Submitted' ? 'bg-blue-50 text-blue-700' : (b.status === 'Returned' || b.status === 'Rejected') ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>{b.status === 'Verified' ? 'Verified' : (b.status === 'Returned' || b.status === 'Rejected') ? 'Returned' : b.status === 'Submitted' ? 'Submitted' : 'Generated · Ready'}</span>
-                  <button type="button" onClick={() => setBatchView(String(b.id))} className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold flex items-center gap-1.5 flex-shrink-0 hover:bg-white">View documents</button>
-                  {b.status !== 'Submitted' && b.status !== 'Verified' && <button type="button" onClick={() => void submitBatch(b.id)} disabled={busy} className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold flex items-center gap-1.5 flex-shrink-0 hover:bg-[#062D4F] disabled:opacity-40"><FileUp size={12}/>Submit</button>}
-                </div>
-              ))}</div>
-            : <p className="text-xs text-gray-400 mb-6">No CLRA registers generated for {createPeriod} {fy.replace('FY ', '')} yet.</p>}
+          <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+            <p className="text-xs font-extrabold uppercase tracking-wider text-gray-500">1 · CLRA Registers</p>
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+              <button type="button" onClick={() => setClraMode('generated')} className={`h-7 px-3 text-[11px] font-bold ${clraMode === 'generated' ? 'bg-[#073B67] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Fetch generated</button>
+              <button type="button" onClick={() => setClraMode('manual')} className={`h-7 px-3 text-[11px] font-bold border-l border-gray-200 ${clraMode === 'manual' ? 'bg-[#073B67] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Upload manually</button>
+            </div>
+          </div>
+
+          {clraMode === 'generated' ? (
+            generatedForCreate.length
+              ? <div className="space-y-2 mb-6">{generatedForCreate.map(b => (
+                  <div key={b.id} className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 flex items-center gap-3">
+                    <span className="flex-1 min-w-0"><strong className="block text-xs text-gray-900">{b.state} · {b.site || b.siteCode}</strong><span className="block text-[10px] text-gray-400 mt-0.5">{b.month} {b.year} · {b.notes}</span></span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${b.status === 'Verified' ? 'bg-green-50 text-green-700 border border-green-200' : b.status === 'Submitted' ? 'bg-blue-50 text-blue-700' : (b.status === 'Returned' || b.status === 'Rejected') ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>{b.status === 'Verified' ? 'Verified' : (b.status === 'Returned' || b.status === 'Rejected') ? 'Returned' : b.status === 'Submitted' ? 'Submitted' : 'Generated · Ready'}</span>
+                    <button type="button" onClick={() => setBatchView(String(b.id))} className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold flex items-center gap-1.5 flex-shrink-0 hover:bg-white">View documents</button>
+                    {b.status !== 'Submitted' && b.status !== 'Verified' && <button type="button" onClick={() => void submitBatch(b.id)} disabled={busy} className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold flex items-center gap-1.5 flex-shrink-0 hover:bg-[#062D4F] disabled:opacity-40"><FileUp size={12}/>Submit</button>}
+                  </div>
+                ))}</div>
+              : <p className="text-xs text-gray-400 mb-6">No CLRA registers generated for {createPeriod} {fy.replace('FY ', '')} yet.</p>
+          ) : registersBusy ? (
+            <p className="text-xs text-gray-400 py-3 mb-6">Loading CLRA forms…</p>
+          ) : registerForms.length === 0 ? (
+            <p className="text-xs text-gray-400 py-3 mb-6">No CLRA register forms configured for this site.</p>
+          ) : (
+            <div className="mb-6">{renderDocsTable(registerForms)}</div>
+          )}
 
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
@@ -775,95 +906,7 @@ export default function ComplianceSubmissionPage() {
               <p className="text-xs text-gray-400 py-3">Loading required documents…</p>
             ) : additionalDocs.length === 0 ? (
               <p className="text-xs text-gray-400 py-3">No specific evidence documents configured for this site.</p>
-            ) : (
-              <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-gray-200 text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
-                      <th className="py-2.5 px-3">Document Name</th>
-                      <th className="py-2.5 px-3">Type</th>
-                      <th className="py-2.5 px-3">Frequency</th>
-                      <th className="py-2.5 px-3">Mandatory</th>
-                      <th className="py-2.5 px-3">Required Format</th>
-                      <th className="py-2.5 px-3">Note</th>
-                      <th className="py-2.5 px-3">Submit</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 text-xs">
-                    {additionalDocs.map(doc => {
-                      const up = uploads[doc.name];
-                      const isSubmitted = submittedNames.has(doc.name);
-                      const submittedRow = isSubmitted
-                        ? submittedDocuments.find(d => d.type?.toLowerCase() === doc.name.toLowerCase() || d.type?.toLowerCase().includes(doc.name.toLowerCase()))
-                        : undefined;
-                      const viewHref = up?.id != null ? `/api/portal/uploads/${up.id}` : submittedRow?.id ? `/api/contractor/submissions/${submittedRow.id}/file` : '';
-                      // A returned submission is editable again so the contractor can fix and resubmit.
-                      const isReturned = isSubmitted && submittedRow?.status === 'Returned';
-                      const locked = isSubmitted && !isReturned;
-                      return (
-                        <tr key={doc.name} className={`align-top hover:bg-slate-50/70 transition-colors ${up?.status === 'Validated' ? 'bg-green-50/20' : doc.mandatory ? 'bg-amber-50/15' : ''}`}>
-                          <td className="py-3 px-3 font-semibold text-gray-900">{doc.name}</td>
-                          <td className="py-3 px-3">
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">{doc.type || '—'}</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 text-[11px]">
-                            {doc.frequency || 'Monthly'}
-                          </td>
-                          <td className="py-3 px-3">
-                            {doc.mandatory ? (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">Mandatory</span>
-                            ) : (
-                              <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">Optional</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 text-[11px]">{doc.requiredFormat || '—'}</td>
-                          <td className="py-3 px-3 text-gray-500 text-[11px] max-w-[220px]" title={doc.note || ''}>{doc.note || '—'}</td>
-                          <td className="py-3 px-3">
-                            {locked ? (
-                              <div className="flex flex-col gap-1">
-                                <span className={`text-[11px] font-semibold inline-flex items-center gap-1 ${submittedRow?.status === 'Verified' ? 'text-green-700' : 'text-emerald-700'}`}>
-                                  <Lock size={12}/> {submittedRow?.status === 'Verified' ? 'Verified' : 'Submitted'}
-                                </span>
-                                {viewHref && <a href={viewHref} target="_blank" rel="noreferrer" className="text-[11px] text-blue-700 font-semibold hover:underline">View</a>}
-                              </div>
-                            ) : (
-                              <div className="flex flex-col gap-1.5">
-                                {isReturned && <span className="text-[10px] font-bold text-red-700">Returned — re-upload to resubmit</span>}
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <label className="h-7 px-3 rounded-md border border-gray-300 text-xs font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-slate-100 bg-white shadow-xs">
-                                    <Upload size={12} className="text-gray-600"/>
-                                    {up?.id != null ? 'Re-upload' : 'Upload'}
-                                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => uploadEvidence(doc, e.target.files?.[0])}/>
-                                  </label>
-                                  <button
-                                    type="button"
-                                    onClick={() => up?.id != null && void submitSingleForm(doc.name, up.id)}
-                                    disabled={busy || up?.id == null}
-                                    className="h-7 px-3 rounded-md bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] disabled:opacity-40 shadow-xs"
-                                  >Submit</button>
-                                  {up?.id != null && (
-                                    <button type="button" onClick={() => handleRemoveEvidence(doc.name)} className="text-[11px] text-red-600 font-semibold hover:underline">Remove</button>
-                                  )}
-                                </div>
-                                {up?.status === 'Validating' ? (
-                                  <span className="text-[10px] font-bold text-blue-700">Validating…</span>
-                                ) : up?.status === 'Errors found' ? (
-                                  <button type="button" onClick={() => setViewErrors({ name: doc.name, findings: up.findings ?? [] })} className="text-left text-[10px] font-bold text-red-700 hover:underline">Errors found — view findings</button>
-                                ) : up?.status === 'Validated' ? (
-                                  <span className="text-[10px] font-bold text-green-700">Validated — ready to submit</span>
-                                ) : (
-                                  <span className="text-[10px] font-medium text-amber-700">Pending submission</span>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            ) : renderDocsTable(additionalDocs)}
           </div>
           {error && <p role="alert" className="bss-alert bss-alert-error mt-3">{error}</p>}
         </div>

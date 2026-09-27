@@ -14,10 +14,12 @@ export async function GET(request: Request) {
     const state = params.get('state') ?? '';
     const all = params.get('all') ?? '';
     const library = params.get('library') ?? '';
+    const siteId = params.get('siteId') ?? '';
     const query = new URLSearchParams();
     if (state) query.set('state', state);
     if (all) query.set('all', all);
     if (library) query.set('library', library);
+    if (siteId) query.set('siteId', siteId);
     const suffix = query.toString() ? `?${query.toString()}` : '';
     const path = `/v1/contractor/clra/templates${suffix}`;
     const result = await upstreamRequest(config.apiBaseUrl, path, session);
