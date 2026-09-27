@@ -508,6 +508,12 @@ def _employer_submissions(user):
     # (The submission's free-text employer name is unreliable — a demo employer
     # may have no profile name — so it is not used as a hard filter.)
     my_sites = set(Site.objects.filter(employer=user).values_list("site_name", flat=True))
+    # Ad-hoc form metadata (Required Format / Note) keyed by name, so an evidence
+    # row can show the same columns the contractor saw when uploading.
+    from bss_core.models import CustomFormName
+    form_meta = {}
+    for f in CustomFormName.objects.filter(is_active=True).values("name", "description", "requires_document"):
+        form_meta.setdefault((f["name"] or "").strip().lower(), f)
     uploaded = (SubmissionEvidence.objects
                 .filter(Q(user__worker_bindings__site__employer=user)
                         | Q(user__contractor_bindings__site__employer=user))
@@ -517,6 +523,7 @@ def _employer_submissions(user):
         if ev.site and my_sites and ev.site not in my_sites:
             continue
         cp = getattr(ev.user, "contractor_profile", None) if ev.user.role == "contractor" else None
+        meta = form_meta.get(_d(ev.doc_type).strip().lower())
         rows.append({
             "id": str(ev.id),
             "contractor": _d(cp.contractor_name if cp else ""),
@@ -532,6 +539,8 @@ def _employer_submissions(user):
             "frequency": _d(ev.frequency),
             "mandatory": bool(ev.is_mandatory),
             "documentType": _d(ev.document_type),
+            "requiredFormat": ("Submission only" if meta and not meta["requires_document"] else "PDF / JPEG / PNG"),
+            "note": _d(meta["description"]) if meta else "",
         })
     for c in user.compliance_docs.all()[:20] if hasattr(user, "compliance_docs") else []:
         rows.append({
@@ -544,6 +553,7 @@ def _employer_submissions(user):
             "kind": "register",
             "financialYear": "", "month": "", "frequency": "",
             "mandatory": True, "documentType": "",
+            "requiredFormat": "", "note": "",
         })
 
     # Contractor CLRA register submissions for THIS employer's sites, grouped as
@@ -583,6 +593,7 @@ def _employer_submissions(user):
             "frequency": "Monthly",
             "mandatory": True,
             "documentType": "CLRA Registers",
+            "requiredFormat": "", "note": "",
             "batchId": str(batches[0].id),
             "hasFile": any(bool(x.generated_file) for x in batches),
         })

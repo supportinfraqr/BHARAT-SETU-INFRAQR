@@ -463,6 +463,8 @@ export type EmployerSubmission = {
   frequency?: string;
   mandatory?: boolean;
   documentType?: string;
+  requiredFormat?: string;
+  note?: string;
   batchId?: string;
   hasFile?: boolean;
 };

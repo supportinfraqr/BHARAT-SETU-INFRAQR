@@ -113,6 +113,8 @@ export default function EmployerComplianceSubmissionPage() {
     { id:'type', header:'Document Name', value:row => row.type, render:row => <div><strong className="text-gray-900">{row.type}</strong>{row.source === 'evidence' && <button type="button" disabled={busy} onClick={() => viewEvidence(row)} className="block text-[11px] text-blue-600 hover:underline mt-0.5">View evidence</button>}</div> },
     { id:'frequency', header:'Frequency', value:row => row.frequency || '—' },
     { id:'mandatory', header:'Mandatory', value:row => row.mandatory ? 'Yes' : 'No', render:row => row.mandatory ? <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">Mandatory</span> : <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">Optional</span> },
+    { id:'requiredFormat', header:'Required Format', value:row => row.requiredFormat || '—' },
+    { id:'note', header:'Note', value:row => row.note || '—', render:row => <span className="text-gray-500 inline-block max-w-[240px]" title={row.note || ''}>{row.note || '—'}</span> },
     { id:'period', header:'Period', value:row => row.period },
     { id:'submitted', header:'Submitted', value:row => row.submittedAt.slice(0, 10) },
     { id:'status', header:'Status', value:row => row.status, render:statusCell },
