@@ -27,7 +27,7 @@ interface RegisterFormProps {
 const DEMO_MOBILES = ['2222222222', '3333333333', '4444444444'];
 
 export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChange, t }: RegisterFormProps) {
-  const [selectedRole, setSelectedRole] = useState("Contractor");
+  const [selectedRole, setSelectedRole] = useState("Worker");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [contact, setContact] = useState("");
   const [otp, setOtp] = useState("");
