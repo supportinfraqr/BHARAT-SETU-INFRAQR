@@ -137,24 +137,24 @@ def aadhaar_otp(request):
                         status=status.HTTP_400_BAD_REQUEST)
 
     def _reuse_recent(window_minutes, message=""):
-        """Return a still-valid OTP reference so a repeated request reuses the
-        OTP already delivered instead of tripping Sandbox's rate limit.
+        """Return a recent OTP reference so a repeated request reuses the OTP
+        already delivered instead of tripping Sandbox's rate limit.
 
-        A reference whose OTP TTL has already lapsed is never reused — handing
-        it back would make the user's next verify fail with "OTP expired".
+        Sandbox is the source of truth for OTP validity: when it reports an OTP
+        was already generated for this Aadhaar we must hand back the last
+        reference we saw — even if our local TTL says it lapsed — otherwise the
+        user is stuck (Sandbox won't issue a new OTP, and we refuse the old one).
         """
         now = timezone.now()
         recent = (AadhaarChallenge.objects
                   .filter(aadhaar_number=aadhaar,
-                          status__in=["INITIATED", "OTP_SENT"],
                           created_at__gte=now - timedelta(minutes=window_minutes))
                   .exclude(reference_id__isnull=True).exclude(reference_id="")
+                  .exclude(status__in=["VERIFIED", "FAILED"])
                   .order_by("-created_at").first())
         if recent is None:
             return None
         expires = recent.expires_at or (recent.created_at + timedelta(minutes=settings.AADHAAR_OTP_TTL_MIN))
-        if expires <= now:
-            return None
         payload = {
             "referenceId": recent.reference_id,
             "expiresIn": max(0, int((expires - now).total_seconds())),
@@ -234,11 +234,6 @@ def aadhaar_verify(request):
         aadhaar_number=aadhaar, reference_id=reference_id).order_by("-created_at").first()
     if challenge is None:
         return Response({"error": "Unknown Aadhaar OTP request. Send a new OTP first."},
-                        status=status.HTTP_400_BAD_REQUEST)
-    if challenge.is_expired:
-        challenge.status = "EXPIRED"
-        challenge.save(update_fields=["status", "updated_at"])
-        return Response({"error": "OTP expired. Request a new OTP."},
                         status=status.HTTP_400_BAD_REQUEST)
     if challenge.status == "VERIFIED":
         return Response({"error": "This Aadhaar has already been verified."},
@@ -382,11 +377,6 @@ def worker_link_aadhaar(request):
         aadhaar_number=aadhaar, reference_id=reference_id).order_by("-created_at").first()
     if challenge is None:
         return Response({"error": "Unknown Aadhaar OTP request. Send a new OTP first."},
-                        status=status.HTTP_400_BAD_REQUEST)
-    if challenge.is_expired:
-        challenge.status = "EXPIRED"
-        challenge.save(update_fields=["status", "updated_at"])
-        return Response({"error": "OTP expired. Request a new OTP."},
                         status=status.HTTP_400_BAD_REQUEST)
     if challenge.status == "VERIFIED":
         return Response({"error": "This Aadhaar has already been verified."},
