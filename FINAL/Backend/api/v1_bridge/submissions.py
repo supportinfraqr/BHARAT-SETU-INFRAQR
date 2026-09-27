@@ -804,14 +804,14 @@ def compliance_batch_site_documents(request, batch_id):
     }}, status=status.HTTP_200_OK)
 
 
-@api_view(["GET"])
-@authentication_classes([BssSessionAuthentication])
-@permission_classes([IsAuthenticated])
 def _required_format(requires_document):
     """"Required Format" column: what the contractor must upload for a form."""
     return "PDF / JPEG / PNG" if requires_document else "Submission only"
 
 
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def contractor_site_documents(request):
     """Additional (template-less) documents the employer requires for a site.
 
