@@ -210,6 +210,42 @@ def build_identity_verify(bss_id, viewer=None):
         except ContractorProfile.DoesNotExist:
             return None
         relationship = _contractor_relationship(cp.user, viewer)
+
+        # Member of BSS since
+        member_dt = getattr(cp.user, "date_joined", None) or getattr(cp, "consent_date", None)
+        bss_member_since = _dts(member_dt) if member_dt else ""
+        if bss_member_since and "T" in bss_member_since:
+            bss_member_since = bss_member_since.split("T")[0]
+
+        # Binding date / Contractor joined date when viewer has permission / relationship
+        binding_date = ""
+        if viewer and getattr(viewer, "is_authenticated", False):
+            role = getattr(viewer, "role", "")
+            if role == "employer":
+                ce = ContractorEmployerBinding.objects.filter(
+                    contractor=cp.user, employer=viewer
+                ).order_by("-id").first()
+                if ce:
+                    b_dt = ce.accepted_at or ce.created_at
+                    binding_date = _dts(b_dt).split("T")[0] if b_dt else ""
+            elif role == "worker":
+                wc = WorkerContractorBinding.objects.filter(
+                    contractor=cp.user, worker=viewer
+                ).order_by("-id").first()
+                if wc:
+                    b_dt = wc.accepted_at or wc.created_at
+                    binding_date = _dts(b_dt).split("T")[0] if b_dt else ""
+            elif role == "contractor" and viewer.id == cp.user.id:
+                ce = ContractorEmployerBinding.objects.filter(
+                    contractor=cp.user, binding_status="ACCEPTED"
+                ).order_by("created_at").first()
+                if ce:
+                    b_dt = ce.accepted_at or ce.created_at
+                    binding_date = _dts(b_dt).split("T")[0] if b_dt else ""
+
+        if binding_date and "T" in binding_date:
+            binding_date = binding_date.split("T")[0]
+
         data = {
             "relationship": relationship,
             "id": cp.user_id,
@@ -217,11 +253,17 @@ def build_identity_verify(bss_id, viewer=None):
             "company": _d(cp.trade_name),
             "bssId": _d(cp.contractor_code),
             "verified": bool(cp.is_verified_badge),
+            "bssMemberSince": bss_member_since,
+            "bindingDate": binding_date,
+            "contractorJoinedDate": binding_date,
             "identity": {
                 "name": _d(cp.contractor_name), "bssId": _d(cp.contractor_code),
                 "company": _d(cp.trade_name), "category": "Contractor",
                 "location": ", ".join(x for x in [_d(cp.state), _d(cp.operating_states)] if x),
                 "verified": bool(cp.is_verified_badge),
+                "bssMemberSince": bss_member_since,
+                "bindingDate": binding_date,
+                "contractorJoinedDate": binding_date,
             },
         }
         if relationship in ("bound", "self"):
@@ -240,6 +282,9 @@ def build_identity_verify(bss_id, viewer=None):
                 "gstin": _d(cp.gstin),
                 "workers": WorkerContractorBinding.objects.filter(
                     contractor=cp.user, binding_status="ACCEPTED").count(),
+                "bssMemberSince": bss_member_since,
+                "bindingDate": binding_date,
+                "contractorJoinedDate": binding_date,
             }}
         return data
     wi = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()

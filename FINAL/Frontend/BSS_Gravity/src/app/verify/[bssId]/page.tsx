@@ -99,6 +99,18 @@ export default function VerifyPage({ params }: { params: Promise<{ bssId: string
                     <dt className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Company / Trade name</dt>
                     <dd className="font-semibold text-gray-800 mt-0.5">{data?.company || '—'}</dd>
                   </div>
+                  {((data as any)?.bssMemberSince || (data as any)?.identity?.bssMemberSince) && (
+                    <div>
+                      <dt className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Member of BSS since</dt>
+                      <dd className="font-semibold text-gray-800 mt-0.5">{(data as any).bssMemberSince || (data as any).identity?.bssMemberSince}</dd>
+                    </div>
+                  )}
+                  {((data as any)?.bindingDate || (data as any)?.contractorJoinedDate || (data as any)?.identity?.bindingDate) && (
+                    <div>
+                      <dt className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Binding Date / Contractor Joined Date</dt>
+                      <dd className="font-semibold text-gray-800 mt-0.5">{(data as any).bindingDate || (data as any).contractorJoinedDate || (data as any).identity?.bindingDate}</dd>
+                    </div>
+                  )}
                 </dl>
               )}
 
