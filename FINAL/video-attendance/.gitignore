@@ -4,6 +4,9 @@ __pycache__/
 .venv/
 venv/
 
+# local-only entrypoint (reads ../Backend/.env; machine-specific)
+run-local.sh
+
 # Local data: captured snapshots, the old SQLite DB, enrolled face photos.
 # Re-created at runtime; never source.
 data/db.sqlite3

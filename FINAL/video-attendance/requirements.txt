@@ -1,9 +1,19 @@
+# Core pipeline
 ultralytics>=8.3
+lap            # ByteTrack tracker dependency that ultralytics auto-installs
 deepface>=0.0.93
 tf-keras
+tensorflow-cpu  # CPU build: our servers have no GPU and this avoids multi-GB CUDA libs
 opencv-python>=4.9,<5
 numpy
 pyyaml
-onnxruntime  # passive anti-spoofing (MiniFASNetV2 ONNX, CPU)
-psycopg[binary]  # Postgres driver (replaces sqlite3)
-faiss-cpu  # indexed vector search for the face gallery (exact at this scale)
+onnxruntime     # passive anti-spoofing (MiniFASNetV2 ONNX, CPU)
+psycopg[binary] # Postgres driver (replaces sqlite3)
+faiss-cpu       # indexed vector search for the face gallery (exact at this scale)
+
+# torch / torchvision are intentionally NOT listed here. Install the CPU wheels
+# BEFORE this file so pip doesn't pull ~5 GB of CUDA libs — and so torch's triton
+# import (which races the capture thread and segfaults on CPU-only hosts) is gone:
+#     pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
+#     pip install -r requirements.txt
+# The Dockerfile does exactly that.

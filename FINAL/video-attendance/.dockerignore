@@ -1,0 +1,18 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.git/
+*.log
+
+# local data / captured / enrolled
+data/snapshots/
+data/db.sqlite3
+people/
+
+# bundled Windows binaries + archives
+tools/ffmpeg-*/
+tools/mediamtx/
+*.exe
+*.zip
+tests/assets/*.mp4
