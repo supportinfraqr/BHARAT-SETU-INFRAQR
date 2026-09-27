@@ -437,12 +437,12 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     if (place.state) setState(place.state);
   }
 
-  // Site code format: SITE-XXXXX (auto-generated and locked). The backend also
-  // guarantees uniqueness on save.
+  // Site code format: SITE-XXXXXXXX (8 chars, auto-generated and locked). The
+  // backend also guarantees uniqueness on save.
   function makeSiteCode() {
-    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let suffix = '';
-    for (let i = 0; i < 5; i += 1) suffix += alphabet[Math.floor(Math.random() * alphabet.length)];
+    for (let i = 0; i < 8; i += 1) suffix += alphabet[Math.floor(Math.random() * alphabet.length)];
     return `SITE-${suffix}`;
   }
 
