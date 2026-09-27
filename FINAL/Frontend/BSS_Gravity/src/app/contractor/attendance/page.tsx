@@ -37,6 +37,12 @@ export default function ContractorAttendancePage() {
   const [notice, setNotice] = useState('');
   const [result, setResult] = useState<UploadResult | null>(null);
   const [rows, setRows] = useState<AttendanceRow[]>([]);
+  const [camSiteId, setCamSiteId] = useState('');
+  const [camBusy, setCamBusy] = useState(false);
+  const [camRunning, setCamRunning] = useState(false);
+  const [camNotice, setCamNotice] = useState('');
+  const [camDetections, setCamDetections] = useState<Array<{ id: number; name: string | null; tsStart: number }>>([]);
+  const [camMarked, setCamMarked] = useState(0);
 
   const sites = contractor.sites;
 
@@ -49,6 +55,29 @@ export default function ContractorAttendancePage() {
       .catch(() => {});
     return () => { active = false; };
   }, [start, end, result]);
+
+  useEffect(() => {
+    if (!camRunning || !camSiteId) return;
+    let active = true;
+    const tick = async () => {
+      try {
+        const response = await fetch('/api/contractor/attendance/camera', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ siteId: Number(camSiteId), action: 'sync' }),
+        });
+        const body = await response.json().catch(() => ({})) as {
+          data?: { sightings: Array<{ id: number; name: string | null; tsStart: number }>; markedToday: number };
+        };
+        if (active && body.data) {
+          setCamDetections(body.data.sightings ?? []);
+          setCamMarked(body.data.markedToday ?? 0);
+        }
+      } catch { /* transient; retry next tick */ }
+    };
+    void tick();
+    const timer = setInterval(tick, 10_000);
+    return () => { active = false; clearInterval(timer); };
+  }, [camRunning, camSiteId]);
 
   const downloadTemplate = () => {
     setError(''); setNotice('');
@@ -74,6 +103,30 @@ export default function ContractorAttendancePage() {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'The attendance sheet could not be uploaded.');
     } finally { setBusy(false); }
+  }
+
+  async function controlCamera(action: 'start' | 'stop') {
+    const siteId = camSiteId || String(sites[0]?.id ?? '');
+    if (!siteId) { setError('Select a site first.'); return; }
+    setCamBusy(true); setError(''); setCamNotice('');
+    try {
+      const response = await fetch('/api/contractor/attendance/camera', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteId: Number(siteId), action }),
+      });
+      const body = await response.json().catch(() => ({})) as {
+        data?: { siteName: string; running: boolean; sightings: Array<{ id: number; name: string | null; tsStart: number }>; markedToday: number };
+        error?: string;
+      };
+      if (!response.ok || !body.data) throw new Error(body.error ?? 'Camera action failed.');
+      setCamRunning(body.data.running);
+      setCamSiteId(siteId);
+      setCamDetections(body.data.sightings ?? []);
+      setCamMarked(body.data.markedToday ?? 0);
+      setCamNotice(`${action === 'start' ? 'Started' : 'Stopped'} live attendance for ${body.data.siteName}.`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Camera action failed.');
+    } finally { setCamBusy(false); }
   }
 
   const columns: DataColumn<AttendanceRow>[] = [
@@ -111,6 +164,63 @@ export default function ContractorAttendancePage() {
           Synced <strong>{result.rows}</strong> worker row(s) → <strong>{result.created}</strong> new + <strong>{result.updated}</strong> updated attendance entries for <strong>{result.workers}</strong> worker(s){result.site ? ` at ${result.site}` : ''} ({result.start} → {result.end}).{result.unknown.length ? ` ${result.unknown.length} BSS ID(s) not matched to your workers: ${result.unknown.slice(0, 5).join(', ')}.` : ''}
         </div>}
         <p className="text-[11px] text-gray-400">The CSV has a <strong>BSS ID</strong> column plus one column per date (<code>YYYY-MM-DD</code>). Uploaded rows are stored in the same attendance table as QR / NFC / camera punches, with capture method <strong>Uploaded sheet</strong> — so they flow into payroll and worker attendance views automatically.</p>
+      </div>
+    </section>
+
+    {/* AI CCTV video attendance — real pipeline control */}
+    <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 rounded-2xl border border-slate-700 text-white p-6 shadow-xl space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-700/80 pb-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className={`w-2.5 h-2.5 rounded-full ${camRunning ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+            <span className={`text-xs font-extrabold uppercase tracking-widest ${camRunning ? 'text-emerald-400' : 'text-slate-400'}`}>{camRunning ? 'Live — tracking' : 'Live AI attendance'}</span>
+          </div>
+          <h2 className="text-lg font-bold text-white mt-1">Site CCTV &amp; Camera Attendance</h2>
+          <p className="text-xs text-slate-300 mt-1">Pick one of your allotted sites and start its camera pipeline — recognised workers and QR scans are recorded live for that site.</p>
+        </div>
+        <button
+          type="button"
+          disabled={camBusy}
+          onClick={() => controlCamera(camRunning ? 'stop' : 'start')}
+          className={`h-10 px-5 rounded-xl text-xs font-extrabold shadow-md flex items-center justify-center gap-2 transition-all self-start sm:self-auto disabled:opacity-50 ${camRunning ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950'}`}
+        >
+          {camRunning ? '⏹ Stop Attendance Camera' : '📹 Start Attendance Camera'}
+        </button>
+      </div>
+
+      {camNotice && <p className="text-xs text-emerald-300">{camNotice}</p>}
+
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="bg-slate-950/60 rounded-xl p-4 border border-slate-800 space-y-2">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Site</span>
+          <select value={camSiteId} onChange={e => setCamSiteId(e.target.value)} className="w-full h-9 bg-slate-900 border border-slate-700 rounded-lg px-2 text-xs font-semibold text-slate-200 focus:outline-none">
+            {sites.length === 0 && <option value="">No allotted sites</option>}
+            {sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` · ${s.code}` : ''}</option>)}
+          </select>
+          <p className="text-[10px] text-slate-400">Status: <span className={camRunning ? 'text-emerald-400 font-bold' : 'text-slate-400 font-bold'}>{camRunning ? 'Pipeline running' : 'Stopped'}</span></p>
+        </div>
+
+        <div className="bg-slate-950/60 rounded-xl p-4 border border-slate-800 space-y-2">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Recorded detections</span>
+          <div className="flex items-center justify-between">
+            <span className="text-2xl font-black text-white">{camDetections.length}</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">This site</span>
+          </div>
+          <p className="text-[10px] text-slate-400">Face / QR events stored by the pipeline.</p>
+          <p className="text-[10px] text-emerald-300">Workers marked today: <strong>{camMarked}</strong></p>
+        </div>
+
+        <div className="bg-slate-950/60 rounded-xl p-4 border border-slate-800 space-y-2">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Latest events</span>
+          {camDetections.length === 0
+            ? <p className="text-[11px] text-slate-500">No events yet.</p>
+            : <ul className="space-y-1">{camDetections.slice(0, 4).map(d => (
+                <li key={d.id} className="text-[11px] text-slate-200 flex justify-between gap-2">
+                  <span>{d.name || 'Unknown / QR'}</span>
+                  <span className="text-slate-500">{new Date((d.tsStart || 0) * 1000).toLocaleTimeString()}</span>
+                </li>
+              ))}</ul>}
+        </div>
       </div>
     </section>
 

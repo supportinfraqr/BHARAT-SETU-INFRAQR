@@ -4,7 +4,7 @@ import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { ArrowLeft, Building2, History, MapPin, Pencil, QrCode, Save, Trash2, UserRound, X } from 'lucide-react';
+import { ArrowLeft, Building2, Camera, History, MapPin, Pencil, QrCode, Save, Trash2, UserRound, X } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerSite } from '@/types/portal';
 import { parseCoordinate } from '@/components/employer/siteGeo';
@@ -25,6 +25,11 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
   const [draft, setDraft] = useState<Record<string, unknown>>({});
   const [qrOpen, setQrOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [cameraNotice, setCameraNotice] = useState('');
+  const [camBusy, setCamBusy] = useState(false);
+  const [camRunning, setCamRunning] = useState(false);
+  const [camDetections, setCamDetections] = useState<Array<{ id: number; name: string | null; tsStart: number }>>([]);
+  const [camMarked, setCamMarked] = useState(0);
   const [letterTemplates, setLetterTemplates] = useState<Array<{ id:number; name:string; state:string; letterType:'APPOINTMENT'|'EXPERIENCE'; letterTypeLabel:string }>>([]);
   const site = employer.sites.find(item => item.id === siteId);
 
@@ -34,6 +39,29 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
       .then((j: { rows?: typeof letterTemplates } | null) => setLetterTemplates(j?.rows ?? []))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!camRunning) return;
+    let active = true;
+    const tick = async () => {
+      try {
+        const response = await fetch('/api/employer/attendance/camera', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ siteId: Number(siteId), action: 'sync' }),
+        });
+        const body = await response.json().catch(() => ({})) as {
+          data?: { sightings: Array<{ id: number; name: string | null; tsStart: number }>; markedToday: number };
+        };
+        if (active && body.data) {
+          setCamDetections(body.data.sightings ?? []);
+          setCamMarked(body.data.markedToday ?? 0);
+        }
+      } catch { /* transient; retry next tick */ }
+    };
+    void tick();
+    const timer = setInterval(tick, 10_000);
+    return () => { active = false; clearInterval(timer); };
+  }, [camRunning, siteId]);
 
   if (!site) return <div className="space-y-6"><h1 className="text-2xl font-bold">Site not found</h1><p className="text-sm text-gray-500 mt-1">This site does not belong to your organisation or has been removed.</p><Link href="/employer/sites" className="inline-flex items-center gap-1 text-sm text-blue-700 font-semibold"><ArrowLeft size={15}/>Back to sites</Link></div>;
 
@@ -91,13 +119,56 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
     return String(v);
   }
 
+  async function toggleCamera() {
+    if (!current) return;
+    setCamBusy(true); setError('');
+    try {
+      const response = await fetch('/api/employer/attendance/camera', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteId: Number(current.id), action: camRunning ? 'stop' : 'start' }),
+      });
+      const body = await response.json().catch(() => ({})) as {
+        data?: { running: boolean; siteName: string; sightings: Array<{ id: number; name: string | null; tsStart: number }>; markedToday: number };
+        error?: string;
+      };
+      if (!response.ok || !body.data) throw new Error(body.error ?? 'Camera action failed.');
+      setCamRunning(body.data.running);
+      setCamDetections(body.data.sightings ?? []);
+      setCamMarked(body.data.markedToday ?? 0);
+      setCameraNotice(body.data.running
+        ? `AI CCTV attendance camera started for ${body.data.siteName} — recording live detections for this site.`
+        : `AI CCTV attendance camera stopped for ${body.data.siteName}.`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Camera action failed.');
+    } finally { setCamBusy(false); }
+  }
+
   return <div className="space-y-6">
     <Link href="/employer/sites" className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:underline"><ArrowLeft size={14}/>Back to My Sites</Link>
     <header><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{current.name}</h1><Status value={current.status}/></div><p className="font-mono text-xs text-gray-500 mt-1">{current.code}</p><p className="text-sm text-gray-600 flex items-center gap-1 mt-2"><MapPin size={13}/>{current.location}, {current.state}</p></div><div className="flex gap-2">
+      <button
+        type="button"
+        disabled={camBusy}
+        onClick={toggleCamera}
+        className={`h-10 px-4 rounded-lg text-white text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors disabled:opacity-60 ${camRunning ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+      >
+        <Camera size={16}/>{camBusy ? 'Working…' : camRunning ? 'Stop AI Camera' : 'Start AI Camera'}
+      </button>
       <button onClick={() => setQrOpen(true)} className="h-10 px-4 rounded-lg border border-gray-200 text-gray-700 text-sm font-semibold flex items-center gap-2 hover:bg-gray-50"><QrCode size={15}/>Site QR</button>
       {editing ? <><button onClick={() => setEditing(false)} className="h-10 px-4 rounded-lg border border-gray-200 text-gray-700 text-sm font-semibold">Cancel</button><button onClick={saveInline} disabled={busy} className="h-10 px-4 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-60"><Save size={15}/>{busy ? 'Saving…' : 'Save changes'}</button></> : <button onClick={startEdit} className="h-10 px-4 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center gap-2"><Pencil size={15}/>Edit</button>}
       <button onClick={() => setConfirmDelete(true)} disabled={busy} className="h-10 px-4 rounded-lg border border-red-200 text-red-600 text-sm font-semibold flex items-center gap-2 hover:bg-red-50"><Trash2 size={15}/>Delete</button>
     </div></div></header>
+
+    {(cameraNotice || camRunning) && (
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-800 font-semibold flex items-center justify-between shadow-xs">
+        <span className="flex items-center gap-2">
+          <span className={`w-2.5 h-2.5 rounded-full bg-emerald-500 ${camRunning ? 'animate-pulse' : ''}`} />
+          {cameraNotice || `AI CCTV attendance camera running for ${current.name}.`}
+          {camRunning && <span className="text-emerald-700/90 font-normal">· {camDetections.length} detection(s) · {camMarked} worker(s) marked today</span>}
+        </span>
+        <button onClick={() => setCameraNotice('')} className="text-emerald-700 hover:underline">Dismiss</button>
+      </div>
+    )}
 
     <nav className="flex gap-1 overflow-x-auto bg-white border border-gray-200 rounded-2xl p-2">{tabs.map(([id, label, Icon]) => <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === id ? 'bg-gray-950 text-white' : 'text-gray-600 hover:bg-gray-50'}`}><Icon size={16}/>{label}</button>)}</nav>
 

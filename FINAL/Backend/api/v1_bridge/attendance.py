@@ -254,3 +254,221 @@ def attendance_uploaded(request):
             "status": row.status, "capture": "Uploaded sheet",
         })
     return Response({"data": rows}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def attendance_camera_punch(request):
+    """Log an AI CCTV/Camera attendance punch into the core Attendance database table."""
+    from bss_core.models import Attendance, AttendanceDevice, Site, User, WorkerIdentity
+
+    data = request.data if isinstance(request.data, dict) else {}
+    bss_worker_id = str(data.get("bssWorkerId") or "").strip()
+    site_id = data.get("siteId")
+    device_code = str(data.get("deviceCode") or "").strip()
+    status_val = str(data.get("status") or "PRESENT").strip().upper()
+    confidence = data.get("confidencePct") or 98.5
+
+    if not bss_worker_id:
+        return Response({"error": "bssWorkerId is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    identity = WorkerIdentity.objects.filter(bss_worker_id=bss_worker_id).first()
+    if not identity or not identity.user:
+        return Response({"error": f"Worker with BSS ID '{bss_worker_id}' not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    worker_user = identity.user
+    today = date.today()
+
+    site_obj = Site.objects.filter(pk=site_id).first() if site_id else None
+    if not site_obj:
+        # Fallback to worker's active assigned site if site_id is missing
+        from bss_core.models import WorkerContractorBinding
+        binding = WorkerContractorBinding.objects.filter(worker=worker_user, binding_status="ACCEPTED").first()
+        site_obj = binding.site if binding else Site.objects.first()
+
+    if not site_obj:
+        return Response({"error": "No valid site found for attendance recording."}, status=status.HTTP_400_BAD_REQUEST)
+
+    device_obj = AttendanceDevice.objects.filter(device_code=device_code).first() if device_code else None
+
+    # Upsert daily attendance record
+    attendance, created = Attendance.objects.update_or_create(
+        worker=worker_user,
+        attendance_date=today,
+        defaults={
+            "site": site_obj,
+            "contractor": request.user if request.user.role == "contractor" else getattr(site_obj, "owner", None),
+            "device": device_obj,
+            "status": status_val,
+            "capture_method": "CAMERA",
+            "verification_type": "face_image",
+            "confidence_pct": confidence,
+            "is_verified": True,
+            "remarks": "AI CCTV Live Camera Punch",
+        }
+    )
+
+    return Response({
+        "message": "AI Attendance punch recorded.",
+        "data": {
+            "id": str(attendance.id),
+            "worker": identity.name or worker_user.username,
+            "bssWorkerId": bss_worker_id,
+            "site": site_obj.site_name,
+            "date": today.isoformat(),
+            "status": attendance.status,
+            "captureMethod": "CAMERA",
+            "confidence": confidence,
+            "created": created,
+        }
+    }, status=status.HTTP_200_OK)
+
+
+def _site_key(site):
+    """Stable label the pipeline tags rows with (matches --site)."""
+    return str(getattr(site, "bss_site_id", "") or site.id)
+
+
+def _worker_for_token(token):
+    """Resolve a pipeline detection token to a worker user (BSS id, username,
+    or enrolled face name)."""
+    from bss_core.models import User, WorkerIdentity
+
+    token = str(token or "").strip()
+    if not token:
+        return None
+    identity = WorkerIdentity.objects.filter(bss_worker_id=token).select_related("user").first()
+    if identity and identity.user_id:
+        return identity.user
+    return User.objects.filter(username=token, role="worker").first()
+
+
+def _mark_worker_attendance(worker, site, verification, score):
+    """Upsert today's CAMERA attendance for one worker (idempotent per day)."""
+    from bss_core.models import Attendance
+
+    confidence = None
+    try:
+        if score is not None:
+            value = 1.0 - float(score) if verification == "face_image" else float(score)
+            confidence = round(max(0.0, min(1.0, value)) * 100, 2)
+    except (TypeError, ValueError):
+        confidence = None
+
+    defaults = {
+        "site": site,
+        "status": "PRESENT",
+        "capture_method": "CAMERA",
+        "verification_type": verification,
+        "is_verified": True,
+        "remarks": "AI CCTV site attendance",
+        "confidence_pct": confidence,
+    }
+    record = Attendance.objects.filter(worker=worker, attendance_date=date.today()).first()
+    if record:
+        for field, val in defaults.items():
+            setattr(record, field, val)
+        record.save(update_fields=list(defaults.keys()) + ["updated_at"])
+        return False
+    Attendance.objects.create(worker=worker, attendance_date=date.today(), **defaults)
+    return True
+
+
+def _sync_attendance(site, payload):
+    """Best-effort: map the pipeline's recent detections for a site to workers
+    and mark today's attendance. Returns a summary."""
+    created = updated = 0
+    seen = set()
+    candidates = []
+    for sighting in payload.get("sightings", []):
+        worker = _worker_for_token(sighting.get("name"))
+        if worker is not None:
+            candidates.append((worker, "face_image", sighting.get("distance")))
+    for scan in payload.get("codeScans", []):
+        worker = _worker_for_token(scan.get("matchedLabel")) or _worker_for_token(scan.get("payload"))
+        if worker is not None:
+            candidates.append((worker, "qr_worker", scan.get("score")))
+    for worker, verification, score in candidates:
+        if worker.id in seen:
+            continue
+        seen.add(worker.id)
+        if _mark_worker_attendance(worker, site, verification, score):
+            created += 1
+        else:
+            updated += 1
+    return {"workers": len(seen), "created": created, "updated": updated}
+
+
+def _attendance_marked_today(site):
+    from bss_core.models import Attendance
+
+    return Attendance.objects.filter(
+        site=site, attendance_date=date.today(), capture_method="CAMERA").count()
+
+
+def _controllable_site(user, site_id):
+    """The site this user may start/stop live attendance for, or None."""
+    from bss_core.models import Site
+
+    if not site_id:
+        return None
+    try:
+        site_id = int(site_id)
+    except (TypeError, ValueError):
+        return None
+    if user.role == "employer":
+        return Site.objects.filter(pk=site_id, employer=user).first()
+    if user.role == "contractor" and site_id in _contractor_site_ids(user):
+        return Site.objects.filter(pk=site_id).first()
+    return None
+
+
+@api_view(["GET", "POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def attendance_camera_session(request):
+    """Start/stop the live CCTV attendance pipeline for one site and read its
+    recent detections. Employers control their own sites; contractors only
+    sites allotted to them (APPROVED)."""
+    from .. import attendance_control as control
+
+    if request.method == "GET":
+        site_id = request.query_params.get("siteId")
+        action, source = "status", None
+    else:
+        body = request.data if isinstance(request.data, dict) else {}
+        site_id = body.get("siteId")
+        action = str(body.get("action") or "status").strip().lower()
+        source = body.get("source")
+
+    site = _controllable_site(request.user, site_id)
+    if site is None:
+        return Response({"error": "You do not have access to this site."},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    key = _site_key(site)
+    try:
+        if action == "start":
+            control.start_session(key, source=source)
+        elif action == "stop":
+            control.stop_session(key)
+        session = control.session_for(key)
+        payload = control.detections(key, limit=50)
+    except control.AttendanceControlError as exc:
+        return Response({"error": str(exc)}, status=exc.status_code)
+
+    running = bool(session and session.get("active"))
+    marked = _sync_attendance(site, payload) if (action == "sync" and running) else None
+
+    return Response({"data": {
+        "siteId": site.id,
+        "siteKey": key,
+        "siteName": site.site_name,
+        "running": running,
+        "session": session,
+        "sightings": payload.get("sightings", []),
+        "codeScans": payload.get("codeScans", []),
+        "marked": marked,
+        "markedToday": _attendance_marked_today(site),
+    }}, status=status.HTTP_200_OK)

@@ -26,9 +26,11 @@ services:
       retries: 12
 
   attendance:
+    image: attendance-attendance:latest
     build:
       context: ..
       dockerfile: Dockerfile
+    command: ["python", "controller.py"]
     restart: unless-stopped
     depends_on:
       db:
@@ -46,6 +48,13 @@ services:
     ports:
       - "80:80"
     volumes:
+      # Run the checked-out source directly (interpreted app; the image carries
+      # the heavy deps only).
+      - ../src:/app/src:ro
+      - ../main.py:/app/main.py:ro
+      - ../controller.py:/app/controller.py:ro
+      - ../config.yaml:/app/config.yaml:ro
+      - ../tests:/app/tests:ro
       - snapshots:/app/data/snapshots
       - deepface:/root/.deepface
       - ultralytics:/root/.config/Ultralytics
