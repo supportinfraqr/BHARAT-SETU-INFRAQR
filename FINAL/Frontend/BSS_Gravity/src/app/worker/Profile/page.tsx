@@ -95,6 +95,12 @@ export default function WorkerProfilePage() {
     }
   }, [worker.identity.bssId, worker.identity.aadhaar]);
 
+  // Stop the webcam stream on unmount (or when it is replaced) so the camera
+  // light never stays on after leaving this page.
+  useEffect(() => {
+    return () => { cameraStream?.getTracks().forEach(track => track.stop()); };
+  }, [cameraStream]);
+
   const startCamera = async (slotIdx: number) => {
     setActiveFaceSlot(slotIdx);
     setCameraModalOpen(true);
