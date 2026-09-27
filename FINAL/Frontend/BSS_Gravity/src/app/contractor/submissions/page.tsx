@@ -96,6 +96,7 @@ export default function ComplianceSubmissionPage() {
   const [selectedYear, setSelectedYear] = useState<string>(availableYears[0] || 'FY 2026-27');
   const [freq, setFreq] = useState<Frequency>('Monthly');
   const [selectedPeriod, setSelectedPeriod] = useState<string>(MONTHS[5]); // Default September
+  const [siteFilter, setSiteFilter] = useState('all');
 
   // Create-submission states
   const [siteName, setSiteName] = useState('');
@@ -112,7 +113,7 @@ export default function ComplianceSubmissionPage() {
   const documents = useMemo(() => scoped(rawDocuments, row => row.employer), [scoped, rawDocuments]);
   // Only evidence rows stamped with a package Unique No. count as actually submitted —
   // a bare upload (draft) stays out of the Submissions Log until "Submit Form" is pressed.
-  const submittedDocuments = useMemo(() => documents.filter(doc => doc.uniqueNo), [documents]);
+  const submittedDocuments = useMemo(() => documents.filter(doc => doc.uniqueNo && (siteFilter === 'all' || (doc.site || '') === siteFilter)), [documents, siteFilter]);
 
   // Sync default selected year if availableYears changes
   useEffect(() => {
@@ -146,17 +147,17 @@ export default function ComplianceSubmissionPage() {
   // Generated CLRA registers from batches
   const fyKey = selectedYear.replace('FY ', '');
   const generatedBatches = useMemo(
-    () => contractor.complianceBatches.filter(b => (b.financialYear || '') === fyKey),
-    [contractor.complianceBatches, fyKey]);
+    () => contractor.complianceBatches.filter(b => (b.financialYear || '') === fyKey && (siteFilter === 'all' || (b.site || '') === siteFilter)),
+    [contractor.complianceBatches, fyKey, siteFilter]);
   const periodBatches = generatedBatches.filter(b => periodOf(b.month, freq) === selectedPeriod);
 
   // Counts reflect only items that were actually submitted (not merely generated/uploaded).
   const batchCountByFy = useMemo(() => {
     const map: Record<string, number> = {};
-    contractor.complianceBatches.filter(b => b.status === 'Submitted')
+    contractor.complianceBatches.filter(b => b.status === 'Submitted' && (siteFilter === 'all' || (b.site || '') === siteFilter))
       .forEach(b => { const k = b.financialYear || ''; map[k] = (map[k] || 0) + 1; });
     return map;
-  }, [contractor.complianceBatches]);
+  }, [contractor.complianceBatches, siteFilter]);
 
   const batchCountByPeriod = useMemo(() => {
     const map: Record<string, number> = {};
@@ -463,6 +464,15 @@ export default function ComplianceSubmissionPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Site Filter */}
+        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-100">
+          <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Site:</span>
+          <select value={siteFilter} onChange={e => setSiteFilter(e.target.value)} className="h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white font-semibold">
+            <option value="all">All Sites</option>
+            {contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}
+          </select>
         </div>
 
         {/* Period Filter Tabs */}
