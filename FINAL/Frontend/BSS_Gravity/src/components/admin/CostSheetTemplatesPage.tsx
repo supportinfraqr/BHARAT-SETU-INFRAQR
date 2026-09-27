@@ -102,12 +102,16 @@ const TEMPLATE_TYPE_OPTIONS = [
 const input = "mt-1 w-full h-9 rounded-lg border border-gray-200 px-3 text-xs";
 const label = "text-[11px] font-semibold text-gray-600";
 
+// In-progress template builder draft (survives closing the form / refresh).
+const DRAFT_STORAGE_KEY = "bss.costSheetTemplate.inProgress";
+
 export default function CostSheetTemplatesPage() {
   const [rows, setRows] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [draft, setDraft] = useState<Template | null>(null);
+  const [cleanSnapshot, setCleanSnapshot] = useState("");
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<CostPreview | null>(null);
   const [previewWage, setPreviewWage] = useState('');
@@ -251,6 +255,80 @@ useEffect(() => {
     return () => { clearTimeout(timer); controller.abort(); };
   }, [draft, previewWage]);
 
+  // Autosave the in-progress draft so closing the form / refreshing never
+  // loses work — applies to every step of the builder.
+  useEffect(() => {
+    if (!draft) return;
+    const timer = setTimeout(() => {
+      try { window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ draft, step, savedAt: Date.now() })); } catch {}
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [draft, step]);
+
+  // Restore a saved in-progress draft on load so the builder reopens where it
+  // was left off.
+  useEffect(() => {
+    const restore = () => {
+      try {
+        const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw) as { draft?: Template; step?: number };
+        if (saved && saved.draft) {
+          setDraft(saved.draft);
+          setStep(saved.step || 1);
+          setCleanSnapshot(JSON.stringify(saved.draft));
+          setNotice("Restored your unsaved template draft.");
+        }
+      } catch {}
+    };
+    queueMicrotask(restore);
+  }, []);
+
+  function readSavedDraft(): { draft: Template; step: number } | null {
+    try {
+      const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!raw) return null;
+      const saved = JSON.parse(raw) as { draft?: Template; step?: number };
+      return saved?.draft ? { draft: saved.draft, step: saved.step || 1 } : null;
+    } catch { return null; }
+  }
+  function clearSavedDraft() {
+    try { window.localStorage.removeItem(DRAFT_STORAGE_KEY); } catch {}
+  }
+
+  // Warn on refresh/close while the builder holds unsaved changes. Applies to
+  // every step — the browser shows its native "Changes you made may not be
+  // saved" prompt when the user reloads, closes the tab or navigates away.
+  useEffect(() => {
+    if (!draft) return;
+    const dirty = JSON.stringify(draft) !== cleanSnapshot;
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      try { window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ draft, step, savedAt: Date.now() })); } catch {}
+      event.preventDefault(); event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [draft, step, cleanSnapshot]);
+
+  function openDraft(next: Template, startStep = 1) {
+    setError(""); setNotice(""); setStep(startStep);
+    setDraft(next);
+    setCleanSnapshot(JSON.stringify(next));
+  }
+
+  // New template: resume a saved in-progress draft, or discard it on request.
+  function startNewTemplate() {
+    const saved = readSavedDraft();
+    if (!saved) { openDraft(makeEmpty()); return; }
+    if (window.confirm("You have an unsaved template draft. Discard it and start a new template?")) {
+      clearSavedDraft();
+      openDraft(makeEmpty());
+    } else {
+      openDraft(saved.draft, saved.step);
+    }
+  }
+
   async function save() {
     if (!draft) return;
     setBusy(true); setError("");
@@ -262,6 +340,7 @@ useEffect(() => {
       const body = await response.json().catch(() => ({})) as { data?:Template; error?:string };
       if (!response.ok || !body.data) throw new Error(body.error ?? "The template could not be saved.");
       setRows(current => isEdit ? current.map(r => r.id === draft.id ? body.data! : r) : [body.data!, ...current]);
+      clearSavedDraft();
       setDraft(null);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "The template could not be saved."); }
     finally { setBusy(false); }
@@ -328,9 +407,9 @@ useEffect(() => {
     { id:"actions", header:"Actions", filterable:false, value:r => r.id, render:r => (
       <div className="flex items-center gap-2">
         {r.status !== "PUBLISHED" ? (
-          <button onClick={() => { const base = { ...r, grade: r.grade ?? "", minimumWage: r.minimumWage ?? { ...EMPTY_MW }, minimumWages: r.minimumWages ?? (r.minimumWage ? [r.minimumWage] : []) }; setDraft({ ...base, states: (r.states?.length ? r.states : r.state ? [r.state] : []) }); setStep(1); }} className="text-xs font-semibold text-blue-700 hover:underline inline-flex items-center gap-1"><Pencil size={12}/>Edit</button>
+          <button onClick={() => { const base = { ...r, grade: r.grade ?? "", minimumWage: r.minimumWage ?? { ...EMPTY_MW }, minimumWages: r.minimumWages ?? (r.minimumWage ? [r.minimumWage] : []) }; openDraft({ ...base, states: (r.states?.length ? r.states : r.state ? [r.state] : []) }); }} className="text-xs font-semibold text-blue-700 hover:underline inline-flex items-center gap-1"><Pencil size={12}/>Edit</button>
         ) : (
-          <button onClick={() => { const base = { ...r, grade: r.grade ?? "", minimumWage: r.minimumWage ?? { ...EMPTY_MW }, minimumWages: r.minimumWages ?? (r.minimumWage ? [r.minimumWage] : []) }; setDraft({ ...base, states: (r.states?.length ? r.states : r.state ? [r.state] : []) }); setStep(1); }} className="text-xs font-semibold text-gray-700 hover:underline inline-flex items-center gap-1"><Eye size={12}/>View</button>
+          <button onClick={() => { const base = { ...r, grade: r.grade ?? "", minimumWage: r.minimumWage ?? { ...EMPTY_MW }, minimumWages: r.minimumWages ?? (r.minimumWage ? [r.minimumWage] : []) }; openDraft({ ...base, states: (r.states?.length ? r.states : r.state ? [r.state] : []) }); }} className="text-xs font-semibold text-gray-700 hover:underline inline-flex items-center gap-1"><Eye size={12}/>View</button>
         )}
         {r.status === "DRAFT" && <button disabled={busy} onClick={() => void transition(r, "publish")} className="text-xs font-semibold text-green-700 hover:underline disabled:opacity-50">Publish</button>}
         {r.status === "PUBLISHED" && <button disabled={busy} onClick={() => void transition(r, "archive")} className="text-xs font-semibold text-gray-600 hover:underline disabled:opacity-50">Archive</button>}
@@ -343,7 +422,7 @@ useEffect(() => {
   return <div className="space-y-6 pb-10">
     <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">BSS Admin · Masters</p><h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Cost Sheet Templates</h1><p className="text-sm text-gray-500 mt-1">Universal worker cost templates — platform-locked statutory rules + minimum-wage link + org-configurable custom costs. Drives a worker&apos;s wage, employer cost and CTC.</p></div>
-      <button onClick={() => { setDraft(makeEmpty()); setStep(1); setError(""); }} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black"><Plus size={16}/>New template</button>
+      <button onClick={startNewTemplate} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black"><Plus size={16}/>New template</button>
     </header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
@@ -564,7 +643,7 @@ useEffect(() => {
         <footer className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-4 flex items-center justify-between gap-2">
           <div className="flex gap-2">
             <button type="button" disabled={step === 1} onClick={() => setStep(s => Math.max(1, s - 1))} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 disabled:opacity-40 inline-flex items-center gap-1"><ChevronLeft size={14}/>Back</button>
-            <button onClick={() => setDraft(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button>
+            <button onClick={() => { clearSavedDraft(); setDraft(null); setNotice(""); }} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Discard draft</button>
           </div>
           {step < 3
             ? <button type="button" onClick={() => setStep(s => Math.min(3, s + 1))} className="h-10 px-5 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1">{STEP_LABELS[step]} — Next<ChevronRight size={14}/></button>
