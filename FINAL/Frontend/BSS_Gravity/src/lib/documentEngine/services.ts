@@ -120,10 +120,10 @@ const DEFAULT_SECTIONS = (type: DocumentType): TemplateSection[] => {
 };
 
 export const DEFAULT_NUMBERING: Record<DocumentType, string> = {
-  'appointment-letter': 'BSS/APPT/{{year}}/{{sequence}}',
-  'experience-letter': 'BSS/EXP/{{year}}/{{sequence}}',
-  'permanent-gate-pass': 'PGP/{{siteCode}}/{{sequence}}',
-  'temporary-gate-pass': 'TGP/{{siteCode}}/{{year}}/{{sequence}}',
+  'appointment-letter': 'BSS-A{{bssSeq}}',
+  'experience-letter': 'BSS-R{{bssSeq}}',
+  'permanent-gate-pass': 'BSS-P{{bssSeq}}',
+  'temporary-gate-pass': 'BSS-T{{bssSeq}}',
 };
 
 export const DEFAULT_SIGNATORIES: Record<DocumentType, SignatureRole[]> = {
@@ -433,6 +433,8 @@ export function renderNumbering(pattern: string, values: Record<string, string>,
     ...values,
     year: String(new Date().getFullYear()),
     sequence: String(sequence).padStart(4, '0'),
+    // 11-char sequence so BSS-A/R/P/T numbering matches the entity ids.
+    bssSeq: String(sequence).padStart(11, '0'),
     siteCode: (values['site.code'] ?? 'SITE').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 12) || 'SITE',
   };
   return pattern.replace(TOKEN_PATTERN, (_match, key: string) => map[key] ?? '');

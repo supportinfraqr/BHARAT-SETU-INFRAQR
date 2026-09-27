@@ -1536,7 +1536,7 @@ export default function WorkerProfilePage() {
                   <div className="bg-white rounded-[12px] border border-gray-200 overflow-hidden">
                     <div className="px-4 py-3 border-b bg-gray-50 flex justify-between items-center"><span className="text-sm font-bold text-gray-900">Temporary Gate Pass Status</span><span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${(worker.welfare?.tempGatePassStatus || '').toLowerCase() === 'active' ? 'bg-green-100 text-[#2F9E67]' : 'bg-orange-100 text-[#F47A32]'}`}>{worker.welfare?.tempGatePassStatus || '—'}</span></div>
                     <div className="p-4 space-y-2 text-xs">
-                      <div className="flex justify-between"><span className="text-gray-400">TGP No.</span><span className="font-mono font-semibold text-[#073B67]">{worker.welfare?.tgpNo || '—'}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-400">Temporary Pass No.</span><span className="font-mono font-semibold text-[#073B67]">{worker.welfare?.tgpNo || '—'}</span></div>
                       <div className="flex justify-between"><span className="text-gray-400">Temporary Gate Pass Start Date</span><span className="font-semibold text-gray-800">{worker.welfare?.tempGatePassStart || '—'}</span></div>
                       <div className="flex justify-between"><span className="text-gray-400">Temporary Gate Pass End Date</span><span className="font-semibold text-gray-800">{worker.welfare?.tempGatePassEnd || '—'}</span></div>
                     </div>
@@ -1544,7 +1544,7 @@ export default function WorkerProfilePage() {
                   <div className="bg-white rounded-[12px] border border-gray-200 overflow-hidden">
                     <div className="px-4 py-3 border-b bg-gray-50 flex justify-between items-center"><span className="text-sm font-bold text-gray-900">Permanent Gate Pass Status</span><span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${(worker.welfare?.permanentGatePassStatus || '').toLowerCase() === 'active' ? 'bg-green-100 text-[#2F9E67]' : 'bg-orange-100 text-[#F47A32]'}`}>{worker.welfare?.permanentGatePassStatus || '—'}</span></div>
                     <div className="p-4 space-y-2 text-xs">
-                      <div className="flex justify-between"><span className="text-gray-400">PGP No.</span><span className="font-mono font-semibold text-[#073B67]">{worker.welfare?.pgpNo || '—'}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-400">Permanent Pass No.</span><span className="font-mono font-semibold text-[#073B67]">{worker.welfare?.pgpNo || '—'}</span></div>
                       <div className="flex justify-between"><span className="text-gray-400">Permanent Gate Pass Start Date</span><span className="font-semibold text-gray-800">{worker.welfare?.permanentGatePassStart || '—'}</span></div>
                       <div className="flex justify-between"><span className="text-gray-400">Permanent Gate Pass End Date</span><span className="font-semibold text-gray-800">{worker.welfare?.permanentGatePassEnd || '—'}</span></div>
                     </div>

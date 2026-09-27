@@ -11,7 +11,13 @@ export const DOCUMENT_TYPES: Array<{ id: DocumentType; label: string; short: str
 ];
 export const docTypeLabel = (id: DocumentType) => DOCUMENT_TYPES.find(item => item.id === id)?.short ?? id;
 export const docTypeFormat = (id: DocumentType) => DOCUMENT_TYPES.find(item => item.id === id)?.format ?? 'A4';
-export const documentTypesFor = (ownerType: 'employer' | 'contractor') => DOCUMENT_TYPES.filter(item => !item.roles || item.roles.includes(ownerType));
+export const documentTypesFor = (ownerType: 'employer' | 'contractor') =>
+  DOCUMENT_TYPES.filter(item => {
+    if (ownerType === 'employer') {
+      return item.id === 'permanent-gate-pass' || item.id === 'temporary-gate-pass';
+    }
+    return !item.roles || item.roles.includes(ownerType);
+  });
 export const isGatePassType = (id: DocumentType) => id === 'permanent-gate-pass' || id === 'temporary-gate-pass';
 
 // These types have a fixed layout/wording in code — the editor only changes the
@@ -72,7 +78,7 @@ export type TemplateConfig = {
   styles: TemplateStyles;
   variables: string[];
   signatories: SignatureRole[];
-  numberingPattern: string;     // e.g. BSS/APPT/{{year}}/{{sequence}}
+  numberingPattern: string;     // e.g. BSS-A{{bssSeq}}
   createdBy: string;
   updatedAt: string;
   sourceVersionId?: string;     // template id this version was forked from

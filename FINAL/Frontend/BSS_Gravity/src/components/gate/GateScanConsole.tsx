@@ -45,7 +45,7 @@ export default function GateScanConsole() {
     <section className="bg-white border border-gray-200 rounded-2xl p-5">
       <div className="flex flex-wrap items-end gap-3">
         <label className="text-xs font-semibold text-gray-600 flex-1 min-w-[240px]">Gate pass number
-          <input value={code} onChange={e => setCode(e.target.value)} onKeyDown={e => { if (e.key === "Enter") void scan(); }} placeholder="e.g. TGP-5F2B364B or BSS-W…" className="mt-1 w-full h-11 rounded-lg border border-gray-200 px-3 text-sm font-mono"/>
+          <input value={code} onChange={e => setCode(e.target.value)} onKeyDown={e => { if (e.key === "Enter") void scan(); }} placeholder="e.g. BSS-T7KQ2M9X4RTA or BSS-W…" className="mt-1 w-full h-11 rounded-lg border border-gray-200 px-3 text-sm font-mono"/>
         </label>
         <button disabled={busy || !code.trim()} onClick={() => void scan()} className="h-11 px-5 rounded-lg bg-[#073B67] text-white text-sm font-bold inline-flex items-center gap-2 disabled:opacity-60"><ScanLine size={16}/>{busy ? "Scanning…" : "Scan"}</button>
       </div>
