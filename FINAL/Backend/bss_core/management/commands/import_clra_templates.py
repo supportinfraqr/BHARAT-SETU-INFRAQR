@@ -521,13 +521,18 @@ def _faithful_xlsx_register_html(rows, title, form_code, columns):
             continue
         text = " ".join(cells)
         lower = text.lower()
-        if lower.lstrip("* \u00a0").startswith("[") and not rule:
+        if (lower.lstrip("* \u00a0").startswith("[") or "see rule" in lower) and not rule:
             rule = text
         elif re.match(r"^form\s+[ivxlcdm0-9]", lower):
             continue
         elif not register_title and not re.match(r"^\d+\.", text):
             register_title = text
-    main_title = (f"{register_title} {form_code}".strip() if register_title else "") or title or form_code
+    see_rule = "see rule" in rule.lower()
+    if see_rule and form_code:
+        # A citation preamble: the heading is the form code, the citation its own line.
+        main_title = form_code
+    else:
+        main_title = (f"{register_title} {form_code}".strip() if register_title else "") or title or form_code
     lines = [f'<h1 style="text-align:center;font-size:18px;font-weight:bold;margin:8px 0;">{esc(main_title)}</h1>']
     if rule:
         lines.append('<h2 style="text-align:center;font-size:14px;font-weight:600;'
@@ -551,7 +556,7 @@ def _faithful_xlsx_register_html(rows, title, form_code, columns):
             continue
         if re.match(r"^form\s+[ivxlcdm0-9]", lower) or lower.lstrip("* \u00a0").startswith("["):
             continue
-        if text == register_title:
+        if text == register_title and not see_rule:
             continue
         if re.match(r"^\d+\.", text):
             key = re.sub(r"[.\s]+$", "", text)
