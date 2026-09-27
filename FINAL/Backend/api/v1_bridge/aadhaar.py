@@ -23,11 +23,17 @@ def _aadhaar_throttle_remaining(aadhaar):
 
 
 def _throttle_aadhaar(aadhaar, seconds=60):
-    """Block further Sandbox OTP calls for this Aadhaar for a short window so a
-    burst of retries cannot keep resetting UIDAI's cooldown."""
+    """Block further Sandbox OTP calls for this Aadhaar so a burst of retries
+    cannot keep resetting UIDAI's cooldown. Backs off progressively (60s, 2m,
+    4m, … up to 30 min) so the upstream lock has time to clear."""
+    now = timezone.now()
+    recent = AadhaarChallenge.objects.filter(
+        aadhaar_number=aadhaar, status="THROTTLED",
+        created_at__gte=now - timedelta(hours=6)).count()
+    wait = min(seconds * (2 ** min(recent, 5)), 30 * 60)
     AadhaarChallenge.objects.create(
         aadhaar_number=aadhaar, status="THROTTLED",
-        expires_at=timezone.now() + timedelta(seconds=seconds))
+        expires_at=now + timedelta(seconds=wait))
 
 
 def _parse_dob(value):
