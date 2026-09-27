@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local data: captured snapshots, the old SQLite DB, enrolled face photos.
+# Re-created at runtime; never source.
+data/db.sqlite3
+data/*.sqlite3
+data/snapshots/
+people/
+*.log
+
+# Bundled Windows binaries and archives (install ffmpeg via apt on servers).
+tools/ffmpeg-*/
+tools/mediamtx/
+*.exe
+*.zip
+tests/assets/*.mp4

@@ -1,0 +1,1 @@
+https://fr201.extcam.com/hls/live?server=100-KqKKF3inDX3uvKrwbIGWGb&camera=851968&access_token=public&streams=both&vcodec=h264&acodec=aac&duration=0&q=2&d=rr2115.extcam.com&public=1&owner_id=100002360252&u=100001892241&ts=1787394726.1415405&token=d67ae16062d043e489c0e093e549046e
