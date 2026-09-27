@@ -106,7 +106,7 @@ export default function ComplianceSubmissionPage() {
   const [viewErrors, setViewErrors] = useState<{ name: string; findings: string[] } | null>(null);
 
   const [uploads, setUploads] = useState<Record<string, EvidenceUpload>>({});
-  const [additionalDocs, setAdditionalDocs] = useState<Array<{ name: string; frequency: string; mandatory: boolean; requiresDocument: boolean }>>([]);
+  const [additionalDocs, setAdditionalDocs] = useState<Array<{ name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; type: string; requiredFormat: string; note: string }>>([]);
   const [docsBusy, setDocsBusy] = useState(false);
 
   const rawDocuments = contractor.submissions.documents as DocumentRow[];
@@ -200,11 +200,11 @@ export default function ComplianceSubmissionPage() {
     setDocsBusy(true);
     void fetch(`/api/contractor/clra/site-documents${docsSiteId ? `?siteId=${encodeURIComponent(docsSiteId)}` : ''}`, { cache:'no-store' })
       .then(response => (response.ok ? response.json() : null))
-      .then((body: { data?: { documents?: Array<{ form:string; purpose:string; frequency:string; mandatory:boolean; requiresDocument?:boolean; custom?:boolean; templateId?:number|null }> } } | null) => {
+      .then((body: { data?: { documents?: Array<{ form:string; purpose:string; frequency:string; mandatory:boolean; requiresDocument?:boolean; custom?:boolean; templateId?:number|null; type?:string; requiredFormat?:string; note?:string }> } } | null) => {
         if (!active) return;
         const docs = (body?.data?.documents || [])
           .filter(doc => doc.custom || !doc.templateId)
-          .map(doc => ({ name: doc.form || doc.purpose, frequency: doc.custom ? (doc.frequency || '') : '', mandatory: !!doc.mandatory, requiresDocument: doc.custom ? doc.requiresDocument !== false : true }));
+          .map(doc => ({ name: doc.form || doc.purpose, frequency: doc.custom ? (doc.frequency || '') : '', mandatory: !!doc.mandatory, requiresDocument: doc.custom ? doc.requiresDocument !== false : true, type: doc.type || '', requiredFormat: doc.requiredFormat || '', note: doc.note || '' }));
         setAdditionalDocs(docs);
       })
       .catch(() => { if (active) setAdditionalDocs([]); })
@@ -660,49 +660,47 @@ export default function ComplianceSubmissionPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-gray-200 text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
-                      <th className="py-2.5 px-3.5">Document Type</th>
-                      <th className="py-2.5 px-3.5">Frequency</th>
-                      <th className="py-2.5 px-3.5">Requirement</th>
-                      <th className="py-2.5 px-3.5">Status</th>
-                      <th className="py-2.5 px-3.5 text-right">Action</th>
+                      <th className="py-2.5 px-3">No</th>
+                      <th className="py-2.5 px-3">Document Name</th>
+                      <th className="py-2.5 px-3">Type</th>
+                      <th className="py-2.5 px-3">Frequency</th>
+                      <th className="py-2.5 px-3">Mandatory</th>
+                      <th className="py-2.5 px-3">Required Format</th>
+                      <th className="py-2.5 px-3">Note</th>
+                      <th className="py-2.5 px-3">Upload</th>
+                      <th className="py-2.5 px-3">View</th>
+                      <th className="py-2.5 px-3">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-xs">
-                    {additionalDocs.map(doc => {
+                    {additionalDocs.map((doc, index) => {
                       const up = uploads[doc.name];
                       const isSubmitted = submittedNames.has(doc.name);
+                      const submittedRow = isSubmitted
+                        ? submittedDocuments.find(d => d.type?.toLowerCase() === doc.name.toLowerCase() || d.type?.toLowerCase().includes(doc.name.toLowerCase()))
+                        : undefined;
+                      const viewHref = up?.id != null ? `/api/portal/uploads/${up.id}` : submittedRow?.id ? `/api/contractor/submissions/${submittedRow.id}/file` : '';
                       return (
                         <tr key={doc.name} className={`hover:bg-slate-50/70 transition-colors ${up?.status === 'Validated' ? 'bg-green-50/20' : doc.mandatory ? 'bg-amber-50/15' : ''}`}>
-                          <td className="py-3 px-3.5 font-semibold text-gray-900">
-                            {doc.name}
+                          <td className="py-3 px-3 text-gray-400 font-semibold">{index + 1}</td>
+                          <td className="py-3 px-3 font-semibold text-gray-900">{doc.name}</td>
+                          <td className="py-3 px-3">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">{doc.type || '—'}</span>
                           </td>
-                          <td className="py-3 px-3.5 text-gray-600 text-[11px]">
+                          <td className="py-3 px-3 text-gray-600 text-[11px]">
                             {doc.frequency || 'Monthly'}
                           </td>
-                          <td className="py-3 px-3.5">
+                          <td className="py-3 px-3">
                             {doc.mandatory ? (
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">Mandatory</span>
                             ) : (
                               <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">Optional</span>
                             )}
                           </td>
-                          <td className="py-3 px-3.5">
-                            {up ? (
-                              <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                                up.status === 'Validated' ? 'bg-green-100 text-green-800 border border-green-200' : 
-                                up.status === 'Validating' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 
-                                'bg-red-100 text-red-800 border border-red-200'
-                              }`}>
-                                {up.status === 'Validated' ? (isSubmitted ? '✓ Submitted' : '✓ Validated · press Submit') : up.status === 'Validating' ? 'Validating…' : 'Errors found'}
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100/80 border border-amber-200 px-2.5 py-0.5 rounded-full">
-                                <AlertCircle size={12} /> Pending Submission
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3 px-3.5 text-right">
-                            <div className="flex items-center justify-end gap-2">
+                          <td className="py-3 px-3 text-gray-600 text-[11px]">{doc.requiredFormat || '—'}</td>
+                          <td className="py-3 px-3 text-gray-500 text-[11px] max-w-[220px]" title={doc.note || ''}>{doc.note || '—'}</td>
+                          <td className="py-3 px-3 text-right">
+                            <div className="flex flex-wrap items-center justify-end gap-2">
                               {!isSubmitted && (
                                 <label className="h-7 px-3 rounded-md border border-gray-300 text-xs font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-slate-100 bg-white shadow-xs">
                                   <Upload size={12} className="text-gray-600"/>
@@ -734,6 +732,28 @@ export default function ComplianceSubmissionPage() {
                                 </>
                               )}
                             </div>
+                          </td>
+                          <td className="py-3 px-3">
+                            {viewHref ? (
+                              <a href={viewHref} target="_blank" rel="noreferrer" className="text-blue-700 font-semibold text-xs inline-flex items-center gap-1 hover:underline">View</a>
+                            ) : (
+                              <span className="text-gray-300 text-xs">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3">
+                            {up ? (
+                              <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                                up.status === 'Validated' ? 'bg-green-100 text-green-800 border border-green-200' :
+                                up.status === 'Validating' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                                'bg-red-100 text-red-800 border border-red-200'
+                              }`}>
+                                {up.status === 'Validated' ? (isSubmitted ? '✓ Submitted' : '✓ Validated · press Submit') : up.status === 'Validating' ? 'Validating…' : 'Errors found'}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100/80 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                                <AlertCircle size={12} /> Pending Submission
+                              </span>
+                            )}
                           </td>
                         </tr>
                       );
