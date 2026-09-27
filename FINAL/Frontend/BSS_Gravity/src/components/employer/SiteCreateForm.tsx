@@ -384,12 +384,13 @@ const BOOLEAN_NAMES = new Set(
   SECTIONS.flatMap(s => s.fields).filter(f => f.type === 'checkbox').map(f => f.name)
 );
 
-export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial }: {
+export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial, existingCodes }: {
   busy: boolean;
   error: string;
   onSubmit: (payload: Record<string, unknown>) => void;
   onClose: () => void;
   initial?: Record<string, unknown> | null;
+  existingCodes?: string[];
 }) {
   const [geo, setGeo] = useState<SiteGeo | null>(() => initial && initial.latitude ? { lat: Number(initial.latitude), lng: Number(initial.longitude), label: 'Saved site location' } : null);
   const [location, setLocation] = useState(String(initial?.location ?? ''));
@@ -437,13 +438,19 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     if (place.state) setState(place.state);
   }
 
-  // Site code format: SITE-XXXXXXXX (8 chars, auto-generated and locked). The
-  // backend also guarantees uniqueness on save.
+  // Site code format: SITE-XXXXXXXX (8 chars, auto-generated and locked). Never
+  // reuses a code already in use (known codes here; the backend also guarantees
+  // global uniqueness on save).
   function makeSiteCode() {
     const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let suffix = '';
-    for (let i = 0; i < 8; i += 1) suffix += alphabet[Math.floor(Math.random() * alphabet.length)];
-    return `SITE-${suffix}`;
+    const taken = new Set((existingCodes ?? []).map(c => String(c).toUpperCase()));
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      let suffix = '';
+      for (let i = 0; i < 8; i += 1) suffix += alphabet[Math.floor(Math.random() * alphabet.length)];
+      const code = `SITE-${suffix}`;
+      if (!taken.has(code)) return code;
+    }
+    return `SITE-${Math.random().toString(36).slice(2, 10).toUpperCase().padEnd(8, '0').slice(0, 8)}`;
   }
 
   // Auto-fill the locked site code for a brand-new site.

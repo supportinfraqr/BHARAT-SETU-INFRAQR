@@ -75,7 +75,7 @@ export default function EmployerSitesPage() {
       })}
     </section>
 
-    {open && <SiteCreateForm busy={busy} error={error} onSubmit={submit} onClose={() => setOpen(false)} />}
+    {open && <SiteCreateForm busy={busy} error={error} onSubmit={submit} onClose={() => setOpen(false)} existingCodes={employer.sites.map(s => s.code)} />}
 
     {qrSite && (
       <div className="fixed inset-0 z-[90] bg-black/55 backdrop-blur-sm grid place-items-center p-4" role="dialog" aria-modal="true" aria-label="Site QR">

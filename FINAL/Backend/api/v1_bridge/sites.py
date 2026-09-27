@@ -299,6 +299,21 @@ def _auto_assign_letter_templates(site):
             setattr(site, attr, template)
 
 
+def _new_unique_site_code():
+    """A globally-unique site code in the SITE-XXXXXXXX house format.
+
+    Loops until the random code is not already used, so a generated code can
+    never match an existing site's code.
+    """
+    import random
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    for _ in range(50):
+        code = "SITE-" + "".join(random.choice(alphabet) for _ in range(8))
+        if not Site.objects.filter(site_code=code).exists():
+            return code
+    return "SITE-" + uuid.uuid4().hex[:8].upper()
+
+
 def _handle_site(user, body, method):
     site = None
     site_id = body.get("id")
@@ -308,13 +323,11 @@ def _handle_site(user, body, method):
 
     if site is None:
         code = str(body.get("site_code") or body.get("code") or "").strip().upper()
-        if not code:
-            code = f"ST-{uuid.uuid4().hex[:8].upper()}"
-        base = code
-        suffix = 0
-        while Site.objects.filter(site_code=code).exists():
-            suffix += 1
-            code = f"{base}-{suffix}"
+        # Guarantee a unique code in the SITE-XXXXXXXX house format. If the
+        # supplied code is missing or already taken, generate a fresh one so a
+        # random code can never collide with an existing site.
+        if not code or Site.objects.filter(site_code=code).exists():
+            code = _new_unique_site_code()
         site = Site(employer=user, site_code=code)
 
     # camelCase aliases the current form uses.
