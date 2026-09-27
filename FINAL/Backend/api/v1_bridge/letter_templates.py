@@ -152,11 +152,13 @@ def admin_restore_letter_defaults(request):
     if mode not in ("ensure", "reset"):
         return Response({"error": "mode must be 'ensure' or 'reset'."},
                         status=status.HTTP_400_BAD_REQUEST)
+    # Never let an admin-UI call delete templates.
+    prune = str(body.get("prune", "false")).strip().lower() == "true"
 
     cmd = RestoreCommand()
     try:
         if mode == "reset":
-            counters = cmd._restore_defaults()
+            counters = cmd._restore_defaults(prune=prune)
         else:
             from bss_core.seeders.letter_templates import seed
             counters = {"created": seed(), "updated": 0, "pruned": 0}

@@ -32,15 +32,21 @@ class Command(BaseCommand):
             "--reset", action="store_true",
             help="Reproduce the exact default library from the code snapshot "
                  "(prunes templates not present in the defaults).")
+        parser.add_argument(
+            "--no-prune", action="store_true",
+            help="With --reset: create missing and update changed, but never "
+                 "delete. Use on a live environment where a locally-built "
+                 "snapshot may be missing rows that env still needs.")
 
     def handle(self, *args, **options):
         from bss_core.models import LetterTemplate
 
         if options["reset"]:
-            c = self._restore_defaults()
+            c = self._restore_defaults(prune=not options["no_prune"])
             self.stdout.write(self.style.SUCCESS(
                 f"Letter library restored to defaults — {c['created']} new / "
-                f"{c['updated']} updated / {c['pruned']} pruned · "
+                f"{c['updated']} updated / {c['pruned']} pruned"
+                f"{' (--no-prune)' if options['no_prune'] else ''} · "
                 f"{LetterTemplate.objects.count()} total"))
             return
 
@@ -51,7 +57,7 @@ class Command(BaseCommand):
             f"Letter templates ready ({created} created, "
             f"{LetterTemplate.objects.count()} total)."))
 
-    def _restore_defaults(self):
+    def _restore_defaults(self, prune=True):
         try:
             from bss_core.seeds import letter_defaults as DEFAULTS
         except ImportError:
@@ -101,8 +107,10 @@ class Command(BaseCommand):
                 c["updated"] += 1
 
         for key, t in existing.items():
-            if key not in by_key:
+            if key not in by_key and prune:
                 t.delete()
                 c["pruned"] += 1
+            elif key not in by_key:
+                c["skipped"] = c.get("skipped", 0) + 1
 
         return c
