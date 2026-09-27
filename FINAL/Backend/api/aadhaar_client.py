@@ -69,7 +69,8 @@ def get_access_token() -> str:
             "x-api-key": settings.AADHAAR_API_KEY,
             "x-api-secret": settings.AADHAAR_API_SECRET,
         },
-        timeout=20,
+        timeout=12,
+        attempts=2,
     )
     if resp.status_code != 200:
         raise SandboxError(f"authenticate failed: {resp.status_code} {resp.text[:300]}")
@@ -104,7 +105,8 @@ def generate_otp(aadhaar_number: str) -> dict:
             "reason": "For KYC",
         },
         headers=_authed_headers(token),
-        timeout=20,
+        timeout=12,
+        attempts=2,
     )
     if resp.status_code != 200:
         raise SandboxError(_error_message(resp), resp.status_code)
@@ -123,7 +125,8 @@ def verify_otp(reference_id: str, otp: str) -> dict:
             "otp": otp,
         },
         headers=_authed_headers(token, include_version=True),
-        timeout=30,
+        timeout=15,
+        attempts=2,
     )
     if resp.status_code != 200:
         raise SandboxError(_error_message(resp), resp.status_code)
