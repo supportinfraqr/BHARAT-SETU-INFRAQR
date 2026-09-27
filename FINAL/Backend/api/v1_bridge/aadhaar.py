@@ -212,16 +212,6 @@ def aadhaar_otp(request):
         return Response({"error": "Enter a valid 12-digit Aadhaar number"},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    # Account-wide circuit breaker: Sandbox rate-limits our whole API key, so
-    # once it throttles any Aadhaar we pause every Aadhaar OTP request for a
-    # cooling window (a new number must not slip through and keep it alive).
-    global_wait = _global_cooldown_remaining()
-    if global_wait:
-        return Response(
-            {"error": f"Aadhaar OTP service is cooling down (UIDAI/Sandbox rate limit). Please try again in {_fmt_wait(global_wait)}.",
-             "retryAfterSeconds": global_wait},
-            status=status.HTTP_429_TOO_MANY_REQUESTS)
-
     # Per-Aadhaar cooldown.
     remaining = _aadhaar_throttle_remaining(aadhaar)
     if remaining:
@@ -269,6 +259,16 @@ def aadhaar_otp(request):
     live = _reuse_recent(1)
     if live is not None:
         return live
+
+    # Account-wide circuit breaker: Sandbox rate-limits our whole API key, so
+    # once it throttles any Aadhaar we pause all Aadhaar OTP requests. A valid
+    # existing reference was already reused above without calling Sandbox.
+    global_wait = _global_cooldown_remaining()
+    if global_wait:
+        return Response(
+            {"error": f"Aadhaar OTP service is cooling down (UIDAI/Sandbox rate limit). Please try again in {_fmt_wait(global_wait)}.",
+             "retryAfterSeconds": global_wait},
+            status=status.HTTP_429_TOO_MANY_REQUESTS)
 
     # Global minimum interval between Sandbox calls (burst protection).
     gap = _global_min_interval_remaining()
