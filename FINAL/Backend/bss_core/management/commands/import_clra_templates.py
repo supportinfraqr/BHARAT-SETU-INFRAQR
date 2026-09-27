@@ -610,6 +610,56 @@ def _folder_name(state):
             "Dadra & Nagar Haveli": "Dadra and Nagar Haveli"}.get(state, state)
 
 
+# Preamble boilerplate that is never the register's name.
+_TITLE_SKIP = ("name and address", "nature and location", "for the month",
+               "sl. no", "wage period", "month and year", "principal employer",
+               "register of contractors", "part i", "part ii")
+
+
+def _register_title_from_lines(lines, limit=15):
+    """The register's printed name — the first preamble line that is not a rule
+    citation, a form code, a numbered key:value line, or boilerplate."""
+    for text in (lines or [])[:limit]:
+        text = re.sub(r"\s+", " ", str(text or "")).strip()
+        if not text:
+            continue
+        low = text.lower()
+        if low.lstrip("* \u00a0").startswith("[") or "see rule" in low:
+            continue
+        if re.match(r"^form\s+[ivxlcdm0-9]", low) or re.match(r"^\d+[\.\)]", text):
+            continue
+        if any(k in low for k in _TITLE_SKIP):
+            continue
+        if re.search(r"[a-z]", low):
+            return text
+    return ""
+
+
+def _flatten_rows(rows):
+    out = []
+    for row in (rows or []):
+        cells = [str(c).strip() for c in row if c and str(c).strip()]
+        if cells:
+            out.append(" ".join(cells))
+    return out
+
+
+def register_title_for_file(name, data):
+    """Best-effort printed register name for one archive file (xlsx/xls/docx)."""
+    ext = os.path.splitext(name)[1].lower()
+    try:
+        if ext == ".xlsx":
+            return _register_title_from_lines(_flatten_rows(_parse_xlsx(data)))
+        if ext == ".xls":
+            return _register_title_from_lines(_flatten_rows(_parse_xls(data)))
+        if ext == ".docx":
+            return _register_title_from_lines(
+                [b["text"] for b in _docx_blocks(data) if b.get("kind") == "p"])
+    except Exception:  # noqa: BLE001 — identity is a nicety, never fatal
+        return ""
+    return ""
+
+
 def _compose_defaults(state, filename, data, title, form_code, classified):
     """Build the (html, defaults) for one classified register/form file."""
     columns = classified["columns"]

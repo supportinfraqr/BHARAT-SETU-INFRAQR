@@ -48,7 +48,77 @@ CLRA_REGISTER_TITLES = {
 # Forms excluded from all seeding (never created, and removed if already present).
 CLRA_EXCLUDE_FORMS = {"FORM XII"}
 
+# States whose matrix entry stays authoritative even where the archive holds a
+# file: Maharashtra's matrix notes "Form 2 as per MW act is enough", so every
+# register there is FORM II and the folder's files must not override it.
+MATRIX_WINS_STATES = {"Maharashtra"}
+
+# Matrix spellings that differ from the archive folder / canonical state name.
+_STATE_FIX = {"DNH": "Dadra & Nagar Haveli"}
+
+# A register's printed name → its core purpose. Order matters: "Muster Roll cum
+# Wage Register" must read as MusterRoll, not Wage Register; "Wage Slip" must not
+# read as Wage Register.
+_PURPOSE_TITLE_MATCHERS = [
+    ("MusterRoll", ("muster roll", "musterroll", "muster-roll")),
+    ("Register of Overtime", ("overtime",)),
+    ("Register of Fines", ("register of fines", "register of fine", "fines")),
+    ("Register of Advances", ("register of advances", "register of advance", "advances")),
+    ("Deductions for Damage or Loss", ("damage", "deduction")),
+    ("Wage Register", ("register of wages", "wage register", "wages register",
+                       "register of wage", "wage book")),
+    ("Register of Workmen", ("register of workmen", "workmen employed")),
+]
+
 DEFAULT_ARCHIVE = "/app/data/clra-registers.zip"
+
+
+def _purpose_from_title(text) -> str:
+    """Map a register's printed name (or filename) to one of the core purposes."""
+    import re
+    t = re.sub(r"\s+", " ", str(text or "")).strip().lower()
+    if not t:
+        return ""
+    for purpose, keys in _PURPOSE_TITLE_MATCHERS:
+        if any(k in t for k in keys):
+            return purpose
+    return ""
+
+
+def _archive_purpose_map(archive: str) -> dict[str, dict[str, dict]]:
+    """``{state: {purpose: {"form": …, "file": …}}}`` read from the register files.
+
+    The archive file **is** the register that gets printed, so its printed title
+    decides which purpose it serves — this overrides the applicability matrix,
+    which names the wrong form for several states (Daman & Diu calls FORM XVI the
+    deductions register, but that file is a Muster Roll)."""
+    import zipfile
+
+    from bss_core.management.commands.import_clra_applicability import canonical_state
+    from bss_core.management.commands.import_clra_templates import (
+        _form_code, canon_form_code, register_title_for_file)
+
+    out: dict[str, dict[str, dict]] = {}
+    with zipfile.ZipFile(archive) as z:
+        for name in z.namelist():
+            if name.endswith("/") or name.lower().endswith("state wise form of  clra.xls"):
+                continue
+            parts = name.split("/")
+            if len(parts) < 3:
+                continue
+            state, filename = canonical_state(parts[-2]), parts[-1]
+            if filename.startswith("~$"):
+                continue
+            form = canon_form_code(_form_code(filename))
+            if not form.startswith("FORM") or form in CLRA_EXCLUDE_FORMS:
+                continue
+            title = register_title_for_file(filename, z.read(name))
+            purpose = _purpose_from_title(title) or _purpose_from_title(filename)
+            if purpose:
+                out.setdefault(state, {}).setdefault(
+                    purpose, {"form": form, "file": filename})
+    return out
+
 
 
 def archive_path() -> str | None:
@@ -69,13 +139,13 @@ def _ensure_matrix(archive: str) -> None:
         pass
 
 
-def _matrix_by_state() -> dict[str, dict[str, str]]:
+def _matrix_by_state(archive: str | None = None) -> dict[str, dict[str, str]]:
     """``{state: {purpose: form_code}}`` for the 7 core purposes.
 
-    Reads the matrix rows imported into ``StateFormApplicability`` and maps every
-    cell label (e.g. ``FORM XIII``) to its canonical token. Special markers such
-    as ``N/A`` and excluded forms are skipped. Several purposes may map to the
-    same form (Maharashtra → FORM II) — each still yields its own template."""
+    The applicability matrix gives the state's purposes → forms, but it is wrong
+    for several states; the archive's own register files (their printed titles)
+    therefore **override** it. States whose folders lack a file keep the matrix's
+    form. Several purposes may map to the same form (Maharashtra → FORM II)."""
     from bss_core.management.commands.import_clra_templates import canon_form_code
     from bss_core.models import StateFormApplicability
 
@@ -84,26 +154,33 @@ def _matrix_by_state() -> dict[str, dict[str, str]]:
             .filter(purpose__in=CLRA_REGISTER_PURPOSES)
             .values_list("state", "purpose", "form_label"))
     for state, purpose, label in rows:
+        state = _STATE_FIX.get(state, state)
         code = canon_form_code(label)
         if not code.startswith("FORM") or code in CLRA_EXCLUDE_FORMS:
             continue
         out.setdefault(state, {})[purpose] = code
+
+    if archive:
+        for state, purposes in _archive_purpose_map(archive).items():
+            if state in MATRIX_WINS_STATES:
+                continue
+            target = out.setdefault(state, {})
+            for purpose, info in purposes.items():
+                target[purpose] = info["form"]
     return out
 
 
 def _prune(matrix: dict[str, dict[str, str]]) -> int:
-    """Delete any template that is not one of the state's purpose-keyed registers.
-
-    Legacy rows without a purpose are superseded by the purpose-keyed set (a
-    lone ``FORM II`` for Maharashtra becomes the six purpose-keyed registers).
-    Returns the number of templates deleted."""
+    """Delete any template that is not one of the state's purpose-keyed registers,
+    or that holds the wrong form for its purpose (a stale Daman & Diu FORM XVI
+    mapped to "Deductions for Damage or Loss", whose file is a Muster Roll)."""
+    from bss_core.management.commands.import_clra_templates import canon_form_code
     from bss_core.models import RegisterTemplate
 
-    keep = {(state, purpose) for state, purposes in matrix.items()
-            for purpose in purposes}
     deleted = 0
     for template in RegisterTemplate.objects.all():
-        if (template.state, template.purpose) not in keep:
+        want = matrix.get(template.state, {}).get(template.purpose)
+        if want is None or canon_form_code(template.form_code or "") != want:
             template.delete()
             deleted += 1
     return deleted
@@ -129,7 +206,7 @@ def _seed_from_matrix(archive: str, only_missing: bool) -> int:
     from bss_core.management.commands.import_clra_templates import create_for_purpose
     from bss_core.models import RegisterTemplate
 
-    matrix = _matrix_by_state()
+    matrix = _matrix_by_state(archive)
     _prune(matrix)
     before = RegisterTemplate.objects.count()
     for state, purposes in matrix.items():
