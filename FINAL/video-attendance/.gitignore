@@ -21,3 +21,7 @@ tools/mediamtx/
 *.exe
 *.zip
 tests/assets/*.mp4
+
+# Model weights downloaded at runtime
+*.pt
+runs/
