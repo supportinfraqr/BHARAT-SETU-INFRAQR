@@ -11,6 +11,14 @@ Safe by default: it only reports. Pass ``--apply`` to write. The old value is
 echoed to stdout and written to a mapping file so the substitution is
 reversible, because ``contractor_code`` / ``employer_code`` are used as lookup
 keys by the admin UI and API.
+
+By default it re-issues only values that are not BSS identifiers at all
+(``V-100234``). Codes that merely carry an older suffix length are valid BSS
+IDs and are listed but left alone. Pass ``--reissue-drifted`` to also convert
+those to the canonical ``BSS-<ROLE>`` + 11-character form.
+
+Any printed QR follows the ID automatically (the QR payload is just the BSS
+ID), whereas letters already issued keep the old value.
 """
 
 import csv
@@ -41,6 +49,11 @@ class Command(BaseCommand):
             "--role", choices=[t[0] for t in TARGETS], default=None,
             help="Limit to one role (default: all roles).")
         parser.add_argument(
+            "--reissue-drifted", action="store_true",
+            help="Also re-issue BSS-style IDs whose suffix is the wrong length "
+                 "(legacy 10-char suffixes), so every ID matches the canonical "
+                 "BSS-<ROLE>+11 form. Off by default because those IDs still work.")
+        parser.add_argument(
             "--map-out", default=None,
             help="CSV path for the old->new mapping (default: stdout only).")
 
@@ -48,6 +61,7 @@ class Command(BaseCommand):
         from bss_core import models as bss_models
 
         apply = options["apply"]
+        reissue_drifted = options["reissue_drifted"]
         rows = []
         for role, model_name, field, allocator_name in TARGETS:
             if options["role"] and options["role"] != role:
@@ -57,18 +71,22 @@ class Command(BaseCommand):
                 current = (getattr(obj, field) or "").strip()
                 if not current:
                     continue
-                # Only a value that is not a BSS identifier at all needs a new
-                # one. Codes that merely predate the current 11-char suffix are
-                # still valid BSS IDs and must never be churned.
-                if bss_ids.is_bss_style_id(current):
+                # A value that is not a BSS identifier at all always needs a new
+                # one. A BSS-style value with the wrong suffix length still works,
+                # so it is only re-issued when --reissue-drifted is passed.
+                style = bss_ids.is_bss_style_id(current)
+                canonical = bss_ids.is_canonical_id(current, role)
+                if style and (canonical or not reissue_drifted):
                     continue
                 rows.append((role, model_name, field, allocator_name, obj, current))
 
-        # Advisory only: report format drift without offering to rewrite it.
+        # Advisory only: report format drift that is being left alone.
         drifted = 0
         for role, model_name, field, _allocator_name in TARGETS:
             if options["role"] and options["role"] != role:
                 continue
+            if reissue_drifted:
+                continue  # these are in `rows` now, not advisory
             model = getattr(bss_models, model_name)
             for obj in model.objects.all():
                 current = (getattr(obj, field) or "").strip()
@@ -78,7 +96,8 @@ class Command(BaseCommand):
 
         if drifted:
             self.stdout.write(f"  note: {drifted} code(s) use an older suffix length "
-                              f"but are valid BSS IDs — left untouched.")
+                              f"but are valid BSS IDs — left untouched "
+                              f"(pass --reissue-drifted to convert them).")
 
         if not rows:
             self.stdout.write(self.style.SUCCESS(
