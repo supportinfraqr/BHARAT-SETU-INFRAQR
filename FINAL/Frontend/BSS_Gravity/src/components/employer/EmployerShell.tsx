@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ClipboardCheck, FileText, LayoutDashboard, Menu, Network, Settings, ShieldCheck, X, Banknote } from 'lucide-react';
+import { ChevronDown, ClipboardCheck, FileText, LayoutDashboard, Menu, Network, Settings, ShieldCheck, X, Banknote, Calculator } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import BrandText from '@/components/BrandText';
@@ -15,7 +15,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 const workforceGroup = { key:'nav.workforce', icon:Network, items:[
   ['nav.workers','/employer/workers'],
   ['nav.contractors','/employer/contractors'],
-  ['Cost Sheets','/employer/cost-sheets'],
   ['nav.gatePass','/employer/gate-pass'],['Gate Scan','/employer/gate-scan'],['Worker Compliance Checklists','/employer/worker-compliance-checklists'],
   ['nav.grievanceCentre','/employer/grievances'],
 ] };
@@ -109,6 +108,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
               <div className="p-3 border-b border-gray-100"><p className="font-semibold text-sm">{employer.identity.company}</p><p className="text-xs text-gray-500 font-mono mt-0.5">{employer.identity.bssId}</p></div>
               <Link href="/employer/profile" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-gray-50"><Settings size={16}/>{t('nav.profile')}</Link>
               <Link href="/employer/clra-registers" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-gray-50"><ClipboardCheck size={16}/>Registers Adoption</Link>
+              <Link href="/employer/cost-sheets" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-gray-50"><Calculator size={16}/>Cost Sheet Adoption</Link>
               <Link href="/employer/templates" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-gray-50"><FileText size={16}/>{t('nav.templates')}</Link>
               <Link href="/employer/settings" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-gray-50"><Settings size={16}/>{t('nav.settings')}</Link>
               <SignOutButton className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 rounded-lg hover:bg-red-50"/>

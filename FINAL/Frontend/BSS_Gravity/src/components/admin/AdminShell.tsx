@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Banknote, BookOpenCheck, ChevronDown, Link2, Menu, Users, X } from 'lucide-react';
+import { Banknote, BookOpenCheck, Calculator, ChevronDown, Link2, Menu, Users, X } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import BrandText from '@/components/BrandText';

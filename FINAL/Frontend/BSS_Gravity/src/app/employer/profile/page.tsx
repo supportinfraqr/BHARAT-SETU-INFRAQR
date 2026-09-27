@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from 'react';
-import { Building2, ClipboardCheck, ContactRound, Landmark, LayoutGrid, Lock, Network, Settings, ShieldCheck, Users } from 'lucide-react';
+import { Building2, Calculator, ClipboardCheck, ContactRound, Landmark, LayoutGrid, Lock, Network, Settings, ShieldCheck, Users } from 'lucide-react';
 import StatutoryLicences from '@/components/portal/StatutoryLicences';
 import ClraRegistersPage from '@/components/employer/ClraRegistersPage';
+import OrgCostSheetsPage from '@/components/costsheet/OrgCostSheetsPage';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { ContractorLicence } from '@/types/portal';
 
@@ -17,6 +18,7 @@ const tabs = [
   ['statutory','F · Labour, Statutory & Regulatory',ShieldCheck],
   ['licences','Registrations & Licences',Landmark],
   ['clra-registers','Registers Adoption (CLRA)',ClipboardCheck],
+  ['cost-sheets','Cost Sheet Adoption',Calculator],
   ['workforce','G · Workforce Profile',Users],
   ['employment','H · Employment, Payroll & Wage Practices',Users],
   ['benefits','I · Social Security & Worker Benefits',ShieldCheck],
@@ -119,6 +121,8 @@ export default function EmployerProfilePage() {
         ? <StatutoryLicences rows={licences} onSave={saveLicence} />
         : tab === 'clra-registers'
         ? <ClraRegistersPage />
+        : tab === 'cost-sheets'
+        ? <OrgCostSheetsPage />
         : <section className="bg-white border border-gray-200 rounded-2xl p-6">
         <header className="flex flex-wrap justify-between gap-2 border-b border-gray-100 pb-4">
           <div><h2 className="font-semibold">{tabs.find(item => item[0] === tab)?.[1]}</h2><p className="text-[11px] text-gray-400 mt-0.5">{fields.length} field(s) · BSS_Employer.csv data dictionary</p></div>
