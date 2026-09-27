@@ -74,6 +74,14 @@ function periodMonth(period: string): string {
   return period;
 }
 
+/** Keep only the periods a contractor could actually file for: in the financial
+ *  year they joined, anything ending before the join month is dropped (a
+ *  quarter/half they were not yet on site for). */
+function clampPeriods(periods: string[], fy: string, bindingFY: string, bindingMonthIdx: number): string[] {
+  if (!bindingFY || fy !== bindingFY) return periods;
+  return periods.filter(period => MONTHS.indexOf(periodMonth(period)) >= bindingMonthIdx);
+}
+
 export default function ComplianceSubmissionPage() {
   const { contractor, replaceContractor, refresh, employerScope, scoped } = useContractor();
   const [tab, setTab] = useState<Tab>('submissions');
@@ -83,23 +91,37 @@ export default function ComplianceSubmissionPage() {
   const [siteFilter, setSiteFilter] = useState('all');
   const [batchView, setBatchView] = useState<string | null>(null);
 
-  // Earliest binding the contractor has with the selected site's employer (or with
-  // any employer when showing all sites). The year list starts here so years
-  // before the contractor joined the site are never offered.
+  // The joining date is per site — one contractor can be bound to several
+  // employers, each with a different date. All Sites takes the earliest across
+  // the contractor's sites; only with no site binding does it fall back to the
+  // employer binding, then the incorporation date.
   const bindingSince = useMemo(() => {
-    if (siteFilter !== 'all') {
-      const site = contractor.sites.find(s => s.name === siteFilter);
-      if (site?.boundSince) return site.boundSince.slice(0, 10);
-    }
-    const names = siteFilter === 'all'
-      ? contractor.employers.map(e => e.name)
-      : contractor.sites.filter(s => s.name === siteFilter).map(s => s.employer);
-    const dates = contractor.employers
+    const sites = siteFilter === 'all'
+      ? contractor.sites
+      : contractor.sites.filter(s => s.name === siteFilter);
+    const siteDates = sites.map(s => (s.boundSince || '').slice(0, 10)).filter(Boolean);
+    if (siteDates.length) return siteDates.sort()[0];
+    const names = siteFilter === 'all' ? contractor.employers.map(e => e.name) : sites.map(s => s.employer);
+    const empDates = contractor.employers
       .filter(e => names.includes(e.name))
       .map(e => (e.boundSince || '').slice(0, 10))
       .filter(Boolean);
-    return dates.length ? dates.sort()[0] : '';
+    return empDates.length ? empDates.sort()[0] : '';
   }, [siteFilter, contractor.employers, contractor.sites]);
+
+  // The binding date's financial year and its position in the Apr–Mar month
+  // order, so the periods inside that first year can be clamped.
+  const { bindingFY, bindingMonthIdx } = useMemo(() => {
+    const base = bindingSince || contractor.identity?.incorpDate;
+    const date = base ? new Date(base) : null;
+    if (!date || isNaN(date.getTime())) return { bindingFY: '', bindingMonthIdx: 0 };
+    const m = date.getMonth();
+    const y = date.getFullYear();
+    const endYear = m >= 3 ? y + 1 : y;
+    const monthName = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][m];
+    const idx = MONTHS.indexOf(monthName);
+    return { bindingFY: `FY ${endYear - 1}-${String(endYear).slice(-2)}`, bindingMonthIdx: idx >= 0 ? idx : 0 };
+  }, [bindingSince, contractor.identity?.incorpDate]);
 
   // Financial Years run from the binding date (not incorporation), so a
   // contractor only sees the years they have actually been on the site.
@@ -119,12 +141,21 @@ export default function ComplianceSubmissionPage() {
   const [freq, setFreq] = useState<Frequency>('Monthly');
   const [selectedPeriod, setSelectedPeriod] = useState<string>(MONTHS[5]); // Default September
 
+  // Periods the contractor can actually file for in the chosen year and site.
+  const visiblePeriods = useMemo(
+    () => clampPeriods(periodsFor(freq), selectedYear, bindingFY, bindingMonthIdx),
+    [freq, selectedYear, bindingFY, bindingMonthIdx]);
+
   // Create-submission states
   const [siteName, setSiteName] = useState('');
   const [fy, setFy] = useState(availableYears[0] || 'FY 2026-27');
   const [createFreq, setCreateFreq] = useState<Frequency>('Monthly');
   const [createPeriod, setCreatePeriod] = useState<string>(MONTHS[5]);
   const [viewErrors, setViewErrors] = useState<{ name: string; findings: string[] } | null>(null);
+
+  const visibleCreatePeriods = useMemo(
+    () => clampPeriods(periodsFor(createFreq), fy, bindingFY, bindingMonthIdx),
+    [createFreq, fy, bindingFY, bindingMonthIdx]);
 
   const [uploads, setUploads] = useState<Record<string, EvidenceUpload>>({});
   const [additionalDocs, setAdditionalDocs] = useState<Array<{ name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; type: string; requiredFormat: string; note: string }>>([]);
@@ -142,6 +173,20 @@ export default function ComplianceSubmissionPage() {
       setSelectedYear(availableYears[0]);
     }
   }, [availableYears, selectedYear]);
+
+  // When the site / year / frequency changes, drop a period the contractor can
+  // no longer file for (e.g. a month before they joined the site).
+  useEffect(() => {
+    if (visiblePeriods.length > 0 && !visiblePeriods.includes(selectedPeriod)) {
+      setSelectedPeriod(visiblePeriods[0]);
+    }
+  }, [visiblePeriods, selectedPeriod]);
+
+  useEffect(() => {
+    if (visibleCreatePeriods.length > 0 && !visibleCreatePeriods.includes(createPeriod)) {
+      setCreatePeriod(visibleCreatePeriods[0]);
+    }
+  }, [visibleCreatePeriods, createPeriod]);
 
   // Documents filtered by selected Year
   const yearFilteredDocuments = useMemo(() => {
@@ -487,7 +532,7 @@ export default function ComplianceSubmissionPage() {
             {FREQUENCIES.map(f => (
               <button 
                 key={f} 
-                onClick={() => { setFreq(f); setSelectedPeriod(periodsFor(f)[0]); }} 
+                onClick={() => { setFreq(f); setSelectedPeriod(clampPeriods(periodsFor(f), selectedYear, bindingFY, bindingMonthIdx)[0] ?? periodsFor(f)[0]); }} 
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${freq === f ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
               >
                 {f}
@@ -500,7 +545,7 @@ export default function ComplianceSubmissionPage() {
         <div className="flex items-center gap-3 pt-3 border-t border-gray-100 overflow-x-auto">
           <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Period:</span>
           <div className="flex items-center gap-1.5">
-            {periodsFor(freq).map(p => {
+            {visiblePeriods.map(p => {
               const count = (documentsByPeriod[p]?.length || 0) + (batchCountByPeriod[p] || 0);
               return (
                 <button
@@ -526,13 +571,18 @@ export default function ComplianceSubmissionPage() {
             <p className="text-[11px] text-gray-500 mt-0.5">Registers Batch (1 Unit) + Each Required Statutory Evidence Form counted as a separate item.</p>
           </div>
           <span className="text-[11px] font-bold text-[#073B67] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg">
-            {MONTHS.filter(m => {
-              const p = periodOf(m, freq);
-              const mDocs = documentsByPeriod[p] || [];
-              const hasRegs = (batchCountByPeriod[p] || 0) > 0;
-              const expectedFormsCount = additionalDocs.length || 1;
-              return hasRegs && mDocs.length >= expectedFormsCount;
-            }).length} / 12 Months Fully Submitted
+            {(() => {
+              // Only months the contractor was actually on the site count.
+              const eligible = MONTHS.filter(m => !(selectedYear === bindingFY && MONTHS.indexOf(m) < bindingMonthIdx));
+              const done = eligible.filter(m => {
+                const p = periodOf(m, freq);
+                const mDocs = documentsByPeriod[p] || [];
+                const hasRegs = (batchCountByPeriod[p] || 0) > 0;
+                const expectedFormsCount = additionalDocs.length || 1;
+                return hasRegs && mDocs.length >= expectedFormsCount;
+              }).length;
+              return `${done} / ${eligible.length} Months Fully Submitted`;
+            })()}
           </span>
         </div>
 
@@ -548,13 +598,16 @@ export default function ComplianceSubmissionPage() {
             const isFull = completedUnits >= totalUnits;
             const isPartial = completedUnits > 0 && !isFull;
             const isSelected = selectedPeriod === p;
+            const beforeBinding = selectedYear === bindingFY && MONTHS.indexOf(m) < bindingMonthIdx;
 
             return (
               <button
                 key={m}
                 type="button"
+                disabled={beforeBinding}
                 onClick={() => setSelectedPeriod(p)}
                 className={`p-3 rounded-xl border text-left transition-all relative ${
+                  beforeBinding ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' :
                   isSelected ? 'border-[#073B67] bg-blue-50/60 ring-2 ring-[#073B67]/20 shadow-xs' :
                   isFull ? 'border-emerald-200 bg-emerald-50/30 hover:border-emerald-300' :
                   isPartial ? 'border-blue-200 bg-blue-50/30 hover:border-blue-300' :
@@ -563,7 +616,9 @@ export default function ComplianceSubmissionPage() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-gray-900">{m}</span>
-                  {isFull ? (
+                  {beforeBinding ? (
+                    <span className="text-[10px] font-medium text-gray-400">Not on site yet</span>
+                  ) : isFull ? (
                     <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">
                       {completedUnits}/{totalUnits} Complete
                     </span>
@@ -578,14 +633,14 @@ export default function ComplianceSubmissionPage() {
                   )}
                 </div>
                 
-                <div className="mt-2 space-y-0.5 text-[10px]">
+                {!beforeBinding && <div className="mt-2 space-y-0.5 text-[10px]">
                   <p className={`font-semibold flex items-center gap-1 ${hasRegs ? 'text-emerald-700' : 'text-amber-700'}`}>
                     <span>{hasRegs ? '✓' : '•'}</span> Registers: {hasRegs ? 'Submitted' : 'Pending'}
                   </p>
                   <p className={`font-semibold flex items-center gap-1 ${submittedFormsCount > 0 ? (totalConfiguredForms && submittedFormsCount < totalConfiguredForms ? 'text-blue-700' : 'text-emerald-700') : 'text-amber-700'}`}>
                     <span>{submittedFormsCount > 0 ? '✓' : '•'}</span> Forms: {submittedFormsCount}{totalConfiguredForms ? `/${totalConfiguredForms}` : ''} Submitted
                   </p>
-                </div>
+                </div>}
               </button>
             );
           })}
@@ -638,11 +693,11 @@ export default function ComplianceSubmissionPage() {
           </label>
 
           <label className="text-xs font-bold text-gray-700 block">Frequency
-            <select value={createFreq} onChange={e => { const f = e.target.value as Frequency; setCreateFreq(f); setCreatePeriod(periodsFor(f)[0]); }} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-white font-semibold">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select>
+            <select value={createFreq} onChange={e => { const f = e.target.value as Frequency; setCreateFreq(f); setCreatePeriod(clampPeriods(periodsFor(f), fy, bindingFY, bindingMonthIdx)[0] ?? periodsFor(f)[0]); }} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-white font-semibold">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select>
           </label>
 
           <label className="text-xs font-bold text-gray-700 block">Period
-            <select value={createPeriod} onChange={e => setCreatePeriod(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-white font-semibold">{periodsFor(createFreq).map(p => <option key={p}>{p}</option>)}</select>
+            <select value={createPeriod} onChange={e => setCreatePeriod(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-white font-semibold">{visibleCreatePeriods.map(p => <option key={p}>{p}</option>)}</select>
           </label>
         </div>
 

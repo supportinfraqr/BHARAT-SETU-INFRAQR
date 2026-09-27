@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Download, FileClock, FileSpreadsheet, FileText, Landmark, Plus, ShieldCheck, Trash2, TriangleAlert, Upload, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
@@ -42,7 +42,6 @@ function periodInfo(month: string, year: string, frequency?: string): { label: s
   const end = new Date(endYear, CAL_MONTH[MONTHS_FY[endIdx]], 0); // last day of the end month
   return { label, due: Date.now() >= end.getTime(), periodEnd: end.toISOString().slice(0, 10) };
 }
-const YEARS = ['2026', '2025', '2024'];
 const MONTHS = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
 
 const FREQUENCIES = ['Monthly', 'Quarterly', 'Half Yearly', 'Yearly'] as const;
@@ -91,7 +90,7 @@ export default function ContractorCompliancePage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   // Master file & CLRA generation state
-  const [year, setYear] = useState(YEARS[0]);
+  const [yearChoice, setYearChoice] = useState<string>('');
   const [freq, setFreq] = useState<Frequency>('Monthly');
   const [period, setPeriod] = useState<string>(MONTHS[6]);
   const month = periodMonth(period);
@@ -119,6 +118,24 @@ export default function ContractorCompliancePage() {
   }, {});
   // The selected site (generation + library are scoped to its state).
   const activeSite = contractor.sites.find(s => s.name === siteName) ?? contractor.sites[0];
+  // Years run from the selected site's binding date — a contractor files only
+  // for the years they have been on the site (which differs per employer).
+  const yearOptions = useMemo(() => {
+    const base = activeSite?.boundSince || contractor.identity?.incorpDate;
+    const nowYear = new Date().getFullYear();
+    let startYear = nowYear;
+    if (base) {
+      const parsed = new Date(base);
+      if (!isNaN(parsed.getTime())) startYear = parsed.getFullYear();
+    }
+    const list: string[] = [];
+    for (let y = nowYear; y >= Math.min(startYear, nowYear); y--) list.push(String(y));
+    return list.length ? list : [String(nowYear)];
+  }, [activeSite?.boundSince, contractor.identity?.incorpDate]);
+
+  // Derive the effective year in render (never sync state in an effect), so a
+  // year outside the selected site's range falls back to its latest.
+  const year = yearOptions.includes(yearChoice) ? yearChoice : (yearOptions[0] ?? String(new Date().getFullYear()));
   const activeState = activeSite?.state || allowedStates[0] || '';
   const activeAdoption = adoption[activeState];
   const activeSiteBoard = siteBoards.find(b => String(b.siteId) === String(activeSite?.id));
@@ -397,7 +414,7 @@ export default function ContractorCompliancePage() {
         <div className="p-5 space-y-4">
           <div className="grid sm:grid-cols-2 gap-3">
             <label className="text-xs font-semibold">Site<select value={activeSite?.name || ''} onChange={e => setSiteName(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}</select></label>
-            <label className="text-xs font-semibold">Year<select value={year} onChange={e => setYear(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{YEARS.map(y => <option key={y}>{y}</option>)}</select></label>
+            <label className="text-xs font-semibold">Year<select value={year} onChange={e => setYearChoice(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{yearOptions.map(y => <option key={y}>{y}</option>)}</select></label>
             <label className="text-xs font-semibold">Frequency<select value={freq} onChange={e => { const f = e.target.value as Frequency; setFreq(f); setPeriod(periodsFor(f)[0]); }} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select></label>
             <label className="text-xs font-semibold">Period<select value={period} onChange={e => setPeriod(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{periodsFor(freq).map(p => <option key={p}>{p}</option>)}</select></label>
           </div>
