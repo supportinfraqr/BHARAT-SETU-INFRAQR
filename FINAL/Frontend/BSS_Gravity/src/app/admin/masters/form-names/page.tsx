@@ -128,7 +128,7 @@ export default function AdminFormNamesPage() {
       </div>
     </section>
 
-    {showAdd && <div className="fixed inset-0 z-[70] bg-black/50 grid place-items-center p-4" role="presentation"><section role="dialog" aria-modal="true" aria-label="Add catalog form" className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+    {showAdd && <div className="fixed inset-0 z-[70] bg-black/50 grid place-items-center p-4" role="presentation"><section role="dialog" aria-modal="true" aria-label="Add catalog form" className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-xl">
       <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between"><h2 className="text-sm font-semibold">Add catalog form — {state}</h2><button onClick={() => setShowAdd(false)} aria-label="Close"><X size={16}/></button></header>
       <div className="p-5 space-y-3">
         <label className="block text-xs font-semibold text-gray-700">Form name *<input value={name} onChange={e => setName(e.target.value)} autoFocus placeholder="e.g., Police Verification" className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm"/></label>
@@ -158,7 +158,7 @@ export default function AdminFormNamesPage() {
         <p className="text-[11px] text-gray-400">Catalog forms are non-mandatory — employers choose which to apply and whether they are mandatory for their contractors.</p>
         {error && <p className="text-xs text-red-700">{error}</p>}
       </div>
-      <footer className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2"><button type="button" onClick={() => setShowAdd(false)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button><button type="button" onClick={() => void add()} disabled={busy || !name.trim()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Submitting…' : 'Submit'}</button></footer>
+      <footer className="sticky bottom-0 px-5 py-4 border-t border-gray-100 bg-white flex justify-end gap-2"><button type="button" onClick={() => setShowAdd(false)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button><button type="button" onClick={() => void add()} disabled={busy || !name.trim()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Submitting…' : 'Submit'}</button></footer>
     </section></div>}
   </div>;
 }

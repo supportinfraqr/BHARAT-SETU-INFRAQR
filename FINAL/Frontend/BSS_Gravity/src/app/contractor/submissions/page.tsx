@@ -79,10 +79,26 @@ export default function ComplianceSubmissionPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [siteFilter, setSiteFilter] = useState('all');
 
-  // Dynamically compute registration-based Financial Years
+  // Earliest binding the contractor has with the selected site's employer (or with
+  // any employer when showing all sites). The year list starts here so years
+  // before the contractor joined the site are never offered.
+  const bindingSince = useMemo(() => {
+    const names = siteFilter === 'all'
+      ? contractor.employers.map(e => e.name)
+      : contractor.sites.filter(s => s.name === siteFilter).map(s => s.employer);
+    const dates = contractor.employers
+      .filter(e => names.includes(e.name))
+      .map(e => (e.boundSince || '').slice(0, 10))
+      .filter(Boolean);
+    return dates.length ? dates.sort()[0] : '';
+  }, [siteFilter, contractor.employers, contractor.sites]);
+
+  // Financial Years run from the binding date (not incorporation), so a
+  // contractor only sees the years they have actually been on the site.
   const availableYears = useMemo(() => {
-    const regYears = getFinancialYearsFromDate(contractor.identity?.incorpDate);
+    const regYears = getFinancialYearsFromDate(bindingSince || contractor.identity?.incorpDate);
     const docYears: string[] = [];
     (contractor.submissions.documents as DocumentRow[]).forEach(doc => {
       const fyStr = doc.financialYear || (doc.period?.includes('FY') ? doc.period.slice(doc.period.indexOf('FY')) : '');
@@ -90,13 +106,12 @@ export default function ComplianceSubmissionPage() {
     });
     const merged = Array.from(new Set([...regYears, ...docYears]));
     return merged.sort().reverse();
-  }, [contractor.identity?.incorpDate, contractor.submissions.documents]);
+  }, [bindingSince, contractor.identity?.incorpDate, contractor.submissions.documents]);
 
   // Default state filters
   const [selectedYear, setSelectedYear] = useState<string>(availableYears[0] || 'FY 2026-27');
   const [freq, setFreq] = useState<Frequency>('Monthly');
   const [selectedPeriod, setSelectedPeriod] = useState<string>(MONTHS[5]); // Default September
-  const [siteFilter, setSiteFilter] = useState('all');
 
   // Create-submission states
   const [siteName, setSiteName] = useState('');
