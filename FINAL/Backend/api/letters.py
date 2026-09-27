@@ -176,6 +176,15 @@ def _letter_tokens(binding, letter_type: str, logo_url: str = "") -> dict:
     esic_val = cb.get("statutoryEmployer", {}).get("ESIC") if isinstance(cb.get("statutoryEmployer"), dict) else None
     takehome_val = cb.get("netTakeHome")
 
+    # Principal Employer BSS ID / Code
+    site = binding.site
+    employer = getattr(site, "employer", None) if site else None
+    ep = getattr(employer, "employer_profile", None) if employer else None
+    employer_bss_id = _e(getattr(ep, "employer_code", "") or getattr(employer, "username", ""))
+
+    # Detailed Salary & CTC Breakdown Table
+    salary_table = _cost_sheet_section(cs, cb)
+
     return {
         "letterTitle": _e(LETTER_NAMES.get(letter_type, "Letter")),
         "refNo": _e(ref),
@@ -188,7 +197,8 @@ def _letter_tokens(binding, letter_type: str, logo_url: str = "") -> dict:
         "costSheetName": _e(cs_name),
         "costSheetCategory": _e(cs_cat),
         "costSheetGrade": _e(cs_grade),
-        "costSheetSection": _cost_sheet_section(cs, cb),
+        "costSheetSection": salary_table,
+        "salaryBreakdownTable": salary_table,
         "ctc": _money(ctc_val),
         "epfEmployer": _money(epf_val),
         "esicEmployer": _money(esic_val),
@@ -196,6 +206,7 @@ def _letter_tokens(binding, letter_type: str, logo_url: str = "") -> dict:
         "contractorName": p["contractor"], "contractorBssId": p["contractorBss"],
         "contractorAddress": p["contractorAddr"],
         "employerName": p["employer"],
+        "employerBssId": employer_bss_id,
         "siteName": p["site"], "siteAddress": p["siteAddr"],
         "logoUrl": logo_url or "",
     }
@@ -310,22 +321,50 @@ def render_letter(binding, letter_type: str) -> str:
     return _shell(f"{LETTER_NAMES[letter_type]} — {w['name']}", body)
 
 
+def _letter_as_pdf(binding, letter_type: str, html: str):
+    """Server-side HTML→PDF snapshots for worker letters. Falls back to the
+    HTML source when the converter is unavailable so letters are never blocked."""
+    try:
+        from weasyprint import HTML
+        from weasyprint.text.fonts import FontConfiguration
+    except Exception:
+        return None
+    try:
+        font_config = FontConfiguration()
+        return HTML(string=html).write_pdf(font_config=font_config)
+    except Exception:
+        return None
+
+
 def issue_letter(binding, letter_type: str):
     """Create/refresh the system-issued letter for the binding's worker.
 
-    Idempotent: any previous auto-issued letter of the same type is replaced."""
+    Issued letters are immutable snapshots bound to a specific engagement
+    (binding.id). When a site or contractor changes, existing letters remain
+    in history so the worker retains their past appointment and releasing letters.
+    Each letter is stored as a real PDF (server-rendered) — the worker's link
+    opens the fixed file, never a live re-render."""
     code = LETTER_CODES.get(letter_type)
     if not code or binding is None or binding.worker is None:
         return None
     master = WorkerDocumentMaster.objects.filter(code=code).first()
     if master is None:
         return None
-    content = render_letter(binding, letter_type).encode("utf-8")
-    filename = f"{code}-{binding.id}-{binding.worker_id}.html"
-    WorkerDocument.objects.filter(user=binding.worker, document=master, auto_generated=True).delete()
+    html = render_letter(binding, letter_type)
+    pdf = _letter_as_pdf(binding, letter_type, html)
+    if pdf:
+        filename = f"{code}-{binding.id}-{binding.worker_id}.pdf"
+        content, mime = pdf, "application/pdf"
+    else:
+        filename = f"{code}-{binding.id}-{binding.worker_id}.html"
+        content, mime = html.encode("utf-8"), "text/html"
+    # Delete previous generation ONLY for the exact same binding ID (snapshot protection)
+    WorkerDocument.objects.filter(
+        user=binding.worker, document=master, auto_generated=True, file_name__startswith=f"{code}-{binding.id}-"
+    ).delete()
     doc = WorkerDocument(
         user=binding.worker, document=master, file_name=filename,
-        mime_type="text/html", status="UPLOADED", is_mandatory=False,
+        mime_type=mime, status="UPLOADED", is_mandatory=False,
         owner_role="system", auto_generated=True, file_size=len(content),
     )
     doc.file.save(filename, ContentFile(content), save=False)

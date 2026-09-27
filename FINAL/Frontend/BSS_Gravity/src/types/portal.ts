@@ -207,6 +207,7 @@ export type ContractorJobPosting = {
 
 export type ContractorBindingRequest = {
   id: string; type: 'Worker' | 'Employer'; entityName: string; bssId: string; site: string; employer: string; designation: string; wage: string; requestedOn: string;
+  costSheetId?: number | null; costSheet?: string; costSheetName?: string;
   status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancelled' | 'Expired' | 'Site Changed';
   /** Who raised the request and who accepted it (role labels). */
   initiatedBy?: string; acceptedBy?: string;
@@ -660,9 +661,10 @@ export type BonusRecord = { id:string; period:string; reason:string; amount:numb
 export type LeaveEncashmentRecord = { id:string; period:string; days:number; rate:number; amount:number; paidOn:string; status:'Credited'|'Processing'|'Pending' };
 
 export type WorkerDocument = { name:string; mandatory:boolean; owner:'Worker'|'Contractor'|'System'; status:string; date:string|null; downloadUrl?:string };
+export type WorkerIssuedLetter = { id:number; name:string; letterType:'appointment'|'experience'; code:string; date:string|null; fileName:string; downloadUrl:string; bindingId:number|null; current:boolean };
 export type WorkerJobRequest = { id:string; employer:string; contractor:string; site:string; designation:string; wage:number; currency:string; payPeriod:string; duration:string; facilities:string[]; status:'Pending'|'Accepted'|'Rejected'|'Cancelled'|'Expired'; dateReceived:string };
 export type WorkerAvailableJob = { id:string; jobId:number; title:string; subTitle:string; employer:string; postedDate:string; description:string; wage:string; state:string; city:string; designation:string; experience:string; dobLimit:string; vacancies:number; matchScore:number; matchBadge:boolean };
-export type WorkerBindingRequest = { id:number; ref:string; contractor:string; contractorCode:string; lin:string; employer:string; site:string; designation:string; wage:string; requestedOn:string; status:'Pending'|'Accepted'|'Rejected'|'Expired'|'Cancelled'|'Site Changed'; initiatedBy?:string; acceptedBy?:string; contractorDetails?:{name:string;code:string;tradeName:string;lin:string;contactPerson:string;email:string;state:string;address:string}; consentWorker?:boolean; consentContractor?:boolean; unbindRequested?:boolean; unbindConsentWorker?:boolean; unbindConsentContractor?:boolean; history?: BindingHistoryEvent[] };export type LabourLawItem = { ruleId: import('@/lib/labour-compliance').RuleId; status: import('@/lib/labour-compliance').RuleStatus; headline: string; detail: string; updatedAt: string };
+export type WorkerBindingRequest = { id:number; ref:string; contractor:string; contractorCode:string; lin:string; employer:string; site:string; designation:string; wage:string; costSheetId?:number | null; costSheet?:string; costSheetName?:string; requestedOn:string; status:'Pending'|'Accepted'|'Rejected'|'Expired'|'Cancelled'|'Site Changed'; initiatedBy?:string; acceptedBy?:string; contractorDetails?:{name:string;code:string;tradeName:string;lin:string;contactPerson:string;email:string;state:string;address:string}; consentWorker?:boolean; consentContractor?:boolean; unbindRequested?:boolean; unbindConsentWorker?:boolean; unbindConsentContractor?:boolean; history?: BindingHistoryEvent[] };export type LabourLawItem = { ruleId: import('@/lib/labour-compliance').RuleId; status: import('@/lib/labour-compliance').RuleStatus; headline: string; detail: string; updatedAt: string };
 export type EmployerLabourCompliance = { ruleId: import('@/lib/labour-compliance').RuleId; scope: import('@/lib/labour-compliance').GovtScope; status: import('@/lib/labour-compliance').RuleStatus; note: string; verifiedAt: string };
 export type CourseSubmissionView = { content:string; fileUrl:string; status:string; score:number|null; feedback:string; submittedAt:string };
 export type CourseAssignmentView = { id:string; title:string; passScore:number; score:number|null; passed:boolean; type:'QUIZ'|'WRITING'|'UPLOAD'; instructions:string; questions:Array<{id:string;question:string;options:string[]}>; submission:CourseSubmissionView|null };
@@ -686,6 +688,7 @@ export type WorkerPortalData = {
   announcements: Array<{id:string;title:string;description:string;publisher:string;published:string;eventDate:string|null;priority:'Important'|'Normal';category:string}>;
   courses: LearningCourse[];
   documents: WorkerDocument[];
+  issuedLetters?: WorkerIssuedLetter[];
   jobRequests: WorkerJobRequest[];
   availableJobs: WorkerAvailableJob[];
   bindings: WorkerBindingRequest[];

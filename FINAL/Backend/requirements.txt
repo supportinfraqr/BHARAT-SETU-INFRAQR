@@ -13,4 +13,7 @@ xlrd==2.0.2
 rapidocr-onnxruntime==1.4.4
 pypdfium2==5.13.0
 
+# Server-side HTML→PDF for issued worker letters (fixed snapshots).
+weasyprint==66.0
+
 cryptography

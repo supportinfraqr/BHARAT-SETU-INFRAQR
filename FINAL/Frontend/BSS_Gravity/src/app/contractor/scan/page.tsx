@@ -30,7 +30,6 @@ export default function ContractorScanPage() {
   const [alreadyPending, setAlreadyPending] = useState(false);
   const [sentBssIds, setSentBssIds] = useState<string[]>([]);
   const [attendanceMarked, setAttendanceMarked] = useState(false);
-  const [unbindRequested, setUnbindRequested] = useState(false);
   const [scanned, setScanned] = useState<Payload | null>(null);
   const [selectedSite, setSelectedSite] = useState(contractor.defaultSite?.name ?? contractor.sites[0]?.name ?? '');
   const [costSheets, setCostSheets] = useState<Array<{ id:number; name:string; code:string; designation?:string; status?:string; ownerId?:number|null; siteId?:number|null; siteName?:string }>>([]);
@@ -86,6 +85,11 @@ export default function ContractorScanPage() {
   // A site change invalidates a previously picked sheet.
   // eslint-disable-next-line react-hooks/set-state-in-effect -- reset selection on site change
   useEffect(() => { setCostSheetId(''); }, [selectedSite]);
+
+  // The already-bound worker's live binding — used to show its cost sheet.
+  const boundWorker = entity?.kind === 'worker'
+    ? contractor.bindingRequests.find(b => b.type === 'Worker' && b.bssId === entity.bssId && (b.status === 'Accepted' || b.status === 'Pending'))
+    : undefined;
 
   const verify = async (text: string) => {
     try {
@@ -165,7 +169,6 @@ export default function ContractorScanPage() {
         setRequestSent(false);
         setAlreadyPending(Boolean(pending) || sentHere);
         setAttendanceMarked(false);
-        setUnbindRequested(false);
         setState("binding");
         setMessage(known ? "Worker is bound to you — mark today's attendance." : pending ? "Binding request already sent — awaiting the worker's approval." : "Worker identified — review current relationship before requesting binding");
         // Load the tiered identity record: public-safe now, extensive when bound.
@@ -238,26 +241,6 @@ export default function ContractorScanPage() {
     }
   };
 
-  const requestUnbind = async () => {
-    if (!entity) return;
-    const row = contractor.bindingRequests.find(b => b.bssId === entity.bssId && b.type === 'Worker' && (b.status === 'Accepted' || b.status === 'Pending'));
-    if (!row) { setMessage('No active binding found for this worker.'); return; }
-    try {
-      const response = await fetch('/api/worker/bindings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: row.id, action: 'unbind', side: 'contractor' }),
-      });
-      const result = await response.json().catch(() => ({})) as { error?: string };
-      if (!response.ok) throw new Error(result.error || 'Unbind could not be requested.');
-      setUnbindRequested(true);
-      setMessage(`Unbind requested for ${entity.name} — the worker must confirm. Once unbound you can bind the worker to a different site.`);
-      void refresh();
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'Unbind could not be requested.');
-    }
-  };
-
   const startCamera = async () => {
     primeAudio();
     setState("scanning"); setMessage("Point the camera at a BSS Worker or Employer QR code");
@@ -275,7 +258,7 @@ export default function ContractorScanPage() {
     catch { setState("error"); setMessage("No valid QR code could be read from that image."); }
   };
 
-  const reset = () => { controls.current?.stop(); setResult(null); setVerifyData(null); setEntity(null); setRequestSent(false); setAttendanceMarked(false); setUnbindRequested(false); setConfirmOpen(false); setMessage(""); setState("idle"); };
+  const reset = () => { controls.current?.stop(); setResult(null); setVerifyData(null); setEntity(null); setRequestSent(false); setAttendanceMarked(false); setConfirmOpen(false); setMessage(""); setState("idle"); };
   // A live binding unlocks the worker's verified identity details for this contractor.
 
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
@@ -355,13 +338,11 @@ export default function ContractorScanPage() {
               )}
               {entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId)
                 ? <div className="space-y-3">
-                    <p className="text-xs text-gray-600 bg-gray-50 rounded-xl p-3">This worker is bound to you at <strong>{entity.site}</strong>. A worker holds one active site at a time — to move them to a different site, unbind this binding first, then bind again.</p>
+                    <p className="text-xs text-gray-600 bg-gray-50 rounded-xl p-3">This worker is bound to you at <strong>{entity.site}</strong>. A worker holds one active site at a time — bind this worker at another site to move them there directly; no unbind needed.</p>
+                    {boundWorker?.costSheetName && <p className="text-xs text-[#073B67] bg-blue-50 rounded-xl p-3">Cost sheet: <strong>{boundWorker.costSheetName}</strong>{boundWorker.costSheet ? <span className="text-gray-500"> · {boundWorker.costSheet}</span> : null}</p>}
                     {attendanceMarked
                       ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Attendance marked for {entity.name}. It is now visible on the worker&apos;s Attendance page.</p>
                       : <button onClick={markAttendance} className="w-full h-11 rounded-xl bg-green-600 text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-700"><CheckCircle2 size={17}/>Mark today&apos;s attendance</button>}
-                    {unbindRequested
-                      ? <p className="p-3 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>Unbind requested — awaiting {entity.name}&apos;s confirmation. Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
-                      : <button onClick={requestUnbind} className="w-full h-11 rounded-xl border border-red-200 text-red-700 text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-50">Unbind to change site</button>}
                   </div>
                 : alreadyPending
                   ? <p className="p-3 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>Binding request already sent — awaiting {entity.name}&apos;s approval. Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>

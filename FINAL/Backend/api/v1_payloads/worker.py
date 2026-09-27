@@ -5,6 +5,9 @@ from .common import *  # noqa: F401,F403
 from .shared import *  # noqa: F401,F403
 
 
+_LETTER_MASTER_CODES = {"APPT", "EXPL"}
+
+
 def _worker_identity_section(identity):
     category = ""
     if identity:
@@ -847,10 +850,18 @@ def _worker_documents_display(user):
     """The worker's document register: the master catalog merged with the
     worker's own uploads (uploads override catalog rows). Duplicate catalog
     entries with the same document name are collapsed to one row."""
-    uploads = {
-        d.document_id: d
-        for d in WorkerDocument.objects.select_related("document").filter(user=user)
-    }
+    # One row per document master. Auto-issued letters (appointment /
+    # experience) keep the EARLIEST snapshot so a later site transfer never
+    # replaces the worker's original engagement letter; worker uploads keep the
+    # most recent copy.
+    uploads = {}
+    for d in (WorkerDocument.objects.select_related("document")
+              .filter(user=user).order_by("id")):
+        if d.document_id in uploads:
+            code = (d.document.code if d.document else "") or ""
+            if d.auto_generated and code in _LETTER_MASTER_CODES:
+                continue
+        uploads[d.document_id] = d
     rows = []
     masters = list(WorkerDocumentMaster.objects.all().order_by("sort_order", "id"))
     seen = set()
@@ -921,6 +932,40 @@ def _worker_documents_display(user):
         elif _doc_row_rank(row) > _doc_row_rank(best[key]):
             best[key] = row
     return [best[k] for k in order]
+
+
+def _worker_issued_letters(user):
+    """Every system-issued worker letter (appointment / experience), newest
+    first, each flagged with whether it belongs to the worker's CURRENT active
+    engagement. Lets the UI show "current" and "older" letters as separate
+    sections instead of collapsing them by document master."""
+    masters = {m.code: m for m in WorkerDocumentMaster.objects.filter(
+        code__in=_LETTER_MASTER_CODES)}
+    if not masters:
+        return []
+    active_binding = (WorkerContractorBinding.objects
+                      .filter(worker=user, binding_status="ACCEPTED")
+                      .order_by("-accepted_at").values_list("id", flat=True).first())
+    rows = []
+    for d in (WorkerDocument.objects.select_related("document")
+              .filter(user=user, auto_generated=True,
+                      document_id__in=[m.id for m in masters.values()])
+              .order_by("-uploaded_at", "-id")):
+        m = masters.get(d.document.code) or d.document
+        match = re.match(r"^(APPT|EXPL)-(\d+)-", d.file_name or "")
+        binding_id = int(match.group(2)) if match else None
+        rows.append({
+            "id": d.id,
+            "name": _d(m.document_name if m else ""),
+            "letterType": "appointment" if (match and match.group(1) == "APPT") else "experience",
+            "code": _d(d.document.code if d.document else ""),
+            "date": _dts(d.uploaded_at),
+            "fileName": _d(d.file_name),
+            "downloadUrl": f"/api/worker/documents/{d.id}/file" if d.file else "",
+            "bindingId": binding_id,
+            "current": bool(binding_id and active_binding and binding_id == active_binding),
+        })
+    return rows
 
 
 def _worker_job_requests(user):
@@ -1149,6 +1194,7 @@ def build_worker_portal(user):
         "announcements": _worker_announcements(),
         "courses": _worker_courses(user),
         "documents": _worker_documents_display(user),
+        "issuedLetters": _worker_issued_letters(user),
         "jobRequests": _worker_job_requests(user),
         "availableJobs": _worker_available_jobs(user),
         "bindings": _worker_bindings(user),

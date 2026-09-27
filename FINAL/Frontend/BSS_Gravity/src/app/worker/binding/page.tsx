@@ -19,6 +19,9 @@ type BindingRequest = {
   site: string;
   designation: string;
   wage: string;
+  costSheetId?: number | null;
+  costSheet?: string;
+  costSheetName?: string;
   requestedOn: string;
   status: 'Pending' | 'Accepted' | 'Rejected' | 'Expired' | 'Cancelled' | 'Site Changed';
   initiatedBy?: string;
@@ -47,6 +50,9 @@ export default function BindingRequestsPage() {
     site: String(req.site || ''),
     designation: String(req.designation || ''),
     wage: String(req.wage || ''),
+    costSheetId: req.costSheetId ?? null,
+    costSheet: String(req.costSheet || ''),
+    costSheetName: String(req.costSheetName || ''),
     requestedOn: String(req.requestedOn || '—'),
     status: (['Pending', 'Accepted', 'Rejected', 'Expired', 'Cancelled', 'Site Changed'].includes(req.status) ? req.status : 'Pending') as BindingRequest['status'],
     initiatedBy: String(req.initiatedBy || ''),
@@ -186,7 +192,7 @@ export default function BindingRequestsPage() {
             <div><dt className="text-gray-400">Principal employer</dt><dd className="font-semibold text-gray-800 mt-0.5">{req.employer}</dd></div>
             <div><dt className="text-gray-400">Site</dt><dd className="font-semibold text-gray-800 mt-0.5 flex items-center gap-1"><MapPin size={11} className="text-gray-400"/>{req.site}</dd></div>
             <div><dt className="text-gray-400">Designation</dt><dd className="font-semibold text-gray-800 mt-0.5">{req.designation}</dd></div>
-            <div><dt className="text-gray-400">Offered wage</dt><dd className="font-semibold text-green-700 mt-0.5">{req.wage}</dd></div>
+            <div><dt className="text-gray-400">Cost sheet</dt><dd className="font-semibold text-green-700 mt-0.5">{req.costSheetName || req.wage || '—'}</dd></div>
           </dl>
 
           {req.status === 'Accepted' && req.contractorDetails && (
