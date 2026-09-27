@@ -1178,6 +1178,7 @@ def _contractor_profile_sections(user):
         ],
         "declarations": [
             _f("Consent for Data Processing", "", "Contractor"),
+            _f("Member of BSS Since", _date_str(getattr(cp, "registered_at", None)) if cp else "", "System", field_type="date"),
             _f("Consent Date", getattr(cp, "consent_date", "") if cp else "", "System", field_type="date"),
             _f("Registration Source", getattr(cp, "registration_source", "") if cp else "", "System"),
             _f("Registered By", getattr(cp, "registered_by", "") if cp else "", "System"),
