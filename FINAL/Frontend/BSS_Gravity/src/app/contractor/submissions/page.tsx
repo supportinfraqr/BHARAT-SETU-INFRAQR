@@ -109,6 +109,8 @@ export default function ComplianceSubmissionPage() {
     }
   }, [contractor.sites, siteFilter]);
   const [batchView, setBatchView] = useState<string | null>(null);
+  // Lets the contractor backfill documents for periods before they joined the site.
+  const [allowPast, setAllowPast] = useState(false);
 
   // The joining date is per site — one contractor can be bound to several
   // employers, each with a different date. All Sites takes the earliest across
@@ -131,6 +133,7 @@ export default function ComplianceSubmissionPage() {
   // The binding date's financial year and its position in the Apr–Mar month
   // order, so the periods inside that first year can be clamped.
   const { bindingFY, bindingMonthIdx } = useMemo(() => {
+    if (allowPast) return { bindingFY: '', bindingMonthIdx: 0 };
     const base = bindingSince || contractor.identity?.incorpDate;
     const date = base ? new Date(base) : null;
     if (!date || isNaN(date.getTime())) return { bindingFY: '', bindingMonthIdx: 0 };
@@ -140,12 +143,13 @@ export default function ComplianceSubmissionPage() {
     const monthName = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][m];
     const idx = MONTHS.indexOf(monthName);
     return { bindingFY: `FY ${endYear - 1}-${String(endYear).slice(-2)}`, bindingMonthIdx: idx >= 0 ? idx : 0 };
-  }, [bindingSince, contractor.identity?.incorpDate]);
+  }, [allowPast, bindingSince, contractor.identity?.incorpDate]);
 
   // Financial Years run from the binding date (not incorporation), so a
-  // contractor only sees the years they have actually been on the site.
+  // contractor only sees the years they have actually been on the site —
+  // unless they opt to backfill past documents, which opens earlier years.
   const availableYears = useMemo(() => {
-    const regYears = getFinancialYearsFromDate(bindingSince || contractor.identity?.incorpDate);
+    const regYears = getFinancialYearsFromDate(allowPast ? contractor.identity?.incorpDate : (bindingSince || contractor.identity?.incorpDate));
     const docYears: string[] = [];
     (contractor.submissions.documents as DocumentRow[]).forEach(doc => {
       const fyStr = doc.financialYear || (doc.period?.includes('FY') ? doc.period.slice(doc.period.indexOf('FY')) : '');
@@ -153,7 +157,7 @@ export default function ComplianceSubmissionPage() {
     });
     const merged = Array.from(new Set([...regYears, ...docYears]));
     return merged.sort().reverse();
-  }, [bindingSince, contractor.identity?.incorpDate, contractor.submissions.documents]);
+  }, [allowPast, bindingSince, contractor.identity?.incorpDate, contractor.submissions.documents]);
 
   // Default state filters
   const [selectedYear, setSelectedYear] = useState<string>(availableYears[0] || 'FY 2026-27');
@@ -192,6 +196,14 @@ export default function ComplianceSubmissionPage() {
       setSelectedYear(availableYears[0]);
     }
   }, [availableYears, selectedYear]);
+
+  // Keep the create form's year valid too (it narrows again when the past-docs
+  // toggle is turned back off).
+  useEffect(() => {
+    if (availableYears.length > 0 && !availableYears.includes(fy)) {
+      setFy(availableYears[0]);
+    }
+  }, [availableYears, fy]);
 
   // When the site / year / frequency changes, drop a period the contractor can
   // no longer file for (e.g. a month before they joined the site).
@@ -722,6 +734,15 @@ export default function ComplianceSubmissionPage() {
           <label className="text-xs font-bold text-gray-700 block">Period
             <select value={createPeriod} onChange={e => setCreatePeriod(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-white font-semibold">{visibleCreatePeriods.map(p => <option key={p}>{p}</option>)}</select>
           </label>
+
+          <button
+            type="button"
+            onClick={() => setAllowPast(v => !v)}
+            className={`w-full h-10 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${allowPast ? 'bg-[#073B67] text-white border-[#073B67]' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+          >
+            {allowPast ? '✓ Submitting past documents' : 'Submit past documents'}
+          </button>
+          {allowPast && <p className="text-[11px] text-gray-500">Earlier financial years are now selectable — pick the year and period the documents belong to.</p>}
         </div>
 
         <div>
