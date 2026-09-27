@@ -15,7 +15,7 @@ import re
 from html import unescape
 
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.styles import Alignment, Font
 
 from .master_sheet import MASTER_COLUMNS, MASTER_FIELD_KEYS, MASTER_HEADER_KEYS
 
@@ -405,12 +405,9 @@ def build_master_template():
     wb = Workbook()
     ws = wb.active
     ws.title = "Master"
-    header_fill = PatternFill("solid", fgColor="0A192F")
-    header_font = Font(bold=True, color="FFFFFF")
     for col, label in enumerate(MASTER_TEMPLATE_COLUMNS, start=1):
         cell = ws.cell(row=1, column=col, value=label)
-        cell.fill = header_fill
-        cell.font = header_font
+        cell.font = Font(bold=True)
         ws.column_dimensions[cell.column_letter].width = max(14, len(label) + 4)
     out = io.BytesIO()
     wb.save(out)
@@ -445,6 +442,8 @@ def _header_lines_from_html(html_text, template, rows, context):
         for token, source in _META_TOKEN_SOURCES.items():
             inner = inner.replace("{{" + token + "}}", str((context or {}).get(source, "")))
         inner = inner.replace("{{ACT}}", str(template.get("act", "")))
+        inner = inner.replace("{{TITLE}}", str(template.get("title", "")))
+        inner = inner.replace("{{FORM_CODE}}", str(template.get("formCode", "")))
         plain = _TAG_RE.sub("", inner)
         plain = re.sub(r"\s+", " ", unescape(plain).replace("\xa0", " ")).strip()
         if plain and re.search(r"[A-Za-z0-9]", plain):
@@ -468,6 +467,8 @@ def _footer_lines_from_html(html_text, template, rows, context):
         for token, source in _META_TOKEN_SOURCES.items():
             inner = inner.replace("{{" + token + "}}", str((context or {}).get(source, "")))
         inner = inner.replace("{{ACT}}", str(template.get("act", "")))
+        inner = inner.replace("{{TITLE}}", str(template.get("title", "")))
+        inner = inner.replace("{{FORM_CODE}}", str(template.get("formCode", "")))
         plain = _TAG_RE.sub("", inner)
         plain = re.sub(r"\s+", " ", unescape(plain).replace("\xa0", " ")).strip()
         if plain and re.search(r"[A-Za-z0-9]", plain):
@@ -475,11 +476,11 @@ def _footer_lines_from_html(html_text, template, rows, context):
     return lines
 
 
-def _write_template_sheet(wb, template, rows, header_fill, header_font, context=None):
+def _write_template_sheet(wb, template, rows, context=None):
     columns = [str(c) for c in (template.get("columns") or [])]
     if not columns:
         columns = [label for label, _ in REGISTER_COLUMNS]
-    title = (template.get("formCode") or template.get("title") or "Register")[:31]
+    title = (template.get("title") or template.get("formCode") or "Register")[:31]
     ws = wb.create_sheet(title=title)
     field_mappings = template.get("fieldMappings") or {}
     mapping = [(field_mappings.get(col) or match_column(col)) for col in columns]
@@ -500,8 +501,7 @@ def _write_template_sheet(wb, template, rows, header_fill, header_font, context=
 
     for col, label in enumerate(columns, start=1):
         cell = ws.cell(row=table_row, column=col, value=label)
-        cell.fill = header_fill
-        cell.font = header_font
+        cell.font = Font(bold=True)
         cell.alignment = Alignment(horizontal="center", wrap_text=True)
     for i, row in enumerate(rows, start=1):
         for col, key in enumerate(mapping, start=1):
@@ -526,9 +526,7 @@ def build_register_workbook(template, rows, context=None):
     and calculation rules)."""
     wb = Workbook()
     wb.remove(wb.active)
-    header_fill = PatternFill("solid", fgColor="0A192F")
-    header_font = Font(bold=True, color="FFFFFF")
-    _write_template_sheet(wb, template, rows, header_fill, header_font, context)
+    _write_template_sheet(wb, template, rows, context)
     out = io.BytesIO()
     wb.save(out)
     return out.getvalue()
@@ -545,8 +543,6 @@ def build_workbook(rows, *, contractor="", employer="", site="", site_code="", s
     registers = list(registers or [])
     templates = list(templates or [])
     wb = Workbook()
-    header_fill = PatternFill("solid", fgColor="0A192F")
-    header_font = Font(bold=True, color="FFFFFF")
 
     if templates:
         # CLRA registers render exactly like the source: one sheet per register
@@ -562,7 +558,7 @@ def build_workbook(rows, *, contractor="", employer="", site="", site_code="", s
             # form-style templates (no columns) render to PDF, not Excel.
             if not template.get("columns"):
                 continue
-            _write_template_sheet(wb, template, rows, header_fill, header_font, context)
+            _write_template_sheet(wb, template, rows, context)
         out = io.BytesIO()
         wb.save(out)
         return out.getvalue()
@@ -596,8 +592,7 @@ def build_workbook(rows, *, contractor="", employer="", site="", site_code="", s
         ws["A2"] = f"Form: {reg.get('formNo', '')}    Frequency: {reg.get('frequency', '')}"
         for col, (label, _) in enumerate(REGISTER_COLUMNS, start=1):
             cell = ws.cell(row=4, column=col, value=label)
-            cell.fill = header_fill
-            cell.font = header_font
+            cell.font = Font(bold=True)
             cell.alignment = Alignment(horizontal="center")
         for i, row in enumerate(rows, start=1):
             ws.cell(row=4 + i, column=1, value=i)
