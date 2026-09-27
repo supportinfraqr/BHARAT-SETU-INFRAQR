@@ -149,7 +149,14 @@ export default function ComplianceSubmissionPage() {
   // contractor only sees the years they have actually been on the site —
   // unless they opt to backfill past documents, which opens earlier years.
   const availableYears = useMemo(() => {
-    const regYears = getFinancialYearsFromDate(allowPast ? contractor.identity?.incorpDate : (bindingSince || contractor.identity?.incorpDate));
+    const now = new Date();
+    // Backfilling opens the last 6 financial years (or back to incorporation,
+    // whichever is earlier) so previous years are always selectable.
+    const earliest = new Date(now.getFullYear() - 6, 0, 1).toISOString().slice(0, 10);
+    const base = allowPast
+      ? [contractor.identity?.incorpDate, earliest].filter(Boolean).sort()[0]
+      : (bindingSince || contractor.identity?.incorpDate);
+    const regYears = getFinancialYearsFromDate(base);
     const docYears: string[] = [];
     (contractor.submissions.documents as DocumentRow[]).forEach(doc => {
       const fyStr = doc.financialYear || (doc.period?.includes('FY') ? doc.period.slice(doc.period.indexOf('FY')) : '');
