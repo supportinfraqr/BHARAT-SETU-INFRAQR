@@ -71,6 +71,11 @@ def session_for(site_key):
     return next((s for s in list_sessions() if str(s.get("site")) == key), None)
 
 
+def enroll(person, images):
+    """Enrol a worker's face photos into the pipeline gallery (keyed by BSS id)."""
+    return _request("POST", "/enroll", {"person": str(person), "images": list(images)}, timeout=60)
+
+
 def recognize_frame(site_key, image):
     """Send one browser-captured frame (base64 jpeg) for recognition."""
     return _request("POST", "/frame", {"site": str(site_key), "image": image}, timeout=30)

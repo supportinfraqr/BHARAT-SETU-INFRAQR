@@ -330,6 +330,57 @@ def _site_key(site):
     return str(getattr(site, "bss_site_id", "") or site.id)
 
 
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_face_enroll(request):
+    """Store a worker's own face photos and enrol them into the pipeline
+    gallery under their BSS id, so AI attendance can recognise them."""
+    from datetime import datetime
+    from django.core.files.base import ContentFile
+    from django.core.files.storage import default_storage
+
+    from bss_core.models import WorkerIdentity
+    from .. import attendance_control as control
+
+    if request.user.role != "worker":
+        return Response({"error": "Only workers can enrol their own face."},
+                        status=status.HTTP_403_FORBIDDEN)
+    identity = WorkerIdentity.objects.filter(user=request.user).first()
+    person = str(getattr(identity, "bss_worker_id", "") or "").strip()
+    if not person:
+        return Response({"error": "This account has no BSS worker id."},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    body = request.data if isinstance(request.data, dict) else {}
+    images = body.get("images") or ([body.get("image")] if body.get("image") else [])
+    images = [str(i) for i in images if i]
+    if not images:
+        return Response({"error": "No images supplied."}, status=status.HTTP_400_BAD_REQUEST)
+
+    saved = 0
+    for index, data_url in enumerate(images):
+        try:
+            encoded = data_url.split(",", 1)[1] if data_url.startswith("data:") else data_url
+            raw = __import__("base64").b64decode(encoded)
+        except Exception:
+            continue
+        name = f"worker_face_photos/{person}/{datetime.utcnow():%Y%m%d%H%M%S}_{index}.jpg"
+        default_storage.save(name, ContentFile(raw))
+        saved += 1
+
+    try:
+        result = control.enroll(person, images)
+    except control.AttendanceControlError as exc:
+        return Response({"error": str(exc), "saved": saved}, status=exc.status_code)
+
+    return Response({"data": {
+        "person": person,
+        "saved": saved,
+        "enrolled": result.get("added", 0),
+    }}, status=status.HTTP_200_OK)
+
+
 def _worker_for_token(token):
     """Resolve a pipeline detection token to a worker user (BSS id, username,
     or enrolled face name)."""

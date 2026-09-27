@@ -150,6 +150,7 @@ _v1_patterns = _v1(
     ("contractor/attendance/camera-punch", v1_bridge.attendance_camera_punch, "v1_attendance_camera_punch"),
     ("contractor/attendance/camera", v1_bridge.attendance_camera_session, "v1_contractor_attendance_camera"),
     ("employer/attendance/camera", v1_bridge.attendance_camera_session, "v1_employer_attendance_camera"),
+    ("worker/face-enroll", v1_bridge.worker_face_enroll, "v1_worker_face_enroll"),
     ("contractor/attendance", v1_bridge.attendance_uploaded, "v1_attendance_uploaded"),
     ("audit-reports/filters", v1_bridge.audit_report_filters, "v1_audit_report_filters"),
     ("audit-reports/generate", v1_bridge.audit_report_generate, "v1_audit_report_generate"),

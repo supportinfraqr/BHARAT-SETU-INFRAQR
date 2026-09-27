@@ -293,6 +293,38 @@ class FaceEngine:
             ))
         return out
 
+    def enroll_from_images(self, person: str, frames) -> int:
+        """Enrol a set of photos under `person` (a BSS worker id). Picks the
+        largest face in each frame and stores its embedding; skips duplicates
+        so re-uploading the same photos is idempotent."""
+        added = 0
+        for frame in frames:
+            observations = self.recognize_frame(frame)
+            if not observations:
+                continue
+            best = max(
+                observations,
+                key=lambda o: (o.face_box[2] - o.face_box[0]) * (o.face_box[3] - o.face_box[1])
+                if o.face_box else 0,
+            )
+            row = self.db.get_person_by_name(person) if self.db else None
+            if row is not None:
+                pid = row[0]
+            elif self.db is not None:
+                pid = self.db.add_person(person, notes="enrolled via BSS face photos")
+            else:
+                continue
+            with self._lock:
+                if any(p == pid and cosine_distance(best.embedding, e) < 0.05
+                       for p, _, e in self.gallery):
+                    continue
+                if self.db is not None:
+                    self.db.add_embedding(pid, self.model_name, best.embedding)
+                self.gallery.append((pid, person, best.embedding))
+                self._store.add(pid, person, best.embedding)
+            added += 1
+        return added
+
     def _estimate_age(self, face_img: np.ndarray) -> Optional[int]:
         try:
             results = self._DeepFace.analyze(

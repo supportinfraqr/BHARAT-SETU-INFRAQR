@@ -295,6 +295,25 @@ def snapshot():
     return send_file(full)
 
 
+@app.post("/enroll")
+def enroll():
+    """Enrol a worker's face photos (base64 jpegs) into the gallery under their
+    BSS id, so the live camera / CCTV can recognise them."""
+    if not _authorized():
+        return jsonify(error="unauthorized"), 401
+    body = request.get_json(silent=True) or {}
+    person = str(body.get("person") or "").strip()
+    images = body.get("images") or []
+    if not person or not images:
+        return jsonify(error="person and images are required"), 400
+    frames = [f for f in (_decode_image(str(i)) for i in images) if f is not None]
+    if not frames:
+        return jsonify(error="no decodable images"), 400
+    engine, _ = _face_engine()
+    added = engine.enroll_from_images(person, frames)
+    return jsonify(person=person, submitted=len(frames), added=added)
+
+
 if __name__ == "__main__":
     print(f"[controller] listening on 0.0.0.0:{CONTROL_PORT} "
           f"(default source: {DEFAULT_SOURCE})", flush=True)

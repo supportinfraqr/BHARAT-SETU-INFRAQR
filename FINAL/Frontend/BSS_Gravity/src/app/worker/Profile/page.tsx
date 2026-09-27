@@ -67,6 +67,24 @@ export default function WorkerProfilePage() {
   const [facePhotos, setFacePhotos] = useState<Record<number, string>>({});
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [faceEnrollStatus, setFaceEnrollStatus] = useState('');
+
+  const enrollFacePhoto = async (dataUrl: string) => {
+    setFaceEnrollStatus('Enrolling this photo for AI attendance…');
+    try {
+      const response = await fetch('/api/worker/face-enroll', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: [dataUrl] }),
+      });
+      const body = await response.json().catch(() => ({})) as { data?: { enrolled: number; saved: number }; error?: string };
+      if (!response.ok || !body.data) throw new Error(body.error ?? 'Enrolment failed.');
+      setFaceEnrollStatus(body.data.enrolled > 0
+        ? `Enrolled for AI attendance (${body.data.enrolled} photo${body.data.enrolled === 1 ? '' : 's'}).`
+        : 'Photo saved, but no face was detected — try a clearer, front-facing shot.');
+    } catch (reason) {
+      setFaceEnrollStatus(reason instanceof Error ? reason.message : 'Enrolment failed.');
+    }
+  };
 
   // Restore face photos from localStorage on component mount
   useEffect(() => {
@@ -136,6 +154,7 @@ export default function WorkerProfilePage() {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
       saveFacePhotos({ ...facePhotos, [activeFaceSlot]: dataUrl });
+      void enrollFacePhoto(dataUrl);
       setDirty(true);
     }
     stopCamera();
@@ -817,6 +836,7 @@ export default function WorkerProfilePage() {
                             }
                             return updated;
                           });
+                          void enrollFacePhoto(dataUrl);
                           setDirty(true);
                         }
                       };
@@ -893,6 +913,7 @@ export default function WorkerProfilePage() {
                     {Object.keys(facePhotos).length || (worker.identity.photoUrl ? 1 : 0)} / 5 Photos Enrolled
                   </span>
                 </div>
+                {faceEnrollStatus && <p role="status" className="text-[11px] font-semibold text-[#073B67] mt-2">{faceEnrollStatus}</p>}
               </div>
             </div>
           )}
