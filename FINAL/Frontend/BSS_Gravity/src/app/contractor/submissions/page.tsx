@@ -82,13 +82,32 @@ function clampPeriods(periods: string[], fy: string, bindingFY: string, bindingM
   return periods.filter(period => MONTHS.indexOf(periodMonth(period)) >= bindingMonthIdx);
 }
 
+/** True when a month of the given FY is still in the future — those aren't due
+ *  yet, so the tracker shows "Upcoming" instead of "Pending". */
+function isFutureMonth(fy: string, monthName: string): boolean {
+  const match = fy.match(/FY\s*(\d{4})/);
+  const idx = MONTHS.indexOf(monthName);
+  if (!match || idx < 0) return false;
+  const fyStart = Number(match[1]);
+  const calMonth = ((idx + 3) % 12) + 1;            // Apr→4 … Dec→12, Jan→1 … Mar→3
+  const calYear = idx >= 9 ? fyStart + 1 : fyStart;
+  const now = new Date();
+  return calYear * 12 + calMonth > now.getFullYear() * 12 + (now.getMonth() + 1);
+}
+
 export default function ComplianceSubmissionPage() {
   const { contractor, replaceContractor, refresh, employerScope, scoped } = useContractor();
   const [tab, setTab] = useState<Tab>('submissions');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [siteFilter, setSiteFilter] = useState('all');
+  const [siteFilter, setSiteFilter] = useState(contractor.sites[0]?.name || '');
+  // Keep a valid site selected — the page is always scoped to one site.
+  useEffect(() => {
+    if (contractor.sites.length && !contractor.sites.some(s => s.name === siteFilter)) {
+      setSiteFilter(contractor.sites[0].name);
+    }
+  }, [contractor.sites, siteFilter]);
   const [batchView, setBatchView] = useState<string | null>(null);
 
   // The joining date is per site — one contractor can be bound to several
@@ -498,7 +517,6 @@ export default function ComplianceSubmissionPage() {
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Site:</span>
           <select value={siteFilter} onChange={e => setSiteFilter(e.target.value)} className="h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white font-semibold">
-            <option value="all">All Sites</option>
             {contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}
           </select>
         </div>
@@ -572,8 +590,9 @@ export default function ComplianceSubmissionPage() {
           </div>
           <span className="text-[11px] font-bold text-[#073B67] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg">
             {(() => {
-              // Only months the contractor was actually on the site count.
-              const eligible = MONTHS.filter(m => !(selectedYear === bindingFY && MONTHS.indexOf(m) < bindingMonthIdx));
+              // Only months the contractor was actually on the site — and that
+              // have already arrived — count toward the progress figure.
+              const eligible = MONTHS.filter(m => !(selectedYear === bindingFY && MONTHS.indexOf(m) < bindingMonthIdx) && !isFutureMonth(selectedYear, m));
               const done = eligible.filter(m => {
                 const p = periodOf(m, freq);
                 const mDocs = documentsByPeriod[p] || [];
@@ -599,15 +618,17 @@ export default function ComplianceSubmissionPage() {
             const isPartial = completedUnits > 0 && !isFull;
             const isSelected = selectedPeriod === p;
             const beforeBinding = selectedYear === bindingFY && MONTHS.indexOf(m) < bindingMonthIdx;
+            const future = !beforeBinding && isFutureMonth(selectedYear, m);
+            const inactive = beforeBinding || future;
 
             return (
               <button
                 key={m}
                 type="button"
-                disabled={beforeBinding}
+                disabled={inactive}
                 onClick={() => setSelectedPeriod(p)}
                 className={`p-3 rounded-xl border text-left transition-all relative ${
-                  beforeBinding ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' :
+                  inactive ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed' :
                   isSelected ? 'border-[#073B67] bg-blue-50/60 ring-2 ring-[#073B67]/20 shadow-xs' :
                   isFull ? 'border-emerald-200 bg-emerald-50/30 hover:border-emerald-300' :
                   isPartial ? 'border-blue-200 bg-blue-50/30 hover:border-blue-300' :
@@ -618,6 +639,8 @@ export default function ComplianceSubmissionPage() {
                   <span className="text-xs font-bold text-gray-900">{m}</span>
                   {beforeBinding ? (
                     <span className="text-[10px] font-medium text-gray-400">Not on site yet</span>
+                  ) : future ? (
+                    <span className="text-[10px] font-medium text-gray-400">Upcoming</span>
                   ) : isFull ? (
                     <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">
                       {completedUnits}/{totalUnits} Complete
@@ -633,7 +656,7 @@ export default function ComplianceSubmissionPage() {
                   )}
                 </div>
                 
-                {!beforeBinding && <div className="mt-2 space-y-0.5 text-[10px]">
+                {!inactive && <div className="mt-2 space-y-0.5 text-[10px]">
                   <p className={`font-semibold flex items-center gap-1 ${hasRegs ? 'text-emerald-700' : 'text-amber-700'}`}>
                     <span>{hasRegs ? '✓' : '•'}</span> Registers: {hasRegs ? 'Submitted' : 'Pending'}
                   </p>
