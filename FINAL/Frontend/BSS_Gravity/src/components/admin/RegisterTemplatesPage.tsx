@@ -6,6 +6,7 @@ import EnterpriseDataTable, { type DataColumn } from '@/components/worker/Enterp
 
 type FieldMapping = { column: string; fieldKey: string };
 type CalcRule = { targetField: string; label: string; formula: string };
+type OcrCheckpoint = { key?: string; type: string; label: string; value?: string; required?: boolean };
 
 type FormField = {
   section: string; label: string; dataType: string; dataSource: string;
@@ -19,6 +20,7 @@ type TemplateRow = {
   sourceFormat: string; outputFormat?: string;
   columns: string[]; fields: FormField[]; meta: { lines?: string[]; file?: string };
   html: string; active: boolean; fieldMappings?: FieldMapping[]; calculationRules?: CalcRule[];
+  ocrCheckpoints?: OcrCheckpoint[];
   formatAvailable?: boolean; version: number; fileName: string; hasFile: boolean; authored?: boolean;
   perRow?: boolean;
 };
@@ -32,6 +34,7 @@ type BuilderDraft = {
   fields: FormField[];
   html: string; perRow: boolean;
   fieldMappings: FieldMapping[]; calcRules: CalcRule[];
+  ocrCheckpoints: OcrCheckpoint[];
 };
 
 const FIELD_KEYS = [
@@ -112,6 +115,7 @@ function draftFromRow(row: TemplateRow): BuilderDraft {
     perRow: row.perRow ?? false,
     fieldMappings: row.fieldMappings ?? [],
     calcRules: row.calculationRules ?? [],
+    ocrCheckpoints: row.ocrCheckpoints ?? [],
   };
 }
 
@@ -123,7 +127,7 @@ function blankDraft(): BuilderDraft {
     sourceFormat: 'html',
     columns: [], columnInput: '',
     fields: [], html: '', perRow: false,
-    fieldMappings: [], calcRules: [],
+    fieldMappings: [], calcRules: [], ocrCheckpoints: [],
   };
 }
 
@@ -1278,6 +1282,17 @@ export default function RegisterTemplatesPage() {
   const [view, setView] = useState<TemplateRow | null>(null);
   const [builder, setBuilder] = useState<BuilderDraft | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cpCatalog, setCpCatalog] = useState<OcrCheckpoint[]>([]);
+
+  // The OCR checkpoint catalog (same list the Additional Forms admin uses).
+  useEffect(() => {
+    let active = true;
+    void fetch('/api/admin/form-names', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((body: { checkpoints?: OcrCheckpoint[] } | null) => { if (active) setCpCatalog(body?.checkpoints ?? []); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1332,6 +1347,7 @@ export default function RegisterTemplatesPage() {
         html: builder.html,
         perRow: builder.perRow,
         fieldMappings: builder.fieldMappings, calculationRules: builder.calcRules,
+        ocrCheckpoints: builder.ocrCheckpoints,
       };
       const isNew = builder.id === null;
       const response = await fetch(isNew ? '/api/admin/register-templates' : `/api/admin/register-templates/${builder.id}`, {
@@ -1499,6 +1515,30 @@ export default function RegisterTemplatesPage() {
           </div>
 
           <div className="p-5 space-y-5">
+            <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-xl">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-blue-900">Verification checkpoints (OCR)</p>
+              <p className="mt-0.5 text-[11px] text-gray-500">Tick what an uploaded document must contain — verified by OCR when the contractor uploads this register/form.</p>
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {cpCatalog.map(cp => {
+                  const key = cp.key ?? cp.type;
+                  const selected = builder.ocrCheckpoints.find(c => (c.key ?? c.type) === key);
+                  return (
+                    <div key={key} className="flex items-center gap-2 text-xs">
+                      <label className="flex items-center gap-1.5 flex-1 min-w-0">
+                        <input type="checkbox" checked={!!selected} onChange={e => {
+                          const rest = builder.ocrCheckpoints.filter(c => (c.key ?? c.type) !== key);
+                          patch('ocrCheckpoints', e.target.checked ? [...rest, { key: cp.key, type: cp.type, label: cp.label, required: true }] : rest);
+                        }} className="accent-[#073B67]"/>
+                        <span className="truncate text-gray-700">{cp.label}</span>
+                      </label>
+                      {selected && <label className="flex items-center gap-1 text-[10px] text-gray-500 whitespace-nowrap"><input type="checkbox" checked={selected.required !== false} onChange={e => patch('ocrCheckpoints', builder.ocrCheckpoints.map(c => (c.key ?? c.type) === key ? { ...c, required: e.target.checked } : c))} className="accent-[#073B67]"/>required</label>}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[11px] text-gray-500">{builder.ocrCheckpoints.length} checkpoint(s) selected{builder.ocrCheckpoints.length === 0 ? ' — uploads use integrity checks only.' : '.'}</p>
+            </div>
+
             {isRegister && (
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Columns ({builder.columns.length}) — Excel register columns</p>

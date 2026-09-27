@@ -52,6 +52,28 @@ def _clean_columns(value):
     return out
 
 
+def _clean_checkpoints(value):
+    """Normalise an incoming OCR checklist to {type,label,value,required}."""
+    out = []
+    if not isinstance(value, list):
+        return out
+    for entry in value:
+        if not isinstance(entry, dict):
+            continue
+        ctype = str(entry.get("type") or "").strip().lower()
+        if not ctype:
+            continue
+        item = {"type": ctype,
+                "label": str(entry.get("label") or ctype)[:120],
+                "required": bool(entry.get("required", True))}
+        if entry.get("value") is not None:
+            item["value"] = str(entry.get("value") or "")[:160]
+        if entry.get("key"):
+            item["key"] = str(entry.get("key"))[:60]
+        out.append(item)
+    return out
+
+
 def _clean_fields(value):
     """Normalise the field-dictionary ``fields`` list into safe dicts.
 
@@ -215,6 +237,7 @@ def _create_template(request, body):
         act=act, frequency=frequency, criticality=criticality, is_mandatory=is_mandatory,
         source_format=source_format, output_format=output_format,
         columns=columns, fields=fields, html=html, per_row=per_row,
+        ocr_checkpoints=_clean_checkpoints(body.get("ocrCheckpoints")),
         is_active=body.get("active", True), format_available=True,
         meta={"authored": True, "author": str(request.user)},
     )
@@ -421,6 +444,8 @@ def register_template_detail(request, template_id):
             template.html = _auto_form_html(
                 template.title, template.form_code, template.state,
                 template.template_type, template.fields, template.columns)
+    if "ocrCheckpoints" in body:
+        template.ocr_checkpoints = _clean_checkpoints(body.get("ocrCheckpoints"))
     template.save()
     if isinstance(body.get("fieldMappings"), list):
         from bss_core.models import RegisterFieldMapping
