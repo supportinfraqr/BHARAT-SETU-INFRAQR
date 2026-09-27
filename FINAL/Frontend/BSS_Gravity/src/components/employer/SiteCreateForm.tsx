@@ -30,7 +30,7 @@ export const SECTIONS: SiteSection[] = [
       { name: 'site_status', label: 'Site Status', type: 'select', options: ['Active', 'Planned', 'Completed', 'Suspended'] },
       { name: 'site_creation_type', label: 'Site Creation Type' },
       { name: 'required_automation', label: 'Required Automation' },
-      { name: 'assign_color', label: 'Assign Color' },
+      { name: 'assign_color', label: 'Site Colour' },
       { name: 'site_start_date', label: 'Site Start Date', type: 'date' },
       { name: 'expected_end_date', label: 'Expected End Date', type: 'date' },
       { name: 'actual_start_date', label: 'Actual Start Date', type: 'date' },

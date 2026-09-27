@@ -105,16 +105,28 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
       {error && <p role="alert" className="mb-4 text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg p-3">{error}</p>}
       <dl className="grid sm:grid-cols-2 gap-x-8 gap-y-5">{TAB_FIELDS[tab].map(name => {
         const def = FIELD_DEFS[name] ?? { label: LABELS[name] ?? name };
+        const isLockedCode = name === 'site_code';
+        const isColour = name === 'assign_color';
+        const labelText = isLockedCode ? 'Site code' : (def.label ?? name);
         return <div key={name}>
-          <dt className="text-[11px] uppercase font-semibold text-gray-400">{def.label ?? name}</dt>
+          <dt className="text-[11px] uppercase font-semibold text-gray-400">{labelText}{isLockedCode && editing ? <span className="ml-1 normal-case tracking-normal text-gray-300">(locked)</span> : null}</dt>
           {editing ? (
-            def.type === 'checkbox' ? (
+            isLockedCode ? (
+              <input value={String(current.code ?? draft[name] ?? '')} readOnly disabled title="The site code cannot be changed" className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm bg-gray-100 text-gray-500 cursor-not-allowed"/>
+            ) : isColour ? (
+              <div className="mt-1 flex items-center gap-3">
+                <input type="color" value={String(draft[name] || '#F47A32')} onChange={e => setDraft(d => ({ ...d, [name]: e.target.value }))} className="h-10 w-16 rounded-lg border border-gray-200 bg-white p-1 cursor-pointer"/>
+                <span className="text-xs font-mono text-gray-500">{String(draft[name] || '#F47A32').toUpperCase()}</span>
+              </div>
+            ) : def.type === 'checkbox' ? (
               <label className="mt-1 flex items-center gap-2 text-sm text-gray-800"><input type="checkbox" checked={Boolean(draft[name])} onChange={e => setDraft(d => ({ ...d, [name]: e.target.checked }))} className="w-4 h-4 rounded border-gray-300"/>{draft[name] ? 'Yes' : 'No'}</label>
             ) : def.type === 'select' ? (
               <select value={String(draft[name] ?? '')} onChange={e => setDraft(d => ({ ...d, [name]: e.target.value }))} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 bg-white text-sm">{(def.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}</select>
             ) : (
               <input type={def.type === 'date' ? 'date' : def.type === 'number' ? 'number' : 'text'} step={def.type === 'number' ? 'any' : undefined} value={draft[name] == null ? '' : String(draft[name])} onChange={e => setDraft(d => ({ ...d, [name]: e.target.value }))} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm text-gray-800"/>
             )
+          ) : isColour ? (
+            <dd className="text-sm font-medium mt-1 text-gray-800 flex items-center gap-2"><span className="inline-block w-5 h-5 rounded border border-gray-200" style={{ background: data[name] ? String(data[name]) : '#F47A32' }}/>{fieldValue(name)}</dd>
           ) : <dd className="text-sm font-medium mt-1 text-gray-800 break-words">{fieldValue(name)}</dd>}
         </div>;
       })}</dl>
