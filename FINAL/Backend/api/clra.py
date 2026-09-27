@@ -132,6 +132,8 @@ _COLUMN_RULES = (
     (("site",), "site"),
     (("location",), "location"),
     (("bss",), "bssId"),
+    (("employee", "code"), "bssId"),
+    (("employee", "id"), "bssId"),
     # Attendance / wage / overtime / deduction columns → master-file keys.
     (("overtime", "hour"), "otHours"),
     (("overtime", "rate"), "otRate"),
@@ -236,7 +238,9 @@ def resolve_cell(key, row, context=None, index=None):
     if key and key.startswith("backend:"):
         return (context or {}).get(key.split(":", 1)[1], "")
     if key:
-        return row.get(key, "")
+        # Accept both the canonical row key (bssId) and the master-sheet column
+        # header (Employee_Code): HEADER_ALIASES maps header -> canonical key.
+        return row.get(key, row.get(HEADER_ALIASES.get(str(key).lower(), ""), ""))
     return ""
 
 
@@ -628,7 +632,9 @@ def render_doc_body(body, rows, context):
     def resolve(key, row):
         if key.startswith("sys."):
             return _esc(str((context or {}).get(key[4:], "")))
-        return _esc(str((row or {}).get(key, "")))
+        # Master-sheet header (Employee_Code) and canonical key (bssId) both work.
+        return _esc(str((row or {}).get(
+            key, (row or {}).get(HEADER_ALIASES.get(str(key).lower(), ""), ""))))
 
     def block(match):
         inner = match.group(1)

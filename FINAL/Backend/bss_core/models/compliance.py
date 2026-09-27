@@ -57,6 +57,10 @@ class RegisterTemplate(models.Model):
 
     state = models.CharField(max_length=60, db_index=True)
     form_code = models.CharField(max_length=60)
+    # The CLRA purpose/register this template serves (e.g. "Register of Overtime").
+    # Several purposes can share a form_code (Maharashtra maps every register to
+    # FORM II) — each purpose still gets its own register-wise template.
+    purpose = models.CharField(max_length=160, blank=True, default="")
     title = models.CharField(max_length=200, blank=True)
     template_type = models.CharField(max_length=20, choices=TEMPLATE_TYPES, default="register")
     status = models.CharField(max_length=20, choices=STATUS, default="draft")
@@ -93,8 +97,8 @@ class RegisterTemplate(models.Model):
 
     class Meta:
         db_table = "register_template"
-        constraints = [models.UniqueConstraint(fields=["state", "form_code"],
-                                               name="uq_register_template_state_form")]
+        constraints = [models.UniqueConstraint(fields=["state", "purpose", "form_code"],
+                                               name="uq_register_template_state_purpose_form")]
         indexes = [models.Index(fields=["state"], name="idx_register_template_state")]
 
     def __str__(self):
@@ -702,6 +706,10 @@ class CustomFormName(models.Model):
 
     employer = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE,
                                  related_name="custom_form_names")
+    # Site scope for the employer's own forms: null = applies to all of the
+    # employer's sites in ``state`` (legacy); set = applies only to that site.
+    site = models.ForeignKey("Site", null=True, blank=True, on_delete=models.CASCADE,
+                             related_name="custom_form_names_at_site")
     state = models.CharField(max_length=60, db_index=True)
     name = models.CharField(max_length=160)
     is_mandatory = models.BooleanField(default=False)
@@ -723,8 +731,8 @@ class CustomFormName(models.Model):
 
     class Meta:
         db_table = "custom_form_name"
-        constraints = [models.UniqueConstraint(fields=["employer", "state", "name"],
-                                               name="uq_custom_form_employer_state_name")]
+        constraints = [models.UniqueConstraint(fields=["employer", "site", "state", "name"],
+                                               name="uq_custom_form_site_state_name")]
         indexes = [models.Index(fields=["state"], name="idx_custom_form_state")]
 
     def __str__(self):
@@ -733,11 +741,17 @@ class CustomFormName(models.Model):
 
 class EmployerFormSelection(models.Model):
     """An employer's selection of an Admin (global) additional form for its
-    contractors, with the employer's own mandatory flag."""
+    contractors, with the employer's own mandatory flag.
+
+    ``site`` null = legacy selection applying to all the employer's sites in the
+    form's state; set = selection applies only to that site (site-specific wins
+    over the legacy one)."""
 
     employer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="form_selections")
     form_name = models.ForeignKey(CustomFormName, on_delete=models.CASCADE,
                                   related_name="employer_selections")
+    site = models.ForeignKey("Site", null=True, blank=True, on_delete=models.CASCADE,
+                             related_name="form_selections_at_site")
     is_mandatory = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -745,8 +759,8 @@ class EmployerFormSelection(models.Model):
 
     class Meta:
         db_table = "employer_form_selection"
-        constraints = [models.UniqueConstraint(fields=["employer", "form_name"],
-                                               name="uq_employer_form_selection")]
+        constraints = [models.UniqueConstraint(fields=["employer", "site", "form_name"],
+                                               name="uq_employer_site_form_selection")]
 
     def __str__(self):
         return f"employer {self.employer_id} · form {self.form_name_id}"

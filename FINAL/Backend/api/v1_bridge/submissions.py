@@ -756,11 +756,18 @@ def compliance_batch_site_documents(request, batch_id):
     catalog = list(CustomFormName.objects.filter(is_active=True, state__iexact=state,
                                                  employer__isnull=True).order_by("sort_order", "name"))
     if employer is not None:
-        selections = {s.form_name_id: s for s in EmployerFormSelection.objects.filter(
-            employer=employer, is_active=True, form_name__in=catalog)}
+        # Adopted for THIS site (the site-specific selection wins over the
+        # legacy site-less one; its is_active decides whether it applies).
+        selections = {}
+        for s in EmployerFormSelection.objects.filter(
+                employer=employer, form_name__in=catalog, is_active=True, site__isnull=True):
+            selections.setdefault(s.form_name_id, s)
+        if site is not None:
+            for s in EmployerFormSelection.objects.filter(employer=employer, form_name__in=catalog, site=site):
+                selections[s.form_name_id] = s
         for obj in catalog:
             selection = selections.get(obj.id)
-            if selection is None:
+            if selection is None or not selection.is_active:
                 continue
             documents.append({
                 "purpose": obj.name, "form": obj.name, "templateId": None,
@@ -768,8 +775,9 @@ def compliance_batch_site_documents(request, batch_id):
                 "outputFormat": "", "custom": True, "scope": "admin",
                 "requiresDocument": bool(obj.requires_document),
             })
-        for obj in CustomFormName.objects.filter(is_active=True, state__iexact=state,
-                                                 employer=employer).order_by("sort_order", "name"):
+        for obj in (CustomFormName.objects.filter(is_active=True, state__iexact=state,
+                                                  employer=employer)
+                    .filter(Q(site=site) | Q(site__isnull=True)).order_by("sort_order", "name")):
             documents.append({
                 "purpose": obj.name, "form": obj.name, "templateId": None,
                 "mandatory": bool(obj.is_mandatory), "frequency": obj.frequency,
@@ -827,18 +835,26 @@ def contractor_site_documents(request):
     if employer is not None:
         catalog = list(CustomFormName.objects.filter(is_active=True, state__iexact=state,
                                                      employer__isnull=True).order_by("sort_order", "name"))
-        selections = {s.form_name_id: s for s in EmployerFormSelection.objects.filter(
-            employer=employer, is_active=True, form_name__in=catalog)}
+        # Adopted for THIS site (the site-specific selection wins over the
+        # legacy site-less one; its is_active decides whether it applies).
+        selections = {}
+        for s in EmployerFormSelection.objects.filter(
+                employer=employer, form_name__in=catalog, is_active=True, site__isnull=True):
+            selections.setdefault(s.form_name_id, s)
+        if site is not None:
+            for s in EmployerFormSelection.objects.filter(employer=employer, form_name__in=catalog, site=site):
+                selections[s.form_name_id] = s
         for obj in catalog:
             selection = selections.get(obj.id)
-            if selection is None:
+            if selection is None or not selection.is_active:
                 continue
             documents.append({"purpose": obj.name, "form": obj.name, "templateId": None,
                               "mandatory": bool(selection.is_mandatory), "frequency": obj.frequency,
                               "outputFormat": "", "custom": True, "scope": "admin",
                               "requiresDocument": bool(obj.requires_document)})
-        for obj in CustomFormName.objects.filter(is_active=True, state__iexact=state,
-                                                 employer=employer).order_by("sort_order", "name"):
+        for obj in (CustomFormName.objects.filter(is_active=True, state__iexact=state,
+                                                  employer=employer)
+                    .filter(Q(site=site) | Q(site__isnull=True)).order_by("sort_order", "name")):
             documents.append({"purpose": obj.name, "form": obj.name, "templateId": None,
                               "mandatory": bool(obj.is_mandatory), "frequency": obj.frequency,
                               "outputFormat": "", "custom": True, "scope": "employer",

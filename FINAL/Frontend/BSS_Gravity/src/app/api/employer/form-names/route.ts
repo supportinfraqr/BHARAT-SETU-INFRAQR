@@ -8,8 +8,13 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    const state = new URL(request.url).searchParams.get('state');
-    const suffix = state ? `?state=${encodeURIComponent(state)}` : '';
+    const url = new URL(request.url);
+    const params = new URLSearchParams();
+    for (const key of ['state', 'siteId']) {
+      const value = url.searchParams.get(key);
+      if (value) params.set(key, value);
+    }
+    const suffix = params.size ? `?${params.toString()}` : '';
     const session = await requireApiSession('Employer');
     const config = getRuntimeConfig();
     const result = await upstreamRequest(config.apiBaseUrl, `/v1/employer/form-names${suffix}`, session);

@@ -4,8 +4,12 @@ Populates the two admin-editable layers of the CLRA register engine so the
 Registers admin UI is pre-configured instead of empty:
 
 * **Field mappings** — pins common statutory register columns (Sl. No., name,
-  date of joining, address, …) to the master-file field keys, filling the gaps
-  the built-in ``match_column`` heuristic leaves.
+  date of joining, address, …) to the matching **master-sheet column** from
+  ``Requirements/ContractorMasterSheet_Audit (28).xlsx`` (their exact header
+  names, e.g. ``Employee_Code`` → ``Employee_Code``), filling the gaps the
+  built-in ``match_column`` heuristic leaves. The renderer resolves a master
+  header to its canonical row key via ``api.clra.HEADER_ALIASES``, so a
+  mapping to ``Employee_Code`` reads the ``bssId`` field of each master row.
 * **Calculation rules** — for wage registers, wires the standard arithmetic
   (wages earned = days worked × daily rate, net paid = wages earned − deductions,
   overtime wages = overtime hours × daily rate ÷ 8).
@@ -19,6 +23,7 @@ import re
 
 from django.core.management.base import BaseCommand
 
+from api.clra import HEADER_ALIASES
 from bss_core.models import (RegisterCalculationRule, RegisterFieldMapping,
                              RegisterTemplate)
 
@@ -45,19 +50,34 @@ def _norm(label):
     return text.strip(" .:")
 
 
-# Register-template column label → master-file field key. Applied to every
-# template; a column the auto-match already resolves is left untouched.
+# Register-template column label → matching master-sheet column (the exact
+# header from ``Requirements/ContractorMasterSheet_Audit (28).xlsx``, e.g.
+# ``Employee_Code``). The renderer resolves a header to its canonical row key via
+# ``api.clra.HEADER_ALIASES``, so ``Employee_Code`` reads the master row's bssId.
+# Applied to every template; a column with no master counterpart is left unmapped
+# rather than assigned a wrong field.
 COLUMN_FIELDS = {
     "si.no.": "sl",
     "si no": "sl",
     "sl no": "sl",
     "sl. no": "sl",
+    "sl.no": "sl",
+    "si. no.": "sl",
+    "si.no": "sl",
+    "si. no": "sl",
     "serial no": "sl",
     "serial number": "sl",
     "sl. no. in the register of workmen": "sl",
     "sl. no. in the register of workmen employed": "sl",
+    "employee code": "Employee_Code",
+    "employee id": "Employee_Code",
+    "employee number": "Employee_Code",
+    "bss id": "Employee_Code",
+    "bss worker id": "Employee_Code",
+    "bss id no": "Employee_Code",
     "name of workmen": "Employee_Name",
     "name of workman": "Employee_Name",
+    "name of the workmen": "Employee_Name",
     "name of the workmen and address": "Employee_Name",
     "name and surname of workmen": "Employee_Name",
     "name and surname of workman": "Employee_Name",
@@ -67,14 +87,13 @@ COLUMN_FIELDS = {
     "father's/ husband's name": "Father_Name",
     "father's / husband's name": "Father_Name",
     "sex": "Gender",
+    "sex / gender": "Gender",
     "age and sex": "Gender",
-    "bss id": "bssId",
-    "bss worker id": "bssId",
-    "bss id no": "bssId",
     "designation/ nature of employment": "Designation",
     "designation/nature of employment": "Designation",
     "nature of employment/designation": "Designation",
     "designation / nature of employment": "Designation",
+    "designation / department": "Designation",
     "nature of work": "Designation",
     "nature of employment": "Designation",
     "designation": "Designation",
@@ -85,9 +104,11 @@ COLUMN_FIELDS = {
     "name of site": "SiteCode",
     "site address": "Location",
     "location": "Location",
-    "local address": "Address",
-    "permanent house a ddress of workman (village and t e hsil/ t aluk and d istrict)": "Address",
     "place of work": "Location",
+    "local address": "Address",
+    "present address": "Address",
+    "permanent home address of workman (village and tehsil/taluka and district)": "Address",
+    "permanent house a ddress of workman (village and t e hsil/ t aluk and d istrict)": "Address",
     "mobile": "mobile",
     "mobile no.": "mobile",
     "mobile number": "mobile",
@@ -99,14 +120,17 @@ COLUMN_FIELDS = {
     "date of commencement of employment": "Date_Of_Joining",
     "date of commencement": "Date_Of_Joining",
     "date of entry into service": "Date_Of_Joining",
+    "date of termination of employment": "Date_Of_Leaving",
     "esi no.": "ESIC_No",
     "esi no": "ESIC_No",
     "esic no": "ESIC_No",
     "esic no.": "ESIC_No",
+    "esic": "ESIC_Deductions",
     "p.f no.": "UAN_No",
     "p.f no": "UAN_No",
     "pf no": "UAN_No",
     "pf no.": "UAN_No",
+    "pf": "PF_Deductions",
     "uan no": "UAN_No",
     "uan no.": "UAN_No",
     "name and address of the contractor": "Name_of_contractor",
@@ -114,61 +138,78 @@ COLUMN_FIELDS = {
     "nature of work on contract": "Nature_ofWork_contractor",
     "location of contract work": "Location",
     "tenure of employment": "Tenure_of_Employement",
-    "remarks": "Remarks",
 }
 
-# Wage-register columns → canonical field key
+# Wage-register columns → matching master-sheet column header.
 WAGE_FIELDS = {
     "no. of days worked": "Total_Days_Worked",
     "no. of days worked in a month": "Total_Days_Worked",
     "number of days worked": "Total_Days_Worked",
     "days worked": "Total_Days_Worked",
     "no of days worked": "Total_Days_Worked",
-    "daily-rate of wages/piece-rate": "Fixed_Basic_Wages",
-    "daily rate of wages": "Fixed_Basic_Wages",
-    "daily rate": "Fixed_Basic_Wages",
-    "rate of wages": "Fixed_Basic_Wages",
-    "rate of daily wages": "Fixed_Basic_Wages",
-    "rate of daily wages/piece rate": "Fixed_Basic_Wages",
+    "unit of work done": "NO_ofunit_Per_Piece",
+    "daily rate": "Normal_Rate",
+    "daily rate of wages": "Normal_Rate",
+    "daily-rate of wages/piece-rate": "Normal_Rate",
+    "rate of wages": "Normal_Rate",
+    "rate of daily wages": "Normal_Rate",
+    "rate of daily wages/piece rate": "Normal_Rate",
+    "normal rate of wages": "Normal_Rate",
+    "normal rates of wages": "Normal_Rate",
+    "minimum rate of wages payable basic": "Fixed_Basic_Wages",
     "wages rate (with particular of unit in case of piece work)": "Fixed_Basic_Wages",
     "rate of wages (with particulars of unit in case of piece-work)": "Fixed_Basic_Wages",
+    "actual rate of wages payable hra": "House_rent_Allowance",
     "amount of wages earned": "Gross_Wages",
     "wages earned": "Gross_Wages",
     "amount of wages": "Gross_Wages",
     "gross wages": "Gross_Wages",
     "gross wages payable": "Gross_Wages",
+    "normal earnings": "Normal_Earnings",
+    "amount of overtime wages": "Overtime_Earnings",
+    "overtime wages": "Overtime_Earnings",
+    "overtime earnings": "Overtime_Earnings",
+    "overtime hours": "Overtime_Extent",
+    "total overtime worked": "Overtime_Extent",
+    "total overtime worked or production in case of piece rate": "Overtime_Extent",
+    "overtime rate": "Overtime_Rate",
+    "overtime rate of wages": "Overtime_Rate",
+    "date on which overtime worked": "Overtime_Date",
+    "dates on which overtime worked": "Overtime_Date",
+    "date on which overtime wages paid": "Overtime_Payment_Date",
     "deductions if any (indicate nature)": "Total_Deductions",
     "deductions if any": "Total_Deductions",
     "deductions, if any,": "Total_Deductions",
     "deductions": "Total_Deductions",
     "total deductions": "Total_Deductions",
+    "total deduction": "Total_Deductions",
     "net amount paid": "Net_Salary",
     "net wages paid": "Net_Salary",
     "net salary": "Net_Salary",
     "net amount of wages paid": "Net_Salary",
-    "amount of overtime wages": "Overtime_Allowance",
-    "overtime hours": "Overtime_Total",
-    "overtime rate": "Overtime_Rate",
-    "overtime wages": "Overtime_Allowance",
-    "overtime earnings": "Overtime_Allowance",
+    "income tax": "TDS_Deductions",
+    "other deduction": "Other_Deduction",
+    "other deductions": "Other_Deduction",
+    "proff / income tax": "PT_Deductions",
+    "date payment of wages": "Payment_Date",
     "date and amount of advance given": "Advance_Amount",
+    "advance paid": "Advance_Amount",
     "purpose(s) for which advance made": "Advance_Purpose",
     "no. of instalments by which advance to be repaid": "Advance_Installments",
     "date and amount of each instalments repaid": "Advance_Repaid_Amount",
+    "date and amount of each instalment repaid": "Advance_Repaid_Amount",
     "date on which last instalments was repaid": "Advance_Repaid_Date",
+    "date on which last instalment was repaid": "Advance_Repaid_Date",
     "particulars of damage or loss": "Loss_Caused",
     "date of damage or loss": "Date_of_Damage",
     "amount of deduction imposed": "Deduction_Amount",
     "no. of instalments": "Deduction_Installments",
     "act/ommission for which imposed": "Fine_Offence_Nature",
+    "act or omission for which fine imposed": "Fine_Offence_Nature",
     "date of offence": "Fine_Offence_Date",
     "amount of fine imposed": "Fine_Amount",
     "date on which fine realised": "Fine_Realised_Date",
-    "date on which overtime worked": "Overtime_Date",
-    "total overtime worked": "Overtime_Total",
-    "normal rate of wages": "Normal_Rate",
-    "overtime rate of wages": "Overtime_Rate",
-    "date on which overtime wages paid": "Overtime_Payment_Date",
+    "date on which fine realized": "Fine_Realised_Date",
 }
 
 
@@ -223,7 +264,8 @@ class Command(BaseCommand):
                 mapped[row.column] = row.field_key
 
             existing_rules = {r.target_field: r for r in template.calculation_rules.all()}
-            for target, label, formula in _calculation_rules(set(mapped.values())):
+            canonical = {HEADER_ALIASES.get(str(v).lower(), v) for v in mapped.values()}
+            for target, label, formula in _calculation_rules(canonical):
                 rule = existing_rules.get(target)
                 if rule is None:
                     RegisterCalculationRule.objects.create(

@@ -599,6 +599,115 @@ def _safe_storage_name(state, filename, form_code):
     return f"{slug}-{code}{ext}"[:100]
 
 
+def _folder_name(state):
+    """Matrix/canonical state spelling as used by the archive folder names."""
+    return {"Uttrakhand": "Uttarakhand", "Chattisgarh": "Chhattisgarh",
+            "Dadra & Nagar Haveli": "Dadra and Nagar Haveli"}.get(state, state)
+
+
+def _compose_defaults(state, filename, data, title, form_code, classified):
+    """Build the (html, defaults) for one classified register/form file."""
+    columns = classified["columns"]
+    fields = classified["fields"]
+    meta = classified["meta"]
+    template_type = classified["type"]
+    html = ""
+    if form_code.upper() in ("FORM X", "FORM XIX") and classified["source_format"] == "docx":
+        # Identity cards / wage slips stored as Word docs are per-worker
+        # forms — never render them as tabular registers.
+        template_type = "form"
+        columns = []
+        html = _faithful_form_html(_docx_blocks(data), title or form_code,
+                                   form_code, state, template_type)
+    elif fields and not columns:
+        html = _faithful_form_html(_docx_blocks(data), title or form_code,
+                                   form_code, state, template_type)
+    elif columns and template_type == "register" and classified["source_format"] == "docx":
+        # A register stored as a Word doc: keep its printed preamble and
+        # turn its table into the live {{HEAD}}/{{ROWS}} grid.
+        html = _faithful_register_html(_docx_blocks(data), title or form_code, form_code)
+    elif columns and template_type == "register" and classified["source_format"] in ("xlsx", "xls"):
+        # An Excel register: keep its printed preamble + declaration
+        # (month/year tokenised) and the live {{HEAD}}/{{ROWS}} grid.
+        rows = (_parse_xlsx(data) if classified["source_format"] == "xlsx"
+                else _parse_xls(data))
+        html = _faithful_xlsx_register_html(rows, title or form_code, form_code, columns)
+    elif not columns and not fields and classified["source_format"] in ("xlsx", "xls"):
+        rows = (_parse_xlsx(data) if classified["source_format"] == "xlsx"
+                else _parse_xls(data))
+        html = _faithful_xlsx_form_html(rows, title or form_code, form_code)
+
+    defaults = {
+        "title": title, "source_format": classified["source_format"],
+        "output_format": "pdf" if classified["source_format"] == "docx" else "xlsx",
+        "columns": columns, "fields": fields,
+        "meta": {"lines": meta, "file": filename,
+                 # Identity Cards (FORM X) and Wage Slips (FORM XIX)
+                 # render once per worker; every other form/register
+                 # renders once for the whole batch.
+                 "scope": "per-worker" if form_code.upper() in ("FORM X", "FORM XIX") else "whole"},
+        "is_active": True,
+        # Identity Cards (FORM X) and Wage Slips (FORM XIX) are issued
+        # once per worker — the authored layout repeats per master row.
+        "per_row": form_code.upper() in ("FORM X", "FORM XIX"),
+    }
+    return html, defaults
+
+
+def create_for_purpose(zip_path, state, purpose, form_code, title="", only_missing=False):
+    """Create/update the RegisterTemplate for (state, purpose) from the first
+    archive file of (state, form_code).
+
+    Distinct purposes may share a form_code (Maharashtra maps every core register
+    to FORM II) — each gets its own register-wise template backed by that file.
+    Returns the number of rows written."""
+    from bss_core.models import RegisterTemplate
+    form = canon_form_code(form_code)
+    entry = None
+    folder = _folder_name(state)
+    with zipfile.ZipFile(zip_path) as archive:
+        for name in archive.namelist():
+            if name.endswith("/") or name.lower().endswith("state wise form of  clra.xls"):
+                continue
+            parts = name.split("/")
+            if len(parts) < 3 or parts[-2].lower() != folder.lower():
+                continue
+            filename = parts[-1]
+            if filename.startswith("~$"):
+                continue
+            if canon_form_code(_form_code(filename)) != form:
+                continue
+            entry = (filename, archive.read(name))
+            break
+    if entry is None:
+        return 0
+    filename, data = entry
+    classified = _classify(filename, data)
+    if classified is None:
+        return 0
+    html, defaults = _compose_defaults(state, filename, data, title or purpose or form,
+                                       form, classified)
+    if title:
+        defaults["title"] = title[:200]
+    existing = RegisterTemplate.objects.filter(
+        state=state, purpose=purpose, form_code=form).first()
+    if only_missing and existing is not None:
+        return 0
+    if existing is None:
+        obj = RegisterTemplate(state=state, purpose=purpose, form_code=form,
+                               template_type=classified["type"], html=html, **defaults)
+    else:
+        obj = existing
+        defaults["version"] = obj.version + 1
+        for key, value in defaults.items():
+            setattr(obj, key, value)
+        obj.template_type = classified["type"]
+        obj.html = html
+    obj.source_file.save(_safe_storage_name(state, filename, form), ContentFile(data), save=False)
+    obj.save()
+    return 1
+
+
 class Command(BaseCommand):
     help = "Import the PAN-India CLRA register templates (LLM-style classification, idempotent)."
 
@@ -681,46 +790,8 @@ class Command(BaseCommand):
             fields = classified["fields"]
             meta = classified["meta"]
             template_type = classified["type"]
-            html = ""
-            if form_code.upper() in ("FORM X", "FORM XIX") and classified["source_format"] == "docx":
-                # Identity cards / wage slips stored as Word docs are per-worker
-                # forms — never render them as tabular registers.
-                template_type = "form"
-                columns = []
-                html = _faithful_form_html(_docx_blocks(data), title or form_code,
-                                           form_code, state, template_type)
-            elif fields and not columns:
-                html = _faithful_form_html(_docx_blocks(data), title or form_code,
-                                           form_code, state, template_type)
-            elif columns and template_type == "register" and classified["source_format"] == "docx":
-                # A register stored as a Word doc: keep its printed preamble and
-                # turn its table into the live {{HEAD}}/{{ROWS}} grid.
-                html = _faithful_register_html(_docx_blocks(data), title or form_code, form_code)
-            elif columns and template_type == "register" and classified["source_format"] in ("xlsx", "xls"):
-                # An Excel register: keep its printed preamble + declaration
-                # (month/year tokenised) and the live {{HEAD}}/{{ROWS}} grid.
-                rows = (_parse_xlsx(data) if classified["source_format"] == "xlsx"
-                        else _parse_xls(data))
-                html = _faithful_xlsx_register_html(rows, title or form_code, form_code, columns)
-            elif not columns and not fields and classified["source_format"] in ("xlsx", "xls"):
-                rows = (_parse_xlsx(data) if classified["source_format"] == "xlsx"
-                        else _parse_xls(data))
-                html = _faithful_xlsx_form_html(rows, title or form_code, form_code)
-
-            defaults = {
-                "title": title, "source_format": classified["source_format"],
-                "output_format": "pdf" if classified["source_format"] == "docx" else "xlsx",
-                "columns": columns, "fields": fields,
-                "meta": {"lines": meta, "file": filename,
-                         # Identity Cards (FORM X) and Wage Slips (FORM XIX)
-                         # render once per worker; every other form/register
-                         # renders once for the whole batch.
-                         "scope": "per-worker" if form_code.upper() in ("FORM X", "FORM XIX") else "whole"},
-                "is_active": True,
-                # Identity Cards (FORM X) and Wage Slips (FORM XIX) are issued
-                # once per worker — the authored layout repeats per master row.
-                "per_row": form_code.upper() in ("FORM X", "FORM XIX"),
-            }
+            html, defaults = _compose_defaults(state, filename, data, title or form_code,
+                                               form_code, classified)
             existing = RegisterTemplate.objects.filter(state=state, form_code=form_code).first()
             if only_missing and existing is not None:
                 continue

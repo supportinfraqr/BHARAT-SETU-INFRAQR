@@ -357,9 +357,10 @@ def register_templates(request):
     rows = [_template_row(t) for t in qs.order_by("state", "form_code")[:2000]]
     states = list(RegisterTemplate.objects.values_list("state", flat=True)
                   .distinct().order_by("state"))
-    from api.master_sheet import BACKEND_FIELD_KEYS, MASTER_FIELD_KEYS
+    from api.master_sheet import BACKEND_FIELD_KEYS, MASTER_COLUMNS
     return Response({"rows": rows, "states": states,
-                     "fieldKeys": MASTER_FIELD_KEYS, "backendKeys": BACKEND_FIELD_KEYS},
+                     "fieldKeys": [h for h in MASTER_COLUMNS if h],
+                     "backendKeys": BACKEND_FIELD_KEYS},
                     status=status.HTTP_200_OK)
 
 
