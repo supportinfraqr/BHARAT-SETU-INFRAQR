@@ -261,16 +261,17 @@ export default function ContractorCompliancePage() {
       const form = new FormData();
       form.set('master', masterFile);
       if (signatureFile) form.set('signature', signatureFile);
-      if (activeSite?.name) form.set('site', activeSite.name);
       // Months Jan–Mar belong to the FY that started in the previous calendar year.
       const sendYear = ['January', 'February', 'March'].includes(month) ? String(Number(year) + 1) : year;
       form.set('month', month); form.set('year', sendYear); form.set('frequency', freq);
       if (includeNonDue || freq !== 'Monthly') form.set('includeNonDue', '1');
       const response = await fetch('/api/portal/compliance-batches', { method: 'POST', body: form });
-      const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['complianceBatches'][number]; error?: string };
+      const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['complianceBatches']; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error ?? 'Registers could not be generated.');
-      replaceContractor({ ...contractor, complianceBatches: [result.data, ...contractor.complianceBatches] });
-      setNotice(`Generated CLRA registers for ${period} ${year} (${freq}) from ${masterFile.name}${signatureFile ? ' with digital signature' : ''}. Download from the batch list.`);
+      const created = result.data;
+      replaceContractor({ ...contractor, complianceBatches: [...created, ...contractor.complianceBatches] });
+      const sites = created.map(b => b.site || b.siteCode).filter(Boolean);
+      setNotice(`Generated ${created.length} register set${created.length === 1 ? '' : 's'} for ${sites.length} site${sites.length === 1 ? '' : 's'} (${sites.join(', ')}) from ${masterFile.name}${signatureFile ? ' with digital signature' : ''}.`);
       setMasterFile(null); setSignatureFile(null);
       void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Registers could not be generated.'); }
@@ -410,10 +411,9 @@ export default function ContractorCompliancePage() {
 
       <div className="grid lg:grid-cols-2 gap-5">
       <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">CLRA Register Generation</h2><p className="text-xs text-gray-400 mt-0.5">Pick the site, then upload that site&apos;s master data and generate its registers (one site per file).</p></header>
+        <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">CLRA Register Generation</h2><p className="text-xs text-gray-400 mt-0.5">Upload the master file — sites are read from the sheet and a separate register set is generated for each site.</p></header>
         <div className="p-5 space-y-4">
           <div className="grid sm:grid-cols-2 gap-3">
-            <label className="text-xs font-semibold">Site<select value={activeSite?.name || ''} onChange={e => setSiteName(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}</select></label>
             <label className="text-xs font-semibold">Year<select value={year} onChange={e => setYearChoice(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{yearOptions.map(y => <option key={y}>{y}</option>)}</select></label>
             <label className="text-xs font-semibold">Frequency<select value={freq} onChange={e => { const f = e.target.value as Frequency; setFreq(f); setPeriod(periodsFor(f)[0]); }} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select></label>
             <label className="text-xs font-semibold">Period<select value={period} onChange={e => setPeriod(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white">{periodsFor(freq).map(p => <option key={p}>{p}</option>)}</select></label>

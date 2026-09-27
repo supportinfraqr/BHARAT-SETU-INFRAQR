@@ -404,45 +404,21 @@ def contractor_compliance_batches(request):
         return Response({"error": "No worker rows found in the master file."},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    # One master file = one site (CLRA registers are generated per site).
-    distinct_sites = sorted({(r.get("site") or "").strip() for r in rows if (r.get("site") or "").strip()})
-    if len(distinct_sites) > 1:
-        shown = ", ".join(distinct_sites[:6]) + ("…" if len(distinct_sites) > 6 else "")
-        return Response(
-            {"error": f"The master file contains {len(distinct_sites)} sites ({shown}). "
-                      "Upload one site per file — CLRA registers are generated per site."},
-            status=status.HTTP_400_BAD_REQUEST)
+    # CLRA registers are generated per site, so one master file may carry many
+    # sites. Split the rows by site (falling back to location), resolve and gate
+    # every site first, then generate one batch per site — a bad site blocks the
+    # whole run rather than leaving a half-finished set of batches.
+    from collections import Counter
 
-    # State / Site are derived from the uploaded master file when not supplied
-    # (the CLRA generation form only asks for Year + Month).
-    state = (request.data.get("state") or "").strip()
-    if not state:
-        from collections import Counter
-        states = [str(r.get("state") or "").strip() for r in rows]
-        states = [s for s in states if s]
-        if states:
-            state = Counter(states).most_common(1)[0][0]
-
-    site_label = (request.data.get("site") or "").strip()
-    if not site_label:
-        for r in rows:
-            candidate = str(r.get("site") or r.get("location") or "").strip()
-            if candidate:
-                site_label = candidate
-                break
+    from .register_templates import (applicable_templates, employer_adopted_ids,
+                                     gate_templates_by_adoption)
 
     site_ids = _contractor_site_ids(user)
-    site = None
-    if site_label:
-        site = (Site.objects.filter(site_name=site_label).first()
-                or Site.objects.filter(site_code=site_label).first())
-    if site is None:
-        row_sites = {str(r.get("site") or "").strip() for r in rows} - {""}
-        if row_sites:
-            site = (Site.objects.filter(id__in=site_ids, site_code__in=row_sites).first()
-                    or Site.objects.filter(id__in=site_ids, site_name__in=row_sites).first())
-    if site is None:
-        site = Site.objects.filter(id__in=site_ids).order_by("id").first()
+
+    groups: dict = {}
+    for r in rows:
+        label = str(r.get("site") or r.get("location") or "").strip()
+        groups.setdefault(label, []).append(r)
 
     month = (request.data.get("month") or "").strip()
     year = (request.data.get("year") or "").strip()
@@ -455,18 +431,6 @@ def contractor_compliance_batches(request):
         for m in RegisterDocumentMaster.objects.filter(kind="register", is_active=True)
         .order_by("sort_order")
     ]
-    # Only allow upload/generation for a state where the principal employer has
-    # adopted CLRA register forms for its sites in that state.
-    from .register_templates import (applicable_templates, employer_adopted_ids,
-                                     gate_templates_by_adoption)
-    adopted_ids = employer_adopted_ids(site.employer, state, site=site) if (site and site.employer_id and state) else set()
-    if state and not adopted_ids:
-        return Response(
-            {"error": f"The principal employer has not adopted CLRA register forms for {state}. "
-                      f"Upload/generation is disabled for sites in {state} until the employer adopts the forms."},
-            status=status.HTTP_400_BAD_REQUEST)
-    site_templates = gate_templates_by_adoption(
-        applicable_templates(state)[0], site.employer if site else None, state) if state else []
 
     # Frequency-aware: only generate forms due in the chosen month (monthly always;
     # quarterly/half-yearly/yearly at their period end) unless the caller overrides.
@@ -487,70 +451,101 @@ def contractor_compliance_batches(request):
         return ""
 
     freq_filter = _norm_freq(request.data.get("frequency"))
-    if freq_filter:
-        site_templates = [
-            t for t in site_templates if (_norm_freq(t.frequency) or "monthly") == freq_filter
-        ]
 
-    selected, skipped = [], []
-    for template in site_templates:
-        period = clra.reporting_period(month, year, template.frequency)
-        if period["due"] or include_non_due:
-            selected.append(template)
-        else:
-            skipped.append({"formCode": template.form_code, "title": template.title,
-                            "frequency": template.frequency or "Monthly", "period": period["label"]})
-    site_templates = selected
+    # Pre-flight every site group. Any failure blocks the whole upload.
+    plans, failures = [], []
+    for label, group_rows in sorted(groups.items()):
+        site = (Site.objects.filter(id__in=site_ids, site_name=label).first()
+                or Site.objects.filter(id__in=site_ids, site_code=label).first())
+        if site is None:
+            failures.append(f"Site \u201c{label or '(blank)'}\u201d is not one of your allotted sites.")
+            continue
+        state = (site.state or "").strip()
+        if not state:
+            candidates = [str(r.get("state") or "").strip() for r in group_rows if str(r.get("state") or "").strip()]
+            state = Counter(candidates).most_common(1)[0][0] if candidates else ""
+        if not state:
+            failures.append(f"Site \u201c{site.site_name}\u201d has no state — cannot choose registers.")
+            continue
+        # Only generate for a state where the principal employer has adopted the
+        # CLRA register forms for its sites.
+        adopted_ids = employer_adopted_ids(site.employer, state, site=site) if site.employer_id else set()
+        if not adopted_ids:
+            failures.append(f"The principal employer has not adopted CLRA register forms for {state} "
+                            f"(site \u201c{site.site_name}\u201d).")
+            continue
+        site_templates = gate_templates_by_adoption(applicable_templates(state)[0], site.employer, state, site=site)
+        if freq_filter:
+            site_templates = [t for t in site_templates if (_norm_freq(t.frequency) or "monthly") == freq_filter]
+        selected, skipped = [], []
+        for template in site_templates:
+            period = clra.reporting_period(month, year, template.frequency)
+            if period["due"] or include_non_due:
+                selected.append(template)
+            else:
+                skipped.append({"formCode": template.form_code, "title": template.title,
+                                "frequency": template.frequency or "Monthly", "period": period["label"]})
+        if not selected:
+            failures.append(f"No register template is due for {state} (site \u201c{site.site_name}\u201d) "
+                            f"in {month} {year}.")
+            continue
+        plans.append({"site": site, "state": state, "rows": group_rows,
+                      "templates": selected, "skipped": skipped})
 
-    templates = [
-        {"formCode": t.form_code, "title": t.title, "state": t.state,
-         "frequency": t.frequency or "Monthly",
-         "period": clra.reporting_period(month, year, t.frequency)["label"],
-         "columns": list(t.columns or []), "html": t.html or "",
-         "perRow": t.per_row,
-         "act": t.act, "calculationRules": [
-             {"targetField": r.target_field, "formula": r.formula}
-             for r in t.calculation_rules.all()],
-         "fieldMappings": {m.column: m.field_key for m in t.field_mappings.all()}}
-        for t in site_templates
-    ]
+    if failures:
+        return Response({"error": " ".join(failures), "failures": failures},
+                        status=status.HTTP_400_BAD_REQUEST)
+
     generated_on = timezone.localdate()
-    data = clra.build_workbook(
-        rows, contractor=payloads._party_name(user),
-        employer=(payloads._party_name(site.employer) if site and site.employer_id else ""),
-        site=(site.site_name if site else site_label),
-        site_code=(site.site_code if site else ""), state=state,
-        financial_year=fy, month=month, year=year, registers=registers,
-        generated_on=str(generated_on), templates=templates,
-    )
-
-    register_count = len(templates) or len(registers)
-
-    batch = ComplianceBatch(
-        contractor=user, site=site,
-        financial_year=fy[:12], month=month[:20], year=year[:4], state=state[:60],
-        employee_count=len(rows),
-        location_count=len({r.get("location", "") for r in rows if r.get("location")}) or 1,
-        generated_on=generated_on, generated_by=payloads._party_name(user),
-        rows_count=len(rows),
-        notes=(f"{register_count} register(s) generated from {len(rows)} worker row(s)"
-               + (f"; {len(skipped)} not due this period: "
-                  + ", ".join(f"{s['formCode']} ({s['frequency']})" for s in skipped[:6]) if skipped else "")),
-        status="GENERATED",
-    )
-    stamp = f"{year or generated_on.year}-{month or generated_on.strftime('%b')}".replace(" ", "")
-    batch.generated_file.save(
-        f"clra-{stamp}-{(site.site_code if site else 'site')}.xlsx",
-        ContentFile(data), save=False)
-    master.seek(0)
-    batch.master_file.save(os.path.basename(master.name or "master.xlsx"), master, save=False)
     signature = request.FILES.get("signature")
-    if signature is not None:
-        signature.seek(0)
-        batch.signature_file.save(os.path.basename(signature.name or "signature"), signature, save=False)
-    batch.save()
-    return Response({"data": payloads._contractor_compliance_batch_row(batch)},
-                    status=status.HTTP_201_CREATED)
+    created = []
+    for plan in plans:
+        site, state, group_rows = plan["site"], plan["state"], plan["rows"]
+        templates = [
+            {"formCode": t.form_code, "title": t.title, "state": t.state,
+             "frequency": t.frequency or "Monthly",
+             "period": clra.reporting_period(month, year, t.frequency)["label"],
+             "columns": list(t.columns or []), "html": t.html or "",
+             "perRow": t.per_row,
+             "act": t.act, "calculationRules": [
+                 {"targetField": r.target_field, "formula": r.formula}
+                 for r in t.calculation_rules.all()],
+             "fieldMappings": {m.column: m.field_key for m in t.field_mappings.all()}}
+            for t in plan["templates"]
+        ]
+        register_count = len(templates) or len(registers)
+        data = clra.build_workbook(
+            group_rows, contractor=payloads._party_name(user),
+            employer=(payloads._party_name(site.employer) if site.employer_id else ""),
+            site=site.site_name, site_code=site.site_code, state=state,
+            financial_year=fy, month=month, year=year, registers=registers,
+            generated_on=str(generated_on), templates=templates,
+        )
+        skipped = plan["skipped"]
+        batch = ComplianceBatch(
+            contractor=user, site=site,
+            financial_year=fy[:12], month=month[:20], year=year[:4], state=state[:60],
+            employee_count=len(group_rows),
+            location_count=len({r.get("location", "") for r in group_rows if r.get("location")}) or 1,
+            generated_on=generated_on, generated_by=payloads._party_name(user),
+            rows_count=len(group_rows),
+            notes=(f"{register_count} register(s) generated from {len(group_rows)} worker row(s)"
+                   + (f"; {len(skipped)} not due this period: "
+                      + ", ".join(f"{s['formCode']} ({s['frequency']})" for s in skipped[:6]) if skipped else "")),
+            status="GENERATED",
+        )
+        stamp = f"{year or generated_on.year}-{month or generated_on.strftime('%b')}".replace(" ", "")
+        batch.generated_file.save(
+            f"clra-{stamp}-{site.site_code or 'site'}.xlsx", ContentFile(data), save=False)
+        master.seek(0)
+        batch.master_file.save(os.path.basename(master.name or "master.xlsx"), master, save=False)
+        if signature is not None:
+            signature.seek(0)
+            batch.signature_file.save(os.path.basename(signature.name or "signature"), signature, save=False)
+        batch.save()
+        created.append(payloads._contractor_compliance_batch_row(batch))
+
+    return Response({"data": created}, status=status.HTTP_201_CREATED)
 
 
 @api_view(["GET"])
