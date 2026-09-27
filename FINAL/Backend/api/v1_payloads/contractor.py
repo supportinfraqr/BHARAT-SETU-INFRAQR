@@ -980,6 +980,9 @@ def _contractor_compliance_batch_row(b):
         "notes": _d(b.notes),
         "status": {"GENERATED": "Generated", "PENDING": "Pending",
                    "SUBMITTED": "Submitted",
+                   "VERIFIED": "Verified",
+                   "RETURNED": "Returned",
+                   "REJECTED": "Rejected",
                    "FAILED": "Failed"}.get(str(b.status).upper(), "Generated"),
     }
 
