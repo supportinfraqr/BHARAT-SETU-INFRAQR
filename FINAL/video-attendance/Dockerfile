@@ -13,10 +13,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # CPU-only torch first: no ~5 GB of CUDA libs, and no triton import racing the
-# capture thread (that import segfaults on CPU-only hosts).
+# capture thread (that import segfaults on CPU-only hosts). Pinning the +cpu
+# wheels with --extra-index-url takes torch from the PyTorch index while its
+# dependencies still resolve from PyPI.
 COPY requirements.txt .
-RUN pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision \
-    && pip install -r requirements.txt
+RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu \
+        "torch==2.14.0+cpu" "torchvision==0.29.0+cpu" \
+    && pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 

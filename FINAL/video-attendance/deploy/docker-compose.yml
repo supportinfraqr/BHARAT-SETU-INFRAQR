@@ -1,0 +1,51 @@
+# Self-contained CCTV/face-attendance stack for a dedicated host.
+# Brings its own Postgres so it can run on a box where the BSS stack is down.
+#
+#   cp .env.example .env    # set BTP_PG_PASSWORD (+ BTP_SOURCE)
+#   docker compose up -d --build
+#
+# One pipeline process per camera: add more `attendance-<name>` services with
+# their own `--camera <name>` and BTP_SOURCE later; they all share this DB and
+# are told apart by the `camera` column.
+name: attendance
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: btp
+      POSTGRES_PASSWORD: ${BTP_PG_PASSWORD:?set BTP_PG_PASSWORD in deploy/.env}
+      POSTGRES_DB: btp
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U btp -d btp"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  attendance:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      BTP_PG_PASSWORD: ${BTP_PG_PASSWORD}
+      BTP_PG_SCHEMA: attendance
+      BTP_DATABASE_URL: postgresql://btp:${BTP_PG_PASSWORD}@db:5432/btp
+    volumes:
+      - snapshots:/app/data/snapshots
+      - deepface:/root/.deepface
+      - ultralytics:/root/.config/Ultralytics
+    command:
+      ["python", "main.py", "--no-display", "--source", "${BTP_SOURCE:-rtsp://127.0.0.1:8554/cctv}"]
+
+volumes:
+  pgdata:
+  snapshots:
+  deepface:
+  ultralytics:
