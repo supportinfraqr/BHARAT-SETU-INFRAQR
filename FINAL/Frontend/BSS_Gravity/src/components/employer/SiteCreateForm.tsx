@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { MapPin, X } from 'lucide-react';
+import { MapPin, X, ChevronDown } from 'lucide-react';
 import type { SiteGeo } from '@/components/employer/siteGeo';
 import { INDIA_STATES } from '@/data/indiaStates';
 
@@ -394,6 +394,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   const [geo, setGeo] = useState<SiteGeo | null>(() => initial && initial.latitude ? { lat: Number(initial.latitude), lng: Number(initial.longitude), label: 'Saved site location' } : null);
   const [location, setLocation] = useState(String(initial?.location ?? ''));
   const [state, setState] = useState(String(initial?.state ?? ''));
+  const [stateOpen, setStateOpen] = useState(false);
   const [name, setName] = useState(String(initial?.site_name ?? initial?.name ?? ''));
   const [code, setCode] = useState(String(initial?.site_code ?? initial?.code ?? ''));
   const [startDate, setStartDate] = useState(String(initial?.site_start_date ?? ''));
@@ -525,11 +526,25 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
               <div className="mt-1 flex items-center gap-3">
                 <input type="color" value={colour} onChange={e => setColour(e.target.value)} className="h-10 w-16 rounded-lg border border-gray-200 bg-white p-1 cursor-pointer" />
                 <span className="text-xs font-mono text-gray-500">{colour.toUpperCase()}</span>
-                <span className="text-[10px] text-gray-400">Shows as the top band on the worker&apos;s ID card.</span>
               </div>
             </label>
             <label className="text-xs font-semibold text-gray-700">City / location <span className="text-red-500">*</span><input list="site-city-options" value={location} onChange={event => setLocation(event.target.value)} className={fieldCls} /></label>
-            <label className="text-xs font-semibold text-gray-700">State (auto-filled from map if you pin) <span className="text-red-500">*</span><select required value={state} onChange={event => setState(event.target.value)} className={`${fieldCls} bg-white`}><option value="">Select state</option>{stateOptions.map(s => <option key={s} value={s}>{s}</option>)}</select></label>
+            <div className="relative text-xs font-semibold text-gray-700">State (auto-filled from map if you pin) <span className="text-red-500">*</span>
+              <button type="button" onClick={() => setStateOpen(o => !o)} className={`${fieldCls} bg-white text-left flex items-center justify-between`}>
+                <span className={state ? 'text-gray-800' : 'text-gray-400'}>{state || 'Select state'}</span>
+                <ChevronDown size={14} className={`text-gray-400 transition-transform ${stateOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {stateOpen && (
+                <>
+                  <button type="button" aria-hidden="true" tabIndex={-1} onClick={() => setStateOpen(false)} className="fixed inset-0 z-20 cursor-default" />
+                  <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-60 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                    {stateOptions.map(s => (
+                      <button key={s} type="button" onClick={() => { setState(s); setStateOpen(false); }} className={`block w-full px-3 py-2 text-left text-sm hover:bg-gray-50 ${state === s ? 'bg-blue-50 font-semibold text-[#073B67]' : 'text-gray-700'}`}>{s}</button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
             <datalist id="site-city-options">{cityOptions.map(city => <option key={city} value={city} />)}</datalist>
             <label className="text-xs font-semibold text-gray-700">Start date <span className="text-red-500">*</span><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={fieldCls} /></label>
             <label className="text-xs font-semibold text-gray-700">End date <span className="text-red-500">*</span><input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={fieldCls} /></label>
