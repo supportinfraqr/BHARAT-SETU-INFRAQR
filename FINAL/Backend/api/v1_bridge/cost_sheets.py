@@ -412,6 +412,8 @@ _TRANSITIONS = {
     "finance-reject": ("DRAFT", {"REVIEW", "FINANCE"}),
     "publish": ("PUBLISHED", {"DRAFT", "REVIEW", "COMPLIANCE", "FINANCE"}),
     "archive": ("ARCHIVED", {"PUBLISHED"}),
+    "restore": ("PUBLISHED", {"ARCHIVED"}),
+    "unarchive": ("DRAFT", {"ARCHIVED"}),
 }
 
 

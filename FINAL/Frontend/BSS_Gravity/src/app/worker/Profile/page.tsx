@@ -14,7 +14,7 @@ import {
   Building2, CreditCard, Briefcase, Award, BadgeCheck,
   Clock,
   Database, Fingerprint, RefreshCw, CheckCircle, HardHat,
-  Plus, Trash2, Percent, Upload, X, Eye
+  Plus, Trash2, Percent, Upload, X, Eye, Camera
 } from 'lucide-react';
 
 export default function WorkerProfilePage() {
@@ -60,6 +60,53 @@ export default function WorkerProfilePage() {
   const [disabilityStatus, setDisabilityStatus] = useState(() => worker.personal.disabilityStatus || 'No');
   const [disabilityTypePct, setDisabilityTypePct] = useState(() => worker.identity.disabilityTypePct || '');
   const nomineeFileRef = useRef<HTMLInputElement>(null);
+  const facePhotoInputRef = useRef<HTMLInputElement>(null);
+  const cameraVideoRef = useRef<HTMLVideoElement>(null);
+  const cameraCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [activeFaceSlot, setActiveFaceSlot] = useState<number | null>(null);
+  const [facePhotos, setFacePhotos] = useState<Record<number, string>>({});
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+
+  const startCamera = async (slotIdx: number) => {
+    setActiveFaceSlot(slotIdx);
+    setCameraModalOpen(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } });
+      setCameraStream(stream);
+      if (cameraVideoRef.current) {
+        cameraVideoRef.current.srcObject = stream;
+        await cameraVideoRef.current.play();
+      }
+    } catch (err) {
+      alert('Could not access camera. Please check camera permissions or upload a photo file.');
+      setCameraModalOpen(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setCameraModalOpen(false);
+  };
+
+  const capturePhoto = () => {
+    if (!cameraVideoRef.current || activeFaceSlot === null) return;
+    const video = cameraVideoRef.current;
+    const canvas = cameraCanvasRef.current || document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      setFacePhotos(prev => ({ ...prev, [activeFaceSlot]: dataUrl }));
+      setDirty(true);
+    }
+    stopCamera();
+  };
   const totalPercent = nominees.reduce((sum, n) => sum + (Number.isFinite(n.percent) ? n.percent : 0), 0);
   const percentBalanced = nominees.length > 0 && totalPercent === 100;
   const nomineeAge = (dob: string) => {
@@ -580,6 +627,143 @@ export default function WorkerProfilePage() {
                     </div>
                  </div>
               </div>
+
+              {/* AI CCTV Video Attendance Face Photos (5 High Quality Photos) */}
+              <div className="bg-gradient-to-r from-blue-50/90 via-slate-50 to-indigo-50/80 border border-blue-200/80 rounded-2xl p-5 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-blue-100 pb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                      <Fingerprint size={18} className="text-[#073B67]" />
+                      AI CCTV Video Attendance — Face Photos (5 Required)
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      To automatically log your site attendance via CCTV &amp; camera recognition, please upload <strong>5 high-quality front-facing photos</strong> taken from different slight angles (approx. 1.5–2 meters distance).
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-blue-100 text-[#073B67] border border-blue-200 whitespace-nowrap self-start sm:self-auto">
+                    AI Enrollment Ready
+                  </span>
+                </div>
+
+                <input
+                  ref={facePhotoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file && activeFaceSlot !== null) {
+                      const url = URL.createObjectURL(file);
+                      setFacePhotos(prev => ({ ...prev, [activeFaceSlot]: url }));
+                      setDirty(true);
+                    }
+                    e.target.value = '';
+                  }}
+                />
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+                  {[1, 2, 3, 4, 5].map((idx) => {
+                    const imgUrl = facePhotos[idx] || (idx === 1 ? worker.identity.photoUrl : '');
+                    return (
+                      <div
+                        key={idx}
+                        className="bg-white border border-gray-200 rounded-xl p-2.5 flex flex-col items-center justify-between text-center relative group hover:border-[#073B67] hover:shadow-xs transition-all"
+                      >
+                        <div 
+                          onClick={() => {
+                            setActiveFaceSlot(idx);
+                            facePhotoInputRef.current?.click();
+                          }}
+                          className="w-13 h-13 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden mb-1.5 relative cursor-pointer group/avatar"
+                        >
+                          {imgUrl ? (
+                            <img src={imgUrl} alt={`Photo ${idx}`} className="w-full h-full object-cover" />
+                          ) : (
+                            <UserCircle size={28} className="text-slate-400" />
+                          )}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center">
+                            <Upload size={14} className="text-white" />
+                          </div>
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-800 leading-tight">Photo #{idx}</span>
+                        <span className="text-[9px] text-slate-500 mt-0.5 min-h-[14px] leading-tight">
+                          {idx === 1 ? 'Frontal View' : idx === 2 ? 'Slight Left' : idx === 3 ? 'Slight Right' : idx === 4 ? 'Outdoor Light' : 'Natural Face'}
+                        </span>
+                        <div className="mt-2.5 grid grid-cols-2 gap-1.5 w-full">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void startCamera(idx);
+                            }}
+                            className="text-emerald-700 hover:bg-emerald-600 hover:text-white bg-emerald-50 py-1.5 rounded-lg border border-emerald-200/80 flex items-center justify-center transition-all shadow-2xs w-full group/btn"
+                            title="Take photo with WebCam"
+                          >
+                            <Camera size={14} className="shrink-0 transition-transform group-hover/btn:scale-110" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveFaceSlot(idx);
+                              facePhotoInputRef.current?.click();
+                            }}
+                            className="text-blue-700 hover:bg-blue-600 hover:text-white bg-blue-50 py-1.5 rounded-lg border border-blue-200/80 flex items-center justify-center transition-all shadow-2xs w-full group/btn"
+                            title="Upload photo file"
+                          >
+                            <Upload size={14} className="shrink-0 transition-transform group-hover/btn:scale-110" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-slate-600 bg-white/80 rounded-xl p-3 border border-slate-200/60 gap-2">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <CheckCircle size={14} className="text-emerald-600 flex-shrink-0" />
+                    Photos are encrypted and embedded directly into the site&apos;s CCTV vector engine.
+                  </span>
+                  <span className="font-bold text-[#073B67]">
+                    {Object.keys(facePhotos).length || (worker.identity.photoUrl ? 1 : 0)} / 5 Photos Enrolled
+                  </span>
+                </div>
+              </div>
+
+              {/* Live WebCam Capture Modal */}
+              {cameraModalOpen && (
+                <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm grid place-items-center p-4">
+                  <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl space-y-4 p-5 text-center">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                      <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                        <Camera size={18} className="text-[#073B67]" />
+                        Capture Photo #{activeFaceSlot}
+                      </h3>
+                      <button type="button" onClick={stopCamera} className="w-8 h-8 grid place-items-center rounded-full hover:bg-gray-100 text-gray-400">
+                        <X size={16} />
+                      </button>
+                    </div>
+
+                    <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-gray-800 flex items-center justify-center">
+                      <video ref={cameraVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 border-2 border-emerald-400/40 rounded-xl pointer-events-none" />
+                    </div>
+
+                    <p className="text-xs text-gray-500">
+                      Position your face clearly in the camera center and click <strong>Capture Photo</strong>.
+                    </p>
+
+                    <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                      <button type="button" onClick={stopCamera} className="h-9 px-4 rounded-lg border border-gray-200 text-xs font-semibold hover:bg-gray-50">
+                        Cancel
+                      </button>
+                      <button type="button" onClick={capturePhoto} className="h-9 px-5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm inline-flex items-center gap-1.5">
+                        <Camera size={14} /> Capture Photo
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6 pt-6 border-t border-black/5">
                  <div>

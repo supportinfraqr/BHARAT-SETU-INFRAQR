@@ -309,19 +309,19 @@ export default function ContractorBindingRequestsPage() {
     )}
     {wageFor && (
       <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4">
-        <section role="dialog" aria-modal="true" className="bg-white rounded-2xl p-6 w-full max-w-sm">
+        <section role="dialog" aria-modal="true" className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl">
           <h2 className="font-semibold text-gray-900">Approve binding — cost sheet</h2>
           <p className="text-xs text-gray-500 mt-1">{wageFor.entityName} · {wageFor.site}</p>
           <p className="text-[11px] text-gray-400 mt-2">Pick the employer-accepted cost sheet for this site. The wage, statutory components, custom costs and CTC are auto-computed and printed on the worker&apos;s appointment letter.</p>
           <label className="block mt-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">Cost sheet (required)</label>
-          <select value={acceptSheet} onChange={e => { setAcceptSheet(e.target.value); setWageError(''); }} disabled={!acceptSheets.length} className="mt-1 w-full bg-[#F5F5F7] border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none disabled:text-gray-500">
+          <select value={acceptSheet} onChange={e => { setAcceptSheet(e.target.value); setWageError(''); }} disabled={!acceptSheets.length} className="mt-1.5 w-full bg-[#F5F5F7] border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#073B67] disabled:text-gray-500 truncate">
             <option value="">{acceptSheets.length ? 'Select an employer-accepted cost sheet…' : 'No accepted cost sheet for this site'}</option>
             {acceptSheets.map(s => <option key={s.id} value={s.id}>{s.name}{s.siteName ? ` · ${s.siteName}` : ''} · {s.code}</option>)}
           </select>
           {wageError && <p className="text-[11px] text-red-600 font-semibold mt-2">{wageError}</p>}
-          <div className="mt-4 flex gap-2 justify-end">
-            <button onClick={() => setWageFor(null)} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold">Cancel</button>
-            <button onClick={() => void confirmWage()} disabled={busy} className="h-9 px-4 rounded-lg bg-emerald-600 text-white text-xs font-bold disabled:opacity-60">{busy ? 'Approving…' : 'Approve & Bind'}</button>
+          <div className="mt-5 flex gap-2 justify-end">
+            <button onClick={() => setWageFor(null)} className="h-9 px-4 rounded-lg border border-gray-200 text-xs font-semibold hover:bg-gray-50">Cancel</button>
+            <button onClick={() => void confirmWage()} disabled={busy} className="h-9 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold disabled:opacity-60 transition-colors">{busy ? 'Approving…' : 'Approve & Bind'}</button>
           </div>
         </section>
       </div>

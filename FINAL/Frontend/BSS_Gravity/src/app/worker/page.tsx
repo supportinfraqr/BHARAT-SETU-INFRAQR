@@ -86,6 +86,28 @@ export default function WorkerOverview() {
     {availableForWork && <section className="bg-[#073B67] border border-[#073B67] text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3"><span className="w-10 h-10 rounded-xl bg-[#F47A32] grid place-items-center flex-shrink-0"><BadgeCheck size={20}/></span><div className="flex-1"><p className="text-sm font-bold">Available for work — ON</p><p className="text-xs text-white/80 mt-0.5">Employers can see that you are available and shortlist you for matching jobs. Turn it off anytime in Rozgar Setu.</p></div><Link href="/worker/rozgar" className="h-9 px-3 rounded-lg bg-white/10 text-xs font-bold inline-flex items-center gap-1.5 hover:bg-white/20 flex-shrink-0">Manage availability<ArrowRight size={13}/></Link></section>}
     {!worker.identity.aadhaarVerified && <section className="bg-[#FFF8F0] border border-[#F47A32]/20 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3"><span className="w-10 h-10 rounded-xl bg-[#F47A32] grid place-items-center flex-shrink-0 text-white"><Fingerprint size={20}/></span><div className="flex-1"><p className="text-sm font-bold text-[#9A3412]">Link your Aadhaar</p><p className="text-xs text-[#9A3412]/80 mt-0.5">Enter your Aadhaar to verify via OTP and auto-fill your name, date of birth, address and photo.</p></div><Link href="/worker/Profile?tab=integrations" className="h-9 px-3 rounded-lg bg-[#F47A32] text-white text-xs font-bold inline-flex items-center gap-1.5 hover:bg-[#e06a24] flex-shrink-0">Link Aadhaar<ArrowRight size={13}/></Link></section>}
 
+    {/* Mandatory AI CCTV Face Attendance Photo Enrolment Prompt Banner */}
+    <section className="bg-gradient-to-r from-blue-900 via-slate-900 to-indigo-950 border border-blue-700/60 text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
+      <div className="flex items-start sm:items-center gap-3.5">
+        <span className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/40 grid place-items-center flex-shrink-0 text-blue-300">
+          <Fingerprint size={22} />
+        </span>
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-blue-300 uppercase tracking-wider">Required for Daily Attendance</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">CCTV Ready</span>
+          </div>
+          <p className="text-sm font-bold text-white mt-0.5">Upload 5 Face Photos for AI Camera Attendance</p>
+          <p className="text-xs text-slate-300 mt-0.5">
+            Your contractor/employer uses AI video cameras on site to auto-track your attendance daily. Upload 5 front-facing photos to enable auto-marking.
+          </p>
+        </div>
+      </div>
+      <Link href="/worker/Profile?tab=personal" className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5 transition-colors flex-shrink-0 whitespace-nowrap shadow-sm">
+        Upload 5 Photos &rarr;
+      </Link>
+    </section>
+
     <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">{t('nav.overview')}</p><div className="mt-1 flex flex-wrap items-center gap-2"><h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950">{t('dash.welcome')}, {worker.identity.name.split(' ')[0]}</h1><span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">{t('portal.worker')}</span></div><p className="text-sm text-gray-500 mt-1">A quick view of your identity, work and benefits.</p></div>
       <div className="flex gap-2"><Link href="/worker/idcard" className="h-10 px-4 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 flex items-center gap-2 hover:border-gray-300"><QrCode size={16}/>{t('dash.view_card')}</Link><Link href="/worker/Profile" className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black">{t('dash.manage')}<ArrowRight size={15}/></Link></div>

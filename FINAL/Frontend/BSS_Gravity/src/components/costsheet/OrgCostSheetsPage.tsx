@@ -30,6 +30,8 @@ export default function OrgCostSheetsPage() {
   const [busy, setBusy] = useState(false);
   const [sites, setSites] = useState<Array<{ id:string; name:string; state?:string }>>([]);
   const [adoptSite, setAdoptSite] = useState<Record<number,string>>({});
+  const [selectedMasterId, setSelectedMasterId] = useState<string>("");
+  const [selectedSiteId, setSelectedSiteId] = useState<string>("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -187,11 +189,49 @@ export default function OrgCostSheetsPage() {
     } },
   ];
 
+  const masterTemplates = rows.filter(r => !r.ownerId);
+
   return <div className="space-y-6 pb-10">
     <header><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Payroll</p><h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Cost Sheets</h1><p className="text-sm text-gray-500 mt-1">Published BSS cost sheet templates plus your own customised copies. Statutory and minimum-wage values are locked; you can adjust your own cost heads (where &ldquo;editable by org&rdquo; is allowed).</p></header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
     {notice && <p role="status" className="bss-alert bss-alert-success">{notice}</p>}
+
+    {role === "contractor" && masterTemplates.length > 0 && (
+      <section className="bg-gradient-to-r from-blue-50/80 via-white to-indigo-50/80 border border-blue-200/80 rounded-2xl p-5 shadow-sm space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-100/80 pb-3">
+          <div>
+            <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2"><Copy size={16} className="text-[#073B67]"/>Quick Adopt Platform Master Template</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Select a master template and your allotted site to adopt it immediately into your cost sheet workspace.</p>
+          </div>
+          <span className="text-[11px] font-semibold text-blue-800 bg-blue-100/70 px-2.5 py-1 rounded-full">{masterTemplates.length} Master Template{masterTemplates.length === 1 ? '' : 's'} available</span>
+        </div>
+        <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-3 items-end pt-1">
+          <label className="block text-xs font-semibold text-gray-700">1. Master Template
+            <select value={selectedMasterId} onChange={e => setSelectedMasterId(e.target.value)} className="mt-1 block w-full h-10 rounded-xl border border-gray-200 px-3 text-xs bg-white focus:ring-2 focus:ring-[#073B67] font-medium">
+              <option value="">Choose Platform Master template…</option>
+              {masterTemplates.map(t => <option key={t.id} value={t.id}>{t.name} ({t.state || "All India"} · {t.workerCategory || "All"})</option>)}
+            </select>
+          </label>
+          <label className="block text-xs font-semibold text-gray-700">2. Allotted Site
+            <select value={selectedSiteId} onChange={e => setSelectedSiteId(e.target.value)} className="mt-1 block w-full h-10 rounded-xl border border-gray-200 px-3 text-xs bg-white focus:ring-2 focus:ring-[#073B67] font-medium">
+              <option value="">{sites.length ? "Select allotted site…" : "No site allotted"}</option>
+              {sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.state ? ` · ${s.state}` : ""}</option>)}
+            </select>
+          </label>
+          <button
+            disabled={busy || !selectedMasterId || !selectedSiteId}
+            onClick={() => {
+              const tmpl = masterTemplates.find(t => String(t.id) === selectedMasterId);
+              if (tmpl && selectedSiteId) void copy(tmpl, selectedSiteId);
+            }}
+            className="h-10 px-5 rounded-xl bg-[#073B67] hover:bg-[#0a4a80] text-white text-xs font-bold shadow-sm disabled:opacity-50 inline-flex items-center gap-2 transition-colors whitespace-nowrap"
+          >
+            <Copy size={14}/>Adopt for Site
+          </button>
+        </div>
+      </section>
+    )}
 
     {loading ? <p className="flex items-center gap-2 text-sm text-gray-500 py-10"><Loader2 size={16} className="animate-spin"/>Loading cost sheets…</p>
       : <EnterpriseDataTable title="Available cost sheet templates" rows={rows} columns={columns} rowKey={r => String(r.id)} filename="org-cost-sheets"/>}

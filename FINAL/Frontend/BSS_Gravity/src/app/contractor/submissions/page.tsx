@@ -671,12 +671,26 @@ export default function ComplianceSubmissionPage() {
     {tab === 'submissions' && <div className="space-y-4">
       {/* Filters Card */}
       <div className="bg-white p-4 rounded-2xl border border-gray-200 space-y-3.5 shadow-sm">
-        {/* Site Filter */}
+        {/* Site Filter & Employer Info */}
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Site:</span>
           <select value={siteFilter} onChange={e => setSiteFilter(e.target.value)} className="h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white font-semibold">
-            {contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}
+            {contractor.sites.map(s => (
+              <option key={s.id} value={s.name}>
+                {s.name}{s.employer ? ` (${s.employer})` : ''}{s.state ? ` — ${s.state}` : ''}
+              </option>
+            ))}
           </select>
+          {(() => {
+            const currentSiteObj = contractor.sites.find(s => s.name === siteFilter);
+            const empName = currentSiteObj?.employer || contractor.employers[0]?.name;
+            return empName ? (
+              <span className="text-xs font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-3 py-1 rounded-lg inline-flex items-center gap-1.5">
+                <ShieldCheck size={14} className="text-[#073B67]" />
+                Principal Employer: <strong className="text-gray-900">{empName}</strong>
+              </span>
+            ) : null;
+          })()}
         </div>
 
         {/* Registration-Based Financial Year Filter Tabs */}
@@ -866,7 +880,18 @@ export default function ComplianceSubmissionPage() {
           </div>
 
           <label className="text-xs font-bold text-gray-700 block">Site
-            <select value={activeSiteObj?.name || ''} onChange={e => setSiteName(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-white font-semibold">{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}</select>
+            <select value={activeSiteObj?.name || ''} onChange={e => setSiteName(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-white font-semibold">
+              {contractor.sites.map(s => (
+                <option key={s.id} value={s.name}>
+                  {s.name}{s.employer ? ` (${s.employer})` : ''}{s.state ? ` — ${s.state}` : ''}
+                </option>
+              ))}
+            </select>
+            {activeSiteObj?.employer && (
+              <span className="mt-1 block text-[11px] text-gray-500 font-medium">
+                Principal Employer: <strong className="text-slate-800">{activeSiteObj.employer}</strong>
+              </span>
+            )}
           </label>
 
           <label className="text-xs font-bold text-gray-700 block">Financial Year (From Registration)

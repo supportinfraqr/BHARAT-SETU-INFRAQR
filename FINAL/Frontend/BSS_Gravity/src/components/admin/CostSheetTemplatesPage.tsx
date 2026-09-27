@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronLeft, ChevronRight, Copy, Eye, FileClock, Loader2, Pencil, Plus, Save, Trash2, Wand2, X } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Copy, Eye, FileClock, Loader2, Pencil, Plus, RotateCcw, Save, Trash2, Wand2, X } from "lucide-react";
 import EnterpriseDataTable, { type DataColumn } from "@/components/worker/EnterpriseDataTable";
 import { INDIA_STATES } from "@/data/indiaStates";
 
@@ -426,6 +426,7 @@ useEffect(() => {
         )}
         {r.status === "DRAFT" && <button disabled={busy} onClick={() => void transition(r, "publish")} className="text-xs font-semibold text-green-700 hover:underline disabled:opacity-50">Publish</button>}
         {r.status === "PUBLISHED" && <button disabled={busy} onClick={() => void transition(r, "archive")} className="text-xs font-semibold text-gray-600 hover:underline disabled:opacity-50">Archive</button>}
+        {r.status === "ARCHIVED" && <button disabled={busy} onClick={() => void transition(r, "restore")} className="text-xs font-semibold text-emerald-700 font-bold hover:underline inline-flex items-center gap-1 disabled:opacity-50"><RotateCcw size={12}/>Restore</button>}
         {r.status === "PUBLISHED" && <button disabled={busy} onClick={() => void newVersion(r)} className="text-xs font-semibold text-blue-700 font-bold hover:underline inline-flex items-center gap-1 disabled:opacity-50"><Copy size={12}/>New version</button>}
         <button onClick={() => void remove(r)} className="text-xs font-semibold text-red-600 hover:underline inline-flex items-center gap-1"><Trash2 size={12}/>Delete</button>
       </div>
