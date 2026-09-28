@@ -38,6 +38,7 @@ const accessGroup = { key: 'Users & Access', icon: Users, items: [
   ['User Registration', '/admin/users'],
   ['Permission Page', '/admin/permissions'],
   ['Bulk Register', '/admin/bulk-register'],
+  ['Identity Verifications', '/admin/verifications'],
 ] as const };
 const auditOpsGroup = { key: 'Audit & Reports', icon: BookOpenCheck, items: [
   ['Activity Report', '/admin/activity'],

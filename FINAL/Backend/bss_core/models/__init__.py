@@ -4,6 +4,7 @@ from .auth import (
     UserManager,
     UserCredential,
     ContractorProfile,
+    EntityVerificationDocument,
     EmployerProfile,
     GovernmentProfile,
     BssStaffProfile,
@@ -164,7 +165,7 @@ from .payroll import (
 
 __all__ = [
     "AppRole", "User", "UserManager", "UserCredential",
-    "ContractorProfile", "EmployerProfile", "GovernmentProfile",
+    "ContractorProfile", "EmployerProfile", "GovernmentProfile", "EntityVerificationDocument",
     "BssStaffProfile",
     "Site", "SiteDocument", "SiteGate", "SiteLicense", "SiteOrder",
     "SiteBocwRegistration", "SiteClraRegistration",

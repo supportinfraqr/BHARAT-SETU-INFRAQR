@@ -156,6 +156,10 @@ class ContractorProfile(models.Model):
     gst_constitution = models.CharField(max_length=120, blank=True)
     gst_certificate = models.FileField(upload_to="gst_certificates/", null=True, blank=True)
     gst_registration_date = models.CharField(max_length=20, blank=True)  # GSTN dateOfRegistration (dd/mm/yyyy)
+    # Post-GST identity step: are you on EntityLocker? If not, manual documents.
+    entity_locker_declined = models.BooleanField(default=False)
+    manual_verification_status = models.CharField(max_length=20, default="NOT_SUBMITTED")
+    manual_verification_note = models.CharField(max_length=255, blank=True)
 
     class Meta:
         db_table = "contractor_profiles"
@@ -250,12 +254,35 @@ class EmployerProfile(models.Model):
     gst_constitution = models.CharField(max_length=120, blank=True)
     gst_certificate = models.FileField(upload_to="gst_certificates/", null=True, blank=True)
     gst_registration_date = models.CharField(max_length=20, blank=True)  # GSTN dateOfRegistration (dd/mm/yyyy)
+    # Post-GST identity step: are you on EntityLocker? If not, manual documents.
+    entity_locker_declined = models.BooleanField(default=False)
+    manual_verification_status = models.CharField(max_length=20, default="NOT_SUBMITTED")
+    manual_verification_note = models.CharField(max_length=255, blank=True)
 
     class Meta:
         db_table = "employer_profiles"
 
     def __str__(self):
         return self.employer_name or str(self.user_id)
+
+
+class EntityVerificationDocument(models.Model):
+    """Manual identity documents uploaded when an entity is not on EntityLocker."""
+    DOC_TYPES = [("PAN", "PAN card"), ("AADHAAR", "Aadhaar"),
+                 ("INCORPORATION", "Incorporation certificate"), ("OTHER", "Other")]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE,
+                             related_name="entity_verification_documents")
+    doc_type = models.CharField(max_length=20, choices=DOC_TYPES, default="OTHER")
+    file = models.FileField(upload_to="entity_verification/")
+    note = models.CharField(max_length=255, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "entity_verification_document"
+
+    def __str__(self):
+        return f"{self.doc_type} · {self.user_id}"
 
 
 class GovernmentProfile(models.Model):
