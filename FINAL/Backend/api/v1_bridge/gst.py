@@ -135,6 +135,46 @@ def gst_verification_validate(request):
     return Response({"data": _serialize(profile)}, status=status.HTTP_200_OK)
 
 
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def gst_verification_verify(request):
+    """Fetch GST tax-payer details by GSTIN (no OTP) and record verification."""
+    profile = _profile_for(request.user)
+    if profile is None:
+        return Response({"error": "Only employers and contractors can verify GST."},
+                        status=status.HTTP_403_FORBIDDEN)
+    body = request.data if isinstance(request.data, dict) else {}
+    gstin = str(body.get("gstin") or profile.gstin or "").strip().upper()
+    if not _GSTIN_RE.match(gstin):
+        return Response({"error": "Enter a valid 15-character GSTIN."}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        result = apisetu_client.gstn_taxpayer(gstin)
+    except apisetu_client.ApiSetuError as exc:
+        return Response({"error": str(exc)}, status=exc.status_code)
+
+    active = str(result.get("status") or "").strip().lower() == "active"
+    profile.gstin = result.get("gstin") or gstin
+    profile.gst_legal_name = (result.get("legal_name") or "")[:200]
+    profile.gst_trade_name = (result.get("trade_name") or "")[:200]
+    profile.gst_constitution = (result.get("constitution") or "")[:120]
+    profile.gst_verification_status = "VERIFIED" if active else "FAILED"
+    profile.gst_verified_at = timezone.now() if active else None
+    fields = ["gstin", "gst_legal_name", "gst_trade_name", "gst_constitution",
+              "gst_verification_status", "gst_verified_at"]
+    if hasattr(profile, "updated_at"):
+        fields.append("updated_at")
+    profile.save(update_fields=fields)
+
+    data = _serialize(profile)
+    data.update({
+        "gstnStatus": result.get("status") or "",
+        "registrationDate": result.get("registration_date") or "",
+        "taxpayerType": result.get("taxpayer_type") or "",
+    })
+    return Response({"data": data}, status=status.HTTP_200_OK)
+
+
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])

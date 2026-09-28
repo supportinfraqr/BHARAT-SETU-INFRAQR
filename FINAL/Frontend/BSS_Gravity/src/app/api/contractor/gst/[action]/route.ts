@@ -34,7 +34,7 @@ export async function POST(request: Request, context: Context) {
   try {
     assertTrustedMutation(request);
     const { action } = await context.params;
-    if (action !== 'initiate' && action !== 'validate') {
+    if (action !== 'initiate' && action !== 'validate' && action !== 'verify') {
       return NextResponse.json({ error: 'Unknown GST action.' }, { status: 404 });
     }
     const session = await requireApiSession('Contractor');
