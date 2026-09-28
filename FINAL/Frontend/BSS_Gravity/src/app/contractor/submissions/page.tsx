@@ -442,9 +442,6 @@ export default function ComplianceSubmissionPage() {
     form.set('documentType', doc.name); form.set('frequency', doc.frequency);
     form.set('mandatory', doc.mandatory ? 'true' : 'false');
     form.set('period', `${createPeriod} ${fy.replace('FY ', '')}`);
-    // No OCR checklist → store the document as-is (skip the slow OCR run). This
-    // matches "OCR does not apply" for additional/Admin forms and keeps uploads fast.
-    if ((doc.ocrCheckpoints?.length ?? 0) === 0) form.set('noOcr', 'true');
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), 60_000);
     try {
@@ -636,7 +633,7 @@ export default function ComplianceSubmissionPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <button type="button" onClick={() => setViewErrors({ name: doc.name, findings: up.findings ?? [], uploadId: up.id })} className="text-left text-[10px] font-bold text-red-700 hover:underline">Errors found — view reasons</button>
                           {up?.id != null && (
-                            <button type="button" onClick={() => void submitSingleForm(doc.name, up.id, true)} disabled={busy} className="h-6 px-2 rounded-md border border-red-300 text-[10px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-40">Submit anyway</button>
+                            <button type="button" onClick={() => void submitSingleForm(doc.name, up.id, true)} disabled={busy} className="h-6 px-2 rounded-md border border-red-300 text-[10px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-40">Submit forcefully</button>
                           )}
                         </div>
                       ) : up?.status === 'Validated' ? (
@@ -1012,7 +1009,7 @@ export default function ComplianceSubmissionPage() {
             <p className="text-[11px] text-gray-400">Overriding records the failed checks against this document.</p>
             <div className="flex gap-2">
               <button type="button" onClick={() => setViewErrors(null)} className="h-9 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Close</button>
-              <button type="button" disabled={busy} onClick={() => { const id = viewErrors.uploadId; const name = viewErrors.name; setViewErrors(null); void submitSingleForm(name, id, true); }} className="h-9 px-4 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700 disabled:opacity-40">Submit anyway</button>
+              <button type="button" disabled={busy} onClick={() => { const id = viewErrors.uploadId; const name = viewErrors.name; setViewErrors(null); void submitSingleForm(name, id, true); }} className="h-9 px-4 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700 disabled:opacity-40">Submit forcefully</button>
             </div>
           </footer>
         )}
