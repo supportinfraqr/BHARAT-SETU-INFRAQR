@@ -43,7 +43,7 @@ export async function POST(request: Request, context: Context) {
     const result = await upstreamRequest(config.apiBaseUrl, `/v1/contractor/gst/${action}`, session, {
       method: 'POST',
       body: JSON.stringify(body),
-    });
+    }, { timeoutMs: 90_000 });
     return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return apiError(error, 'GST verification could not be completed.');

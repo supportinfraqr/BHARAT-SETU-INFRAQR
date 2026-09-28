@@ -19,6 +19,7 @@ Configuration (env):
 import base64
 import json
 import os
+import time
 import uuid
 
 import requests
@@ -68,16 +69,22 @@ def _auth_headers():
     return headers
 
 
-def _request(method, url, *, params=None, payload=None, action=None, timeout=30):
+def _request(method, url, *, params=None, payload=None, action=None, timeout=30, retries=1):
     headers = _auth_headers()
     if action:
         headers["action"] = action
-    try:
-        response = requests.request(method, url, params=params,
-                                    data=json.dumps(payload) if payload is not None else None,
-                                    headers=headers, timeout=timeout)
-    except requests.RequestException as exc:
-        raise ApiSetuError(f"API Setu unreachable: {exc}", 502)
+    response = None
+    for attempt in range(retries + 1):
+        try:
+            response = requests.request(method, url, params=params,
+                                        data=json.dumps(payload) if payload is not None else None,
+                                        headers=headers, timeout=timeout)
+            break
+        except requests.RequestException as exc:
+            if attempt < retries:
+                time.sleep(1.5 * (attempt + 1))
+                continue
+            raise ApiSetuError(f"API Setu unreachable: {exc}", 502)
     try:
         body = response.json()
     except ValueError:
@@ -97,7 +104,7 @@ def gstn_taxpayer(gstin, version=None):
         return {"gstin": gstin, "legal_name": "MOCK LEGAL NAME", "trade_name": "Mock Trade",
                 "constitution": "Proprietorship", "status": "Active",
                 "registration_date": "", "taxpayer_type": "Regular", "raw": {}}
-    body = _request("GET", f"{_taxpayer_base_url()}{path}")
+    body = _request("GET", f"{_taxpayer_base_url()}{path}", timeout=40, retries=1)
     if version == "v1":
         return {
             "gstin": body.get("gstin") or gstin,
