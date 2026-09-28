@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { 
   HardHat, 
   Briefcase, 
@@ -34,19 +34,12 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   const [aadhaar, setAadhaar] = useState("");
   const [aadhaarOtp, setAadhaarOtp] = useState("");
   const [aadhaarRef, setAadhaarRef] = useState("");
-  const [aadhaarCooldown, setAadhaarCooldown] = useState(0);
 
   const [step, setStep] = useState<"details" | "otp" | "aadhaar" | "aadhaar-otp">("details");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    if (aadhaarCooldown <= 0) return;
-    const timer = setTimeout(() => setAadhaarCooldown(s => Math.max(0, s - 1)), 1000);
-    return () => clearTimeout(timer);
-  }, [aadhaarCooldown]);
 
   const isSelfService = ['Worker', 'Contractor', 'Employer'].includes(selectedRole);
 
@@ -93,12 +86,8 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
     setError(""); setNotice(""); setIsCreating(true);
     try {
       const response = await fetch('/api/auth/aadhaar/otp', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ aadhaar }) });
-      const result = await response.json() as { referenceId?: string; error?: string; message?: string; reused?: boolean; retryAfterSeconds?: number };
-      if (!response.ok || !result.referenceId) {
-        if (typeof result.retryAfterSeconds === 'number' && result.retryAfterSeconds > 0) setAadhaarCooldown(result.retryAfterSeconds);
-        throw new Error(result.error ?? 'Aadhaar OTP could not be sent.');
-      }
-      setAadhaarCooldown(0);
+      const result = await response.json() as { referenceId?: string; error?: string; message?: string; reused?: boolean };
+      if (!response.ok || !result.referenceId) throw new Error(result.error ?? 'Aadhaar OTP could not be sent.');
       setAadhaarRef(result.referenceId);
       setStep("aadhaar-otp");
     } catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'Aadhaar OTP could not be sent.'); }
@@ -273,21 +262,13 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
               </div>
 
               <button 
-                disabled={!agreedToTerms || isCreating || aadhaarCooldown > 0 || (step === "aadhaar" && !/^\d{12}$/.test(aadhaar))}
+                disabled={!agreedToTerms || isCreating || (step === "aadhaar" && !/^\d{12}$/.test(aadhaar))}
                 onClick={step === "aadhaar" ? sendAadhaarOtp : verifyAadhaar}
                 type="button"
                 className="mt-1 w-full text-white bg-[#1E3A8A] hover:bg-[#152960] rounded-[12px] px-3.5 py-2.5 text-[13px] font-bold flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isCreating ? "Please wait…"
-                  : aadhaarCooldown > 0 ? `Cooling down — retry in ${Math.max(1, Math.ceil(aadhaarCooldown / 60))} mins`
-                  : step === "aadhaar" ? "Send OTP to Aadhaar-linked mobile"
-                  : "Verify Aadhaar & create Worker ID"}
+                {isCreating ? "Please wait…" : step === "aadhaar" ? "Send OTP to Aadhaar-linked mobile" : "Verify Aadhaar & create Worker ID"}
               </button>
-              {aadhaarCooldown > 0 && (
-                <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                  Aadhaar OTP service is cooling down. Please try again in {Math.max(1, Math.ceil(aadhaarCooldown / 60))} mins.
-                </p>
-              )}
             </div>
           )}
 

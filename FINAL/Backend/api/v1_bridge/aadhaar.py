@@ -217,14 +217,6 @@ def aadhaar_otp(request):
         return Response({"error": "Enter a valid 12-digit Aadhaar number"},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    # Per-Aadhaar cooldown.
-    remaining = _aadhaar_throttle_remaining(aadhaar)
-    if remaining:
-        return Response(
-            {"error": f"An OTP was requested for this Aadhaar a moment ago. Please wait {_fmt_wait(remaining)} before requesting another.",
-             "retryAfterSeconds": remaining},
-            status=status.HTTP_429_TOO_MANY_REQUESTS)
-
     def _reuse_recent(window_minutes, message=""):
         """Return a recent OTP reference so a repeated request reuses the OTP
         already delivered instead of tripping Sandbox's rate limit.
@@ -244,12 +236,6 @@ def aadhaar_otp(request):
         if recent is None:
             return None
         expires = recent.expires_at or (recent.created_at + timedelta(minutes=settings.AADHAAR_OTP_TTL_MIN))
-        # Never hand back a reference whose OTP has already lapsed — otherwise
-        # the user is sent to an OTP screen with a reference Sandbox reports as
-        # expired. If there is no valid one we let the caller report the
-        # rate-limit so the user waits for a fresh OTP instead.
-        if expires <= now:
-            return None
         payload = {
             "referenceId": recent.reference_id,
             "expiresIn": max(0, int((expires - now).total_seconds())),
@@ -265,46 +251,18 @@ def aadhaar_otp(request):
     if live is not None:
         return live
 
-    # Account-wide circuit breaker: Sandbox rate-limits our whole API key, so
-    # once it throttles any Aadhaar we pause all Aadhaar OTP requests. A valid
-    # existing reference was already reused above without calling Sandbox.
-    global_wait = _global_cooldown_remaining()
-    if global_wait:
-        return Response(
-            {"error": f"Aadhaar OTP service is cooling down. Please try again in {_fmt_mins(global_wait)} mins.",
-             "retryAfterSeconds": global_wait},
-            status=status.HTTP_429_TOO_MANY_REQUESTS)
-
-    # Global minimum interval between Sandbox calls (burst protection).
-    gap = _global_min_interval_remaining()
-    if gap:
-        return Response(
-            {"error": f"Please wait {_fmt_wait(gap)} before requesting another Aadhaar OTP.",
-             "retryAfterSeconds": gap},
-            status=status.HTTP_429_TOO_MANY_REQUESTS)
-
-    _mark_global_call()
     try:
         result = aadhaar_client.generate_otp(aadhaar)
     except aadhaar_client.SandboxError as exc:
         sb_status = getattr(exc, "status", 502)
         if 400 <= sb_status < 500:
-            # Already-generated / rate-limited: reuse a recent reference if we
-            # have one (the OTP was already delivered), else ask them to wait.
+            # Already-generated / rate-limited: reuse the last delivered
+            # reference so the user still reaches the OTP screen with the OTP
+            # they received, instead of being blocked.
             msg = str(exc)
             fallback = _reuse_recent(24 * 60, msg)
             if fallback is not None:
                 return fallback
-            rate_limited = (sb_status == 429 or "try after" in msg.lower()
-                            or "already" in msg.lower())
-            if rate_limited:
-                _throttle_aadhaar(aadhaar, 60)
-                _open_global_cooldown()
-                g = _global_cooldown_remaining()
-                return Response(
-                    {"error": f"Aadhaar OTP service is cooling down. Please try again in {_fmt_mins(g)} mins.",
-                     "retryAfterSeconds": g},
-                    status=status.HTTP_429_TOO_MANY_REQUESTS)
             return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"error": f"Aadhaar (UIDAI) service is temporarily unavailable — {str(exc)}. Please try again later."},
                         status=status.HTTP_503_SERVICE_UNAVAILABLE)
@@ -316,12 +274,9 @@ def aadhaar_otp(request):
         fallback = _reuse_recent(24 * 60, msg)
         if fallback is not None:
             return fallback
-        _throttle_aadhaar(aadhaar, 60)
-        _open_global_cooldown()
-        g = _global_cooldown_remaining()
         return Response(
-            {"error": f"Aadhaar OTP service is cooling down. Please try again in {_fmt_mins(g)} mins.",
-             "retryAfterSeconds": g},
+            {"error": "An OTP was already sent to this Aadhaar. Please enter it in the OTP field.",
+             "retryAfterSeconds": 0},
             status=status.HTTP_429_TOO_MANY_REQUESTS)
 
     challenge = AadhaarChallenge.objects.create(
