@@ -86,11 +86,16 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
     setError(""); setNotice(""); setIsCreating(true);
     try {
       const response = await fetch('/api/auth/aadhaar/otp', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ aadhaar }) });
-      const result = await response.json() as { referenceId?: string; error?: string; message?: string; reused?: boolean };
-      if (!response.ok || !result.referenceId) throw new Error(result.error ?? 'Aadhaar OTP could not be sent.');
-      setAadhaarRef(result.referenceId);
+      const result = await response.json().catch(() => ({})) as { referenceId?: string; error?: string; message?: string; reused?: boolean };
+      if (result.referenceId) setAadhaarRef(result.referenceId);
+      // Always advance to the OTP screen so the user can enter the OTP they
+      // received — even if Sandbox rate-limited the resend.
+      if (!response.ok || !result.referenceId) setError(result.error ?? 'OTP already sent — enter it below.');
       setStep("aadhaar-otp");
-    } catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'Aadhaar OTP could not be sent.'); }
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Aadhaar OTP could not be sent.');
+      setStep("aadhaar-otp");
+    }
     finally { setIsCreating(false); }
   };
   const verifyAadhaar = async () => {
