@@ -102,8 +102,9 @@ def gstn_taxpayer(gstin, version=None):
     path = (TAXPAYER_PATHS.get(version) or TAXPAYER_PATHS["v2"]).format(gstin=gstin)
     if _mock_enabled():
         return {"gstin": gstin, "legal_name": "MOCK LEGAL NAME", "trade_name": "Mock Trade",
-                "constitution": "Proprietorship", "status": "Active",
-                "registration_date": "", "taxpayer_type": "Regular", "raw": {}}
+                "constitution": "Proprietorship", "status": "Active", "registration_date": "",
+                "taxpayer_type": "Regular", "state": "", "district": "", "address": "",
+                "pincode": "", "city": "", "nature_of_business": "", "raw": {}}
     body = _request("GET", f"{_taxpayer_base_url()}{path}", timeout=40, retries=1)
     if version == "v1":
         return {
@@ -114,8 +115,20 @@ def gstn_taxpayer(gstin, version=None):
             "status": body.get("status") or "",
             "registration_date": body.get("registrationDate") or "",
             "taxpayer_type": body.get("taxPayerType") or "",
+            "state": "", "district": "", "address": "", "pincode": "", "city": "",
+            "nature_of_business": ", ".join(body.get("natureBusinessActivities") or []),
             "raw": body,
         }
+    ppo = ((body.get("principalPlaceOfBusinessFields") or {})
+           .get("principalPlaceOfBusinessAddress") or {})
+    flat = []
+    for item in (body.get("natureOfBusinessActivity") or []):
+        if isinstance(item, list):
+            flat.extend(str(x) for x in item if x)
+        elif item:
+            flat.append(str(item))
+    address = " ".join(x for x in [ppo.get("buildingNumber"), ppo.get("streetName"),
+                                   ppo.get("location"), ppo.get("floorNumber")] if x)
     return {
         "gstin": body.get("gstIdentificationNumber") or gstin,
         "legal_name": body.get("legalNameOfBusiness") or "",
@@ -124,6 +137,12 @@ def gstn_taxpayer(gstin, version=None):
         "status": body.get("gstnStatus") or "",
         "registration_date": body.get("dateOfRegistration") or "",
         "taxpayer_type": body.get("taxpayerType") or "",
+        "state": ppo.get("stateName") or "",
+        "district": ppo.get("districtName") or "",
+        "address": address,
+        "pincode": ppo.get("pincode") or "",
+        "city": ppo.get("location") or "",
+        "nature_of_business": ", ".join(flat),
         "raw": body,
     }
 

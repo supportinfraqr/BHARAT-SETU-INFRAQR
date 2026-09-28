@@ -36,6 +36,51 @@ def _legal_name_attr(profile):
     return getattr(profile, "contractor_name", "") or getattr(profile, "trade_name", "")
 
 
+def _apply_gst_details(profile, result):
+    """Fill blank canonical profile fields from GSTN details (never overwrite)."""
+    from datetime import datetime
+
+    from bss_core.models import EmployerProfile
+
+    is_employer = isinstance(profile, EmployerProfile)
+    filled = []
+
+    def put(attr, value, limit):
+        value = str(value or "").strip()
+        if not value or not hasattr(profile, attr):
+            return
+        if str(getattr(profile, attr, "") or "").strip():
+            return
+        setattr(profile, attr, value[:limit])
+        filled.append(attr)
+
+    put("employer_name" if is_employer else "contractor_name", result.get("legal_name"), 120)
+    put("trade_name", result.get("trade_name"), 120)
+    put("state", result.get("state"), 60)
+    put("district", result.get("district"), 60)
+    put("address", result.get("address"), 255)
+    put("entity_class", result.get("constitution"), 80)
+    if is_employer:
+        put("employer_category", result.get("taxpayer_type"), 80)
+        put("industry", result.get("nature_of_business"), 80)
+    else:
+        put("constitution", result.get("constitution"), 80)
+        put("activity", result.get("nature_of_business"), 160)
+    gst_value = str(result.get("gstin") or "")
+    if len(gst_value) == 15:
+        put("pan_no", gst_value[2:12], 20)
+    date_str = str(result.get("registration_date") or "").strip()
+    if date_str and not getattr(profile, "incorporation_date", None):
+        for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+            try:
+                setattr(profile, "incorporation_date", datetime.strptime(date_str, fmt).date())
+                filled.append("incorporation_date")
+                break
+            except ValueError:
+                continue
+    return filled
+
+
 def _serialize(profile):
     return {
         "gstin": profile.gstin or "",
@@ -162,9 +207,10 @@ def gst_verification_verify(request):
     profile.gst_verified_at = timezone.now() if active else None
     fields = ["gstin", "gst_legal_name", "gst_trade_name", "gst_constitution",
               "gst_verification_status", "gst_verified_at"]
+    fields += _apply_gst_details(profile, result)
     if hasattr(profile, "updated_at"):
         fields.append("updated_at")
-    profile.save(update_fields=fields)
+    profile.save(update_fields=sorted(set(fields)))
 
     data = _serialize(profile)
     data.update({
