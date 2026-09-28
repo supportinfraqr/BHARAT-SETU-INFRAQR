@@ -99,6 +99,8 @@ def _contractor_identity(user):
         "contact": _d(cp.contact_person if cp else ""),
         "email": _d(cp.email if cp else ""),
         "accountStatus": _d(cp.approval_status if cp else "PENDING"),
+        "cardIssueDate": (cp.id_card_issue_date.isoformat() if cp and cp.id_card_issue_date else ""),
+        "cardValidTill": (cp.id_card_validity_till.isoformat() if cp and cp.id_card_validity_till else ""),
     }
 
 

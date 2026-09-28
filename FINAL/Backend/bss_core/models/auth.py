@@ -160,6 +160,10 @@ class ContractorProfile(models.Model):
     entity_locker_declined = models.BooleanField(default=False)
     manual_verification_status = models.CharField(max_length=20, default="NOT_SUBMITTED")
     manual_verification_note = models.CharField(max_length=255, blank=True)
+    # Identity card dates: issued once at profile creation (= BSS registered_at
+    # date), valid for three years.
+    id_card_issue_date = models.DateField(null=True, blank=True)
+    id_card_validity_till = models.DateField(null=True, blank=True)
 
     class Meta:
         db_table = "contractor_profiles"
@@ -258,6 +262,10 @@ class EmployerProfile(models.Model):
     entity_locker_declined = models.BooleanField(default=False)
     manual_verification_status = models.CharField(max_length=20, default="NOT_SUBMITTED")
     manual_verification_note = models.CharField(max_length=255, blank=True)
+    # Identity card dates: issued once at profile creation (= BSS registered_at
+    # date), valid for three years.
+    id_card_issue_date = models.DateField(null=True, blank=True)
+    id_card_validity_till = models.DateField(null=True, blank=True)
 
     class Meta:
         db_table = "employer_profiles"

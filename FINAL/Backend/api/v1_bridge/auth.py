@@ -5,6 +5,23 @@ from .common import *  # noqa: F401,F403
 from .aadhaar import *  # noqa: F401,F403
 
 
+def _stamp_id_card_dates(profile):
+    """Set an employer/contractor identity-card issue + validity date once.
+
+    Issue date = the profile's BSS ``registered_at`` date; valid till = issue + 3
+    years (same rule as worker ID cards)."""
+    from django.utils import timezone as _tz
+
+    from .aadhaar import _id_card_validity
+
+    if getattr(profile, "id_card_issue_date", None):
+        return
+    issue = (getattr(profile, "registered_at", None) or _tz.now()).date()
+    profile.id_card_issue_date = issue
+    profile.id_card_validity_till = _id_card_validity(issue)
+    profile.save(update_fields=["id_card_issue_date", "id_card_validity_till"])
+
+
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -276,12 +293,14 @@ def _register_account(request, role):
             # Creating the profile is the moment consent is recorded, so this
             # stamps registered_at and consent_date together.
             _record_contractor_membership(profile, user)
+            _stamp_id_card_dates(profile)
             bss_id = profile.contractor_code
         else:  # employer
             from django.utils import timezone as _tz
             profile = EmployerProfile.objects.create(
                 user=user, employer_name="", employer_code=bss_ids.new_bss_employer_code(),
                 approval_status="PENDING", mobile=mobile, registered_at=_tz.now())
+            _stamp_id_card_dates(profile)
             bss_id = profile.employer_code
         UserCredential.objects.create(
             identity_type="mobile", identity_value=mobile,

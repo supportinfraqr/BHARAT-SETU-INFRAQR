@@ -130,6 +130,8 @@ def _employer_identity(user):
         "contact": _d(ep.contact_person if ep else ""),
         "email": _d(ep.email if ep else ""),
         "address": _d(ep.address if ep else ""),
+        "cardIssueDate": (ep.id_card_issue_date.isoformat() if ep and ep.id_card_issue_date else ""),
+        "cardValidTill": (ep.id_card_validity_till.isoformat() if ep and ep.id_card_validity_till else ""),
     }
 
 

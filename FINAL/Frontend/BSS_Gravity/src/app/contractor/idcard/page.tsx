@@ -37,7 +37,8 @@ export default function ContractorIdentityCardPage() {
     registrationLabel: 'Registration No.',
     registrationValue,
     initials: entityInitials(portal.identity.company),
-    issueDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+    issueDate: formatCardDate(portal.identity.cardIssueDate) || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+    validTill: formatCardDate(portal.identity.cardValidTill) || '',
     backTagline: 'Your Company. Your Compliance. Your Security.',
     backBadges: [
       { icon: 'shield', title: 'Verified', sub: 'Organization' },

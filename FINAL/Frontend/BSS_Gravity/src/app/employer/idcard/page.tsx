@@ -17,7 +17,6 @@ export default function EmployerIdentityCardPage() {
 
   const entityId = employer.identity.bssId;
   const findLabel = (section: string | undefined, label: string) => employer.profileSections[section ?? '']?.find(f => f.label === label)?.value;
-  const registrationValue = findLabel('identity', 'CIN / LLPIN / Registration No.') ?? findLabel('registration', 'CIN');
   const incorpDate = formatCardDate(findLabel('identity', 'Date of Incorporation') ?? findLabel('identity', 'Date of Incorporation / Constitution') ?? findLabel('registration', 'Date of Incorporation'));
 
   const content: OrganizationCardContent = {
@@ -29,10 +28,9 @@ export default function EmployerIdentityCardPage() {
     entityId,
     dateLabel: 'Date of Incorporation',
     dateValue: incorpDate,
-    registrationLabel: 'Registration No.',
-    registrationValue,
     initials: entityInitials(employer.identity.company),
-    issueDate: new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' }),
+    issueDate: formatCardDate(employer.identity.cardIssueDate) || new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' }),
+    validTill: formatCardDate(employer.identity.cardValidTill) || '',
     backTagline: 'Your Workforce. Your Sites. Your Governance.',
     backBadges: [
       { icon: 'shield', title: 'Verified', sub: 'Organization' },

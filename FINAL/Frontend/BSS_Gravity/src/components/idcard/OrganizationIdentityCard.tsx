@@ -24,6 +24,7 @@ export type OrganizationCardContent = {
   dateValue: string;
   registrationLabel?: string;
   registrationValue?: string;
+  validTill?: string;
   initials: string;
   issueDate: string;
   backTagline: string;
@@ -133,6 +134,12 @@ export default function OrganizationIdentityCard({
                   <p className="text-[6px] text-slate-300 uppercase tracking-[0.16em] font-bold mb-1">{content.dateLabel}</p>
                   <p className={`font-bold tracking-[0.06em] text-white leading-none ${standard ? 'text-[9px]' : 'text-[9px]'}`}>{content.dateValue}</p>
                 </div>
+                {content.registrationValue && (
+                  <div>
+                    <p className="text-[6px] text-slate-300 uppercase tracking-[0.16em] font-bold mb-1">{content.registrationLabel ?? 'Registration No.'}</p>
+                    <p className="font-mono font-bold tracking-[0.05em] text-white leading-none text-[7.5px]">{content.registrationValue}</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -149,12 +156,15 @@ export default function OrganizationIdentityCard({
           {/* Footer — approved issue-date logic retained */}
           {standard ? (
             <div className="h-[36px] px-4 flex justify-between items-center relative z-10 border-t border-white/[0.08] bg-black/[0.08]">
-              <div><p className="text-[5.5px] text-slate-300 uppercase tracking-[0.16em] font-bold mb-1">Issue Date</p><p className="text-[9px] font-bold tracking-[0.08em] text-white leading-none">{content.issueDate}</p></div>
+              <div className="flex gap-5">
+                <div><p className="text-[5.5px] text-slate-300 uppercase tracking-[0.16em] font-bold mb-1">Issue Date</p><p className="text-[9px] font-bold tracking-[0.08em] text-white leading-none">{content.issueDate}</p></div>
+                {content.validTill && <div><p className="text-[5.5px] text-slate-300 uppercase tracking-[0.16em] font-bold mb-1">Valid Till</p><p className="text-[9px] font-bold tracking-[0.08em] text-white leading-none">{content.validTill}</p></div>}
+              </div>
               <p className="text-[6px] text-slate-200 font-bold tracking-[0.12em] uppercase">BSS Card · National ID</p>
               <div className="w-[92px]" aria-hidden="true" />
             </div>
           ) : (
-            <div className="flex justify-between items-center relative z-10 mt-2"><p className="text-[5.5px] text-slate-300 uppercase tracking-[0.16em] font-bold">Issue Date</p><p className="text-[9px] font-bold text-white">{content.issueDate}</p><div className="w-[92px]"/></div>
+            <div className="flex justify-between items-center relative z-10 mt-2"><div className="flex gap-5"><div><p className="text-[5.5px] text-slate-300 uppercase tracking-[0.16em] font-bold">Issue Date</p><p className="text-[9px] font-bold text-white">{content.issueDate}</p></div>{content.validTill && <div><p className="text-[5.5px] text-slate-300 uppercase tracking-[0.16em] font-bold">Valid Till</p><p className="text-[9px] font-bold text-white">{content.validTill}</p></div>}</div><div className="w-[92px]"/></div>
           )}
         </div>
 
