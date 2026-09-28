@@ -9,10 +9,11 @@ type GstStatus = {
   gstnStatus?: string; registrationDate?: string; taxpayerType?: string;
 };
 
-export default function GstVerifyCard({ role, defaultGstin = '', defaultEmail = '' }: {
+export default function GstVerifyCard({ role, defaultGstin = '', defaultEmail = '', onVerified }: {
   role: 'contractor' | 'employer';
   defaultGstin?: string;
   defaultEmail?: string;
+  onVerified?: () => void;
 }) {
   const base = `/api/${role}/gst`;
   const [status, setStatus] = useState<GstStatus | null>(null);
@@ -54,6 +55,7 @@ export default function GstVerifyCard({ role, defaultGstin = '', defaultEmail = 
       setNotice(body.data.status === 'VERIFIED'
         ? `GST verified — ${body.data.legalName || body.data.gstin}.`
         : `GSTIN status: ${body.data.gstnStatus || body.data.status}. Not verified.`);
+      if (body.data.status === 'VERIFIED') onVerified?.();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'GST lookup failed.');
     } finally { setBusy(false); }
@@ -86,6 +88,7 @@ export default function GstVerifyCard({ role, defaultGstin = '', defaultEmail = 
       if (!response.ok || !body.data) throw new Error(body.error ?? 'GST verification failed.');
       setStatus(body.data);
       setNotice('GST verified successfully.');
+      if (body.data.status === 'VERIFIED') onVerified?.();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'GST verification failed.');
     } finally { setBusy(false); }
