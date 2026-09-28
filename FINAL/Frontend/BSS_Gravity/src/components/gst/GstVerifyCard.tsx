@@ -7,7 +7,15 @@ type GstStatus = {
   gstin: string; status: string; verifiedAt: string | null;
   legalName: string; tradeName: string; constitution: string; hasCertificate: boolean;
   gstnStatus?: string; registrationDate?: string; taxpayerType?: string;
+  incorporationDate?: string; memberSince?: string;
 };
+
+function fmtDate(value?: string | null) {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
 
 export default function GstVerifyCard({ role, defaultGstin = '', onVerified }: {
   role: 'contractor' | 'employer';
@@ -76,7 +84,9 @@ export default function GstVerifyCard({ role, defaultGstin = '', onVerified }: {
           <Field label="Trade name" value={status?.tradeName || '—'}/>
           <Field label="Constitution" value={status?.constitution || '—'}/>
           <Field label="GSTN status" value={status?.gstnStatus || 'Active'}/>
-          <Field label="Registered on" value={status?.registrationDate || '—'}/>
+          <Field label="GST registered on" value={status?.registrationDate || '—'}/>
+          <Field label="Date of incorporation" value={fmtDate(status?.incorporationDate)}/>
+          <Field label="BSS member since" value={fmtDate(status?.memberSince)}/>
           {status?.hasCertificate && (
             <a href={`${base}/certificate`} target="_blank" rel="noreferrer" className="sm:col-span-2 inline-flex items-center gap-1.5 text-[#073B67] text-xs font-semibold hover:underline"><FileText size={14}/>Download GST Registration Certificate (PDF)</a>
           )}

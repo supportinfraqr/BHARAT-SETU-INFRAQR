@@ -38,8 +38,6 @@ def _legal_name_attr(profile):
 
 def _apply_gst_details(profile, result):
     """Fill blank canonical profile fields from GSTN details (never overwrite)."""
-    from datetime import datetime
-
     from bss_core.models import EmployerProfile
 
     is_employer = isinstance(profile, EmployerProfile)
@@ -69,16 +67,26 @@ def _apply_gst_details(profile, result):
     gst_value = str(result.get("gstin") or "")
     if len(gst_value) == 15:
         put("pan_no", gst_value[2:12], 20)
-    date_str = str(result.get("registration_date") or "").strip()
-    if date_str and not getattr(profile, "incorporation_date", None):
-        for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
-            try:
-                setattr(profile, "incorporation_date", datetime.strptime(date_str, fmt).date())
-                filled.append("incorporation_date")
-                break
-            except ValueError:
-                continue
     return filled
+
+
+def _parse_gst_date(value):
+    """Parse a GSTN date string (dd/mm/yyyy or yyyy-mm-dd) to a date, else None."""
+    from datetime import datetime
+
+    text = str(value or "").strip()
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _member_since(profile):
+    """When the entity joined BSS (contractor registered_at, else user.date_joined)."""
+    ts = getattr(profile, "registered_at", None) or getattr(profile.user, "date_joined", None)
+    return payloads._dts(ts) if ts else ""
 
 
 def _serialize(profile):
@@ -89,6 +97,9 @@ def _serialize(profile):
         "legalName": profile.gst_legal_name or "",
         "tradeName": profile.gst_trade_name or "",
         "constitution": profile.gst_constitution or "",
+        "registrationDate": profile.gst_registration_date or "",
+        "incorporationDate": payloads._dts(profile.incorporation_date) if profile.incorporation_date else "",
+        "memberSince": _member_since(profile),
         "hasCertificate": bool(profile.gst_certificate),
     }
 
@@ -205,8 +216,14 @@ def gst_verification_verify(request):
     profile.gst_constitution = (result.get("constitution") or "")[:120]
     profile.gst_verification_status = "VERIFIED" if active else "FAILED"
     profile.gst_verified_at = timezone.now() if active else None
+    profile.gst_registration_date = str(result.get("registration_date") or "")[:20]
     fields = ["gstin", "gst_legal_name", "gst_trade_name", "gst_constitution",
-              "gst_verification_status", "gst_verified_at"]
+              "gst_verification_status", "gst_verified_at", "gst_registration_date"]
+    # Date of Incorporation follows the GST registration date (GST is the source).
+    incorporation = _parse_gst_date(result.get("registration_date"))
+    if incorporation is not None:
+        profile.incorporation_date = incorporation
+        fields.append("incorporation_date")
     fields += _apply_gst_details(profile, result)
     if hasattr(profile, "updated_at"):
         fields.append("updated_at")

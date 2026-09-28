@@ -155,6 +155,7 @@ class ContractorProfile(models.Model):
     gst_trade_name = models.CharField(max_length=200, blank=True)
     gst_constitution = models.CharField(max_length=120, blank=True)
     gst_certificate = models.FileField(upload_to="gst_certificates/", null=True, blank=True)
+    gst_registration_date = models.CharField(max_length=20, blank=True)  # GSTN dateOfRegistration (dd/mm/yyyy)
 
     class Meta:
         db_table = "contractor_profiles"
@@ -246,6 +247,7 @@ class EmployerProfile(models.Model):
     gst_trade_name = models.CharField(max_length=200, blank=True)
     gst_constitution = models.CharField(max_length=120, blank=True)
     gst_certificate = models.FileField(upload_to="gst_certificates/", null=True, blank=True)
+    gst_registration_date = models.CharField(max_length=20, blank=True)  # GSTN dateOfRegistration (dd/mm/yyyy)
 
     class Meta:
         db_table = "employer_profiles"
