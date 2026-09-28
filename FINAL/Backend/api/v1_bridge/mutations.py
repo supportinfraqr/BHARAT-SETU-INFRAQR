@@ -14,6 +14,32 @@ from .sites import *  # noqa: F401,F403
 from .submissions import *  # noqa: F401,F403
 
 
+# Profile fields that GST verification owns. Once gst_verification_status is
+# VERIFIED these can no longer be edited from the portal (SAP writes the model
+# directly and is unaffected).
+# Profile fields owned by the GST verification flow — never editable from the
+# portal (would let a user self-declare verification). SAP writes the model
+# directly and is unaffected.
+_GST_SYSTEM_ATTRS = {
+    "gst_verification_status", "gst_verified_at", "gst_legal_name",
+    "gst_trade_name", "gst_constitution", "gst_certificate",
+}
+
+
+_GST_LOCKED_PROFILE_ATTRS = {
+    "employer": {
+        "employer_name", "trade_name", "entity_class", "employer_category",
+        "industry", "state", "district", "address", "pan_no", "incorporation_date",
+        "gstin",
+    },
+    "contractor": {
+        "contractor_name", "trade_name", "constitution", "entity_class",
+        "activity", "state", "district", "address", "pan_no", "incorporation_date",
+        "gstin",
+    },
+}
+
+
 def _persist_mutation(user, role_path, resource, method, body):
     """Best-effort persistence for the handful of resources backed by real
     models; returns an id for the generic/unmapped case."""
@@ -26,10 +52,18 @@ def _persist_mutation(user, role_path, resource, method, body):
             profile_model = (EmployerProfile if user.role == "employer" else ContractorProfile)
             label_map = _PROFILE_LABEL_MAP[user.role]
             prof, _ = profile_model.objects.get_or_create(user=user)
+            # Once GST-verified, the GST-derived identity fields are locked: the
+            # user can no longer edit them (only the GST flow / SAP may change
+            # them). SAP writes the model directly, bypassing this handler.
+            locked = set()
+            if str(getattr(prof, "gst_verification_status", "") or "").upper() == "VERIFIED":
+                locked = _GST_LOCKED_PROFILE_ATTRS.get(user.role, set())
             for field in fields:
                 label = (field.get("label") or "").strip()
                 attr = label_map.get(label)
                 if not attr or not hasattr(prof, attr):
+                    continue
+                if attr in _GST_SYSTEM_ATTRS or attr in locked:
                     continue
                 if attr == "mobile":
                     # The registered mobile is the login identity — immutable for

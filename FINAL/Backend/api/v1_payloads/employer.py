@@ -25,7 +25,7 @@ def _employer_grievances(user):
 def _employer_profile_sections(user):
     ep = getattr(user, "employer_profile", None)
     g = lambda fld, note="": _f(fld, getattr(ep, fld, "") if ep else "", note)
-    return {
+    sections = {
         "identity": [
             _f("BSS Employer ID", getattr(ep, "employer_code", "") if ep else "", "System-calculated"),
             _f("Registration Status", getattr(ep, "approval_status", "") if ep else "", "Employer"),
@@ -115,6 +115,8 @@ def _employer_profile_sections(user):
             _f("Escalation Contact", getattr(ep, "escalation_contact", "") if ep else "", "Employer"),
         ],
     }
+    verified = str(getattr(ep, "gst_verification_status", "") or "").upper() == "VERIFIED"
+    return lock_gst_fields(sections, "employer", verified)
 
 
 def _employer_identity(user):

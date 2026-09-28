@@ -262,6 +262,36 @@ def _f(label, value, note="", sensitive=False, field_type="text"):
     return {"label": label, "value": "" if value is None else str(value), "note": note, "sensitive": sensitive, "type": field_type}
 
 
+# Profile field labels owned by GST verification. When a profile is GST-verified
+# these are shown read-only (the UI locks any field whose note says
+# "System-calculated"/"auto-generated"); SAP writes the model directly and can
+# still overwrite them.
+GST_LOCKED_LABELS = {
+    "employer": {
+        "Employer Category", "Legal Entity Name", "Trade / Brand Name",
+        "Class of Company", "Date of Incorporation", "PAN", "GSTIN",
+        "Industry / Sector", "Registered Address", "State", "District",
+    },
+    "contractor": {
+        "Legal Name", "Trade / Brand Name", "Entity Constitution",
+        "Date of Incorporation", "PAN", "PAN Document", "GSTIN",
+        "GST Certificate", "Activity", "Registered Address", "State / UT",
+    },
+}
+
+
+def lock_gst_fields(sections, role, verified):
+    """Mark the GST-owned profile fields locked (read-only) once verified."""
+    if not verified:
+        return sections
+    labels = GST_LOCKED_LABELS.get(role, set())
+    for fields in (sections or {}).values():
+        for field in fields:
+            if field.get("label") in labels:
+                field["note"] = "System-calculated · auto-generated (GST verified)"
+    return sections
+
+
 def sha256_checksum(file_obj):
     hasher = hashlib.sha256()
     for chunk in file_obj.chunks():
@@ -354,5 +384,7 @@ __all__ = [
     "hashlib",
     "re",
     "sha256_checksum",
+    "GST_LOCKED_LABELS",
+    "lock_gst_fields",
     "timezone",
 ]

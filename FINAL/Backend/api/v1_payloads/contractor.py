@@ -1157,7 +1157,7 @@ def _contractor_payroll_config(user):
 def _contractor_profile_sections(user):
     cp = getattr(user, "contractor_profile", None)
     g = lambda fld, note="": _f(fld, getattr(cp, fld, "") if cp else "", note)
-    return {
+    sections = {
         "basic": [
             _f("BSS ID", _contractor_identity(user).get("bssId", ""), "System-calculated"),
             _f("Contractor Type", getattr(cp, "entity_type", "") if cp else "", "Contractor"),
@@ -1222,6 +1222,8 @@ def _contractor_profile_sections(user):
             _f("Payroll Method", getattr(cp, "payroll_method", "") if cp else "", "Contractor"),
         ],
     }
+    verified = str(getattr(cp, "gst_verification_status", "") or "").upper() == "VERIFIED"
+    return lock_gst_fields(sections, "contractor", verified)
 
 
 def build_contractor_portal(user):
