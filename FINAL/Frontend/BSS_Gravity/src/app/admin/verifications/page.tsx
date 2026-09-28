@@ -73,7 +73,7 @@ export default function AdminVerificationsPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-bold text-gray-900">{row.name}</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">{row.role} · GSTIN {row.gstin || '—'}{row.legalName ? ` · ${row.legalName}` : ''}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{row.role} · account <span className="font-mono">{row.username}</span> · GSTIN {row.gstin || '—'}{row.legalName ? ` · ${row.legalName}` : ''}</p>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-1 rounded-full border whitespace-nowrap ${STAGE[row.stage].tone}`}>{STAGE[row.stage].label}</span>
               </div>
