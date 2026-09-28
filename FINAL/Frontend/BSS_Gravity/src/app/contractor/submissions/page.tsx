@@ -161,12 +161,28 @@ export default function ComplianceSubmissionPage() {
     const regYears = getFinancialYearsFromDate(base);
     const docYears: string[] = [];
     (contractor.submissions.documents as DocumentRow[]).forEach(doc => {
-      const fyStr = doc.financialYear || (doc.period?.includes('FY') ? doc.period.slice(doc.period.indexOf('FY')) : '');
-      if (fyStr && !docYears.includes(fyStr)) docYears.push(fyStr);
+      let fyStr = doc.financialYear || (doc.period?.includes('FY') ? doc.period.slice(doc.period.indexOf('FY')) : '');
+      if (fyStr) {
+        fyStr = fyStr.trim();
+        if (!fyStr.startsWith('FY ')) {
+          fyStr = `FY ${fyStr.replace(/^FY\s*/, '')}`;
+        }
+        if (!docYears.includes(fyStr)) docYears.push(fyStr);
+      }
+    });
+    (contractor.complianceBatches || []).forEach(b => {
+      let fyStr = b.financialYear || '';
+      if (fyStr) {
+        fyStr = fyStr.trim();
+        if (!fyStr.startsWith('FY ')) {
+          fyStr = `FY ${fyStr.replace(/^FY\s*/, '')}`;
+        }
+        if (!docYears.includes(fyStr)) docYears.push(fyStr);
+      }
     });
     const merged = Array.from(new Set([...regYears, ...docYears]));
     return merged.sort().reverse();
-  }, [allowPast, bindingSince, contractor.identity?.incorpDate, contractor.submissions.documents]);
+  }, [allowPast, bindingSince, contractor.identity?.incorpDate, contractor.submissions.documents, contractor.complianceBatches]);
 
   // Default state filters
   const [selectedYear, setSelectedYear] = useState<string>(availableYears[0] || 'FY 2026-27');
@@ -197,6 +213,8 @@ export default function ComplianceSubmissionPage() {
   const [clraMode, setClraMode] = useState<'generated' | 'manual'>('generated');
   const [registerForms, setRegisterForms] = useState<DocRowUI[]>([]);
   const [registersBusy, setRegistersBusy] = useState(false);
+  const [optimisticSubmitted, setOptimisticSubmitted] = useState<string[]>([]);
+  const [submittingName, setSubmittingName] = useState<string | null>(null);
 
   const rawDocuments = contractor.submissions.documents as DocumentRow[];
   const documents = useMemo(() => scoped(rawDocuments, row => row.employer), [scoped, rawDocuments]);
@@ -236,7 +254,11 @@ export default function ComplianceSubmissionPage() {
   // Documents filtered by selected Year
   const yearFilteredDocuments = useMemo(() => {
     return submittedDocuments.filter(doc => {
-      const fyStr = doc.financialYear || (doc.period?.includes('FY') ? doc.period.slice(doc.period.indexOf('FY')) : '');
+      let fyStr = doc.financialYear || (doc.period?.includes('FY') ? doc.period.slice(doc.period.indexOf('FY')) : '');
+      if (fyStr) {
+        fyStr = fyStr.trim();
+        if (!fyStr.startsWith('FY ')) fyStr = `FY ${fyStr.replace(/^FY\s*/, '')}`;
+      }
       return (fyStr || availableYears[0]) === selectedYear;
     });
   }, [submittedDocuments, selectedYear, availableYears]);
@@ -300,8 +322,9 @@ export default function ComplianceSubmissionPage() {
       names.add(doc.type);
       if (doc.documentType) names.add(doc.documentType);
     });
+    optimisticSubmitted.forEach(name => names.add(name));
     return names;
-  }, [documents, createPeriod, fy, month]);
+  }, [documents, createPeriod, fy, month, optimisticSubmitted]);
 
   const submittedEvidenceCount = additionalDocs.filter(d => submittedNames.has(d.name)).length;
 
@@ -359,6 +382,7 @@ export default function ComplianceSubmissionPage() {
     lastContextKey.current = uploadContextKey;
     setUploads({});
     setRemovedKeys([]);
+    setOptimisticSubmitted([]);
   }, [uploadContextKey]);
 
   // Merge already-submitted evidence for the current period into uploads, without clobbering a
@@ -401,7 +425,7 @@ export default function ComplianceSubmissionPage() {
   const missingEvidence = additionalDocs.filter(doc => doc.mandatory && doc.requiresDocument && uploads[doc.name]?.status !== 'Validated');
   const isPartialSubmission = missingEvidence.length > 0;
 
-  async function uploadEvidence(doc: { name: string; frequency: string; mandatory: boolean }, next?: File) {
+  async function uploadEvidence(doc: { name: string; frequency: string; mandatory: boolean; ocrCheckpoints?: OcrCheckpoint[] }, next?: File) {
     if (!next) return;
     setRemovedKeys(prev => prev.filter(k => k !== doc.name));
     setError('');
@@ -418,6 +442,9 @@ export default function ComplianceSubmissionPage() {
     form.set('documentType', doc.name); form.set('frequency', doc.frequency);
     form.set('mandatory', doc.mandatory ? 'true' : 'false');
     form.set('period', `${createPeriod} ${fy.replace('FY ', '')}`);
+    // No OCR checklist → store the document as-is (skip the slow OCR run). This
+    // matches "OCR does not apply" for additional/Admin forms and keeps uploads fast.
+    if ((doc.ocrCheckpoints?.length ?? 0) === 0) form.set('noOcr', 'true');
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), 60_000);
     try {
@@ -475,7 +502,7 @@ export default function ComplianceSubmissionPage() {
 
   async function submitSingleForm(docName: string, uploadId?: number, force = false) {
     if (!uploadId) return;
-    setBusy(true); setError(''); setNotice('');
+    setBusy(true); setSubmittingName(docName); setError(''); setNotice('');
     const siteObj = activeSiteObj;
     const empName = siteObj?.employer || ctxEmployer;
     const subSiteName = siteObj?.name || ctxSite;
@@ -488,11 +515,13 @@ export default function ComplianceSubmissionPage() {
       const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['auditReports'][number]; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error ?? 'Document could not be submitted.');
       replaceContractor({ ...contractor, auditReports: [result.data, ...contractor.auditReports] });
+      // Flip the row to Submitted immediately; the full portal refresh runs in the background.
+      setOptimisticSubmitted(prev => (prev.includes(docName) ? prev : [...prev, docName]));
       setNotice(`Submitted successfully! Ref No: ${result.data.uniqueNo} (${docName})${force ? ' — submitted despite OCR issues' : ''}.`);
       void refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Document could not be submitted.');
-    } finally { setBusy(false); }
+    } finally { setBusy(false); setSubmittingName(null); }
   }
 
   const documentColumns: DataColumn<DocumentRow>[] = [
@@ -596,7 +625,7 @@ export default function ComplianceSubmissionPage() {
                           onClick={() => up?.id != null && void submitSingleForm(doc.name, up.id, up?.status === 'Errors found')}
                           disabled={busy || up?.id == null}
                           className="h-7 px-3 rounded-md bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] disabled:opacity-40 shadow-xs"
-                        >Submit</button>
+                        >{submittingName === doc.name ? 'Submitting…' : 'Submit'}</button>
                         {up?.id != null && (
                           <button type="button" onClick={() => handleRemoveEvidence(doc.name)} className="text-[11px] text-red-600 font-semibold hover:underline">Remove</button>
                         )}
@@ -699,7 +728,11 @@ export default function ComplianceSubmissionPage() {
           <div className="flex flex-wrap gap-1.5">
             {availableYears.map(yr => {
               const yrCount = submittedDocuments.filter(doc => {
-                const fyStr = doc.financialYear || (doc.period?.includes('FY') ? doc.period.slice(doc.period.indexOf('FY')) : '');
+                let fyStr = doc.financialYear || (doc.period?.includes('FY') ? doc.period.slice(doc.period.indexOf('FY')) : '');
+                if (fyStr) {
+                  fyStr = fyStr.trim();
+                  if (!fyStr.startsWith('FY ')) fyStr = `FY ${fyStr.replace(/^FY\s*/, '')}`;
+                }
                 return (fyStr || availableYears[0]) === yr;
               }).length + (batchCountByFy[yr.replace('FY ', '')] || 0);
               return (
