@@ -5,7 +5,6 @@ import { AlertTriangle, ArrowRight, Banknote, Building2, CheckCircle2, Clipboard
 import { useEmployer } from '@/contexts/EmployerContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { CopyButton } from '@/components/ui/CopyButton';
-import EntityLockerGate from '@/components/auth/EntityLockerGate';
 
 export default function EmployerDashboardPage() {
   const { employer } = useEmployer();
@@ -39,7 +38,6 @@ export default function EmployerDashboardPage() {
   ].filter(action => action.count > 0);
 
   return <div className="space-y-6 pb-10">
-    <EntityLockerGate role="employer" />
     <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">{t('ui.overview')}</p>
