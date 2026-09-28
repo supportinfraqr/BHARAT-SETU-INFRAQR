@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Building2, Calculator, ClipboardCheck, ContactRound, Landmark, LayoutGrid, Lock, Network, Settings, ShieldCheck, Users } from 'lucide-react';
 import StatutoryLicences from '@/components/portal/StatutoryLicences';
+import GstVerifyCard from '@/components/gst/GstVerifyCard';
 import ClraRegistersPage from '@/components/employer/ClraRegistersPage';
 import OrgCostSheetsPage from '@/components/costsheet/OrgCostSheetsPage';
 import { useEmployer } from '@/contexts/EmployerContext';
@@ -87,6 +88,7 @@ export default function EmployerProfilePage() {
   }
 
   return <div className="space-y-6">
+    <GstVerifyCard role="employer" />
     <section className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col sm:flex-row justify-between gap-5">
       <div className="flex gap-4">
         <span className="w-16 h-16 rounded-xl bg-blue-50 text-blue-700 grid place-items-center text-2xl font-bold">{employer.identity.company.charAt(0)}</span>

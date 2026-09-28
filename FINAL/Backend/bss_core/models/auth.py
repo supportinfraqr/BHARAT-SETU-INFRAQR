@@ -148,6 +148,13 @@ class ContractorProfile(models.Model):
     # Site pre-selected for worker bindings created by scanning a worker QR.
     default_site = models.ForeignKey("bss_core.Site", null=True, blank=True,
                                      on_delete=models.SET_NULL, related_name="+")
+    # GST identity verification (API Setu GSTN Registration Certificate).
+    gst_verification_status = models.CharField(max_length=20, default="PENDING")
+    gst_verified_at = models.DateTimeField(null=True, blank=True)
+    gst_legal_name = models.CharField(max_length=200, blank=True)
+    gst_trade_name = models.CharField(max_length=200, blank=True)
+    gst_constitution = models.CharField(max_length=120, blank=True)
+    gst_certificate = models.FileField(upload_to="gst_certificates/", null=True, blank=True)
 
     class Meta:
         db_table = "contractor_profiles"
@@ -232,6 +239,13 @@ class EmployerProfile(models.Model):
     lin = models.CharField(max_length=40, blank=True)
     approval_status = models.CharField(max_length=20, choices=APPROVAL, default="PENDING")
     is_active = models.BooleanField(default=True)
+    # GST identity verification (API Setu GSTN Registration Certificate).
+    # gst_verification_status is declared above.
+    gst_verified_at = models.DateTimeField(null=True, blank=True)
+    gst_legal_name = models.CharField(max_length=200, blank=True)
+    gst_trade_name = models.CharField(max_length=200, blank=True)
+    gst_constitution = models.CharField(max_length=120, blank=True)
+    gst_certificate = models.FileField(upload_to="gst_certificates/", null=True, blank=True)
 
     class Meta:
         db_table = "employer_profiles"

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Building2, Calculator, CheckCircle2, CreditCard, FileSignature, FileText, Landmark, Lock, MapPin, Phone, ShieldCheck, Users } from 'lucide-react';
 import StatutoryLicences from '@/components/portal/StatutoryLicences';
+import GstVerifyCard from '@/components/gst/GstVerifyCard';
 import OrgCostSheetsPage from '@/components/costsheet/OrgCostSheetsPage';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorLicence } from '@/types/portal';
@@ -64,6 +65,7 @@ export default function ContractorProfilePage() {
 
   return (
     <div className="space-y-6">
+      <GstVerifyCard role="contractor" />
       <section className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col sm:flex-row justify-between gap-5">
         <div className="flex gap-4">
           <span className="w-16 h-16 rounded-xl bg-blue-50 text-blue-700 grid place-items-center text-2xl font-bold">{contractor.identity.company.charAt(0)}</span>
