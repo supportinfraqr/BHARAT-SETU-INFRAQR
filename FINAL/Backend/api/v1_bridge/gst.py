@@ -84,8 +84,8 @@ def _parse_gst_date(value):
 
 
 def _member_since(profile):
-    """When the entity joined BSS (contractor registered_at, else user.date_joined)."""
-    ts = getattr(profile, "registered_at", None) or getattr(profile.user, "date_joined", None)
+    """When the account was created on BSS (user.date_joined; fallback registered_at)."""
+    ts = getattr(profile.user, "date_joined", None) or getattr(profile, "registered_at", None)
     return payloads._dts(ts) if ts else ""
 
 

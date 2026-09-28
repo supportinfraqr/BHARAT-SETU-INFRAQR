@@ -22,7 +22,7 @@ from .submissions import *  # noqa: F401,F403
 # directly and is unaffected.
 _GST_SYSTEM_ATTRS = {
     "gst_verification_status", "gst_verified_at", "gst_legal_name",
-    "gst_trade_name", "gst_constitution", "gst_certificate",
+    "gst_trade_name", "gst_constitution", "gst_certificate", "gst_registration_date",
 }
 
 
