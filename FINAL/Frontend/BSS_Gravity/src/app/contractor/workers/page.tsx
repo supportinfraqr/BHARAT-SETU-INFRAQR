@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BadgeCheck, Calculator, CheckCircle2, Download, FileText, IdCard, MoreVertical, Plus, Trash2, Upload, UserRound, X } from 'lucide-react';
+import { BadgeCheck, Briefcase, Calculator, CheckCircle2, Download, FileText, IdCard, MoreVertical, Plus, Trash2, Upload, UserRound, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorWorker, GatePassEligibility } from '@/types/portal';
 import WorkerQr from '@/components/qr/WorkerQr';
 import WorkerIdentityCard from '@/components/idcard/WorkerIdentityCard';
+import WorkerEmploymentCard from '@/components/idcard/WorkerEmploymentCard';
 import ScanIdentityCard, { type ScanVerifyData } from '@/components/scan/ScanIdentityCard';
 import { useContractorDocView } from '@/components/documentEngine/portalAdapters';
 import { WorkerDocumentsDrawer } from '@/components/documentEngine/DocumentFlow';
@@ -41,6 +42,7 @@ export default function WorkerMasterPage() {
   const [profileDetail, setProfileDetail] = useState<ScanVerifyData | null>(null);
   const [docsView, setDocsView] = useState<ContractorWorker | null>(null);
   const [idView, setIdView] = useState<ContractorWorker | null>(null);
+  const [empView, setEmpView] = useState<ContractorWorker | null>(null);
   const [costSheets, setCostSheets] = useState<Array<{ id:number; name:string; code:string; status?:string; ownerId?:number|null; siteId?:number|null; siteName?:string }>>([]);
   const [bindSite, setBindSite] = useState('');
   const [sheetView, setSheetView] = useState<ContractorWorker | null>(null);
@@ -160,7 +162,7 @@ export default function WorkerMasterPage() {
     <EnterpriseDataTable
       title="Workforce directory"
       rows={scopedRows}
-      columns={[...columns, { id:'actions', header:'Actions', filterable:false, value:row => row.id, render:row => <ActionMenu open={openMenuFor === row.id} onToggle={() => setOpenMenuFor(openMenuFor === row.id ? '' : row.id)} onViewProfile={() => openProfile(row)} onViewDocs={() => { setDocsView(row); setOpenMenuFor(''); }} onIdCard={() => { setIdView(row); setOpenMenuFor(''); }} onDocs={() => { setDocsView2(row); setOpenMenuFor(''); }} onChangeCostSheet={() => { setSheetView(row); setSheetChoice(""); setError(""); setOpenMenuFor(""); }} /> }]}
+      columns={[...columns, { id:'actions', header:'Actions', filterable:false, value:row => row.id, render:row => <ActionMenu open={openMenuFor === row.id} onToggle={() => setOpenMenuFor(openMenuFor === row.id ? '' : row.id)} onViewProfile={() => openProfile(row)} onViewDocs={() => { setDocsView(row); setOpenMenuFor(''); }} onIdCard={() => { setIdView(row); setOpenMenuFor(''); }} onEmploymentCard={() => { setEmpView(row); setOpenMenuFor(''); }} onDocs={() => { setDocsView2(row); setOpenMenuFor(''); }} onChangeCostSheet={() => { setSheetView(row); setSheetChoice(""); setError(""); setOpenMenuFor(""); }} /> }]}
       rowKey={row => row.id}
       filename="contractor-workers"
     />
@@ -269,6 +271,7 @@ export default function WorkerMasterPage() {
 
     {/* Identity card drawer — worker-level identity card from the actions menu */}
     {idView && <WorkerIdentityCardDrawer worker={idView} onClose={() => setIdView(null)}/>}
+    {empView && <WorkerEmploymentCard workerName={empView.name} bssId={empView.bssId} designation={empView.designation} mobile={empView.mobile} department={empView.department} photoUrl={empView.photoUrl} siteName={empView.site} siteId={empView.siteId} bloodGroup={empView.bloodGroup} companyName={empView.employer} contractorName={contractor.identity.company} contractorId={contractor.identity.bssId} contractorContact={contractor.identity.contact} onClose={() => setEmpView(null)} />}
   {docsView2 && (() => { const row = docsView2; const like: WorkerLike = { id: row.id, name: row.name, bssId: row.bssId, mobile: row.mobile, site: row.site, siteId: row.site, employer: row.employer, designation: row.designation, department: row.department, doj: row.doj, category: row.category, gender: row.gender, age: row.age, photoUrl: row.photoUrl, status: row.status, skills: row.skills, refCode: row.refCode }; return <WorkerDocumentsDrawer owner={docCtx.owner} view={docCtx.view} worker={like} onClose={() => setDocsView2(null)} />; })()}
   </div>;
 }
@@ -304,7 +307,7 @@ function WorkerIdentityCardDrawer({ worker, onClose }: { worker: ContractorWorke
   </div>;
 }
 
-function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onIdCard, onDocs, onChangeCostSheet }: { open: boolean; onToggle: () => void; onViewProfile: () => void; onViewDocs: () => void; onIdCard: () => void; onDocs?: () => void; onChangeCostSheet?: () => void }) {
+function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onIdCard, onEmploymentCard, onDocs, onChangeCostSheet }: { open: boolean; onToggle: () => void; onViewProfile: () => void; onViewDocs: () => void; onIdCard: () => void; onEmploymentCard?: () => void; onDocs?: () => void; onChangeCostSheet?: () => void }) {
   const btnRef = useRef<HTMLButtonElement>(null);
   const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
 
@@ -333,6 +336,7 @@ function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onIdCard, onDoc
       <div role="menu" className="fixed z-[120] w-52 bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-900/5 p-1.5" style={{ top: anchor.top, right: anchor.right }}>
         <button role="menuitem" onClick={onViewProfile} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><UserRound size={14} className="text-gray-400"/>View Profile</button>
         <button role="menuitem" onClick={onIdCard} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><IdCard size={14} className="text-gray-400"/>Identity Card</button>
+        {onEmploymentCard && <button role="menuitem" onClick={onEmploymentCard} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><Briefcase size={14} className="text-gray-400"/>Employment Card</button>}
         <button role="menuitem" onClick={onViewDocs} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><FileText size={14} className="text-gray-400"/>Compliance Documents</button>
         <button role="menuitem" onClick={onDocs} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><FileText size={14} className="text-[#073B67]"/>Documents — Generate / Issue</button>
         {onChangeCostSheet && <button role="menuitem" onClick={onChangeCostSheet} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><Calculator size={14} className="text-gray-400"/>Change Cost Sheet</button>}
