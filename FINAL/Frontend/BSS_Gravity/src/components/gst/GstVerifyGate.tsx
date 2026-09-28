@@ -39,6 +39,10 @@ export default function GstVerifyGate({ role }: { role: 'contractor' | 'employer
         <div className="p-5">
           <GstVerifyCard role={role} onVerified={() => setVerified(true)} />
         </div>
+        <footer className="px-5 py-3 border-t border-gray-100 flex items-center justify-between gap-3 bg-white">
+          <span className="text-[11px] text-gray-400">You&apos;ll be asked again next login until it&apos;s verified.</span>
+          <button type="button" onClick={() => setOpen(false)} className="h-9 px-4 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50">Skip for now</button>
+        </footer>
       </div>
     </div>
   );
