@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
 import type { WorkerRecord } from '@/types/portal';
 import { MobilitySection, type MobilitySectionHandle } from '@/components/worker/MobilitySection';
+import DownSelect from '@/components/ui/DownSelect';
 import { ResendOtp } from '@/components/auth/ResendOtp';
 import { 
   UserCircle, Save, CheckCircle2, ShieldCheck, 
@@ -80,16 +81,31 @@ export default function WorkerProfilePage() {
   const [religion, setReligion] = useState(() => worker.personal.religion || '');
   const [caste, setCaste] = useState(() => worker.personal.caste || '');
   const [placeOfBirth, setPlaceOfBirth] = useState(() => worker.identity.placeOfBirth || worker.address.permanentState || '');
+  const [motherName, setMotherName] = useState(() => worker.personal.motherName || '');
+  const [emergencyName, setEmergencyName] = useState(() => worker.identity.emergencyContactName || '');
+  const [emergencyNumber, setEmergencyNumber] = useState(() => worker.identity.emergencyContactNumber || '');
+  const [emergencyRelation, setEmergencyRelation] = useState(() => worker.identity.emergencyContactRelation || '');
+  const [alternateMobile, setAlternateMobile] = useState(() => worker.contact.alternateMobile || '');
+  const [email, setEmail] = useState(() => worker.contact.email || '');
+  const [bankName, setBankName] = useState(() => worker.banking.bankName || '');
+  const [sector, setSector] = useState(() => worker.classification?.sector || '');
+  const [occupation, setOccupation] = useState(() => worker.classification?.occupation || '');
 
-  // Value-based dirty check for the Personal tab: enable Save only when a field
-  // actually differs from what's stored (changing then reverting counts as "no
-  // change"). Other tabs keep using the event-based `dirty` flag.
+  // Value-based dirty check for the Personal tab: enable Save when ANY field
+  // differs from what's stored (changing then reverting back counts as "no
+  // change" → Save stays disabled). Other tabs keep the event-based `dirty`.
   const personalDirty =
     maritalStatus !== (worker.personal.maritalStatus || '') ||
     bloodGroup !== (worker.personal.bloodGroup || '') ||
     religion !== (worker.personal.religion || '') ||
     caste !== (worker.personal.caste || '') ||
     placeOfBirth !== (worker.identity.placeOfBirth || worker.address.permanentState || '') ||
+    motherName !== (worker.personal.motherName || '') ||
+    emergencyName !== (worker.identity.emergencyContactName || '') ||
+    emergencyNumber !== (worker.identity.emergencyContactNumber || '') ||
+    emergencyRelation !== (worker.identity.emergencyContactRelation || '') ||
+    alternateMobile !== (worker.contact.alternateMobile || '') ||
+    email !== (worker.contact.email || '') ||
     disabilityStatus !== normDisabilityStatus(worker.personal.disabilityStatus) ||
     disabilityTypePct !== (worker.identity.disabilityTypePct || '');
   const nomineeFileRef = useRef<HTMLInputElement>(null);
@@ -744,39 +760,23 @@ export default function WorkerProfilePage() {
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Marital Status</label>
-                    <select name="personal.maritalStatus" defaultValue={worker.personal.maritalStatus || ''} onChange={e => setMaritalStatus(e.target.value)} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                      <option value="">Select</option>
-                      {BssTaxonomies.MaritalStatus.map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
+                    <DownSelect name="personal.maritalStatus" value={maritalStatus} onChange={setMaritalStatus} placeholder="Select" options={BssTaxonomies.MaritalStatus} />
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Blood Group</label>
-                    <select name="personal.bloodGroup" defaultValue={worker.personal.bloodGroup || ''} onChange={e => setBloodGroup(e.target.value)} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                      <option value="">Select</option>
-                      {BssTaxonomies.BloodGroup.map(b => <option key={b} value={b}>{b}</option>)}
-                    </select>
+                    <DownSelect name="personal.bloodGroup" value={bloodGroup} onChange={setBloodGroup} placeholder="Select" options={BssTaxonomies.BloodGroup} />
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Religion</label>
-                    <select name="personal.religion" defaultValue={worker.personal.religion || ''} onChange={e => setReligion(e.target.value)} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                      <option value="">Select</option>
-                      {BssTaxonomies.Religion.map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
+                    <DownSelect name="personal.religion" value={religion} onChange={setReligion} placeholder="Select" options={BssTaxonomies.Religion} />
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Caste</label>
-                    <select name="personal.caste" defaultValue={worker.personal.caste || ''} onChange={e => setCaste(e.target.value)} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                      <option value="">Select</option>
-                      {BssTaxonomies.SocialCategory.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                    <DownSelect name="personal.caste" value={caste} onChange={setCaste} placeholder="Select" options={BssTaxonomies.SocialCategory} />
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Status</label>
-                    <select name="personal.disabilityStatus" defaultValue={disabilityStatus} onChange={e => { const v = e.target.value; setDisabilityStatus(v); if (v !== 'Yes') setDisabilityTypePct(''); }} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                      <option value="">Select</option>
-                      <option value="No">No</option>
-                      <option value="Yes">Yes</option>
-                    </select>
+                    <DownSelect name="personal.disabilityStatus" value={disabilityStatus} onChange={v => { setDisabilityStatus(v); if (v !== 'Yes') setDisabilityTypePct(''); }} placeholder="Select" options={[{ value: 'No', label: 'No' }, { value: 'Yes', label: 'Yes' }]} />
                   </div>
                   <div className="relative">
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Type / %</label>
@@ -805,7 +805,7 @@ export default function WorkerProfilePage() {
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Mother Name</label>
-                    <input name="personal.motherName" type="text" defaultValue={worker.personal.motherName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
+                    <input name="personal.motherName" type="text" defaultValue={worker.personal.motherName} onChange={e => setMotherName(e.target.value)} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
                  </div>
                </div>
 
@@ -815,17 +815,15 @@ export default function WorkerProfilePage() {
                 <div className="bg-[#F5F5F7] rounded-[16px] p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Emergency Contact Name</p>
-                     <input name="identity.emergencyContactName" type="text" defaultValue={worker.identity.emergencyContactName} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
+                     <input name="identity.emergencyContactName" type="text" defaultValue={worker.identity.emergencyContactName} onChange={e => setEmergencyName(e.target.value)} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Emergency Contact Number</p>
-                     <input name="identity.emergencyContactNumber" type="tel" maxLength={10} defaultValue={worker.identity.emergencyContactNumber} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
+                     <input name="identity.emergencyContactNumber" type="tel" maxLength={10} defaultValue={worker.identity.emergencyContactNumber} onChange={e => setEmergencyNumber(e.target.value)} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Emergency Contact Relationship</p>
-                     <select name="identity.emergencyContactRelation" defaultValue={worker.identity.emergencyContactRelation} className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]">
-                       {BssTaxonomies.NomineeRelationship.map(r => <option key={r} value={r}>{r}</option>)}
-                     </select>
+                     <DownSelect name="identity.emergencyContactRelation" value={emergencyRelation} onChange={setEmergencyRelation} placeholder="Select" options={BssTaxonomies.NomineeRelationship} />
                   </div>
                 </div>
               </div>
@@ -839,11 +837,11 @@ export default function WorkerProfilePage() {
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Alternate Mobile Number</p>
-                    <input name="identity.alternateMobile" type="tel" defaultValue={worker.contact.alternateMobile} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
+                    <input name="identity.alternateMobile" type="tel" defaultValue={worker.contact.alternateMobile} onChange={e => setAlternateMobile(e.target.value)} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Email ID</p>
-                    <input name="identity.email" type="email" defaultValue={worker.contact.email} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
+                    <input name="identity.email" type="email" defaultValue={worker.contact.email} onChange={e => setEmail(e.target.value)} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
                   </div>
                 </div>
               </div>
@@ -1224,11 +1222,16 @@ export default function WorkerProfilePage() {
                     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
                       <div className="sm:col-span-2">
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Name</label>
-                        <select name="banking.bankName" defaultValue={worker.banking.bankName || ''} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
-                          <option value="">Select bank…</option>
-                          {worker.banking.bankName && !INDIAN_BANKS.includes(worker.banking.bankName) && <option value={worker.banking.bankName}>{worker.banking.bankName}</option>}
-                          {INDIAN_BANKS.map(bank => <option key={bank} value={bank}>{bank}</option>)}
-                        </select>
+                        <DownSelect
+                          name="banking.bankName"
+                          value={bankName}
+                          onChange={setBankName}
+                          placeholder="Select bank…"
+                          options={[
+                            ...(worker.banking.bankName && !INDIAN_BANKS.includes(worker.banking.bankName) ? [worker.banking.bankName] : []),
+                            ...INDIAN_BANKS,
+                          ]}
+                        />
                       </div>
                       <div className="sm:col-span-2">
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Account Holder Name</label>
@@ -1259,29 +1262,15 @@ export default function WorkerProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Current Employment Status</label>
-                   <select 
-                     defaultValue={employmentStatus}
-                     onChange={(e) => setEmploymentStatus(e.target.value)}
-                     className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"
-                   >
-                     {BssTaxonomies.EmploymentStatus.map(s => <option key={s} value={s}>{s}</option>)}
-                   </select>
+                   <DownSelect value={employmentStatus} onChange={setEmploymentStatus} placeholder="Select" options={BssTaxonomies.EmploymentStatus} />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Worker Category</label>
-                   <select 
-                     defaultValue={workerCategory}
-                     onChange={(e) => setWorkerCategory(e.target.value)}
-                     className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"
-                   >
-                     {BssTaxonomies.WorkerCategory.map(c => <option key={c} value={c}>{c}</option>)}
-                   </select>
+                   <DownSelect value={workerCategory} onChange={setWorkerCategory} placeholder="Select" options={BssTaxonomies.WorkerCategory} />
                 </div>
                 <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Sector <span className="text-[#FF3B30]">*</span></label>
-                    <select name="classification.sector" defaultValue={worker.classification?.sector} className={`w-full bg-white border ${clsErr('classification.sector')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`}>
-                      {BssTaxonomies.Sector.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                    <DownSelect name="classification.sector" value={sector} onChange={setSector} placeholder="Select" options={BssTaxonomies.Sector} />
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Industry <span className="text-[#FF3B30]">*</span></label>
@@ -1289,12 +1278,7 @@ export default function WorkerProfilePage() {
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Occupation <span className="text-[#FF3B30]">*</span></label>
-                    <select name="classification.occupation" defaultValue={worker.classification?.occupation} className={`w-full bg-white border ${clsErr('classification.occupation')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`}>
-                      <option>Bar Bender (Rebar)</option>
-                      <option>Mason</option>
-                      <option>Carpenter</option>
-                      <option>Electrician</option>
-                    </select>
+                    <DownSelect name="classification.occupation" value={occupation} onChange={setOccupation} placeholder="Select" options={['Bar Bender (Rebar)', 'Mason', 'Carpenter', 'Electrician']} />
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Total Worker Experience (Years) <span className="text-[#FF3B30]">*</span></label>

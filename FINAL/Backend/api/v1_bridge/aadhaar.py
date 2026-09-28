@@ -106,12 +106,12 @@ def _parse_dob(value):
 
 
 def _id_card_validity(issue):
-    """A worker ID card is valid for five years from its issue date (29 Feb is
+    """A worker ID card is valid for three years from its issue date (29 Feb is
     clamped to 28 Feb in non-leap years)."""
     try:
-        return issue.replace(year=issue.year + 5)
+        return issue.replace(year=issue.year + 3)
     except ValueError:
-        return issue.replace(year=issue.year + 5, day=28)
+        return issue.replace(year=issue.year + 3, day=28)
 
 
 def _ensure_id_card_dates(user, issue=None):
@@ -245,9 +245,39 @@ def aadhaar_otp(request):
             payload["message"] = message
         return Response(payload, status=status.HTTP_200_OK)
 
-    # Always ask Sandbox to send the OTP now, so the user gets a fresh SMS as
-    # soon as they click Send. Sandbox itself enforces the ~45s resend cooldown
-    # (we fall back to the last reference below if it refuses).
+    now = timezone.now()
+
+    # 1) If we already hold a still-valid OTP reference, reuse it and do NOT
+    #    call Sandbox — repeated clicks must not reset its resend cooldown.
+    valid = (AadhaarChallenge.objects
+             .filter(aadhaar_number=aadhaar, status__in=["INITIATED", "OTP_SENT"],
+                     expires_at__gt=now)
+             .exclude(reference_id__isnull=True).exclude(reference_id="")
+             .order_by("-expires_at").first())
+    if valid is not None:
+        return Response({
+            "referenceId": valid.reference_id,
+            "expiresIn": max(0, int((valid.expires_at - now).total_seconds())),
+            "reused": True,
+        }, status=status.HTTP_200_OK)
+
+    # 2) Debounce Sandbox: at most one OTP request per ~45s per Aadhaar, so a
+    #    burst of clicks cannot keep resetting the upstream cooldown (which is
+    #    what stopped any OTP from actually being sent).
+    last_call = (AadhaarChallenge.objects
+                 .filter(aadhaar_number=aadhaar, status="CALL",
+                         created_at__gte=now - timedelta(seconds=45))
+                 .order_by("-created_at").first())
+    if last_call is not None:
+        wait = max(1, 45 - int((now - last_call.created_at).total_seconds()))
+        return Response({
+            "error": "An OTP was requested for this Aadhaar a moment ago. Please check your messages and wait a few seconds before resending.",
+            "retryAfterSeconds": wait,
+        }, status=status.HTTP_200_OK)
+
+    AadhaarChallenge.objects.create(aadhaar_number=aadhaar, status="CALL")
+
+    # Ask Sandbox to send the OTP now.
     try:
         result = aadhaar_client.generate_otp(aadhaar)
     except aadhaar_client.SandboxError as exc:
