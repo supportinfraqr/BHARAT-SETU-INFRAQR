@@ -80,7 +80,13 @@ def verification_decline_entitylocker(request):
         return Response({"error": "Please confirm you are not on EntityLocker."},
                         status=status.HTTP_400_BAD_REQUEST)
     profile.entity_locker_declined = True
-    profile.save(update_fields=["entity_locker_declined"])
+    fields = ["entity_locker_declined"]
+    if (getattr(profile, "manual_verification_status", "") or "") == "REJECTED":
+        # Fresh start after a rejection.
+        profile.manual_verification_status = "NOT_SUBMITTED"
+        profile.manual_verification_note = ""
+        fields += ["manual_verification_status", "manual_verification_note"]
+    profile.save(update_fields=fields)
     return Response({"data": _state(profile, request.user)}, status=status.HTTP_200_OK)
 
 
@@ -196,7 +202,13 @@ def admin_verification_review(request):
         return Response({"error": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
     profile.manual_verification_status = decision
     profile.manual_verification_note = str(body.get("note") or "")[:255]
-    profile.save(update_fields=["manual_verification_status", "manual_verification_note"])
+    fields = ["manual_verification_status", "manual_verification_note"]
+    if decision == "REJECTED":
+        # Send the entity back to the "EntityLocker or manual documents?" choice
+        # so they can redo it (they are asked again on their next visit).
+        profile.entity_locker_declined = False
+        fields.append("entity_locker_declined")
+    profile.save(update_fields=fields)
     return Response({"data": {"userId": profile.user_id, "role": role, "status": decision}},
                     status=status.HTTP_200_OK)
 
