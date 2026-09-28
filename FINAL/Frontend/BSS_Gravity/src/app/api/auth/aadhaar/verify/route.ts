@@ -13,9 +13,8 @@ export async function POST(request: Request) {
     if (
       typeof body.aadhaar !== 'string' ||
       !/^\d{12}$/.test(body.aadhaar.replace(/\D/g, '')) ||
-      typeof body.referenceId !== 'string' ||
-      !body.referenceId ||
       typeof body.otp !== 'string' ||
+      !body.otp ||
       typeof body.acceptedTerms !== 'boolean'
     ) {
       return NextResponse.json({ error: 'Aadhaar number, OTP and accepted terms are required.' }, { status: 400 });

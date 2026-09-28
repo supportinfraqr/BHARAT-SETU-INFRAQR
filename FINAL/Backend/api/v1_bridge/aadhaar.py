@@ -303,9 +303,18 @@ def aadhaar_verify(request):
     aadhaar = _sanitize_aadhaar(body.get("aadhaar"))
     reference_id = str(body.get("referenceId") or "").strip()
     otp = str(body.get("otp") or "").strip()
-    if not aadhaar or not reference_id or not otp:
-        return Response({"error": "aadhaar, referenceId and otp are required"},
+    if not aadhaar or not otp:
+        return Response({"error": "Aadhaar number and OTP are required"},
                         status=status.HTTP_400_BAD_REQUEST)
+    # The client may not hold the reference (e.g. the send was rate-limited and
+    # it still advanced to the OTP screen) — fall back to the latest request.
+    if not reference_id:
+        latest = (AadhaarChallenge.objects
+                  .filter(aadhaar_number=aadhaar)
+                  .exclude(reference_id__isnull=True).exclude(reference_id="")
+                  .exclude(status__in=["VERIFIED", "FAILED"])
+                  .order_by("-expires_at", "-created_at").first())
+        reference_id = latest.reference_id if latest else ""
 
     challenge = AadhaarChallenge.objects.filter(
         aadhaar_number=aadhaar, reference_id=reference_id).order_by("-created_at").first()
@@ -446,9 +455,18 @@ def worker_link_aadhaar(request):
     aadhaar = _sanitize_aadhaar(body.get("aadhaar"))
     reference_id = str(body.get("referenceId") or "").strip()
     otp = str(body.get("otp") or "").strip()
-    if not aadhaar or not reference_id or not otp:
-        return Response({"error": "aadhaar, referenceId and otp are required"},
+    if not aadhaar or not otp:
+        return Response({"error": "Aadhaar number and OTP are required"},
                         status=status.HTTP_400_BAD_REQUEST)
+    # The client may not hold the reference (e.g. the send was rate-limited and
+    # it still advanced to the OTP screen) — fall back to the latest request.
+    if not reference_id:
+        latest = (AadhaarChallenge.objects
+                  .filter(aadhaar_number=aadhaar)
+                  .exclude(reference_id__isnull=True).exclude(reference_id="")
+                  .exclude(status__in=["VERIFIED", "FAILED"])
+                  .order_by("-expires_at", "-created_at").first())
+        reference_id = latest.reference_id if latest else ""
 
     challenge = AadhaarChallenge.objects.filter(
         aadhaar_number=aadhaar, reference_id=reference_id).order_by("-created_at").first()
