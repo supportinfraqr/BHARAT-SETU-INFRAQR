@@ -245,12 +245,9 @@ def aadhaar_otp(request):
             payload["message"] = message
         return Response(payload, status=status.HTTP_200_OK)
 
-    # Reuse an OTP generated within the last minute (Sandbox blocks regeneration
-    # for ~45s) rather than calling Sandbox and getting rate-limited.
-    live = _reuse_recent(1)
-    if live is not None:
-        return live
-
+    # Always ask Sandbox to send the OTP now, so the user gets a fresh SMS as
+    # soon as they click Send. Sandbox itself enforces the ~45s resend cooldown
+    # (we fall back to the last reference below if it refuses).
     try:
         result = aadhaar_client.generate_otp(aadhaar)
     except aadhaar_client.SandboxError as exc:
