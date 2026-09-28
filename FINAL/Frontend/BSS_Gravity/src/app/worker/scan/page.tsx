@@ -57,7 +57,7 @@ export default function QRScannerWorkflow() {
     e.preventDefault();
     const raw = manualInput.trim().toUpperCase();
     if (!raw) return;
-    const isBssFormat = /^(?:BSS-[WCES][A-Z0-9]+|BSS[WCES]?\d{6,14})$/.test(raw);
+    const isBssFormat = /^(?:BSS-?[WCES][A-Z0-9]+|BSS[WCES]?\d{6,14})$/.test(raw);
     if (!isBssFormat) {
       setState("error");
       setMessage(`"${raw}" is not a valid BSS ID format. Expected format: BSS-C... (Contractor), BSS-E... (Employer), or BSS-W... (Worker).`);
@@ -79,7 +79,7 @@ export default function QRScannerWorkflow() {
       const p = JSON.parse(text) as Payload;
       if (!["BSS_WORKER","BSS_CONTRACTOR","BSS_EMPLOYER"].includes(p.type) || p.v !== 1 || p.issuer !== "Bharat Shram Setu") throw new Error("Unsupported QR credential");
       const isContractor = p.type === "BSS_CONTRACTOR" || p.bssId.startsWith("BSS-C") || p.bssId.startsWith("BSSC");
-      const isEmployer = p.type === "BSS_EMPLOYER" || p.bssId.startsWith("BSS-E");
+      const isEmployer = p.type === "BSS_EMPLOYER" || p.bssId.startsWith("BSS-E") || p.bssId.startsWith("BSSE");
       playScanBeep(true);
       setVerifyData(null);
       if (isContractor) {

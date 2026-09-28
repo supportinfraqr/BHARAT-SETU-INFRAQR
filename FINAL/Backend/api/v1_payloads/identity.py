@@ -166,7 +166,7 @@ def _worker_details(wi, user):
 
 def build_identity_verify(bss_id, viewer=None):
     bss_id = (bss_id or "").strip()
-    if bss_id.upper().startswith("BSS-E"):
+    if bss_id.upper().startswith("BSS-E") or bss_id.upper().startswith("BSSE"):
         ep = EmployerProfile.objects.filter(employer_code=bss_id).first()
         if not ep:
             return None

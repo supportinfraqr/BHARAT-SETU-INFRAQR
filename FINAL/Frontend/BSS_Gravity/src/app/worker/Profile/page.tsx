@@ -26,6 +26,12 @@ const DISABILITY_OPTIONS = [
   'Other / not listed',
 ];
 
+/** Normalize the stored disability status to 'Yes' | 'No' | '' (Select). */
+function normDisabilityStatus(v: unknown): string {
+  const s = String(v ?? '').trim();
+  return /^yes$/i.test(s) ? 'Yes' : /^no$/i.test(s) ? 'No' : '';
+}
+
 export default function WorkerProfilePage() {
   const { t } = useLanguage();
   const { worker, portal, updateWorker, saveWorker } = useWorker();
@@ -66,12 +72,26 @@ export default function WorkerProfilePage() {
   const [nextNomineeId, setNextNomineeId] = useState(() => Math.max(0, ...(worker.family?.nominees ?? []).map(n => n.id)) + 1);
   const [docTargetId, setDocTargetId] = useState<number | null>(null);
   // Disability: Status drives whether Type / % is applicable.
-  const [disabilityStatus, setDisabilityStatus] = useState(() => {
-    const v = String(worker.personal.disabilityStatus ?? '').trim();
-    return /^yes$/i.test(v) ? 'Yes' : /^no$/i.test(v) ? 'No' : '';
-  });
+  const [disabilityStatus, setDisabilityStatus] = useState(() => normDisabilityStatus(worker.personal.disabilityStatus));
   const [disabilityTypePct, setDisabilityTypePct] = useState(() => worker.identity.disabilityTypePct || '');
   const [disabilityTypeOpen, setDisabilityTypeOpen] = useState(false);
+  const [maritalStatus, setMaritalStatus] = useState(() => worker.personal.maritalStatus || '');
+  const [bloodGroup, setBloodGroup] = useState(() => worker.personal.bloodGroup || '');
+  const [religion, setReligion] = useState(() => worker.personal.religion || '');
+  const [caste, setCaste] = useState(() => worker.personal.caste || '');
+  const [placeOfBirth, setPlaceOfBirth] = useState(() => worker.identity.placeOfBirth || worker.address.permanentState || '');
+
+  // Value-based dirty check for the Personal tab: enable Save only when a field
+  // actually differs from what's stored (changing then reverting counts as "no
+  // change"). Other tabs keep using the event-based `dirty` flag.
+  const personalDirty =
+    maritalStatus !== (worker.personal.maritalStatus || '') ||
+    bloodGroup !== (worker.personal.bloodGroup || '') ||
+    religion !== (worker.personal.religion || '') ||
+    caste !== (worker.personal.caste || '') ||
+    placeOfBirth !== (worker.identity.placeOfBirth || worker.address.permanentState || '') ||
+    disabilityStatus !== normDisabilityStatus(worker.personal.disabilityStatus) ||
+    disabilityTypePct !== (worker.identity.disabilityTypePct || '');
   const nomineeFileRef = useRef<HTMLInputElement>(null);
   const facePhotoInputRef = useRef<HTMLInputElement>(null);
   const cameraVideoRef = useRef<HTMLVideoElement>(null);
@@ -540,6 +560,11 @@ export default function WorkerProfilePage() {
       if (activeTab === 'personal') {
         patch.identity = { ...(patch.identity ?? {}), disabilityTypePct: disabilityStatus === 'Yes' ? disabilityTypePct.trim() : '' };
       }
+      // The Bank Account Number field is intentionally blank (re-enter to
+      // change); an empty value must not wipe the stored account number.
+      if (activeTab === 'banking' && patch.banking && String(patch.banking.accountNumber ?? '') === '') {
+        delete patch.banking.accountNumber;
+      }
       // Family nominees live in component state.
       if (activeTab === 'family') {
         patch.family = {
@@ -714,33 +739,33 @@ export default function WorkerProfilePage() {
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Place of Birth <span className="text-[#FF3B30]">*</span></label>
-                   <input name="identity.placeOfBirth" type="text" defaultValue={worker.identity.placeOfBirth || worker.address.permanentState || ''} placeholder="Native village/town, tehsil and district" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                   <input name="identity.placeOfBirth" type="text" defaultValue={worker.identity.placeOfBirth || worker.address.permanentState || ''} onChange={e => setPlaceOfBirth(e.target.value)} placeholder="Native village/town, tehsil and district" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                    <p className="text-[10px] text-[#86868B] mt-1">Used with your Aadhaar-verified work address to map migrant flows for state policy.</p>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Marital Status</label>
-                    <select name="personal.maritalStatus" defaultValue={worker.personal.maritalStatus || ''} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
+                    <select name="personal.maritalStatus" defaultValue={worker.personal.maritalStatus || ''} onChange={e => setMaritalStatus(e.target.value)} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
                       <option value="">Select</option>
                       {BssTaxonomies.MaritalStatus.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Blood Group</label>
-                    <select name="personal.bloodGroup" defaultValue={worker.personal.bloodGroup || ''} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
+                    <select name="personal.bloodGroup" defaultValue={worker.personal.bloodGroup || ''} onChange={e => setBloodGroup(e.target.value)} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
                       <option value="">Select</option>
                       {BssTaxonomies.BloodGroup.map(b => <option key={b} value={b}>{b}</option>)}
                     </select>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Religion</label>
-                    <select name="personal.religion" defaultValue={worker.personal.religion || ''} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
+                    <select name="personal.religion" defaultValue={worker.personal.religion || ''} onChange={e => setReligion(e.target.value)} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
                       <option value="">Select</option>
                       {BssTaxonomies.Religion.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Caste</label>
-                    <select name="personal.caste" defaultValue={worker.personal.caste || ''} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
+                    <select name="personal.caste" defaultValue={worker.personal.caste || ''} onChange={e => setCaste(e.target.value)} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
                       <option value="">Select</option>
                       {BssTaxonomies.SocialCategory.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
@@ -1211,7 +1236,7 @@ export default function WorkerProfilePage() {
                       </div>
                       <div>
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Account Number</label>
-                        <input name="banking.accountNumber" type="password" defaultValue={worker.banking.accountNumber} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
+                        <input name="banking.accountNumber" type="password" defaultValue="" placeholder="Enter account number" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
                       </div>
                       <div>
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">IFSC Code</label>
@@ -2091,8 +2116,8 @@ export default function WorkerProfilePage() {
           <div className="mt-10 flex justify-end">
             <button 
               type="submit" 
-              disabled={isSaving || !dirty}
-              title={!dirty ? 'Make a change to enable saving' : undefined}
+              disabled={isSaving || (activeTab === 'personal' ? !personalDirty : !dirty)}
+              title={(activeTab === 'personal' ? personalDirty : dirty) ? undefined : 'Make a change to enable saving'}
               className="bg-[#0F172A] hover:bg-black text-white px-8 py-3 rounded-full font-bold text-[14px] shadow-sm transition-all flex justify-center items-center gap-2 min-w-[160px] disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {isSaving ? (

@@ -61,7 +61,7 @@ export default function WorkerIdentityCard({ data, className = "" }: { data: Wor
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="leading-tight flex flex-col items-start min-w-0">
                   <h2 className="text-[15px] font-extrabold tracking-[-0.015em] leading-none whitespace-nowrap" aria-label="Bharat Shram Setu"><span className="text-white">Bharat</span><span className="text-[#FF9933]">Shram</span><span className="text-[#2F9E67]">Setu</span></h2>
-                  <p className="text-[5.5px] text-slate-300 mt-1.5 tracking-[0.105em] font-semibold uppercase leading-none whitespace-nowrap">One Worker. One Identity. One Future.</p>
+                  <p className="text-[5.5px] text-slate-300 mt-1.5 tracking-[0.105em] font-semibold uppercase leading-none whitespace-nowrap">One Nation. One Identity. One Future.</p>
                 </div>
               </div>
               <div className="inline-flex items-center gap-1.5 h-[18px] px-2 rounded-full border border-slate-300/35 bg-white/[0.08] shadow-inner" aria-label="RFID enabled card">

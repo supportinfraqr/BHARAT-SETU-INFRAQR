@@ -44,7 +44,7 @@ export default function ContractorScanPage() {
     e.preventDefault();
     const raw = manualInput.trim().toUpperCase();
     if (!raw) return;
-    const isBssFormat = /^(?:BSS-[WCES][A-Z0-9]+|BSS[WCES]?\d{6,14})$/.test(raw);
+    const isBssFormat = /^(?:BSS-?[WCES][A-Z0-9]+|BSS[WCES]?\d{6,14})$/.test(raw);
     if (!isBssFormat) {
       setState("error");
       setMessage(`"${raw}" is not a valid BSS ID format. Expected format: BSS-W... (Worker), BSS-E... (Employer), or BSS-C... (Contractor).`);
@@ -136,7 +136,7 @@ export default function ContractorScanPage() {
         controls.current?.stop();
         return;
       }
-      if (p.type === "BSS_WORKER" || bssId.startsWith("BSS-W")) {
+      if (p.type === "BSS_WORKER" || bssId.startsWith("BSS-W") || bssId.startsWith("BSSW")) {
         // Worker QR → identify worker, show relationship, request binding (never auto-bind)
         const known = contractor.workers.find(w => w.bssId === bssId);
         const pending = contractor.bindingRequests.find(b => b.bssId === bssId && b.status === 'Pending');

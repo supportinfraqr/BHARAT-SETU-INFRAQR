@@ -38,11 +38,12 @@ except Exception:  # pragma: no cover - never hit under Django run
     ContractorProfile = EmployerProfile = WorkerIdentity = Site = BssIdSequence = None
 
 ROLE_PREFIX = {
-    "worker": "BSS-W",
-    "contractor": "BSS-C",
-    "employer": "BSS-E",
-    "site": "BSS-S",
+    "worker": "BSSW",
+    "contractor": "BSSC",
+    "employer": "BSSE",
+    "site": "BSSS",
 }
+_ROLE_LETTER = {"worker": "W", "contractor": "C", "employer": "E", "site": "S"}
 
 ID_SUFFIX_LENGTH = 11
 ID_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # 32 chars, no I/O/0/1/ambiguous
@@ -97,11 +98,10 @@ def _allocate(prefix, *, exclude_ids=()):
     raise RuntimeError("Unable to allocate a unique BSS identifier.")
 
 
-# Any recognised BSS identifier: the role prefix plus an alphanumeric suffix.
-# Deliberately looser than is_canonical_id() — older accounts were issued
-# 10-char suffixes before the current 11-char masked format, and those are
-# perfectly valid BSS IDs that must not be churned.
-_BSS_STYLE_RE = re.compile(r"^BSS-[WCES][A-Z0-9]{9,12}$")
+# Any recognised BSS identifier: optional ``BSS-`` / ``BSS`` prefix, the role
+# letter, then the alphanumeric suffix. New IDs have no hyphen (BSSW…); legacy
+# ones keep it (BSS-W…) and remain valid.
+_BSS_STYLE_RE = re.compile(r"^BSS-?[WCES][A-Z0-9]{9,12}$")
 
 
 def is_bss_style_id(value) -> bool:
@@ -118,20 +118,22 @@ def is_bss_style_id(value) -> bool:
 def is_canonical_id(value, role: str | None = None) -> bool:
     """True when *value* is a well-formed masked BSS identifier.
 
-    ``role`` narrows the accepted prefix ("worker"/"contractor"/"employer"/
-    "site"); omit it to accept any role. Used to spot legacy pre-BSS codes
-    (e.g. ``V-100234``) that predate this allocator.
+    Accepts both the current hyphen-less form (``BSSW…``) and the legacy
+    hyphenated form (``BSS-W…``). ``role`` narrows the accepted letter
+    ("worker"/"contractor"/"employer"/"site"); omit it to accept any role.
+    Used to spot legacy pre-BSS codes (e.g. ``V-100234``) that predate this
+    allocator.
     """
     text = (value or "").strip()
-    roles = [role] if role else list(ROLE_PREFIX)
-    for name in roles:
-        prefix = ROLE_PREFIX.get(name)
-        if not prefix or not text.startswith(prefix):
-            continue
-        suffix = text[len(prefix):]
-        if len(suffix) == ID_SUFFIX_LENGTH and set(suffix) <= ID_ALPHABET_SET:
-            return True
-    return False
+    match = re.match(r"^BSS-?([WCES])([A-Z0-9]+)$", text)
+    if not match:
+        return False
+    letter, suffix = match.group(1), match.group(2)
+    if len(suffix) != ID_SUFFIX_LENGTH or not set(suffix) <= ID_ALPHABET_SET:
+        return False
+    if role and _ROLE_LETTER.get(role) != letter:
+        return False
+    return True
 
 
 def new_bss_worker_id():

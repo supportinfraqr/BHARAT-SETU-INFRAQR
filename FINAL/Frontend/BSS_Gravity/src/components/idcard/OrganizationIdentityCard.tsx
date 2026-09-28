@@ -101,13 +101,13 @@ export default function OrganizationIdentityCard({
             <div className="h-[57px] px-4 pt-3 flex justify-between items-start relative z-10 border-b border-white/[0.08]">
               <div className="leading-tight flex flex-col items-start min-w-0">
                 <h2 className="text-[15px] font-extrabold tracking-[-0.015em] leading-none whitespace-nowrap" aria-label="Bharat Shram Setu"><span className="text-white">Bharat</span><span className="text-[#FF9933]">Shram</span><span className="text-[#2F9E67]">Setu</span></h2>
-                <p className="text-[5.5px] text-slate-300 mt-1.5 tracking-[0.105em] font-semibold uppercase leading-none whitespace-nowrap">One Worker. One Identity. One Future.</p>
+                <p className="text-[5.5px] text-slate-300 mt-1.5 tracking-[0.105em] font-semibold uppercase leading-none whitespace-nowrap">One Nation. One Identity. One Future.</p>
               </div>
               <span className="inline-flex items-center gap-1.5 h-[18px] px-2 rounded-full border border-slate-300/35 bg-white/[0.08] shadow-inner" aria-label="RFID enabled card"><RadioTower size={9} className="text-slate-200" strokeWidth={2}/><span className="text-[6px] text-slate-100 uppercase font-extrabold tracking-[0.12em]">RFID Enabled</span></span>
             </div>
           ) : (
             <div className="flex items-center justify-between relative z-10">
-              <div><h2 className="text-[15px] font-extrabold tracking-[-0.015em]"><span className="text-white">Bharat</span><span className="text-[#FF9933]">Shram</span><span className="text-[#2F9E67]">Setu</span></h2><p className="text-[5.5px] text-slate-300 tracking-[0.105em] font-semibold uppercase">One Worker. One Identity. One Future.</p></div>
+              <div><h2 className="text-[15px] font-extrabold tracking-[-0.015em]"><span className="text-white">Bharat</span><span className="text-[#FF9933]">Shram</span><span className="text-[#2F9E67]">Setu</span></h2><p className="text-[5.5px] text-slate-300 tracking-[0.105em] font-semibold uppercase">One Nation. One Identity. One Future.</p></div>
               <span className="inline-flex items-center gap-1.5 h-[18px] px-2 rounded-full border border-slate-300/35 bg-white/[0.08]"><RadioTower size={9} className="text-slate-200"/><span className="text-[6px] text-slate-100 uppercase font-extrabold tracking-[0.12em]">RFID Enabled</span></span>
             </div>
           )}

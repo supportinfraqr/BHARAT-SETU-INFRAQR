@@ -168,7 +168,7 @@ export function renderDocumentHtml(target: RenderTarget): string {
     ? '<span style="color:#022B5E">Bharat</span><span style="color:#E45D24"> Shram</span><span style="color:#14843C"> Setu</span>'
     : esc(brandName);
   const logoUrl = template.styles.brandLogoUrl || '/bss-original-logo.png';
-  const tagline = template.styles.brandTagline || 'One Worker · One Identity · One Future';
+  const tagline = template.styles.brandTagline || 'One Nation · One Identity · One Future';
   const headingMeta = template.styles.showBrandHeader
     ? `<div class="doc-logo-row">${template.styles.showLogo ? `<img src="${esc(logoUrl)}" alt="logo" class="doc-logo"/>` : ''}<div class="doc-brand"><strong>${brandWordmark}</strong><span>${esc(tagline)}</span></div></div>`
     : '';

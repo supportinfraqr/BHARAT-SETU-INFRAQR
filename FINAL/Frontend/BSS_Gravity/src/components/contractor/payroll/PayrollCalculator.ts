@@ -99,7 +99,7 @@ export function validateRows(rows: string[][], config: ContractorPayrollConfig, 
     const lop = get(4);
 
     if (!bssId) errors.push('Worker BSS ID is mandatory');
-    else if (!/^BSS-W[A-Z0-9]{10,11}$/.test(bssId) && !/^BSS\d{12}$/.test(bssId) && !/^BSS-C[A-Z0-9]{10,11}$/.test(bssId)) errors.push(`Invalid BSS ID format "${bssId}"`);
+    else if (!/^BSS-?W[A-Z0-9]{10,11}$/.test(bssId) && !/^BSS\d{12}$/.test(bssId) && !/^BSS-?C[A-Z0-9]{10,11}$/.test(bssId)) errors.push(`Invalid BSS ID format "${bssId}"`);
     else if (!knownWorkerIds.includes(bssId)) warnings.push('Worker not in current bound-worker list — will be added as unknown worker');
 
     if (!period) errors.push('Period is mandatory');

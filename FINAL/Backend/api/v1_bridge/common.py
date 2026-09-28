@@ -192,9 +192,9 @@ _TEXT_FIELD_TYPES = ("CharField", "TextField", "SlugField", "EmailField", "URLFi
 
 
 def _bss_worker_id(user_id):
-    """Collision-free 15-char worker ID: 'BSS-W' + the User primary key
-    zero-padded to 10 digits. The PK is unique, so IDs never collide."""
-    return f"BSS-W{user_id:010d}"
+    """Collision-free 15-char worker ID: 'BSSW' + the User primary key
+    zero-padded to 11 digits. The PK is unique, so IDs never collide."""
+    return f"BSSW{user_id:011d}"
 
 
 def _record_registration_consent(user, source="Self Registered via App",

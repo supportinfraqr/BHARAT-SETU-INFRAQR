@@ -25,7 +25,10 @@ export default function IdentityCardPage() {
   const frontRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLDivElement>(null);
 
-  const isEmployment = cardFormat === 'employment';
+  // The Employment Card is only available once the worker is bound to a
+  // contractor. Until then, only the Standard BSS ID Card is shown.
+  const isBound = Boolean((worker.employment.contractor || worker.employment.contractorDetails?.code || '').trim());
+  const isEmployment = cardFormat === 'employment' && isBound;
 
   const handleDownload = async () => {
     if (!frontRef.current || !backRef.current || isExporting) return;
@@ -241,16 +244,18 @@ export default function IdentityCardPage() {
         <div className="flex gap-1 w-full sm:w-auto">
           <button
             onClick={() => setCardFormat('standard')}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${cardFormat === 'standard' ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${!isEmployment ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
           >
             <IdCard size={15}/> Standard BSS ID Card
           </button>
+          {isBound && (
           <button
             onClick={() => setCardFormat('employment')}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${cardFormat === 'employment' ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${isEmployment ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
           >
             <Briefcase size={15} className="text-orange-400"/> Employment Card
           </button>
+          )}
         </div>
 
         {/* SIDE FLIP CONTROLS */}
@@ -303,7 +308,7 @@ export default function IdentityCardPage() {
                  <div className="flex items-center gap-2.5 min-w-0">
                    <div className="leading-tight flex flex-col items-start min-w-0">
                      <h2 className="text-[15px] font-extrabold tracking-[-0.015em] leading-none whitespace-nowrap" aria-label="Bharat Shram Setu"><span className="text-white">Bharat</span><span className="text-[#FF9933]">Shram</span><span className="text-[#2F9E67]">Setu</span></h2>
-                     <p className="text-[5.5px] text-slate-300 mt-1.5 tracking-[0.105em] font-semibold uppercase leading-none whitespace-nowrap">One Worker. One Identity. One Future.</p>
+                     <p className="text-[5.5px] text-slate-300 mt-1.5 tracking-[0.105em] font-semibold uppercase leading-none whitespace-nowrap">One Nation. One Identity. One Future.</p>
                    </div>
                  </div>
                  <div className="flex flex-col items-end">

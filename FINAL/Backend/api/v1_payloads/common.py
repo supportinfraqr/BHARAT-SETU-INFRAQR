@@ -155,15 +155,15 @@ def _d(value, default=""):
 
 
 def _bss_worker_code(user_id):
-    return f"BSS-W{user_id:011d}"
+    return f"BSSW{user_id:011d}"
 
 
 def _bss_contractor_code(user_id):
-    return f"BSS-C{user_id:011d}"
+    return f"BSSC{user_id:011d}"
 
 
 def _bss_employer_code(user_id):
-    return f"BSS-E{user_id:011d}"
+    return f"BSSE{user_id:011d}"
 
 
 def _dts(value):

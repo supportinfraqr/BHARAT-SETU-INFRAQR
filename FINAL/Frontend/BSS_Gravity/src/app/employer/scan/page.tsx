@@ -60,7 +60,7 @@ export default function EmployerScanPage() {
     e.preventDefault();
     const raw = manualInput.trim().toUpperCase();
     if (!raw) return;
-    const isBssFormat = /^(?:BSS-[WCES][A-Z0-9]+|BSS[WCES]?\d{6,14})$/.test(raw);
+    const isBssFormat = /^(?:BSS-?[WCES][A-Z0-9]+|BSS[WCES]?\d{6,14})$/.test(raw);
     if (!isBssFormat) {
       setState("error");
       setMessage(`"${raw}" is not a valid BSS ID format. Expected format: BSS-C... (Contractor), BSS-W... (Worker), or BSS-E... (Employer).`);
@@ -88,7 +88,7 @@ export default function EmployerScanPage() {
       setScanned(p);
       setVerifyData(null);
       const isContractor = p.type === 'BSS_CONTRACTOR' || p.bssId.startsWith('BSS-C') || p.bssId.startsWith('BSSC');
-      const isWorker = p.type === 'BSS_WORKER' || p.bssId.startsWith('BSS-W');
+      const isWorker = p.type === 'BSS_WORKER' || p.bssId.startsWith('BSS-W') || p.bssId.startsWith('BSSW');
       if (isContractor) {
         // Contractor QR → identify contractor, display relationship. The
         // contractor need not be engaged already — look them up in the registry.
