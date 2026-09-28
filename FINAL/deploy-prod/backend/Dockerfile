@@ -24,6 +24,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt gunicorn
 
+# CACHEBUST: pass a changing value (e.g. a timestamp) to force this COPY to
+# re-run. Works around Docker 29/containerd reusing a stale COPY layer when only
+# file contents changed.
+ARG CACHEBUST=0
 COPY . .
 
 RUN chmod +x /app/entrypoint.sh

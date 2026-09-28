@@ -8,6 +8,10 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=dependencies /app/node_modules ./node_modules
+# CACHEBUST: pass a changing value (e.g. a timestamp) to force this COPY — and
+# the build below — to re-run. Works around Docker 29/containerd reusing a stale
+# COPY layer when only file contents changed.
+ARG CACHEBUST=0
 COPY . .
 RUN npm run build
 
