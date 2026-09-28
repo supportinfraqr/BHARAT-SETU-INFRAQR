@@ -593,7 +593,7 @@ export default function ComplianceSubmissionPage() {
                         </label>
                         <button
                           type="button"
-                          onClick={() => up?.id != null && void submitSingleForm(doc.name, up.id)}
+                          onClick={() => up?.id != null && void submitSingleForm(doc.name, up.id, up?.status === 'Errors found')}
                           disabled={busy || up?.id == null}
                           className="h-7 px-3 rounded-md bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] disabled:opacity-40 shadow-xs"
                         >Submit</button>
