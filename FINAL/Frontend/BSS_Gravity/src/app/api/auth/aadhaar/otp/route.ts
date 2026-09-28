@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     if (typeof body.aadhaar !== 'string' || !/^\d{12}$/.test(body.aadhaar.replace(/\D/g, ''))) {
       return NextResponse.json({ error: 'Enter a valid 12-digit Aadhaar number.' }, { status: 400 });
     }
-    assertRateLimit(`aadhaar-otp:${body.aadhaar}`, 5, 10 * 60_000);
+    assertRateLimit(`aadhaar-otp:${body.aadhaar}`, 100, 10 * 60_000);
     const config = getRuntimeConfig();
 
     const result = await upstreamRequest<{ referenceId: string; expiresIn: number }>(

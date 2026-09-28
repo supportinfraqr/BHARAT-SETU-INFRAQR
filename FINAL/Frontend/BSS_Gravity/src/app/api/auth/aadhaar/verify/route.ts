@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json({ error: 'Aadhaar number, OTP and accepted terms are required.' }, { status: 400 });
     }
-    assertRateLimit(`aadhaar-verify:${body.aadhaar}`, 5, 10 * 60_000);
+    assertRateLimit(`aadhaar-verify:${body.aadhaar}`, 100, 10 * 60_000);
     const config = getRuntimeConfig();
 
     const result = await upstreamRequest<{ subject: string; sessionId: string; accessToken?: string; bssId: string }>(

@@ -275,9 +275,9 @@ def aadhaar_otp(request):
         if fallback is not None:
             return fallback
         return Response(
-            {"error": "An OTP was already sent to this Aadhaar. Please enter it in the OTP field.",
-             "retryAfterSeconds": 0},
-            status=status.HTTP_429_TOO_MANY_REQUESTS)
+            {"error": "An OTP was sent to this Aadhaar recently. Enter it below — if it doesn't work, tap 'Resend OTP' to get a new code.",
+             "retryAfterSeconds": 45},
+            status=status.HTTP_200_OK)
 
     challenge = AadhaarChallenge.objects.create(
         aadhaar_number=aadhaar,
@@ -319,7 +319,7 @@ def aadhaar_verify(request):
     challenge = AadhaarChallenge.objects.filter(
         aadhaar_number=aadhaar, reference_id=reference_id).order_by("-created_at").first()
     if challenge is None:
-        return Response({"error": "Unknown Aadhaar OTP request. Send a new OTP first."},
+        return Response({"error": "We couldn't match this OTP to a request. Tap 'Resend OTP' to get a new code."},
                         status=status.HTTP_400_BAD_REQUEST)
     if challenge.status == "VERIFIED":
         return Response({"error": "This Aadhaar has already been verified."},
@@ -471,7 +471,7 @@ def worker_link_aadhaar(request):
     challenge = AadhaarChallenge.objects.filter(
         aadhaar_number=aadhaar, reference_id=reference_id).order_by("-created_at").first()
     if challenge is None:
-        return Response({"error": "Unknown Aadhaar OTP request. Send a new OTP first."},
+        return Response({"error": "We couldn't match this OTP to a request. Tap 'Resend OTP' to get a new code."},
                         status=status.HTTP_400_BAD_REQUEST)
     if challenge.status == "VERIFIED":
         return Response({"error": "This Aadhaar has already been verified."},
