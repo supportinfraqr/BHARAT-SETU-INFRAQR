@@ -746,7 +746,7 @@ export default function WorkerProfilePage() {
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Status</label>
-                    <select name="personal.disabilityStatus" value={disabilityStatus} onChange={e => { const v = e.target.value; setDisabilityStatus(v); if (v !== 'Yes') setDisabilityTypePct(''); }} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
+                    <select name="personal.disabilityStatus" defaultValue={disabilityStatus} onChange={e => { const v = e.target.value; setDisabilityStatus(v); if (v !== 'Yes') setDisabilityTypePct(''); }} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
                       <option value="">Select</option>
                       <option value="No">No</option>
                       <option value="Yes">Yes</option>
