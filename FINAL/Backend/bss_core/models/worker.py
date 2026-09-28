@@ -400,6 +400,10 @@ class WorkerDocument(models.Model):
     is_mandatory = models.BooleanField(default=False)
     owner_role = models.CharField(max_length=20, choices=OWNER, default="worker")
     auto_generated = models.BooleanField(default=False)
+    # OCR result for a manually uploaded document: kept even after a forced
+    # submit so the UI can keep flagging "OCR failed".
+    ocr_failed = models.BooleanField(default=False)
+    ocr_findings = models.TextField(blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

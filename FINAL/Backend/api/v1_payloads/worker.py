@@ -887,6 +887,8 @@ def _worker_documents_display(user):
                 "downloadUrl": f"/api/worker/documents/{d.id}/file" if d.file else "",
                 "locked": bool(d.auto_generated),
                 "source": _doc_source_label(_d(m.code), bool(d.auto_generated)),
+                "ocrFailed": bool(getattr(d, "ocr_failed", False)),
+                "ocrFindings": _d(getattr(d, "ocr_findings", "")),
             })
         else:
             rows.append({

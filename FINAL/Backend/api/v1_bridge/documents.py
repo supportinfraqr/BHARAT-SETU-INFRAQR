@@ -65,34 +65,37 @@ def worker_documents(request):
         return Response({"error": "You must complete Aadhaar verification before uploading documents."},
                         status=status.HTTP_403_FORBIDDEN)
 
-    # Perform OCR check to verify the uploaded document belongs to the worker (name matching)
+    # OCR check: verify the uploaded document belongs to the worker and matches
+    # its type. A failure no longer blocks — the caller can force-submit, and the
+    # document keeps an "OCR failed" marker.
     worker_name = (identity.name or f"{user.first_name} {user.last_name}").strip()
+    force = str(request.data.get("force") or "").strip().lower() in ("1", "true", "yes", "on")
+    ocr_ok = True
+    ocr_findings = ""
     try:
         file_bytes = file_obj.read()
         file_obj.seek(0)
         ocr_text = ocr_client.extract_text(file_bytes, file_obj.name)
-        if ocr_text and worker_name:
-            blob = f"{master.code or ''} {master.document_name or ''}".upper()
-            if "AADHAAR" in blob or "ADHAR" in blob:
-                doc_type_key = "aadhaar"
-            elif "PAN" in blob:
-                doc_type_key = "pan"
-            elif "UAN" in blob or "EPFO" in blob:
-                doc_type_key = "uan"
-            elif "ESIC" in blob:
-                doc_type_key = "esic"
-            else:
-                doc_type_key = "pan"
-            ok, msg = ocr_client.verify_document_text(
-                doc_type=doc_type_key,
-                ocr_text=ocr_text,
-                expected_name=worker_name
-            )
-            if not ok and "Name does not match" in msg:
-                return Response({"error": f"Document name verification failed: Uploaded document does not belong to {worker_name}."},
-                                status=status.HTTP_400_BAD_REQUEST)
+        blob = f"{master.code or ''} {master.document_name or ''}".upper()
+        if "AADHAAR" in blob or "ADHAR" in blob:
+            doc_type_key = "aadhaar"
+        elif "UAN" in blob or "EPFO" in blob:
+            doc_type_key = "uan"
+        elif "ESIC" in blob:
+            doc_type_key = "esic"
+        else:
+            doc_type_key = "pan"
+        ok, msg = ocr_client.verify_document_text(
+            doc_type=doc_type_key, ocr_text=ocr_text or "", expected_name=worker_name)
+        if not ok:
+            ocr_ok = False
+            ocr_findings = msg or "OCR verification failed."
     except Exception as exc:
         logging.getLogger(__name__).warning("OCR verification skipped/failed during document upload: %s", exc)
+
+    if not ocr_ok and not force:
+        return Response({"ocrFailed": True, "requiresForce": True, "findings": [ocr_findings]},
+                        status=status.HTTP_200_OK)
 
     WorkerDocument.objects.filter(user=user, document=master).delete()
     doc = WorkerDocument(
@@ -100,7 +103,7 @@ def worker_documents(request):
         file_name=os.path.basename(file_obj.name or "document"),
         file_size=file_obj.size, mime_type=file_obj.content_type or "",
         status="UNDER_VERIFICATION", is_mandatory=master.is_mandatory,
-        owner_role="worker",
+        owner_role="worker", ocr_failed=(not ocr_ok), ocr_findings=ocr_findings,
     )
     if expiry:
         try:
@@ -114,6 +117,8 @@ def worker_documents(request):
         "id": doc.id, "name": master.document_name, "code": master.code,
         "status": doc.status, "date": payloads._dts(doc.uploaded_at),
         "downloadUrl": f"/api/worker/documents/{doc.id}/file",
+        "ocrFailed": bool(doc.ocr_failed),
+        "findings": [ocr_findings] if ocr_findings else [],
     }}, status=status.HTTP_201_CREATED)
 
 

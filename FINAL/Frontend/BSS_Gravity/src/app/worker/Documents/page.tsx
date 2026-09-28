@@ -24,6 +24,8 @@ type DocumentRow = {
   downloadUrl: string;
   locked?: boolean;
   source?: string;
+  ocrFailed?: boolean;
+  ocrFindings?: string;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -55,6 +57,7 @@ export default function DocumentsModule() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [uploadTarget, setUploadTarget] = useState<{ code: string; name: string } | null>(null);
+  const [ocrPrompt, setOcrPrompt] = useState<{ file: File; code: string; name: string; findings: string[] } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -107,18 +110,24 @@ export default function DocumentsModule() {
   const receiveFile = async (file?: File) => {
     if (!file || !uploadTarget) return;
     if (file.size > 10 * 1024 * 1024) { setError('Document must be 10 MB or smaller.'); return; }
-    setBusy(uploadTarget.code);
+    const target = uploadTarget;
+    setBusy(target.code);
     setError('');
     setNotice('');
     try {
       const form = new FormData();
       form.append('file', file);
-      form.append('code', uploadTarget.code);
-      form.append('name', uploadTarget.name);
+      form.append('code', target.code);
+      form.append('name', target.name);
       const response = await fetch('/api/worker/documents', { method: 'POST', body: form });
-      const json = await response.json() as { error?: string };
+      const json = await response.json() as { error?: string; ocrFailed?: boolean; findings?: string[] };
       if (!response.ok) throw new Error(json.error || 'Upload failed.');
-      setNotice(`${uploadTarget.name} uploaded — pending verification.`);
+      if (json.ocrFailed) {
+        // OCR failed — offer a force-submit; the document keeps the OCR-failed flag.
+        setOcrPrompt({ file, code: target.code, name: target.name, findings: json.findings ?? [] });
+        return;
+      }
+      setNotice(`${target.name} uploaded — pending verification.`);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed.');
@@ -126,6 +135,30 @@ export default function DocumentsModule() {
       setBusy(null);
       setUploadTarget(null);
       if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  const forceUpload = async () => {
+    if (!ocrPrompt) return;
+    const { file, code, name } = ocrPrompt;
+    setBusy(code);
+    setError('');
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('code', code);
+      form.append('name', name);
+      form.append('force', 'true');
+      const response = await fetch('/api/worker/documents', { method: 'POST', body: form });
+      const json = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(json.error || 'Upload failed.');
+      setNotice(`${name} uploaded with an OCR-failed flag — pending verification.`);
+      setOcrPrompt(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed.');
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -182,7 +215,7 @@ export default function DocumentsModule() {
     { id: 'name', header: 'Document name', value: d => d.name, render: d => <span className="font-semibold text-gray-800">{d.name}{d.mandatory && <span className="text-red-500 ml-1">*</span>}</span> },
     { id: 'type', header: 'Mandatory / Optional', value: d => d.mandatory ? 'Mandatory' : 'Optional', render: d => <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${d.mandatory ? 'bg-orange-50 text-[#F47A32]' : 'bg-gray-100 text-gray-500'}`}>{d.mandatory ? 'Mandatory' : 'Optional'}</span> },
     { id: 'owner', header: 'Document Owner', value: d => d.owner, render: d => d.owner === 'System' ? <span className="text-[10px] font-bold bg-[#073B67]/10 text-[#073B67] px-2 py-0.5 rounded">Auto-Generated</span> : d.owner },
-    { id: 'status', header: 'Document Status', value: d => gatePassFor(d)?.status ?? (gatePassDisabled(d) ? 'Disabled' : label(d.status)), render: d => { const gp = gatePassFor(d); if (gp) { const tone = gp.status === 'Approved' ? 'bg-green-100 text-green-700' : gp.status === 'Blocked' ? 'bg-gray-200 text-gray-700' : 'bg-orange-100 text-orange-700'; return <span className={`text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 ${tone}`}><CheckCircle2 size={14}/>{gp.status}</span>; } if (gatePassDisabled(d)) return <span className="text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 bg-gray-100 text-gray-400">Disabled</span>; const config = getStatusConfig(d.status); return <span className={`text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 ${config.bg} ${config.text}`}>{config.icon}{label(d.status)}</span>; } },
+    { id: 'status', header: 'Document Status', value: d => gatePassFor(d)?.status ?? (gatePassDisabled(d) ? 'Disabled' : label(d.status)), render: d => { const gp = gatePassFor(d); if (gp) { const tone = gp.status === 'Approved' ? 'bg-green-100 text-green-700' : gp.status === 'Blocked' ? 'bg-gray-200 text-gray-700' : 'bg-orange-100 text-orange-700'; return <span className={`text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 ${tone}`}><CheckCircle2 size={14}/>{gp.status}</span>; } if (gatePassDisabled(d)) return <span className="text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 bg-gray-100 text-gray-400">Disabled</span>; const config = getStatusConfig(d.status); return <span className="inline-flex flex-col items-start gap-1"><span className={`text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 ${config.bg} ${config.text}`}>{config.icon}{label(d.status)}</span>{d.ocrFailed && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200" title={d.ocrFindings || 'OCR verification failed'}>OCR failed</span>}</span>; } },
     { id: 'date', header: 'Date', value: d => gatePassFor(d)?.validFrom ?? formatDate(d.date) ?? '-' },
     { id: 'expiry', header: 'Expiry Date', value: d => gatePassFor(d)?.validTo ?? formatDate(d.expiry) ?? '-', render: d => { const gp = gatePassFor(d); const value = gp ? gp.validTo : formatDate(d.expiry); return value ? <span className="text-xs font-semibold text-gray-700">{value}</span> : <span className="text-gray-300">—</span>; } },
     {
@@ -248,6 +281,22 @@ export default function DocumentsModule() {
       ) : (
         <div id="missing-documents">
           <EnterpriseDataTable title="Document records" rows={documents} columns={columns} rowKey={d => `${d.code}-${d.id ?? 'x'}`} filename="bss-worker-documents" defaultPageSize={15} />
+        </div>
+      )}
+
+      {ocrPrompt && (
+        <div className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-sm grid place-items-center p-4" role="dialog" aria-modal="true" aria-label="OCR check failed">
+          <section className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-bold text-gray-900">OCR check failed</h2><p className="text-xs text-gray-500 mt-1">{ocrPrompt.name}</p></header>
+            <div className="p-5 space-y-3">
+              <p className="text-xs text-gray-600">The text on your upload didn&apos;t match your record. You can still submit it, but it will stay marked <strong>OCR failed</strong> and go for manual verification.</p>
+              {ocrPrompt.findings.length > 0 && <ul className="list-disc pl-5 text-xs text-red-700 space-y-1">{ocrPrompt.findings.map((f, i) => <li key={i}>{f}</li>)}</ul>}
+              <div className="flex gap-2 justify-end">
+                <button type="button" onClick={() => setOcrPrompt(null)} disabled={busy !== null} className="h-9 px-4 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600">Cancel</button>
+                <button type="button" onClick={() => void forceUpload()} disabled={busy !== null} className="h-9 px-4 rounded-lg bg-red-600 text-white text-xs font-bold disabled:opacity-60">Force submit</button>
+              </div>
+            </div>
+          </section>
         </div>
       )}
 

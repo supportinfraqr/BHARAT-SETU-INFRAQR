@@ -20,6 +20,7 @@ export type EmploymentCardProps = {
   contractorName?: string;
   contractorId?: string;
   contractorContact?: string;
+  contractorEmail?: string;
   siteName?: string;
   siteId?: string;
   siteAddress?: string;
@@ -51,6 +52,7 @@ export default function WorkerEmploymentCard({
   contractorName = "BuildWell Contractors Pvt Ltd",
   contractorId = "BSS-C0000000004",
   contractorContact = "4444444444",
+  contractorEmail = "",
   siteName = "Demo Metro Site",
   siteId = "DEMO-SITE-001",
   siteAddress = "Sector 21, Navi Mumbai",
@@ -316,7 +318,7 @@ export default function WorkerEmploymentCard({
                 {/* Notice Box */}
                 <div className="notice-box">
                   <p>• This identity card must always be carried & displayed for security & identification.</p>
-                  <p>• Loss or theft of this card should be reported immediately to site security.</p>
+                  <p>• Loss or theft of this card should be reported to the Contractor — <b>{contractorName}</b>{contractorEmail ? <> · <b>{contractorEmail}</b></> : null}{contractorContact ? <> · <b>{contractorContact}</b></> : null}.</p>
                   <p>• This card is not transferable & must be returned immediately on cessation of employment.</p>
                 </div>
 
