@@ -57,7 +57,7 @@ export default function WorkerProfilePage() {
   const [nextNomineeId, setNextNomineeId] = useState(() => Math.max(0, ...(worker.family?.nominees ?? []).map(n => n.id)) + 1);
   const [docTargetId, setDocTargetId] = useState<number | null>(null);
   // Disability: Status drives whether Type / % is applicable.
-  const [disabilityStatus, setDisabilityStatus] = useState(() => worker.personal.disabilityStatus || 'No');
+  const [disabilityStatus, setDisabilityStatus] = useState(() => (/^yes$/i.test(String(worker.personal.disabilityStatus ?? '').trim()) ? 'Yes' : 'No'));
   const [disabilityTypePct, setDisabilityTypePct] = useState(() => worker.identity.disabilityTypePct || '');
   const nomineeFileRef = useRef<HTMLInputElement>(null);
   const facePhotoInputRef = useRef<HTMLInputElement>(null);
@@ -731,15 +731,15 @@ export default function WorkerProfilePage() {
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Status</label>
                     <select name="personal.disabilityStatus" value={disabilityStatus} onChange={e => { const v = e.target.value; setDisabilityStatus(v); if (v !== 'Yes') setDisabilityTypePct(''); }} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                      <option>No</option>
-                      <option>Yes</option>
+                      <option value="No">No</option>
+                      <option value="Yes">Yes</option>
                     </select>
-                 </div>
-                 <div>
+                  </div>
+                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Type / %</label>
-                    <input name="identity.disabilityTypePct" type="text" value={disabilityTypePct} onChange={e => setDisabilityTypePct(e.target.value)} disabled={disabilityStatus !== 'Yes'} placeholder={disabilityStatus === 'Yes' ? 'e.g. Locomotor 40%' : 'Not applicable'} className="bss-cursor-blocked w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC] disabled:bg-[#F5F5F7] disabled:text-gray-400" />
+                    <input name="identity.disabilityTypePct" type="text" value={disabilityTypePct} onChange={e => setDisabilityTypePct(e.target.value)} disabled={disabilityStatus !== 'Yes'} placeholder={disabilityStatus === 'Yes' ? 'e.g. Locomotor 40%' : 'Select "Yes" above to enter'} className={`w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC] disabled:bg-[#F5F5F7] disabled:text-gray-400 ${disabilityStatus !== 'Yes' ? 'cursor-not-allowed' : ''}`} />
                     {disabilityStatus === 'Yes' && !disabilityTypePct.trim() && <p className="text-[11px] text-[#F47A32] mt-1">Please specify the disability type / percentage.</p>}
-                 </div>
+                  </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 pt-6 border-t border-black/5">
