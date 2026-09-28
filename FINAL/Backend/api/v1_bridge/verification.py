@@ -139,20 +139,38 @@ def _admin_only(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_verification_queue(request):
-    """Manual verifications awaiting an admin decision."""
+    """GST-verified employers/contractors that are not yet identity-verified.
+
+    Each row carries its stage so the admin knows whether it is awaiting the
+    EntityLocker answer, awaiting documents, or ready to review."""
     from bss_core.models import ContractorProfile, EmployerProfile
 
     if not _admin_only(request):
         return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
     rows = []
     for model, role in ((EmployerProfile, "employer"), (ContractorProfile, "contractor")):
-        for profile in model.objects.filter(manual_verification_status="PENDING").select_related("user"):
+        for profile in model.objects.filter(gst_verification_status="VERIFIED").select_related("user"):
+            user = profile.user
+            el_verified = _entitylocker_verified(user)
+            manual = profile.manual_verification_status or "NOT_SUBMITTED"
+            if el_verified or manual == "VERIFIED":
+                continue  # already verified
+            if manual == "PENDING":
+                stage = "PENDING"           # documents submitted, admin review due
+            elif profile.entity_locker_declined:
+                stage = "AWAITING_DOCUMENTS"
+            else:
+                stage = "AWAITING_ENTITYLOCKER"
             rows.append({
                 "userId": profile.user_id, "role": role,
-                "name": (profile.employer_name if role == "employer" else profile.contractor_name) or profile.user.username,
+                "name": (profile.employer_name if role == "employer" else profile.contractor_name) or user.username,
+                "username": user.username,
                 "gstin": profile.gstin or "", "legalName": profile.gst_legal_name or "",
-                "documents": _documents(profile.user),
+                "stage": stage, "manualStatus": manual,
+                "declined": bool(profile.entity_locker_declined),
+                "documents": _documents(user),
             })
+    rows.sort(key=lambda r: (r["stage"] != "PENDING", r["name"] or ""))
     return Response({"data": rows}, status=status.HTTP_200_OK)
 
 
