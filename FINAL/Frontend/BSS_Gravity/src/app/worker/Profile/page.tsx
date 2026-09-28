@@ -17,6 +17,15 @@ import {
   Plus, Trash2, Percent, Upload, X, Eye, Camera
 } from 'lucide-react';
 
+// Disability "Type / %" picker — fixed type + percentage combinations (RPwD
+// common categories; 40% is the certification threshold in India).
+const DISABILITY_TYPES = ['Locomotor', 'Visual', 'Hearing', 'Speech', 'Intellectual', 'Multiple'];
+const DISABILITY_PERCENTS = [40, 50, 60, 70, 80, 90, 100];
+const DISABILITY_OPTIONS = [
+  ...DISABILITY_TYPES.flatMap(t => DISABILITY_PERCENTS.map(p => `${t} ${p}%`)),
+  'Other / not listed',
+];
+
 export default function WorkerProfilePage() {
   const { t } = useLanguage();
   const { worker, portal, updateWorker, saveWorker } = useWorker();
@@ -737,8 +746,12 @@ export default function WorkerProfilePage() {
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Type / %</label>
-                    <input name="identity.disabilityTypePct" type="text" value={disabilityTypePct} onChange={e => setDisabilityTypePct(e.target.value)} disabled={disabilityStatus !== 'Yes'} placeholder={disabilityStatus === 'Yes' ? 'e.g. Locomotor 40%' : 'Select "Yes" above to enter'} className={`w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC] disabled:bg-[#F5F5F7] disabled:text-gray-400 ${disabilityStatus !== 'Yes' ? 'cursor-not-allowed' : ''}`} />
-                    {disabilityStatus === 'Yes' && !disabilityTypePct.trim() && <p className="text-[11px] text-[#F47A32] mt-1">Please specify the disability type / percentage.</p>}
+                    <select name="identity.disabilityTypePct" value={disabilityTypePct} onChange={e => setDisabilityTypePct(e.target.value)} disabled={disabilityStatus !== 'Yes'} className={`w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC] disabled:bg-[#F5F5F7] disabled:text-gray-400 ${disabilityStatus !== 'Yes' ? 'cursor-not-allowed' : ''}`}>
+                      <option value="">Select type &amp; %</option>
+                      {DISABILITY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                      {disabilityTypePct && !DISABILITY_OPTIONS.includes(disabilityTypePct) && <option value={disabilityTypePct}>{disabilityTypePct} (current)</option>}
+                    </select>
+                    {disabilityStatus === 'Yes' && !disabilityTypePct.trim() && <p className="text-[11px] text-[#F47A32] mt-1">Please select the disability type / percentage.</p>}
                   </div>
               </div>
               
