@@ -153,6 +153,7 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
           <button type="button" onClick={() => { setAskEl(true); setConfirmNotEl(true); }} disabled={busy} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-700">No, I&apos;m not on EntityLocker</button>
           <button type="button" onClick={() => setAskEl(true)} disabled={busy} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">Yes, I am on EntityLocker</button>
         </div>
+        <button type="button" onClick={() => void declineEntityLocker()} disabled={busy} className="text-[11px] text-gray-500 underline hover:text-gray-700">EntityLocker isn&apos;t working? Continue with document verification</button>
       </div>
     );
   } else if (entityLocker.declined && (manual.status === "NOT_SUBMITTED" || manual.status === "REJECTED")) {
