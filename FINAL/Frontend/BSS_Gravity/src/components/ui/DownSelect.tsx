@@ -9,7 +9,7 @@ import { ChevronDown } from "lucide-react";
  * hidden input carrying `name` so it still works with FormData-based saves.
  */
 export default function DownSelect({
-  name, value, onChange, options, disabled = false, placeholder = "Select", className = "",
+  name, value, onChange, options, disabled = false, placeholder = "Select", allowClear = true, className = "",
 }: {
   name?: string;
   value: string;
@@ -17,6 +17,8 @@ export default function DownSelect({
   options: Array<string | { value: string; label: string }>;
   disabled?: boolean;
   placeholder?: string;
+  /** Prepend a selectable blank "Select" entry so the value can be cleared. */
+  allowClear?: boolean;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -33,6 +35,7 @@ export default function DownSelect({
 
   const normalized = options.map(o => (typeof o === "string" ? { value: o, label: o } : o));
   const selected = normalized.find(o => o.value === value);
+  const entries = allowClear ? [{ value: "", label: placeholder }, ...normalized] : normalized;
 
   return (
     <div ref={ref} className={`relative ${className}`}>
@@ -48,7 +51,7 @@ export default function DownSelect({
       </button>
       {open && !disabled && (
         <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
-          {normalized.map(o => (
+          {entries.map(o => (
             <button
               key={o.value}
               type="button"
