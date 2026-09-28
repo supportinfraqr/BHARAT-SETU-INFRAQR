@@ -66,7 +66,10 @@ export default function WorkerProfilePage() {
   const [nextNomineeId, setNextNomineeId] = useState(() => Math.max(0, ...(worker.family?.nominees ?? []).map(n => n.id)) + 1);
   const [docTargetId, setDocTargetId] = useState<number | null>(null);
   // Disability: Status drives whether Type / % is applicable.
-  const [disabilityStatus, setDisabilityStatus] = useState(() => (/^yes$/i.test(String(worker.personal.disabilityStatus ?? '').trim()) ? 'Yes' : 'No'));
+  const [disabilityStatus, setDisabilityStatus] = useState(() => {
+    const v = String(worker.personal.disabilityStatus ?? '').trim();
+    return /^yes$/i.test(v) ? 'Yes' : /^no$/i.test(v) ? 'No' : '';
+  });
   const [disabilityTypePct, setDisabilityTypePct] = useState(() => worker.identity.disabilityTypePct || '');
   const nomineeFileRef = useRef<HTMLInputElement>(null);
   const facePhotoInputRef = useRef<HTMLInputElement>(null);
@@ -716,34 +719,35 @@ export default function WorkerProfilePage() {
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Marital Status</label>
                     <select name="personal.maritalStatus" defaultValue={worker.personal.maritalStatus || ''} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                      <option value="" disabled className="text-gray-400">Select</option>
+                      <option value="">Select</option>
                       {BssTaxonomies.MaritalStatus.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Blood Group</label>
                     <select name="personal.bloodGroup" defaultValue={worker.personal.bloodGroup || ''} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                      <option value="" disabled className="text-gray-400">Select</option>
+                      <option value="">Select</option>
                       {BssTaxonomies.BloodGroup.map(b => <option key={b} value={b}>{b}</option>)}
                     </select>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Religion</label>
                     <select name="personal.religion" defaultValue={worker.personal.religion || ''} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                      <option value="" disabled className="text-gray-400">Select</option>
+                      <option value="">Select</option>
                       {BssTaxonomies.Religion.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Caste</label>
                     <select name="personal.caste" defaultValue={worker.personal.caste || ''} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                      <option value="" disabled className="text-gray-400">Select</option>
+                      <option value="">Select</option>
                       {BssTaxonomies.SocialCategory.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Status</label>
                     <select name="personal.disabilityStatus" value={disabilityStatus} onChange={e => { const v = e.target.value; setDisabilityStatus(v); if (v !== 'Yes') setDisabilityTypePct(''); }} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
+                      <option value="">Select</option>
                       <option value="No">No</option>
                       <option value="Yes">Yes</option>
                     </select>
