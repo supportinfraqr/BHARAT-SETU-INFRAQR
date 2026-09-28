@@ -133,12 +133,6 @@ export default function OrganizationIdentityCard({
                   <p className="text-[6px] text-slate-300 uppercase tracking-[0.16em] font-bold mb-1">{content.dateLabel}</p>
                   <p className={`font-bold tracking-[0.06em] text-white leading-none ${standard ? 'text-[9px]' : 'text-[9px]'}`}>{content.dateValue}</p>
                 </div>
-                {content.registrationValue && (
-                  <div>
-                    <p className="text-[6px] text-slate-300 uppercase tracking-[0.16em] font-bold mb-1">{content.registrationLabel ?? 'Registration No.'}</p>
-                    <p className="font-mono font-bold tracking-[0.05em] text-white leading-none text-[7.5px]">{content.registrationValue}</p>
-                  </div>
-                )}
               </div>
             </div>
 
