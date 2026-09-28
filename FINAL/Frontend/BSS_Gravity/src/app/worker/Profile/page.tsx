@@ -14,7 +14,7 @@ import {
   Building2, CreditCard, Briefcase, Award, BadgeCheck,
   Clock,
   Database, Fingerprint, RefreshCw, CheckCircle, HardHat,
-  Plus, Trash2, Percent, Upload, X, Eye, Camera
+  Plus, Trash2, Percent, Upload, X, Eye, Camera, ChevronDown
 } from 'lucide-react';
 
 // Disability "Type / %" picker — fixed type + percentage combinations (RPwD
@@ -71,6 +71,7 @@ export default function WorkerProfilePage() {
     return /^yes$/i.test(v) ? 'Yes' : /^no$/i.test(v) ? 'No' : '';
   });
   const [disabilityTypePct, setDisabilityTypePct] = useState(() => worker.identity.disabilityTypePct || '');
+  const [disabilityTypeOpen, setDisabilityTypeOpen] = useState(false);
   const nomineeFileRef = useRef<HTMLInputElement>(null);
   const facePhotoInputRef = useRef<HTMLInputElement>(null);
   const cameraVideoRef = useRef<HTMLVideoElement>(null);
@@ -752,13 +753,22 @@ export default function WorkerProfilePage() {
                       <option value="Yes">Yes</option>
                     </select>
                   </div>
-                  <div>
+                  <div className="relative">
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Type / %</label>
-                    <select name="identity.disabilityTypePct" value={disabilityTypePct} onChange={e => setDisabilityTypePct(e.target.value)} disabled={disabilityStatus !== 'Yes'} className={`w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC] disabled:bg-[#F5F5F7] disabled:text-gray-400 ${disabilityStatus !== 'Yes' ? 'cursor-not-allowed' : ''}`}>
-                      <option value="">Select type &amp; %</option>
-                      {DISABILITY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                      {disabilityTypePct && !DISABILITY_OPTIONS.includes(disabilityTypePct) && <option value={disabilityTypePct}>{disabilityTypePct} (current)</option>}
-                    </select>
+                    <button type="button" disabled={disabilityStatus !== 'Yes'} onClick={() => setDisabilityTypeOpen(o => !o)} className={`w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium flex items-center justify-between text-left focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC] disabled:bg-[#F5F5F7] ${disabilityStatus !== 'Yes' ? 'cursor-not-allowed' : ''}`}>
+                      <span className={disabilityTypePct ? 'text-[#1D1D1F]' : 'text-gray-400'}>{disabilityTypePct || 'Select type & %'}</span>
+                      <ChevronDown size={15} className={`text-gray-400 transition-transform ${disabilityTypeOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {disabilityTypeOpen && disabilityStatus === 'Yes' && (
+                      <>
+                        <button type="button" aria-hidden="true" tabIndex={-1} onClick={() => setDisabilityTypeOpen(false)} className="fixed inset-0 z-40 cursor-default" />
+                        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+                          <button type="button" onClick={() => { setDisabilityTypePct(''); setDisabilityTypeOpen(false); }} className="block w-full px-4 py-2 text-left text-[13px] text-gray-400 hover:bg-gray-50">Select type &amp; %</button>
+                          {DISABILITY_OPTIONS.map(o => <button key={o} type="button" onClick={() => { setDisabilityTypePct(o); setDisabilityTypeOpen(false); }} className={`block w-full px-4 py-2 text-left text-[13px] hover:bg-gray-50 ${disabilityTypePct === o ? 'bg-blue-50 font-semibold text-[#073B67]' : 'text-gray-700'}`}>{o}</button>)}
+                          {disabilityTypePct && !DISABILITY_OPTIONS.includes(disabilityTypePct) && <button type="button" onClick={() => { setDisabilityTypePct(disabilityTypePct); setDisabilityTypeOpen(false); }} className="block w-full px-4 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50">{disabilityTypePct} (current)</button>}
+                        </div>
+                      </>
+                    )}
                     {disabilityStatus === 'Yes' && !disabilityTypePct.trim() && <p className="text-[11px] text-[#F47A32] mt-1">Please select the disability type / percentage.</p>}
                   </div>
               </div>
