@@ -188,6 +188,8 @@ class EmployerProfile(models.Model):
     corporate_website = models.CharField(max_length=160, blank=True)
     verification_status = models.CharField(max_length=20, default="PENDING")
     verification_date = models.DateField(null=True, blank=True)
+    # When the employer profile was created on BSS ("BSS member since").
+    registered_at = models.DateTimeField(null=True, blank=True)
     verification_source = models.CharField(max_length=80, blank=True)
     pan_verification_status = models.CharField(max_length=20, default="PENDING")
     gst_verification_status = models.CharField(max_length=20, default="PENDING")

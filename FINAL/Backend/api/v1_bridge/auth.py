@@ -278,9 +278,10 @@ def _register_account(request, role):
             _record_contractor_membership(profile, user)
             bss_id = profile.contractor_code
         else:  # employer
+            from django.utils import timezone as _tz
             profile = EmployerProfile.objects.create(
                 user=user, employer_name="", employer_code=bss_ids.new_bss_employer_code(),
-                approval_status="PENDING", mobile=mobile)
+                approval_status="PENDING", mobile=mobile, registered_at=_tz.now())
             bss_id = profile.employer_code
         UserCredential.objects.create(
             identity_type="mobile", identity_value=mobile,
