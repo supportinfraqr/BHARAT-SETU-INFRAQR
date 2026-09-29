@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BadgeCheck, Briefcase, CheckCircle2, Download, FileText, MoreVertical, Plus, Trash2, Upload, UserRound, X } from 'lucide-react';
+import { BadgeCheck, Briefcase, CheckCircle2, Download, Eye, FileText, MoreVertical, Plus, Trash2, Upload, UserRound, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorWorker, GatePassEligibility } from '@/types/portal';
 import WorkerEmploymentCard from '@/components/idcard/WorkerEmploymentCard';
 import ScanIdentityCard, { type ScanVerifyData } from '@/components/scan/ScanIdentityCard';
+import { useContractorDocView } from '@/components/documentEngine/portalAdapters';
+import { buildGatePassHtml } from '@/lib/documentEngine/gatePass';
+import { GatePassViewer } from '@/components/documentEngine/GatePassViewer';
 import { exportMatrixToXlsx } from '@/lib/exportXlsx';
 
 const fmtCardDate = (v?: string) => { if (!v) return ''; const d = new Date(v); return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }); };
@@ -41,6 +44,8 @@ export default function WorkerMasterPage() {
   const [empView, setEmpView] = useState<ContractorWorker | null>(null);
   const [costSheets, setCostSheets] = useState<Array<{ id:number; name:string; code:string; status?:string; ownerId?:number|null; siteId?:number|null; siteName?:string }>>([]);
   const [bindSite, setBindSite] = useState('');
+  const docCtx = useContractorDocView();
+  const [passPreview, setPassPreview] = useState<{ html: string; title: string } | null>(null);
   const scopedRows = scoped(contractor.workers, w => w.employer);
 
   // Cost sheet templates available for binding (replaces manual wage entry).
@@ -72,6 +77,24 @@ export default function WorkerMasterPage() {
       .then(r => (r.ok ? r.json() : null))
       .then((j: { data?: ScanVerifyData } | null) => { if (j?.data) setProfileDetail(j.data); })
       .catch(() => {});
+  }
+
+  // View the worker's dispatched gate pass (only offered when one was released
+  // by the principal employer).
+  async function viewGatePass(row: ContractorWorker) {
+    setOpenMenuFor('');
+    const pass = row.gatePass;
+    if (!pass) return;
+    const worker = docCtx.workers.find(w => w.bssId === row.bssId || w.id === row.id);
+    if (!worker) { setError('Gate pass could not be opened for this worker.'); return; }
+    try {
+      const html = await buildGatePassHtml(
+        docCtx.owner, docCtx.view, worker,
+        pass.type === 'Permanent' ? 'permanent-gate-pass' : 'temporary-gate-pass',
+        { validFrom: pass.validFrom, validTo: pass.validTo, number: pass.number, status: pass.status, branding: pass.branding },
+      );
+      setPassPreview({ html, title: `${row.name} · ${pass.type} Gate Pass` });
+    } catch { setError('Gate pass could not be opened.'); }
   }
 
   async function submitSingle(event: React.FormEvent<HTMLFormElement>) {
@@ -142,7 +165,7 @@ export default function WorkerMasterPage() {
     <EnterpriseDataTable
       title="Workforce directory"
       rows={scopedRows}
-      columns={[...columns, { id:'actions', header:'Actions', filterable:false, value:row => row.id, render:row => <ActionMenu open={openMenuFor === row.id} onToggle={() => setOpenMenuFor(openMenuFor === row.id ? '' : row.id)} onViewProfile={() => openProfile(row)} onViewDocs={() => { setDocsView(row); setOpenMenuFor(''); }} onEmploymentCard={() => { setEmpView(row); setOpenMenuFor(''); }} /> }]}
+      columns={[...columns, { id:'actions', header:'Actions', filterable:false, value:row => row.id, render:row => <ActionMenu open={openMenuFor === row.id} onToggle={() => setOpenMenuFor(openMenuFor === row.id ? '' : row.id)} onViewProfile={() => openProfile(row)} onViewDocs={() => { setDocsView(row); setOpenMenuFor(''); }} onEmploymentCard={() => { setEmpView(row); setOpenMenuFor(''); }} onGatePass={row.gatePass ? () => void viewGatePass(row) : undefined} /> }]}
       rowKey={row => row.id}
       filename="contractor-workers"
     />
@@ -239,10 +262,11 @@ export default function WorkerMasterPage() {
     </section></div>}
 
     {empView && <WorkerEmploymentCard workerName={empView.name} bssId={empView.bssId} designation={empView.designation} mobile={empView.mobile} department={empView.department} uan={empView.uan} esic={empView.esic} campNo={empView.campNo} routeBusNo={empView.routeBusNo} photoUrl={empView.photoUrl} siteName={empView.site} siteId={empView.siteId} siteCode={empView.siteCode} siteAddress={empView.siteAddress} supervisorName={empView.supervisorName} supervisorContact={empView.supervisorContact} emergencyName={empView.emergencyName} emergencyNumber={empView.emergencyNumber} emergencyRelation={empView.emergencyRelation} bloodGroup={empView.bloodGroup} companyName={empView.employer} contractorName={empView.contractorName} contractorId={empView.contractorCode} contractorContact={empView.contractorContact} contractorEmail={empView.contractorEmail} siteColour={empView.siteColour || undefined} issueDate={fmtCardDate(empView.idCardIssueDate)} validTill={fmtCardDate(empView.idCardValidityTill)} onClose={() => setEmpView(null)} />}
+    {passPreview && <GatePassViewer html={passPreview.html} title={passPreview.title} onClose={() => setPassPreview(null)} />}
   </div>;
 }
 
-function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onEmploymentCard }: { open: boolean; onToggle: () => void; onViewProfile: () => void; onViewDocs: () => void; onEmploymentCard?: () => void }) {
+function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onEmploymentCard, onGatePass }: { open: boolean; onToggle: () => void; onViewProfile: () => void; onViewDocs: () => void; onEmploymentCard?: () => void; onGatePass?: () => void }) {
   const btnRef = useRef<HTMLButtonElement>(null);
   const [anchor, setAnchor] = useState<{ top?: number; bottom?: number; right: number; maxHeight: number } | null>(null);
 
@@ -291,6 +315,7 @@ function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onEmploymentCar
           </button>
         )}
         <button role="menuitem" onClick={onViewDocs} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><FileText size={14} className="text-gray-400"/>Compliance Documents</button>
+        {onGatePass && <button role="menuitem" onClick={onGatePass} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><Eye size={14} className="text-gray-400"/>View Gate Pass</button>}
       </div>
     </>, document.body)}
   </>;

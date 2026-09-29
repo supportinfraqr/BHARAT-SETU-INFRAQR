@@ -198,6 +198,14 @@ def _contractor_workers(user):
     worker_ids = [b.worker_id for b in bindings]
     emp_map = {e.user_id: e for e in WorkerEmployment.objects.filter(user_id__in=worker_ids)}
     ss_map = {s.user_id: s for s in WorkerSocialSecurity.objects.filter(user_id__in=worker_ids)}
+    # Latest DISPATCHED gate pass per worker (employer released it) — drives the
+    # "View Gate Pass" action in the contractor's worker menu.
+    gp_map = {}
+    for gp in (WorkerGatePass.objects
+               .filter(worker_id__in=worker_ids, dispatched=True)
+               .exclude(status="REVOKED")
+               .order_by("worker_id", "-created_at")):
+        gp_map.setdefault(gp.worker_id, gp)
     rows = []
     for b in bindings:
         wi = WorkerIdentity.objects.filter(user=b.worker).first()
@@ -211,6 +219,7 @@ def _contractor_workers(user):
             emp = getattr(b.site.employer, "employer_profile", None)
         card_issue, card_valid = _worker_id_card_dates(
             wemp, b.accepted_at.date() if b.accepted_at else None)
+        gp = gp_map.get(b.worker_id)
         rows.append({
             "id": b.worker_id,
             "bindingId": b.id,
@@ -253,6 +262,16 @@ def _contractor_workers(user):
             "contractorEmail": _d(getattr(cp, "email", "")) if cp else "",
             "idCardIssueDate": card_issue.isoformat() if card_issue else "",
             "idCardValidityTill": card_valid.isoformat() if card_valid else "",
+            "gatePass": ({
+                "id": gp.id,
+                "number": _d(gp.gate_pass_no),
+                "type": _GP_TYPE_LABEL.get(_d(gp.gate_pass_type), _d(gp.gate_pass_type)),
+                "validFrom": _dts(gp.start_date),
+                "validTo": _dts(gp.end_date),
+                "status": _GP_STATUS_LABEL.get(_d(gp.status), _d(gp.status)),
+                "blocked": (_is_gate_pass_blocked(b.worker, b.site.employer) if (b.site and b.site.employer) else False),
+                "branding": _gate_pass_branding(b.site),
+            } if gp else None),
         })
     return rows
 

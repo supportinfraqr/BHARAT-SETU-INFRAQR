@@ -132,6 +132,8 @@ export type ContractorWorker = {
   /** The underlying worker↔contractor binding and its site (for moving a worker). */
   bindingId?: number; siteId?: string; siteColour?: string; siteCode?: string;
   idCardIssueDate?: string; idCardValidityTill?: string;
+  /** Latest dispatched gate pass (present only once the employer dispatches it). */
+  gatePass?: { id: number; number: string; type: string; validFrom: string; validTo: string; status: string; blocked?: boolean; branding?: { companyName?: string; logoUrl?: string; header?: string } } | null;
   siteAddress?: string; campNo?: string; routeBusNo?: string; uan?: string; esic?: string;
   emergencyName?: string; emergencyNumber?: string; emergencyRelation?: string;
   supervisorName?: string; supervisorContact?: string;
