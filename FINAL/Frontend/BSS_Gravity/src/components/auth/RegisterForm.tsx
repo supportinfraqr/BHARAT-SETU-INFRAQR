@@ -5,6 +5,9 @@ import {
   HardHat, 
   Briefcase, 
   Building2, 
+  ShieldCheck, 
+  BadgeCheck, 
+  Landmark, 
   ArrowRight,
   Fingerprint,
   RefreshCw
@@ -112,6 +115,9 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
     { id: 'Worker', icon: HardHat, label: t('worker') },
     { id: 'Contractor', icon: Briefcase, label: t('contractor') },
     { id: 'Employer', icon: Building2, label: t('employer') },
+    { id: 'Government', icon: Landmark, label: t('government') },
+    { id: 'BSS_Staff', icon: BadgeCheck, label: t('bssStaff') },
+    { id: 'BSS_Admin', icon: ShieldCheck, label: t('bssAdmin') },
   ];
 
   return (

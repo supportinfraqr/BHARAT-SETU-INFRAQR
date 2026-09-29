@@ -6,6 +6,7 @@ import {
   Briefcase, 
   Building2, 
   Monitor, 
+  BadgeCheck, 
   Landmark, 
   ChevronDown,
   ArrowRight,
@@ -130,6 +131,8 @@ export default function OriginalLoginPage() {
   ];
 
   const otherRoles = [
+    { id: 'Government', icon: Landmark, label: t('government') },
+    { id: 'BSS Staff', icon: BadgeCheck, label: t('bssStaff') },
     { id: 'BSS Admin', icon: ShieldCheck, label: t('bssAdmin') },
   ];
 
