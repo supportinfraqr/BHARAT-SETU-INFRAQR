@@ -26,6 +26,7 @@ def _worker_identity_section(identity):
         "pan": _identity_display(identity, "pan"),
         "placeOfBirth": _identity_display(identity, "place_of_birth"),
         "alternateMobile": _identity_display(identity, "alternate_mobile"),
+        "mobile": _identity_display(identity, "mobile_number"),
         "email": _identity_display(identity, "email"),
         "emergencyContactName": _identity_display(identity, "emergency_contact_name"),
         "emergencyContactNumber": _identity_display(identity, "emergency_contact_number"),
@@ -80,6 +81,14 @@ def _worker_employment_section(user, identity):
             contractor_code = _bss_contractor_code(binding.contractor.id) if binding.contractor else ""
             contractor_contact = _d(getattr(cp, "mobile", "") or getattr(cp, "contact_person", "") if cp else "")
             contractor_email = _d(getattr(cp, "email", "") if cp else "")
+            if not contractor_email:
+                # Fall back to the contractor account's own email / email credential
+                # so the employment card always carries a reachable address when set.
+                contractor_email = _d(getattr(binding.contractor, "email", "") or "")
+            if not contractor_email:
+                contractor_email = _d(UserCredential.objects.filter(
+                    user=binding.contractor, identity_type="email"
+                ).values_list("identity_value", flat=True).first() or "")
             contractor_lin = _d(getattr(cp, "lin", "") if cp else "")
         if binding.site and binding.site.employer:
             emp_profile = getattr(binding.site.employer, "employer_profile", None)

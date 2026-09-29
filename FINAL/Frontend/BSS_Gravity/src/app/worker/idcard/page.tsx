@@ -564,9 +564,10 @@ export default function IdentityCardPage() {
                 <div className="border border-slate-300 border-l-[3px] border-l-[#153C71] bg-white p-2 rounded-md shadow-2xs">
                   <h3 className="m-0 text-[#153C71] text-[11px] font-extrabold mb-0.5">Contractor Details</h3>
                   <div className="text-[10.5px] font-extrabold text-slate-900">{worker.employment.contractor || '—'}</div>
-                  <div className="flex justify-between items-center text-slate-600 text-[8.5px] mt-0.5">
+                  <div className="flex flex-wrap justify-between items-center text-slate-600 text-[8.5px] mt-0.5 gap-x-2">
                     <span>Contractor ID: <b className="text-slate-900">{worker.employment.contractorDetails?.code || '—'}</b></span>
                     <span>Contact: <b className="text-slate-900">{worker.employment.contractorDetails?.contact || '—'}</b></span>
+                    {worker.employment.contractorDetails?.email ? <span>Email: <b className="text-slate-900">{worker.employment.contractorDetails.email}</b></span> : null}
                   </div>
                 </div>
 
@@ -608,7 +609,11 @@ export default function IdentityCardPage() {
                 {/* Notice Container */}
                 <div className="mt-auto bg-[#F1F5F9] border border-slate-200 p-2 rounded-lg text-[8px] leading-snug text-slate-600 space-y-0.5">
                   <p className="m-0">• This identity card must always be carried & displayed for security & identification.</p>
-                  <p className="m-0">• Loss or theft of this card should be reported immediately to site security.</p>
+                  {worker.employment.contractor ? (
+                    <p className="m-0">• Loss or theft of this card should be reported immediately to the Contractor — <b>{worker.employment.contractor}</b>{worker.employment.contractorDetails?.contact ? <> · <b>{worker.employment.contractorDetails.contact}</b></> : null}{worker.employment.contractorDetails?.email ? <> · <b>{worker.employment.contractorDetails.email}</b></> : null}.</p>
+                  ) : (
+                    <p className="m-0">• Loss or theft of this card should be reported immediately to site security.</p>
+                  )}
                   <p className="m-0">• This card is not transferable & must be returned immediately on cessation of employment.</p>
                 </div>
 
