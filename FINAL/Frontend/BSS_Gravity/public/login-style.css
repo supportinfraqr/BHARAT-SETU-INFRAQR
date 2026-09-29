@@ -2707,7 +2707,7 @@ summary,
     }
 
     /* -----------------------------------------------------
-       HIDE ALL HERO CONTENT EXCEPT LOGO
+       HERO CONTENT RESPONSIVE DISPLAY
     ----------------------------------------------------- */
 
     .newLoginHeroHeading,
@@ -2715,7 +2715,7 @@ summary,
     .newLoginHeroBottom,
     .newLoginStatsBanner,
     .newLoginBottomMessage {
-        display: none !important;
+        display: flex;
     }
 
     /* -----------------------------------------------------
@@ -2844,7 +2844,7 @@ html:has(.newLoginPage) {
 }
 
 /* ---- Tablets & small laptops: stack hero above the card ---- */
-@media (max-width: 1024px) {
+@media (max-width: 1366px) {
     .newLoginMain {
         padding: 20px 20px 28px;
     }

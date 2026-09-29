@@ -1,3 +1,4 @@
+
 # BSS Session Summary — 2026-09-20 (opencode OCR + CLRA compliance session)
 
 Self-hosted deploy box: `yasser@BSS_Project/FINAL` (tailb59a73). Target: prod `ubuntu@ec2-13-235-161-192.ap-south-1.compute.amazonaws.com` (public EC2, PEM transport — this is what ships this file too).
