@@ -13,11 +13,13 @@ export async function POST(request: Request) {
     if (
       typeof body.aadhaar !== 'string' ||
       !/^\d{12}$/.test(body.aadhaar.replace(/\D/g, '')) ||
+      typeof body.contact !== 'string' ||
+      !/^[6-9]\d{9}$/.test(body.contact.replace(/\D/g, '')) ||
       typeof body.otp !== 'string' ||
       !body.otp ||
       typeof body.acceptedTerms !== 'boolean'
     ) {
-      return NextResponse.json({ error: 'Aadhaar number, OTP and accepted terms are required.' }, { status: 400 });
+      return NextResponse.json({ error: 'Aadhaar number, mobile number, OTP and accepted terms are required.' }, { status: 400 });
     }
     assertRateLimit(`aadhaar-verify:${body.aadhaar}`, 100, 10 * 60_000);
     const config = getRuntimeConfig();

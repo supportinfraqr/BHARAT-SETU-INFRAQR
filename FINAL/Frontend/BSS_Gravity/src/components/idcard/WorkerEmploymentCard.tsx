@@ -23,6 +23,7 @@ export type EmploymentCardProps = {
   contractorEmail?: string;
   siteName?: string;
   siteId?: string;
+  siteCode?: string;
   siteAddress?: string;
   supervisorName?: string;
   supervisorContact?: string;
@@ -55,6 +56,7 @@ export default function WorkerEmploymentCard({
   contractorEmail = "",
   siteName = "Demo Metro Site",
   siteId = "DEMO-SITE-001",
+  siteCode,
   siteAddress = "Sector 21, Navi Mumbai",
   supervisorName = "Site Supervisor",
   supervisorContact = "—",
@@ -62,13 +64,30 @@ export default function WorkerEmploymentCard({
   emergencyNumber = "—",
   emergencyRelation = "Relative",
   bloodGroup = "O+",
-  issueDate = "29/06/2023",
-  validTill = "29/06/2028",
+  issueDate,
+  validTill,
   siteColour = "#F47A32",
   onClose,
 }: EmploymentCardProps) {
   const [isExporting, setIsExporting] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Real issue/validity dates come from the worker's employment record; fall
+  // back to a 3-year window (issue = today, valid = issue + 3 years).
+  const fmtCardDate = (d: Date) => d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const parseCardDate = (v?: string) => {
+    if (!v) return null;
+    const parsed = new Date(v);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+  const issueDateObj = parseCardDate(issueDate) ?? new Date();
+  const validDateObj = parseCardDate(validTill) ?? (() => {
+    const d = new Date(issueDateObj);
+    d.setFullYear(d.getFullYear() + 3);
+    return d;
+  })();
+  const resolvedIssue = fmtCardDate(issueDateObj);
+  const resolvedValid = fmtCardDate(validDateObj);
 
   const handlePrint = () => {
     window.print();
@@ -158,7 +177,7 @@ export default function WorkerEmploymentCard({
               <div className="text-white text-center pt-3 px-4 pb-0 relative z-10" style={{ background: siteColour }}>
                 <div className="mb-1.5">
                   <div className="text-[13px] font-extrabold leading-tight tracking-tight">{companyName}</div>
-                  <div className="text-[9px] font-mono font-bold text-white/90 tracking-[0.08em] mt-0.5">{siteId || siteName || "—"}</div>
+                  <div className="text-[9px] font-mono font-bold text-white/90 tracking-[0.08em] mt-0.5">{siteCode || siteId || siteName || "—"}</div>
                 </div>
                 <div className="flex h-[4px] w-full">
                   <div className="flex-1 bg-[#FF9933]" />
@@ -259,7 +278,7 @@ export default function WorkerEmploymentCard({
                   <div className="text-[10.5px] font-extrabold text-slate-900">{siteName || "—"}</div>
                   <div className="flex justify-between items-center text-slate-600 text-[8.5px] mt-0.5">
                     <span>{siteAddress || "—"}</span>
-                    <span>Site ID: <b className="text-slate-900">{siteId || "—"}</b></span>
+                    <span>Site ID: <b className="text-slate-900">{siteCode || siteId || "—"}</b></span>
                   </div>
                 </div>
 
@@ -299,11 +318,11 @@ export default function WorkerEmploymentCard({
                 <div className="flex justify-between items-center text-[8.5px] px-1">
                   <div>
                     <span className="text-slate-500 font-bold uppercase text-[8px]">Issue Date</span>
-                    <strong className="block text-[11px] font-extrabold font-mono text-slate-900">{issueDate}</strong>
+                    <strong className="block text-[11px] font-extrabold font-mono text-slate-900">{resolvedIssue}</strong>
                   </div>
                   <div className="text-right">
                     <span className="text-slate-500 font-bold uppercase text-[8px]">Valid Till</span>
-                    <strong className="block text-[11px] font-extrabold font-mono text-slate-900">{validTill}</strong>
+                    <strong className="block text-[11px] font-extrabold font-mono text-slate-900">{resolvedValid}</strong>
                   </div>
                 </div>
               </div>

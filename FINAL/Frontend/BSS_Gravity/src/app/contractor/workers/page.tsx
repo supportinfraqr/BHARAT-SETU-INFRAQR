@@ -10,6 +10,8 @@ import WorkerEmploymentCard from '@/components/idcard/WorkerEmploymentCard';
 import ScanIdentityCard, { type ScanVerifyData } from '@/components/scan/ScanIdentityCard';
 import { exportMatrixToXlsx } from '@/lib/exportXlsx';
 
+const fmtCardDate = (v?: string) => { if (!v) return ''; const d = new Date(v); return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }); };
+
 const columns: DataColumn<ContractorWorker>[] = [
   { id:'name', header:'Worker', value:row => row.name, render:row => <div><strong className="text-gray-900">{row.name}</strong><p className="font-mono text-[11px] text-gray-500">{row.bssId}</p></div> },
   { id:'refCode', header:'Ref Worker Code', value:row => row.refCode ?? '—', render:row => <span className="font-mono text-xs text-gray-600">{row.refCode ?? '—'}</span> },
@@ -261,7 +263,7 @@ export default function WorkerMasterPage() {
       </div>
     </section></div>}
 
-    {empView && <WorkerEmploymentCard workerName={empView.name} bssId={empView.bssId} designation={empView.designation} mobile={empView.mobile} department={empView.department} photoUrl={empView.photoUrl} siteName={empView.site} siteId={empView.siteId} bloodGroup={empView.bloodGroup} companyName={empView.employer} contractorName={contractor.identity.company} contractorId={contractor.identity.bssId} contractorContact={contractor.identity.contact} contractorEmail={contractor.identity.email} siteColour={empView.siteColour || undefined} onClose={() => setEmpView(null)} />}
+    {empView && <WorkerEmploymentCard workerName={empView.name} bssId={empView.bssId} designation={empView.designation} mobile={empView.mobile} department={empView.department} photoUrl={empView.photoUrl} siteName={empView.site} siteId={empView.siteId} bloodGroup={empView.bloodGroup} companyName={empView.employer} contractorName={contractor.identity.company} contractorId={contractor.identity.bssId} contractorContact={contractor.identity.contact} contractorEmail={contractor.identity.email} siteColour={empView.siteColour || undefined} siteCode={empView.siteCode} issueDate={fmtCardDate(empView.idCardIssueDate)} validTill={fmtCardDate(empView.idCardValidityTill)} onClose={() => setEmpView(null)} />}
   </div>;
 }
 

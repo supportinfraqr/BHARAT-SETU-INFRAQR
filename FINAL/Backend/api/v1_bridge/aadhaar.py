@@ -357,6 +357,23 @@ def aadhaar_verify(request):
         return Response({"error": "Too many attempts. Request a new OTP."},
                         status=status.HTTP_400_BAD_REQUEST)
 
+    # The worker's mobile number is captured at Aadhaar signup and becomes a
+    # second login identifier for this SAME account (the Aadhaar number stays
+    # usable too). Validate it before spending a Sandbox verification, and make
+    # sure it is not already attached to a different account — a phone belongs
+    # to exactly one account, so it can never be used to open a new one.
+    contact = _normalize_mobile(body.get("contact"))
+    if not contact or contact[0] not in "6789":
+        return Response({"error": "Enter the 10-digit mobile number you want to use for this account."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    aadhaar_cred = UserCredential.objects.filter(identity_type="aadhaar",
+                                                 identity_value=aadhaar).first()
+    mobile_owner = UserCredential.objects.filter(identity_type="mobile",
+                                                 identity_value=contact).first()
+    if mobile_owner is not None and (aadhaar_cred is None or mobile_owner.user_id != aadhaar_cred.user_id):
+        return Response({"error": "This mobile number is already registered. Log in with it, or use a different number."},
+                        status=status.HTTP_409_CONFLICT)
+
     try:
         result = aadhaar_client.verify_otp(reference_id, otp)
     except aadhaar_client.SandboxError as exc:
@@ -387,8 +404,7 @@ def aadhaar_verify(request):
 
     photo_url = ""
     user = None
-    cred = UserCredential.objects.filter(identity_type="aadhaar",
-                                         identity_value=aadhaar).first()
+    cred = aadhaar_cred
     if cred is None:
         username = f"worker_aadhaar_{aadhaar}"
         with transaction.atomic():
@@ -418,16 +434,8 @@ def aadhaar_verify(request):
             UserCredential.objects.create(user=user, identity_type="aadhaar",
                                           identity_value=aadhaar,
                                           is_primary=False, verified=True)
-            # UIDAI oKYC never returns the real mobile number, so capture the one
-            # the worker typed at signup — otherwise the profile has no contact
-            # and would wrongly fall back to the Aadhaar-based username.
-            contact = "".join(ch for ch in str(body.get("contact") or "") if ch.isdigit())
-            if len(contact) == 10 and contact[0] in "6789":
-                identity.mobile_number = contact
-                identity.save(update_fields=["mobile_number"])
-                UserCredential.objects.get_or_create(
-                    user=user, identity_type="mobile", identity_value=contact,
-                    defaults={"is_primary": True, "verified": True})
+            # The mobile number is linked to the account after the create /
+            # existing branches below, so it becomes a login identifier too.
             challenge.user = user
             challenge.name = data.get("name") or ""
             challenge.gender = data.get("gender") or ""
@@ -458,6 +466,22 @@ def aadhaar_verify(request):
             )
     else:
         user = cred.user
+
+    # Link the signup mobile to the account for BOTH first-time and returning
+    # Aadhaar users. This makes the phone a login identifier on the SAME account
+    # as the Aadhaar number, and (via the uniqueness check above) stops the phone
+    # from ever opening a separate account.
+    identity = WorkerIdentity.objects.filter(user=user).first()
+    if identity is None:
+        identity = WorkerIdentity.objects.create(
+            user=user, bss_worker_id=bss_ids.new_bss_worker_id())
+    identity.mobile_number = contact
+    identity.save(update_fields=["mobile_number"])
+    UserCredential.objects.filter(user=user, identity_type="mobile").exclude(
+        identity_value=contact).delete()
+    UserCredential.objects.update_or_create(
+        user=user, identity_type="mobile", identity_value=contact,
+        defaults={"is_primary": True, "verified": True})
 
     if user is None or not user.is_active:
         return Response({"error": "Account is disabled"}, status=status.HTTP_401_UNAUTHORIZED)

@@ -442,14 +442,9 @@ export default function IdentityCardPage() {
 
               {/* Coloured Header — uses the linked site's colour */}
               <div className="text-white text-center pt-3 px-4 pb-0 relative z-10" style={{ background: siteColour }}>
-                <div className="flex items-center justify-center gap-2.5 mb-1.5">
-                  <div className="w-9 h-9 bg-white border border-slate-200 rounded-lg p-1 flex items-center justify-center shadow-xs">
-                    <img src="/bss-original-logo.png" alt="BSS Logo" className="w-full h-full object-contain" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-[13px] font-extrabold leading-tight tracking-tight">{employerName}</div>
-                    <div className="text-[9px] font-mono font-bold text-white/90 tracking-[0.08em] mt-0.5">{siteCode}</div>
-                  </div>
+                <div className="mb-1.5">
+                  <div className="text-[13px] font-extrabold leading-tight tracking-tight">{employerName}</div>
+                  <div className="text-[9px] font-mono font-bold text-white/90 tracking-[0.08em] mt-0.5">{siteCode}</div>
                 </div>
 
                 {/* 3-Color Line */}
@@ -515,11 +510,6 @@ export default function IdentityCardPage() {
                     {/* QR Code */}
                     <div className="relative w-[96px] h-[96px] bg-white p-1 rounded-lg border border-slate-300 shadow-xs flex items-center justify-center mt-1">
                       <WorkerQr bssId={worker.identity.bssId} size={220} />
-                      <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <span className="w-[26px] h-[26px] bg-white rounded-full grid place-items-center shadow-md border border-blue-900/30 p-[2px]">
-                          <img src="/bss-original-logo.png" alt="" className="w-full h-full object-contain rounded-full" />
-                        </span>
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -632,7 +622,7 @@ export default function IdentityCardPage() {
 
               {/* Bottom Footer */}
               <div className="absolute left-0 right-0 bottom-0 h-[32px] bg-[#07182b] text-white flex items-center justify-center text-[7.5px] font-bold tracking-wider z-20 px-2 text-center">
-                This card is the property of Bharat Shram Setu. Misuse is punishable under applicable laws.
+                This card is the property of the issuing organisation. Misuse is punishable under applicable laws.
               </div>
             </div>
           )}

@@ -12,6 +12,8 @@ import type { EmployerWorker, GatePassEligibility } from '@/types/portal';
 import { useEmployerDocView } from '@/components/documentEngine/portalAdapters';
 import { WorkerDocumentsDrawer } from '@/components/documentEngine/DocumentFlow';
 
+const fmtCardDate = (v?: string) => { if (!v) return ''; const d = new Date(v); return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }); };
+
 const columns: DataColumn<EmployerWorker>[] = [
   { id:'name', header:'Worker', value:row => row.name, render:row => <div><strong className="text-gray-900">{row.name}</strong><p className="font-mono text-[11px] text-gray-500">{row.bssId}</p></div> },
   { id:'contractor', header:'Contractor', value:row => row.contractor, render:row => <div><span className="font-medium text-gray-800">{row.contractor}</span><p className="text-[10px] font-mono text-gray-400">{row.contractorId}</p></div> },
@@ -108,7 +110,7 @@ export default function EmployerWorkersPage() {
     </section></div>}
 
     {/* Employment card — worker's site employment ID (issued by the worker's contractor) */}
-    {empView && <WorkerEmploymentCard workerName={empView.name} bssId={empView.bssId} designation={empView.designation} mobile={empView.mobile} department={empView.department} photoUrl={empView.photoUrl} siteName={empView.site} siteId={empView.siteId} bloodGroup={empView.bloodGroup} companyName={employer.identity.company} contractorName={empView.contractor} contractorId={empView.contractorId} siteColour={empView.siteColour || undefined} onClose={() => setEmpView(null)} />}
+    {empView && <WorkerEmploymentCard workerName={empView.name} bssId={empView.bssId} designation={empView.designation} mobile={empView.mobile} department={empView.department} photoUrl={empView.photoUrl} siteName={empView.site} siteId={empView.siteId} bloodGroup={empView.bloodGroup} companyName={employer.identity.company} contractorName={empView.contractor} contractorId={empView.contractorId} siteColour={empView.siteColour || undefined} siteCode={empView.siteCode} issueDate={fmtCardDate(empView.idCardIssueDate)} validTill={fmtCardDate(empView.idCardValidityTill)} onClose={() => setEmpView(null)} />}
   </div>;
 }
 

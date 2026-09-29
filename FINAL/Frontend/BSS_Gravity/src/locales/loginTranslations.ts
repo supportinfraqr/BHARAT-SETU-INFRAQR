@@ -12,7 +12,7 @@ export const loginTranslations: Record<string, Record<string, string>> = {
     bssStaff: "BSS Staff",
     bssAdmin: "BSS Admin",
     mobileOrEmail: "Mobile Number",
-    bssIdOrMobile: "BSS ID or Mobile Number",
+    bssIdOrMobile: "BSS ID, Mobile or Aadhaar Number",
     enterMpin: "Enter Secure MPIN",
     enterPassword: "Enter Password",
     officialBssId: "Official BSS ID",

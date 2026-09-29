@@ -287,10 +287,12 @@ def _employer_contractors(user):
 
 
 def _employer_workers(user):
-    bindings = (WorkerContractorBinding.objects
-                .filter(site__employer=user, binding_status="ACCEPTED")
-                .select_related("worker", "site", "contractor")
-                .order_by("worker_id", "-created_at"))
+    bindings = list(WorkerContractorBinding.objects
+                    .filter(site__employer=user, binding_status="ACCEPTED")
+                    .select_related("worker", "site", "contractor")
+                    .order_by("worker_id", "-created_at"))
+    emp_map = {e.user_id: e for e in WorkerEmployment.objects.filter(
+        user_id__in=[b.worker_id for b in bindings])}
     rows = []
     seen = set()
     for b in bindings:
@@ -301,6 +303,8 @@ def _employer_workers(user):
         seen.add(b.worker_id)
         wi = WorkerIdentity.objects.filter(user=b.worker).first()
         cp = getattr(b.contractor, "contractor_profile", None)
+        card_issue, card_valid = _worker_id_card_dates(
+            emp_map.get(b.worker_id), b.accepted_at.date() if b.accepted_at else None)
         rows.append({
             "id": b.worker_id,
             "name": _d(wi.name if wi else b.worker.username),
@@ -310,10 +314,13 @@ def _employer_workers(user):
             "contractor": _d(cp.contractor_name if cp else b.contractor.username),
             "siteId": str(b.site_id), "site": b.site.site_name if b.site else "",
             "siteColour": _d(getattr(b.site, "assign_color", "") or "") if b.site else "",
+            "siteCode": _d(getattr(b.site, "site_code", "") or "") if b.site else "",
             "designation": _d(b.designation),
             "doj": _dts(b.accepted_at.date()) if b.accepted_at else None,
             "compliance": _worker_compliance_label(b.worker),
             "status": _d(b.binding_status), "verified": bool(wi and wi.aadhaar),
+            "idCardIssueDate": card_issue.isoformat() if card_issue else "",
+            "idCardValidityTill": card_valid.isoformat() if card_valid else "",
         })
     return rows
 

@@ -192,9 +192,11 @@ def _contractor_pending_sites(user):
 
 
 def _contractor_workers(user):
-    bindings = (WorkerContractorBinding.objects
-                .filter(contractor=user, binding_status__in=("PENDING", "ACCEPTED"))
-                .order_by("-created_at"))
+    bindings = list(WorkerContractorBinding.objects
+                    .filter(contractor=user, binding_status__in=("PENDING", "ACCEPTED"))
+                    .order_by("-created_at"))
+    emp_map = {e.user_id: e for e in WorkerEmployment.objects.filter(
+        user_id__in=[b.worker_id for b in bindings])}
     rows = []
     for b in bindings:
         wi = WorkerIdentity.objects.filter(user=b.worker).first()
@@ -203,6 +205,8 @@ def _contractor_workers(user):
         if b.site:
             site = b.site
             emp = getattr(b.site.employer, "employer_profile", None)
+        card_issue, card_valid = _worker_id_card_dates(
+            emp_map.get(b.worker_id), b.accepted_at.date() if b.accepted_at else None)
         rows.append({
             "id": b.worker_id,
             "bindingId": b.id,
@@ -211,6 +215,7 @@ def _contractor_workers(user):
             "bssId": _d(wi.bss_worker_id if wi else ""),
             "mobile": _d(wi.mobile_number if wi else ""),
             "siteColour": _d(getattr(b.site, "assign_color", "") or "") if b.site else "",
+            "siteCode": _d(getattr(b.site, "site_code", "") or "") if b.site else "",
             "site": site.site_name if site else "",
             "employer": _org_name(b.site.employer) if b.site else "",
             "designation": _d(b.designation),
@@ -230,6 +235,8 @@ def _contractor_workers(user):
             "dob": _dts(wi.date_of_birth) if wi and wi.date_of_birth else "",
             "fatherName": _d(wi.father_name if wi else ""),
             "bloodGroup": _d(wi.blood_group if wi else ""),
+            "idCardIssueDate": card_issue.isoformat() if card_issue else "",
+            "idCardValidityTill": card_valid.isoformat() if card_valid else "",
         })
     return rows
 

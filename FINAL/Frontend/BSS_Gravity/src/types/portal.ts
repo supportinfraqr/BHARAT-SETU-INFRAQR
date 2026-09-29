@@ -130,7 +130,8 @@ export type WorkerRecord = {
 export type ContractorWorker = {
   id: string; name: string; bssId: string; mobile: string; site: string; employer: string;
   /** The underlying worker↔contractor binding and its site (for moving a worker). */
-  bindingId?: number; siteId?: string; siteColour?: string;
+  bindingId?: number; siteId?: string; siteColour?: string; siteCode?: string;
+  idCardIssueDate?: string; idCardValidityTill?: string;
   designation: string; doj: string; compliance: 'Compliant' | 'Expiring' | 'Non-compliant';
   status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancelled' | 'Expired' | 'Site Changed';
   refCode?: string; department?: string; gender?: string; age?: string; category?: string; skills?: string[]; photoUrl?: string;
@@ -546,6 +547,9 @@ export type EmployerWorker = {
   contractor: string;
   siteId: string;
   siteColour?: string;
+  siteCode?: string;
+  idCardIssueDate?: string;
+  idCardValidityTill?: string;
   site: string;
   designation: string;
   doj: string;

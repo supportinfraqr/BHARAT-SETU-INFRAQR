@@ -224,6 +224,21 @@ def _entity_identity_verified(profile):
     return EntityLockerAuth.objects.filter(user=user, status="VERIFIED").exists()
 
 
+def _worker_id_card_dates(employment, fallback_issue=None):
+    """(issue, validity) dates for a worker's employment card.
+
+    Uses the stored WorkerEmployment dates; falls back to the binding date and a
+    three-year validity so the printed card always shows a real 3-year window."""
+    issue = getattr(employment, "id_card_issue_date", None) or fallback_issue
+    validity = getattr(employment, "id_card_validity_till", None)
+    if validity is None and issue is not None:
+        try:
+            validity = issue.replace(year=issue.year + 3)
+        except ValueError:  # 29 Feb → 28 Feb
+            validity = issue.replace(year=issue.year + 3, day=28)
+    return issue, validity
+
+
 def _entity_account_status(profile):
     """Effective registration status shown on the portal badge.
 
@@ -408,6 +423,7 @@ __all__ = [
     "_f",
     "_get_identity",
     "_identity_display",
+    "_worker_id_card_dates",
     "_num",
     "_org_name",
     "_party_name",
