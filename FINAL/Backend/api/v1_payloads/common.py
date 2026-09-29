@@ -403,6 +403,8 @@ __all__ = [
     "_d",
     "_date_str",
     "_dts",
+    "_entity_account_status",
+    "_entity_identity_verified",
     "_f",
     "_get_identity",
     "_identity_display",
