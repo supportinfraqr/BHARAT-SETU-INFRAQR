@@ -493,7 +493,7 @@ export default function IdentityCardPage() {
                     </div>
                     <div>
                       <label className="block text-[#64748B] font-bold text-[8.5px] tracking-wider mb-0.5">ROUTE/BUS NO.</label>
-                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{(worker.employment as any).busRoute || (worker.employment as any).routeNo || '—'}</strong>
+                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{(worker.employment as any).route || (worker.employment as any).busNo || '—'}</strong>
                     </div>
                   </div>
 

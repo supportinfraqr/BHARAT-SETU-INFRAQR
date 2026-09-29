@@ -39,10 +39,10 @@ export type EmploymentCardProps = {
 };
 
 export default function WorkerEmploymentCard({
-  companyName = "ADANI INFRA PVT LTD",
-  workerName = "RAMESH KUMAR",
+  companyName = "—",
+  workerName = "",
   designation = "Mason",
-  bssId = "BSS-W9MQKMHMQYKU",
+  bssId = "",
   mobile = "—",
   uan = "—",
   esic = "—",
@@ -50,20 +50,20 @@ export default function WorkerEmploymentCard({
   campNo = "Skilled",
   routeBusNo = "—",
   photoUrl,
-  contractorName = "BuildWell Contractors Pvt Ltd",
-  contractorId = "BSS-C0000000004",
-  contractorContact = "4444444444",
+  contractorName = "—",
+  contractorId = "—",
+  contractorContact = "—",
   contractorEmail = "",
-  siteName = "Demo Metro Site",
-  siteId = "DEMO-SITE-001",
+  siteName = "—",
+  siteId = "—",
   siteCode,
-  siteAddress = "Sector 21, Navi Mumbai",
-  supervisorName = "Site Supervisor",
+  siteAddress = "—",
+  supervisorName = "—",
   supervisorContact = "—",
-  emergencyName = "Family Contact",
+  emergencyName = "—",
   emergencyNumber = "—",
-  emergencyRelation = "Relative",
-  bloodGroup = "O+",
+  emergencyRelation = "—",
+  bloodGroup = "—",
   issueDate,
   validTill,
   siteColour = "#F47A32",
@@ -197,7 +197,7 @@ export default function WorkerEmploymentCard({
                 </div>
 
                 <div className="text-center text-[15px] font-extrabold text-slate-900 tracking-wide mt-0.5">{workerName.toUpperCase()}</div>
-                <div className="w-fit mx-auto my-1 px-3.5 py-0.5 border border-emerald-400 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold">{designation || "—"}</div>
+                <div className="w-fit mx-auto my-1 px-3.5 py-0.5 border border-emerald-400 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold">{designation || "Mason"}</div>
 
                 <div className="grid grid-cols-2 gap-3 text-[10px] mt-2">
                   <div className="flex flex-col gap-1.5">
@@ -215,7 +215,7 @@ export default function WorkerEmploymentCard({
                     </div>
                     <div>
                       <label className="block text-[#64748B] font-bold text-[8.5px] tracking-wider mb-0.5">CAMP NO.</label>
-                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{campNo || "—"}</strong>
+                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{campNo || "Skilled"}</strong>
                     </div>
                     <div>
                       <label className="block text-[#64748B] font-bold text-[8.5px] tracking-wider mb-0.5">ROUTE/BUS NO.</label>
@@ -230,7 +230,7 @@ export default function WorkerEmploymentCard({
                     </div>
                     <div>
                       <label className="block text-[#64748B] font-bold text-[8.5px] tracking-wider mb-0.5">DEPARTMENT</label>
-                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{department || "—"}</strong>
+                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{department || "Civil Works"}</strong>
                     </div>
                     <div className="relative w-[96px] h-[96px] bg-white p-1 rounded-lg border border-slate-300 shadow-xs flex items-center justify-center mt-1">
                       <WorkerQr bssId={bssId} size={220} />

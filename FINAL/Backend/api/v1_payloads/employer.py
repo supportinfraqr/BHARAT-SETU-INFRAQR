@@ -291,8 +291,9 @@ def _employer_workers(user):
                     .filter(site__employer=user, binding_status="ACCEPTED")
                     .select_related("worker", "site", "contractor")
                     .order_by("worker_id", "-created_at"))
-    emp_map = {e.user_id: e for e in WorkerEmployment.objects.filter(
-        user_id__in=[b.worker_id for b in bindings])}
+    worker_ids = [b.worker_id for b in bindings]
+    emp_map = {e.user_id: e for e in WorkerEmployment.objects.filter(user_id__in=worker_ids)}
+    ss_map = {s.user_id: s for s in WorkerSocialSecurity.objects.filter(user_id__in=worker_ids)}
     rows = []
     seen = set()
     for b in bindings:
@@ -302,9 +303,11 @@ def _employer_workers(user):
             continue
         seen.add(b.worker_id)
         wi = WorkerIdentity.objects.filter(user=b.worker).first()
+        wemp = emp_map.get(b.worker_id)
+        ss = ss_map.get(b.worker_id)
         cp = getattr(b.contractor, "contractor_profile", None)
         card_issue, card_valid = _worker_id_card_dates(
-            emp_map.get(b.worker_id), b.accepted_at.date() if b.accepted_at else None)
+            wemp, b.accepted_at.date() if b.accepted_at else None)
         rows.append({
             "id": b.worker_id,
             "name": _d(wi.name if wi else b.worker.username),
@@ -312,10 +315,28 @@ def _employer_workers(user):
             "mobile": _d(wi.mobile_number if wi else ""),
             "contractorId": b.contractor_id,
             "contractor": _d(cp.contractor_name if cp else b.contractor.username),
+            "contractorCode": _d(cp.contractor_code) if cp else "",
+            "contractorContact": _d(getattr(cp, "mobile", "") or getattr(cp, "contact_person", "")) if cp else "",
+            "contractorEmail": _d(getattr(cp, "email", "")) if cp else "",
             "siteId": str(b.site_id), "site": b.site.site_name if b.site else "",
             "siteColour": _d(getattr(b.site, "assign_color", "") or "") if b.site else "",
             "siteCode": _d(getattr(b.site, "site_code", "") or "") if b.site else "",
-            "designation": _d(b.designation),
+            "siteAddress": _d(getattr(b.site, "location", "") or "") if b.site else "",
+            "employer": _org_name(b.site.employer) if b.site else "",
+            "designation": _d(b.designation) or ((_d(wemp.designation) if wemp else "") or ""),
+            "department": _d(b.department) or ((_d(wemp.department) if wemp else "") or ""),
+            "campNo": _d(wemp.camp_no) if wemp else "",
+            "routeBusNo": ((_d(wemp.route) or _d(wemp.bus_no)) if wemp else ""),
+            "uan": _d(ss.epfo_uan) if ss else "",
+            "esic": _d(ss.esic_ip_number) if ss else "",
+            "gender": _d(wi.gender if wi else ""),
+            "photoUrl": _d(wi.photo if wi else ""),
+            "dob": _dts(wi.date_of_birth) if wi and wi.date_of_birth else "",
+            "fatherName": _d(wi.father_name if wi else ""),
+            "bloodGroup": _d(wi.blood_group if wi else ""),
+            "emergencyName": _d(wi.emergency_contact_name if wi else ""),
+            "emergencyNumber": _d(wi.emergency_contact_number if wi else ""),
+            "emergencyRelation": _d(wi.emergency_contact_relation if wi else ""),
             "doj": _dts(b.accepted_at.date()) if b.accepted_at else None,
             "compliance": _worker_compliance_label(b.worker),
             "status": _d(b.binding_status), "verified": bool(wi and wi.aadhaar),

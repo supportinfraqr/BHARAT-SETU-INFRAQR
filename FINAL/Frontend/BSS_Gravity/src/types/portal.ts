@@ -132,6 +132,10 @@ export type ContractorWorker = {
   /** The underlying worker↔contractor binding and its site (for moving a worker). */
   bindingId?: number; siteId?: string; siteColour?: string; siteCode?: string;
   idCardIssueDate?: string; idCardValidityTill?: string;
+  siteAddress?: string; campNo?: string; routeBusNo?: string; uan?: string; esic?: string;
+  emergencyName?: string; emergencyNumber?: string; emergencyRelation?: string;
+  supervisorName?: string; supervisorContact?: string;
+  contractorName?: string; contractorCode?: string; contractorContact?: string; contractorEmail?: string;
   designation: string; doj: string; compliance: 'Compliant' | 'Expiring' | 'Non-compliant';
   status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancelled' | 'Expired' | 'Site Changed';
   refCode?: string; department?: string; gender?: string; age?: string; category?: string; skills?: string[]; photoUrl?: string;
@@ -550,6 +554,10 @@ export type EmployerWorker = {
   siteCode?: string;
   idCardIssueDate?: string;
   idCardValidityTill?: string;
+  siteAddress?: string; campNo?: string; routeBusNo?: string; uan?: string; esic?: string;
+  emergencyName?: string; emergencyNumber?: string; emergencyRelation?: string;
+  supervisorName?: string; supervisorContact?: string;
+  contractorCode?: string; contractorContact?: string; contractorEmail?: string;
   site: string;
   designation: string;
   doj: string;

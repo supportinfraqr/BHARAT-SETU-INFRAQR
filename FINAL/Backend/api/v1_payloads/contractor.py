@@ -195,18 +195,22 @@ def _contractor_workers(user):
     bindings = list(WorkerContractorBinding.objects
                     .filter(contractor=user, binding_status__in=("PENDING", "ACCEPTED"))
                     .order_by("-created_at"))
-    emp_map = {e.user_id: e for e in WorkerEmployment.objects.filter(
-        user_id__in=[b.worker_id for b in bindings])}
+    worker_ids = [b.worker_id for b in bindings]
+    emp_map = {e.user_id: e for e in WorkerEmployment.objects.filter(user_id__in=worker_ids)}
+    ss_map = {s.user_id: s for s in WorkerSocialSecurity.objects.filter(user_id__in=worker_ids)}
     rows = []
     for b in bindings:
         wi = WorkerIdentity.objects.filter(user=b.worker).first()
+        wemp = emp_map.get(b.worker_id)
+        ss = ss_map.get(b.worker_id)
+        cp = getattr(b.contractor, "contractor_profile", None)
         emp = None
         site = None
         if b.site:
             site = b.site
             emp = getattr(b.site.employer, "employer_profile", None)
         card_issue, card_valid = _worker_id_card_dates(
-            emp_map.get(b.worker_id), b.accepted_at.date() if b.accepted_at else None)
+            wemp, b.accepted_at.date() if b.accepted_at else None)
         rows.append({
             "id": b.worker_id,
             "bindingId": b.id,
@@ -216,16 +220,21 @@ def _contractor_workers(user):
             "mobile": _d(wi.mobile_number if wi else ""),
             "siteColour": _d(getattr(b.site, "assign_color", "") or "") if b.site else "",
             "siteCode": _d(getattr(b.site, "site_code", "") or "") if b.site else "",
+            "siteAddress": _d(getattr(b.site, "location", "") or "") if b.site else "",
             "site": site.site_name if site else "",
             "employer": _org_name(b.site.employer) if b.site else "",
-            "designation": _d(b.designation),
+            "designation": _d(b.designation) or ((_d(wemp.designation) if wemp else "") or ""),
             "doj": _dts(b.accepted_at.date()) if b.accepted_at else None,
             "compliance": 0,
             # Mirror the binding status shown on the Binding Requests page / DB.
             "status": _WORKER_BINDING_STATUS.get(str(b.binding_status).upper(),
                                                  _d(b.binding_status)),
             "refCode": _d(wi.bss_worker_id if wi else ""),
-            "department": _d(b.department),
+            "department": _d(b.department) or ((_d(wemp.department) if wemp else "") or ""),
+            "campNo": _d(wemp.camp_no) if wemp else "",
+            "routeBusNo": ((_d(wemp.route) or _d(wemp.bus_no)) if wemp else ""),
+            "uan": _d(ss.epfo_uan) if ss else "",
+            "esic": _d(ss.esic_ip_number) if ss else "",
             "gender": _d(wi.gender if wi else ""),
             "category": "",
             "skills": "",
@@ -235,6 +244,13 @@ def _contractor_workers(user):
             "dob": _dts(wi.date_of_birth) if wi and wi.date_of_birth else "",
             "fatherName": _d(wi.father_name if wi else ""),
             "bloodGroup": _d(wi.blood_group if wi else ""),
+            "emergencyName": _d(wi.emergency_contact_name if wi else ""),
+            "emergencyNumber": _d(wi.emergency_contact_number if wi else ""),
+            "emergencyRelation": _d(wi.emergency_contact_relation if wi else ""),
+            "contractorName": _org_name(b.contractor),
+            "contractorCode": _bss_contractor_code(b.contractor_id),
+            "contractorContact": _d(getattr(cp, "mobile", "") or getattr(cp, "contact_person", "")) if cp else "",
+            "contractorEmail": _d(getattr(cp, "email", "")) if cp else "",
             "idCardIssueDate": card_issue.isoformat() if card_issue else "",
             "idCardValidityTill": card_valid.isoformat() if card_valid else "",
         })
