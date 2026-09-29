@@ -217,6 +217,11 @@ def admin_verification_review(request):
     profile.manual_verification_status = decision
     profile.manual_verification_note = str(body.get("note") or "")[:255]
     fields = ["manual_verification_status", "manual_verification_note"]
+    if decision == "VERIFIED":
+        # Completing identity verification IS the account approval — no separate
+        # admin approval step exists, so reflect it on the profile.
+        profile.approval_status = "APPROVED"
+        fields.append("approval_status")
     if decision == "REJECTED":
         # Send the entity back to the "EntityLocker or manual documents?" choice
         # so they can redo it (they are asked again on their next visit).

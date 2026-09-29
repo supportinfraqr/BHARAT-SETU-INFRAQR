@@ -109,6 +109,15 @@ def entitylocker_callback(request):
     auth.mobile = str(entity.get("mobile") or "")[:40]
     auth.save(update_fields=["status", "entity_name", "entity_locker_id", "verified_by",
                              "doi", "email", "mobile", "user", "updated_at"])
+    # EntityLocker verification completes the entity's identity step — there is
+    # no separate admin approval, so mark the profile APPROVED too.
+    if auth.user_id:
+        from bss_core.models import ContractorProfile, EmployerProfile
+        profile_model = ContractorProfile if auth.role == "contractor" else EmployerProfile
+        profile = profile_model.objects.filter(user_id=auth.user_id).first()
+        if profile and profile.approval_status != "APPROVED":
+            profile.approval_status = "APPROVED"
+            profile.save(update_fields=["approval_status"])
     return Response({"verified": True, "data": {
         "entityName": auth.entity_name, "verifiedBy": auth.verified_by,
         "entityLockerId": auth.entity_locker_id, "role": auth.role,

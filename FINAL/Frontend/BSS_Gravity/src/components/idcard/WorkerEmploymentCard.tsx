@@ -32,8 +32,6 @@ export type EmploymentCardProps = {
   bloodGroup?: string;
   issueDate?: string;
   validTill?: string;
-  eShramNo?: string;
-  bocwNo?: string;
   onClose?: () => void;
 };
 
@@ -64,8 +62,6 @@ export default function WorkerEmploymentCard({
   bloodGroup = "O+",
   issueDate = "29/06/2023",
   validTill = "29/06/2028",
-  eShramNo = "—",
-  bocwNo = "—",
   onClose,
 }: EmploymentCardProps) {
   const [isExporting, setIsExporting] = useState(false);
@@ -258,15 +254,11 @@ export default function WorkerEmploymentCard({
               {/* Construction Watermark */}
               <img aria-hidden="true" src="/login-bg.jpg" className="watermark-bg" alt="" />
 
-              {/* Back Header with E-Shram & BOCW Numbers & Tricolour bar */}
-              <div className="back-top relative">
-                <span>E-SHRAM: {eShramNo}</span>
-                <span>BOCW: {bocwNo}</span>
-                <div className="tricolor-bar absolute bottom-0 left-0 right-0">
-                  <div className="stripe orange" />
-                  <div className="stripe white" />
-                  <div className="stripe green" />
-                </div>
+              {/* Back header — tricolour strip only (matches the worker ID card; no E-SHRAM/BOCW) */}
+              <div className="tricolor-bar">
+                <div className="stripe orange" />
+                <div className="stripe white" />
+                <div className="stripe green" />
               </div>
 
               <div className="back-body">

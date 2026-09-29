@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle2, FileText, IdCard, MoreVertical, QrCode, ShieldAlert, UserCheck, UserRound, Users, X } from 'lucide-react';
+import { Briefcase, CheckCircle2, FileText, MoreVertical, QrCode, ShieldAlert, UserCheck, UserRound, Users, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import WorkerQr from '@/components/qr/WorkerQr';
-import WorkerIdentityCard from '@/components/idcard/WorkerIdentityCard';
+import WorkerEmploymentCard from '@/components/idcard/WorkerEmploymentCard';
 import ScanIdentityCard, { type ScanVerifyData } from '@/components/scan/ScanIdentityCard';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerWorker, GatePassEligibility } from '@/types/portal';
@@ -29,7 +29,7 @@ export default function EmployerWorkersPage() {
   const [qrWorker, setQrWorker] = useState<EmployerWorker | null>(null);
   const [profileView, setProfileView] = useState<EmployerWorker | null>(null);
   const [profileDetail, setProfileDetail] = useState<ScanVerifyData | null>(null);
-  const [idView, setIdView] = useState<EmployerWorker | null>(null);
+  const [empView, setEmpView] = useState<EmployerWorker | null>(null);
   const [openMenuFor, setOpenMenuFor] = useState('');
 
   const active = employer.workers.filter(worker => worker.status === 'Active').length;
@@ -50,7 +50,7 @@ export default function EmployerWorkersPage() {
     <header><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Connected workforce</p><h1 className="text-2xl font-bold mt-1">Workers</h1><p className="text-sm text-gray-500 mt-1">A consolidated view of workers supplied by connected contractors — with full profile details, identity card, compliance documents, and QR identity.</p></header>
     <div className="grid grid-cols-3 gap-3"><Metric label="Total connected" value={employer.workers.length} icon={Users} tone="bg-blue-50 text-blue-700"/><Metric label="Active and verified" value={Math.min(active, verified)} icon={UserCheck} tone="bg-green-50 text-green-700"/><Metric label="Compliance attention" value={attention} icon={ShieldAlert} tone="bg-orange-50 text-orange-700"/></div>
     <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex gap-3 text-xs text-blue-900"><CheckCircle2 size={16} className="shrink-0 mt-0.5"/><p>Worker records are managed in partnership with contractors. Principal Employers have complete visibility over worker identity credentials, eligibility checks, cost breakdowns, and compliance documents.</p></div>
-    <EnterpriseDataTable title="Connected worker directory" rows={employer.workers} columns={[...columns, { id:'actions', header:'Actions', filterable:false, value:row => row.id, render:row => <ActionMenu open={openMenuFor === row.id} onToggle={() => setOpenMenuFor(openMenuFor === row.id ? '' : row.id)} onViewProfile={() => openProfile(row)} onIdCard={() => { setIdView(row); setOpenMenuFor(''); }} onQr={() => { setQrWorker(row); setOpenMenuFor(''); }} onDocs={() => { setDocsWorker(row); setOpenMenuFor(''); }} /> }]} rowKey={row => `${row.id}-${row.contractorId}-${row.siteId}`} filename="employer-connected-workers"/>
+    <EnterpriseDataTable title="Connected worker directory" rows={employer.workers} columns={[...columns, { id:'actions', header:'Actions', filterable:false, value:row => row.id, render:row => <ActionMenu open={openMenuFor === row.id} onToggle={() => setOpenMenuFor(openMenuFor === row.id ? '' : row.id)} onViewProfile={() => openProfile(row)} onEmploymentCard={() => { setEmpView(row); setOpenMenuFor(''); }} onQr={() => { setQrWorker(row); setOpenMenuFor(''); }} onDocs={() => { setDocsWorker(row); setOpenMenuFor(''); }} /> }]} rowKey={row => `${row.id}-${row.contractorId}-${row.siteId}`} filename="employer-connected-workers"/>
     
     {/* QR modal */}
     {qrWorker && <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4" onClick={() => setQrWorker(null)}><section role="dialog" aria-modal="true" className="bg-white rounded-2xl p-6 w-full max-w-sm text-center relative" onClick={e => e.stopPropagation()}><button onClick={() => setQrWorker(null)} aria-label="Close" className="absolute right-4 top-4"><X/></button><h2 className="font-semibold">{qrWorker.name}</h2><p className="text-xs font-mono text-gray-500">{qrWorker.bssId}</p><div className="relative w-56 h-56 mx-auto mt-5"><WorkerQr bssId={qrWorker.bssId} className="w-full h-full"/><span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="w-[44px] h-[44px] bg-white rounded-[8px] grid place-items-center shadow-sm"><img src="/bss-original-logo.png" alt="" className="w-[34px] h-[34px] object-contain"/></span></span></div><p className="text-xs text-gray-500 mt-4">Verification still applies server-side disclosure rules.</p></section></div>}
@@ -107,50 +107,31 @@ export default function EmployerWorkersPage() {
       </div>
     </section></div>}
 
-    {/* Identity card drawer */}
-    {idView && <WorkerIdentityCardDrawer worker={idView} employerName={employer.identity.company} onClose={() => setIdView(null)}/>}
+    {/* Employment card — worker's site employment ID (issued by the worker's contractor) */}
+    {empView && <WorkerEmploymentCard workerName={empView.name} bssId={empView.bssId} designation={empView.designation} mobile={empView.mobile} department={empView.department} photoUrl={empView.photoUrl} siteName={empView.site} siteId={empView.siteId} bloodGroup={empView.bloodGroup} companyName={employer.identity.company} contractorName={empView.contractor} contractorId={empView.contractorId} onClose={() => setEmpView(null)} />}
   </div>;
 }
 
-function WorkerIdentityCardDrawer({ worker, employerName, onClose }: { worker: EmployerWorker; employerName: string; onClose: () => void }) {
-  const issued = new Date();
-  const validTill = new Date();
-  validTill.setFullYear(validTill.getFullYear() + 1);
-  const fmt = (d: Date) => d.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' });
-  return <div className="fixed inset-0 z-[96] bg-black/50 flex justify-end" role="presentation">
-    <section role="dialog" aria-modal="true" aria-label="Worker identity card" className="bg-white w-full max-w-md h-full overflow-y-auto animate-in slide-in-from-right-4 duration-200">
-      <header className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-start justify-between gap-3">
-        <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Identity Card</p><h2 className="font-semibold text-gray-950 mt-0.5">{worker.name}</h2><p className="text-xs text-gray-500 font-mono mt-0.5">{worker.bssId}</p></div>
-        <button onClick={onClose} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button>
-      </header>
-      <div className="p-5 space-y-5">
-        <WorkerIdentityCard data={{ name: worker.name, bssId: worker.bssId, photoUrl: worker.photoUrl, dob: worker.dob, gender: worker.gender, designation: worker.designation, site: worker.site, employer: employerName, issueDate: fmt(issued), validTill: fmt(validTill) }} />
-        <div className="rounded-xl border border-gray-100 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">Worker record</p>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs">
-            <Info label="Ref Worker Code" value={worker.refCode ?? '—'}/>
-            <Info label="Department" value={worker.department ?? '—'}/>
-            <Info label="Category" value={worker.category ?? '—'}/>
-            <Info label="Mobile" value={worker.mobile ?? '—'}/>
-            <Info label="Contractor" value={worker.contractor}/>
-            <Info label="Date of Joining" value={worker.doj}/>
-          </dl>
-        </div>
-        <p className="text-[11px] text-gray-400 leading-5">The identity card is issued with signed BSS credentials verification for site governance.</p>
-      </div>
-    </section>
-  </div>;
-}
-
-function ActionMenu({ open, onToggle, onViewProfile, onIdCard, onQr, onDocs }: { open: boolean; onToggle: () => void; onViewProfile: () => void; onIdCard: () => void; onQr: () => void; onDocs: () => void }) {
+function ActionMenu({ open, onToggle, onViewProfile, onEmploymentCard, onQr, onDocs }: { open: boolean; onToggle: () => void; onViewProfile: () => void; onEmploymentCard: () => void; onQr: () => void; onDocs: () => void }) {
   const btnRef = useRef<HTMLButtonElement>(null);
-  const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
+  const [anchor, setAnchor] = useState<{ top?: number; bottom?: number; right: number; maxHeight: number } | null>(null);
 
   useEffect(() => {
     if (!open) return;
     const update = () => {
       const rect = btnRef.current?.getBoundingClientRect();
-      if (rect) setAnchor({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+      if (!rect) return;
+      const right = Math.max(8, window.innerWidth - rect.right);
+      const spaceBelow = window.innerHeight - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+      const ESTIMATED = 300;
+      // Flip above the trigger when the menu would run off the bottom of the
+      // viewport, and cap its height so every item stays reachable.
+      if (spaceBelow < ESTIMATED && spaceAbove > spaceBelow) {
+        setAnchor({ bottom: window.innerHeight - rect.top + 4, right, maxHeight: Math.max(140, spaceAbove) });
+      } else {
+        setAnchor({ top: rect.bottom + 4, right, maxHeight: Math.max(140, spaceBelow) });
+      }
     };
     update();
     window.addEventListener('scroll', update, true);
@@ -165,9 +146,15 @@ function ActionMenu({ open, onToggle, onViewProfile, onIdCard, onQr, onDocs }: {
     <button ref={btnRef} onClick={onToggle} aria-label="Worker actions" aria-expanded={open} className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-100 text-gray-400"><MoreVertical size={16}/></button>
     {open && anchor && createPortal(<>
       <div className="fixed inset-0 z-[110]" onClick={onToggle} />
-      <div role="menu" className="fixed z-[120] w-52 bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-900/5 p-1.5" style={{ top: anchor.top, right: anchor.right }}>
+      <div role="menu" className="fixed z-[120] w-52 bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-900/5 p-1.5 overflow-y-auto" style={{ top: anchor.top, bottom: anchor.bottom, right: anchor.right, maxHeight: anchor.maxHeight }}>
         <button role="menuitem" onClick={onViewProfile} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><UserRound size={14} className="text-gray-400"/>View Profile</button>
-        <button role="menuitem" onClick={onIdCard} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><IdCard size={14} className="text-gray-400"/>Identity Card</button>
+        <button role="menuitem" onClick={onEmploymentCard} className="w-full flex items-start gap-2.5 px-3 py-2.5 rounded-lg text-left bg-[#073B67]/[0.06] hover:bg-[#073B67]/[0.12] border border-[#073B67]/15">
+          <span className="mt-0.5 w-6 h-6 rounded-md bg-[#073B67] text-white grid place-items-center flex-shrink-0"><Briefcase size={13}/></span>
+          <span className="min-w-0">
+            <span className="block text-xs font-bold text-[#073B67]">Employment Card</span>
+            <span className="block text-[10px] text-gray-500 leading-tight">Worker&apos;s site employment ID — view / print</span>
+          </span>
+        </button>
         <button role="menuitem" onClick={onQr} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><QrCode size={14} className="text-gray-400"/>QR Code</button>
         <button role="menuitem" onClick={onDocs} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><FileText size={14} className="text-gray-400"/>Compliance Documents</button>
       </div>

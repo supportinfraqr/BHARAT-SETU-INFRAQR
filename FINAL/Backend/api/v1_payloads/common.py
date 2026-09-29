@@ -22,6 +22,7 @@ from bss_core.models import (
     ComplianceMaster,
     ComplianceReport,
     EmployerProfile,
+    EntityLockerAuth,
     LeaveRequest,
     LeaveType,
     RestrictedHolidayRequest,
@@ -210,6 +211,34 @@ def _identity_display(identity, field):
     return _d(getattr(identity, field, None)) if identity else ""
 
 
+def _entity_identity_verified(profile):
+    """True when an employer/contractor has completed the post-GST identity
+    step — EntityLocker verified, or manual documents approved by BSS Admin."""
+    if profile is None:
+        return False
+    if str(getattr(profile, "manual_verification_status", "") or "").upper() == "VERIFIED":
+        return True
+    user = getattr(profile, "user", None)
+    if user is None:
+        return False
+    return EntityLockerAuth.objects.filter(user=user, status="VERIFIED").exists()
+
+
+def _entity_account_status(profile):
+    """Effective registration status shown on the portal badge.
+
+    There is no separate admin "approve the account" step wired anywhere: an
+    employer/contractor is APPROVED once its identity verification completes
+    (EntityLocker or BSS-Admin-approved documents). Falls back to the stored
+    approval_status otherwise."""
+    if profile is None:
+        return "PENDING"
+    stored = str(getattr(profile, "approval_status", "") or "PENDING").upper()
+    if stored == "APPROVED" or _entity_identity_verified(profile):
+        return "APPROVED"
+    return stored or "PENDING"
+
+
 def government_geography():
     return dict(GEOGRAPHY)
 
@@ -316,6 +345,7 @@ __all__ = [
     "CourseQuestion",
     "CourseSubmission",
     "EmployerProfile",
+    "EntityLockerAuth",
     "GEOGRAPHY",
     "GratuityApplication",
     "LeaveRequest",
