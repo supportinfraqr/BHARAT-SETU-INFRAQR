@@ -13,6 +13,13 @@ from .common import *  # noqa: F401,F403
 
 _DOC_TYPES = {"PAN", "AADHAAR", "INCORPORATION", "OTHER"}
 
+_MIME_BY_EXT = {
+    ".pdf": "application/pdf",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+}
+
 
 def _profile_for(user):
     from bss_core.models import ContractorProfile, EmployerProfile
@@ -132,8 +139,15 @@ def verification_document(request, document_id):
         return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
     if doc.user_id != request.user.id and request.user.role not in ("bss_admin", "bss_staff"):
         return Response({"error": "Not authorized."}, status=status.HTTP_403_FORBIDDEN)
-    return FileResponse(doc.file.open("rb"), as_attachment=True,
-                        filename=f"{doc.doc_type}-{document_id}")
+    # Preserve the stored file's real name/extension so the browser previews or
+    # saves it as the actual document (PDF/JPEG/PNG) instead of a nameless blob.
+    stored = os.path.basename(doc.file.name or "")
+    ext = os.path.splitext(stored)[1].lower()
+    filename = stored or f"{doc.doc_type}-{document_id}{ext}"
+    response = FileResponse(doc.file.open("rb"), as_attachment=False, filename=filename)
+    response["Content-Type"] = _MIME_BY_EXT.get(ext, "application/octet-stream")
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 # --------------------------------------------------------------------------- admin

@@ -40,6 +40,7 @@ export async function POST(request: Request) {
       '/v1/worker/documents',
       session,
       { method: 'POST', body: form },
+      { timeoutMs: 60_000 },
     );
     return NextResponse.json(result, { status: 201, headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {

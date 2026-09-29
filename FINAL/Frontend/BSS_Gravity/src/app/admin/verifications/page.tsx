@@ -79,8 +79,8 @@ export default function AdminVerificationsPage() {
               </div>
               <div className="flex flex-wrap gap-2">
                 {row.documents.map(doc => (
-                  <a key={doc.id} href={`/api/admin/verification/document/${doc.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#073B67] border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50">
-                    <Download size={12}/>{doc.docType}
+                  <a key={doc.id} href={`/api/admin/verification/document/${doc.id}`} target="_blank" rel="noreferrer" title={doc.fileName} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#073B67] border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50">
+                    <Download size={12}/>{doc.docType}<span className="font-normal text-gray-400 truncate max-w-[180px]">{doc.fileName}</span>
                   </a>
                 ))}
               </div>
