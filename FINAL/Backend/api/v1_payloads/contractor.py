@@ -210,6 +210,7 @@ def _contractor_workers(user):
             "name": _d(wi.name if wi else b.worker.username),
             "bssId": _d(wi.bss_worker_id if wi else ""),
             "mobile": _d(wi.mobile_number if wi else ""),
+            "siteColour": _d(getattr(b.site, "assign_color", "") or "") if b.site else "",
             "site": site.site_name if site else "",
             "employer": _org_name(b.site.employer) if b.site else "",
             "designation": _d(b.designation),

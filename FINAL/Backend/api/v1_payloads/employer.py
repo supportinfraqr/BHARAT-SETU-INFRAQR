@@ -309,6 +309,7 @@ def _employer_workers(user):
             "contractorId": b.contractor_id,
             "contractor": _d(cp.contractor_name if cp else b.contractor.username),
             "siteId": str(b.site_id), "site": b.site.site_name if b.site else "",
+            "siteColour": _d(getattr(b.site, "assign_color", "") or "") if b.site else "",
             "designation": _d(b.designation),
             "doj": _dts(b.accepted_at.date()) if b.accepted_at else None,
             "compliance": _worker_compliance_label(b.worker),

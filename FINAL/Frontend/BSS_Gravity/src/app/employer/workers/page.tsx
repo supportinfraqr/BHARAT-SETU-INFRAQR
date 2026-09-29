@@ -108,7 +108,7 @@ export default function EmployerWorkersPage() {
     </section></div>}
 
     {/* Employment card — worker's site employment ID (issued by the worker's contractor) */}
-    {empView && <WorkerEmploymentCard workerName={empView.name} bssId={empView.bssId} designation={empView.designation} mobile={empView.mobile} department={empView.department} photoUrl={empView.photoUrl} siteName={empView.site} siteId={empView.siteId} bloodGroup={empView.bloodGroup} companyName={employer.identity.company} contractorName={empView.contractor} contractorId={empView.contractorId} onClose={() => setEmpView(null)} />}
+    {empView && <WorkerEmploymentCard workerName={empView.name} bssId={empView.bssId} designation={empView.designation} mobile={empView.mobile} department={empView.department} photoUrl={empView.photoUrl} siteName={empView.site} siteId={empView.siteId} bloodGroup={empView.bloodGroup} companyName={employer.identity.company} contractorName={empView.contractor} contractorId={empView.contractorId} siteColour={empView.siteColour || undefined} onClose={() => setEmpView(null)} />}
   </div>;
 }
 
