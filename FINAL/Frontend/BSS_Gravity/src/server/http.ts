@@ -95,8 +95,11 @@ export async function upstreamRequest<T>(baseUrl: string | undefined, path: stri
     } catch (error) {
       if (error instanceof UpstreamError) throw error;
       const aborted = error instanceof Error && error.name === 'AbortError';
-      if (idempotent && !aborted && attempt <= RETRY_BACKOFF_MS.length) {
-        await delay(RETRY_BACKOFF_MS[attempt - 1]);
+      // Idempotent reads retry transient network errors a few times, and a
+      // timeout once — a momentary upstream stall must not fail the whole page.
+      const retryable = idempotent && (aborted ? attempt <= 1 : attempt <= RETRY_BACKOFF_MS.length);
+      if (retryable) {
+        await delay(RETRY_BACKOFF_MS[Math.min(attempt - 1, RETRY_BACKOFF_MS.length - 1)]);
         continue;
       }
       if (aborted) throw new UpstreamError('The BSS service timed out.', 504);

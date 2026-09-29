@@ -24,10 +24,14 @@ async function guarded<T>(load: () => Promise<T>): Promise<T> {
   }
 }
 
+// Portal SSR loads get a longer budget than interactive API calls: a momentary
+// backend stall (cold worker, deploy, heavy OCR) must not crash the whole route.
+const PORTAL_TIMEOUT_MS = 25_000;
+
 export function getWorkerPortal(session: PortalSession): Promise<WorkerPortalData> {
   return guarded(async () => {
     const config = getRuntimeConfig();
-    const portal = await upstreamRequest<Omit<WorkerPortalData, 'dataMode'>>(config.apiBaseUrl, '/v1/worker/portal', session);
+    const portal = await upstreamRequest<Omit<WorkerPortalData, 'dataMode'>>(config.apiBaseUrl, '/v1/worker/portal', session, {}, { timeoutMs: PORTAL_TIMEOUT_MS });
     return { ...portal, dataMode: 'remote' };
   });
 }
@@ -35,21 +39,21 @@ export function getWorkerPortal(session: PortalSession): Promise<WorkerPortalDat
 export function getContractorPortal(session: PortalSession): Promise<ContractorPortalData> {
   return guarded(() => {
     const config = getRuntimeConfig();
-    return upstreamRequest<ContractorPortalData>(config.apiBaseUrl, '/v1/contractor/portal', session);
+    return upstreamRequest<ContractorPortalData>(config.apiBaseUrl, '/v1/contractor/portal', session, {}, { timeoutMs: PORTAL_TIMEOUT_MS });
   });
 }
 
 export function getEmployerPortal(session: PortalSession): Promise<EmployerPortalData> {
   return guarded(() => {
     const config = getRuntimeConfig();
-    return upstreamRequest<EmployerPortalData>(config.apiBaseUrl, '/v1/employer/portal', session);
+    return upstreamRequest<EmployerPortalData>(config.apiBaseUrl, '/v1/employer/portal', session, {}, { timeoutMs: PORTAL_TIMEOUT_MS });
   });
 }
 
 export function getGovernmentPortal(session: PortalSession): Promise<GovernmentPortalData> {
   return guarded(async () => {
     const config = getRuntimeConfig();
-    const portal = await upstreamRequest<Omit<GovernmentPortalData, 'dataMode'>>(config.apiBaseUrl, '/v1/government/portal', session);
+    const portal = await upstreamRequest<Omit<GovernmentPortalData, 'dataMode'>>(config.apiBaseUrl, '/v1/government/portal', session, {}, { timeoutMs: PORTAL_TIMEOUT_MS });
     return { ...portal, dataMode: 'remote' };
   });
 }
