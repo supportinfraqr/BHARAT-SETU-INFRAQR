@@ -102,11 +102,7 @@ export default function BindingRequestsPage() {
       if (action === 'accept' && req) {
         recordBindingApproval({ contractor: req.contractor, approvedOn: formatApprovalDate(new Date()) });
       }
-      setNotice(action === 'accept'
-        ? `Binding approved — you are now bound to ${req?.contractor || 'the contractor'}.`
-        : (req && req.consentWorker && !req.consentContractor)
-          ? 'Binding request cancelled — the contractor has been notified.'
-          : `You declined the binding request from ${req?.contractor || 'the contractor'}.`);
+      setNotice(action === 'accept' ? `Binding approved — you are now bound to ${req?.contractor || 'the contractor'}.` : `You declined the binding request from ${req?.contractor || 'the contractor'}.`);
       void refresh();
       setTimeout(() => setNotice(''), 6000);
     } catch (reason) {
@@ -154,11 +150,6 @@ export default function BindingRequestsPage() {
     const map: Record<string, string> = { Pending:'bg-orange-100 text-orange-700', Accepted:'bg-green-100 text-green-700', Rejected:'bg-red-100 text-red-700', Expired:'bg-gray-100 text-gray-500' };
     return <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${map[status]}`}>{status}</span>;
   };
-
-  // Declining a request this worker raised (scanned the contractor QR) is a
-  // cancel, not a decline of an incoming request.
-  const cancelOwnRequest = !!confirm && confirm.kind === 'decline'
-    && !!confirm.req.consentWorker && !confirm.req.consentContractor;
 
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
     <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
@@ -221,9 +212,8 @@ export default function BindingRequestsPage() {
             // This worker raised the request (scanned the contractor QR), so their
             // consent is already recorded — it is waiting on the contractor, not on
             // the worker. Never show "Accept" on the worker's own request.
-            <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
+            <div className="mt-4 pt-4 border-t border-gray-100">
               <p className="text-xs font-semibold text-amber-700 flex items-center gap-1.5"><Clock3 size={14}/>Awaiting contractor approval — you raised this request.</p>
-              <button onClick={() => setConfirm({ req, kind: 'decline' })} disabled={busyId===req.id} className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold flex items-center gap-1.5 hover:bg-red-50 disabled:opacity-60"><XCircle size={14}/>Cancel request</button>
             </div>
           ) : (
             <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
@@ -261,21 +251,19 @@ export default function BindingRequestsPage() {
     <ConfirmDialog
       open={!!confirm}
       tone={confirm?.kind === 'accept' ? 'positive' : 'negative'}
-      title={cancelOwnRequest ? 'Cancel this binding request?' : confirm?.kind === 'decline' ? 'Decline this binding?' : confirm?.kind === 'unbind' ? 'Unbind this binding?' : 'Accept this binding?'}
-      description={cancelOwnRequest
-        ? 'Your binding request will be withdrawn and the contractor will be notified. This cannot be undone.'
-        : confirm?.kind === 'decline'
-          ? 'The contractor will be notified and this request will be declined. This cannot be undone.'
-          : confirm?.kind === 'unbind'
-            ? 'This requests unbinding. The binding is cancelled only when both parties confirm.'
-            : 'Both parties must approve before you are bound. Accepting records your consent and starts your employment at the site.'}
+      title={confirm?.kind === 'decline' ? 'Decline this binding?' : confirm?.kind === 'unbind' ? 'Unbind this binding?' : 'Accept this binding?'}
+      description={confirm?.kind === 'decline'
+        ? 'The contractor will be notified and this request will be declined. This cannot be undone.'
+        : confirm?.kind === 'unbind'
+          ? 'This requests unbinding. The binding is cancelled only when both parties confirm.'
+          : 'Both parties must approve before you are bound. Accepting records your consent and starts your employment at the site.'}
       details={confirm ? [
         { label: 'Contractor', value: confirm.req.contractor },
         { label: 'Contractor ID', value: confirm.req.contractorCode },
         { label: 'Site', value: confirm.req.site },
         { label: 'Designation', value: confirm.req.designation },
       ] : []}
-      confirmLabel={cancelOwnRequest ? 'Confirm cancel' : confirm?.kind === 'decline' ? 'Confirm decline' : confirm?.kind === 'unbind' ? 'Confirm unbind' : 'Confirm accept'}
+      confirmLabel={confirm?.kind === 'decline' ? 'Confirm decline' : confirm?.kind === 'unbind' ? 'Confirm unbind' : 'Confirm accept'}
       busy={!!confirm && busyId === confirm.req.id}
       onCancel={() => setConfirm(null)}
       onConfirm={runConfirm}
