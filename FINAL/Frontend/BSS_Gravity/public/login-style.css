@@ -2843,8 +2843,10 @@ html:has(.newLoginPage) {
     margin-inline: auto;
 }
 
-/* ---- Tablets & small laptops: stack hero above the card ---- */
-@media (max-width: 1366px) {
+/* ---- Narrow or portrait only: stack hero above the card. Landscape tablets
+   and small laptops keep the side-by-side row, which fits their short viewport
+   without clipping. ---- */
+@media (max-width: 1366px) and (orientation: portrait), (max-width: 900px) {
     .newLoginMain {
         padding: 20px 20px 28px;
     }
@@ -2859,6 +2861,8 @@ html:has(.newLoginPage) {
     }
 
     .newLoginHero {
+        flex: 0 0 auto;
+        align-self: center;
         width: 100%;
         max-width: 680px;
         align-items: center;
@@ -2902,6 +2906,18 @@ html:has(.newLoginPage) {
     .newLoginFormWrap {
         max-width: 540px;
     }
+}
+
+/* ---- Narrow landscape (e.g. 1024×768 iPad): keep the side-by-side row but
+   shrink/wrap the hero so it fits without overflowing ---- */
+@media (max-width: 1100px) and (orientation: landscape) {
+    .newLoginBrandLogo { height: 58px; }
+    .newLoginBrandTitle { font-size: 32px; }
+    .newLoginHeroHeading h2 { font-size: 14px; }
+    .newLoginFeatureRow { flex-wrap: wrap; row-gap: 14px; gap: 14px; }
+    .newLoginFeatureBox { width: 96px; }
+    .newLoginFeatureBox img { height: 32px; }
+    .newLoginFeatureDivider { display: none; }
 }
 
 /* ---- Phones ---- */
