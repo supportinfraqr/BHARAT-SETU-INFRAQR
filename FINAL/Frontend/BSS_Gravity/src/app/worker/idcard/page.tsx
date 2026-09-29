@@ -307,7 +307,8 @@ export default function IdentityCardPage() {
               <div className="h-[57px] px-4 pt-3 flex justify-between items-start relative z-10 border-b border-white/[0.08]">
                  <div className="flex items-center gap-2.5 min-w-0">
                    <div className="leading-tight flex flex-col items-start min-w-0">
-                     <p className="text-[5.5px] text-slate-300 tracking-[0.105em] font-semibold uppercase leading-none whitespace-nowrap">One Nation. One Identity. One Future.</p>
+                     <h2 className="text-[15px] font-extrabold tracking-[-0.015em] leading-none whitespace-nowrap" aria-label="Bharat Shram Setu"><span className="text-white">Bharat</span><span className="text-[#FF9933]">Shram</span><span className="text-[#2F9E67]">Setu</span></h2>
+                     <p className="text-[5.5px] text-slate-300 mt-1.5 tracking-[0.105em] font-semibold uppercase leading-none whitespace-nowrap">One Nation. One Identity. One Future.</p>
                    </div>
                  </div>
                  <div className="flex flex-col items-end">
@@ -351,6 +352,7 @@ export default function IdentityCardPage() {
                  <div className="w-[92px] flex-shrink-0 flex flex-col justify-end items-center pb-0.5">
                     <div className="relative bg-white p-1 rounded-[6px] shadow-[0_4px_12px_rgba(0,0,0,0.3)] w-[84px] h-[84px] flex items-center justify-center border border-slate-200">
                       <WorkerQr bssId={worker.identity.bssId} size={256} />
+                      <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="w-[13px] h-[13px] bg-white rounded-[3px] grid place-items-center shadow-sm"><img src="/bss-original-logo.png" alt="" className="w-[10px] h-[10px] object-contain" /></span></span>
                     </div>
                    <p className="text-[5px] text-slate-300 uppercase font-bold tracking-[0.12em] mt-1.5 whitespace-nowrap">Scan to Verify</p>
                  </div>
@@ -393,6 +395,7 @@ export default function IdentityCardPage() {
                  <div className="flex-1 flex flex-col items-center justify-center w-full my-1">
                      <div className="relative bg-white p-1.5 rounded-md shadow-lg w-[120px] h-[120px] flex items-center justify-center z-10 border-2 border-slate-300 flex-shrink-0">
                        <WorkerQr bssId={worker.identity.bssId} size={320} />
+                       <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="w-[22px] h-[22px] bg-white rounded-[4px] grid place-items-center shadow-sm"><img src="/bss-original-logo.png" alt="" className="w-[16px] h-[16px] object-contain" /></span></span>
                      </div>
                    <p className="text-[7px] font-bold uppercase tracking-widest text-white/90 z-10 mt-1">Scan to Verify</p>
                  </div>
@@ -507,6 +510,11 @@ export default function IdentityCardPage() {
                     {/* QR Code */}
                     <div className="relative w-[96px] h-[96px] bg-white p-1 rounded-lg border border-slate-300 shadow-xs flex items-center justify-center mt-1">
                       <WorkerQr bssId={worker.identity.bssId} size={220} />
+                      <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span className="w-[26px] h-[26px] bg-white rounded-full grid place-items-center shadow-md border border-blue-900/30 p-[2px]">
+                          <img src="/bss-original-logo.png" alt="" className="w-full h-full object-contain rounded-full" />
+                        </span>
+                      </span>
                     </div>
                   </div>
                 </div>

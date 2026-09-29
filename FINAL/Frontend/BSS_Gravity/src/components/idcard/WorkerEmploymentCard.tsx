@@ -234,6 +234,11 @@ export default function WorkerEmploymentCard({
                     </div>
                     <div className="relative w-[96px] h-[96px] bg-white p-1 rounded-lg border border-slate-300 shadow-xs flex items-center justify-center mt-1">
                       <WorkerQr bssId={bssId} size={220} />
+                      <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span className="w-[26px] h-[26px] bg-white rounded-full grid place-items-center shadow-md border border-blue-900/30 p-[2px]">
+                          <img src="/bss-original-logo.png" alt="" className="w-full h-full object-contain rounded-full" />
+                        </span>
+                      </span>
                     </div>
                   </div>
                 </div>
