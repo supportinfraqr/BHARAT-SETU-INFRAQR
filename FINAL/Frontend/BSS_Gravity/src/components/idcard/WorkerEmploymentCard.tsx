@@ -104,8 +104,8 @@ export default function WorkerEmploymentCard({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl max-w-4xl w-full p-6 text-slate-100 relative my-8">
+    <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-xs flex justify-center p-4 overflow-y-auto">
+      <div className="bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl max-w-4xl w-full p-6 text-slate-100 relative my-auto">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
           <div className="flex items-center gap-3">
@@ -348,7 +348,8 @@ export default function WorkerEmploymentCard({
 
           .card {
             width: 374px;
-            height: 560px;
+            min-height: 560px;
+            height: auto;
             background: #ffffff;
             border-radius: 12px;
             overflow: hidden;
