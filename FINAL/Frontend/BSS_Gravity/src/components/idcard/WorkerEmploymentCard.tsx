@@ -90,7 +90,6 @@ export default function WorkerEmploymentCard({
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       pdf.setProperties({
         title: `Employment Card - ${workerName} - ${bssId}`,
-        author: "Bharat Shram Setu",
       });
 
       pdf.addImage(frontImg, "PNG", 20, 20, 80, 120);
@@ -154,17 +153,7 @@ export default function WorkerEmploymentCard({
               <img aria-hidden="true" src="/login-bg.jpg" className="watermark-bg" alt="" />
 
               <div className="front-header">
-                <div className="brand-logo-row">
-                  <div className="logo-box">
-                    <img src="/bss-original-logo.png" alt="BSS Logo" className="logo-img" />
-                  </div>
-                  <div className="brand-text">
-                    <h1 className="brand-title">
-                      <span className="c-white">Bharat</span><span className="c-orange">Shram</span><span className="c-green">Setu</span>
-                    </h1>
-                    <div className="card-sub-title">EMPLOYMENT CARD</div>
-                  </div>
-                </div>
+                <div className="card-title">EMPLOYMENT CARD</div>
                 <div className="company-name">{companyName}</div>
 
                 {/* 3-Color Line */}
@@ -229,11 +218,6 @@ export default function WorkerEmploymentCard({
                     {/* QR Code */}
                     <div className="qr-container relative">
                       <WorkerQr bssId={bssId} size={220} />
-                      <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <span className="w-[26px] h-[26px] bg-white rounded-full grid place-items-center shadow-md border border-blue-900/30 p-[2px]">
-                          <img src="/bss-original-logo.png" alt="" className="w-full h-full object-contain rounded-full" />
-                        </span>
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -329,7 +313,7 @@ export default function WorkerEmploymentCard({
 
               {/* Back Footer */}
               <div className="back-footer">
-                This card is the property of Bharat Shram Setu. Misuse is punishable under applicable laws.
+                This card is the property of the issuing organisation. Misuse is punishable under applicable laws.
               </div>
             </section>
 
@@ -385,55 +369,11 @@ export default function WorkerEmploymentCard({
             z-index: 1;
           }
 
-          .brand-logo-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 2px;
-          }
-
-          .logo-box {
-            width: 36px;
-            height: 36px;
-            background: #ffffff;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 4px;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-          }
-
-          .logo-img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-          }
-
-          .brand-text {
-            text-align: left;
-          }
-
-          .brand-title {
-            font-size: 16px;
+          .card-title {
+            font-size: 15px;
             font-weight: 800;
-            margin: 0;
-            line-height: 1;
-            letter-spacing: -0.2px;
-          }
-
-          .c-white { color: #ffffff; }
-          .c-orange { color: #ff9933; }
-          .c-green { color: #2f9e67; }
-
-          .card-sub-title {
-            font-size: 8.5px;
-            font-weight: 700;
-            color: #94a3b8;
-            letter-spacing: 1.2px;
-            margin-top: 2px;
+            color: #ffffff;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
           }
 
