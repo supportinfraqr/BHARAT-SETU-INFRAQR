@@ -4,7 +4,8 @@
 
 | | Staging | Production (live) |
 |---|---|---|
-| Host | `ec2-15-206-193-173.ap-south-1.compute.amazonaws.com` | `ec2-13-235-161-192.ap-south-1.compute.amazonaws.com` |
+| Host | `ec2-3-109-68-143.ap-south-1.compute.amazonaws.com` | `ec2-13-235-161-192.ap-south-1.compute.amazonaws.com` |
+| IP | `3.109.68.143` | `13.235.161.192` |
 | SSH user | `ubuntu` | `ubuntu` |
 | Key | `/home/yasser/BSS_Project/bharat-shram-setu-staging-key.pem` | `/home/yasser/BSS_Project/login-bharatshramsetu-root_key.pem` |
 | App path | `~/bss/FINAL` | `~/bss/FINAL` |
@@ -13,6 +14,12 @@
 | Database | `bss_final` | `bss_prod` |
 | URL | **`bharat-shram-setu-staging.bharatshramsetu.com`** | **`login.bharatshramsetu.com`** |
 | Purpose | pre-prod testing | real / demo users |
+
+**Video-attendance server (separate — NOT a BSS app host):**
+- Host `15.206.193.173` (`ec2-15-206-193-173.ap-south-1.compute.amazonaws.com`), same staging key.
+- Runs the CCTV / face-attendance pipeline only: `~/bss/FINAL/video-attendance/deploy` (compose project **`attendance`** → `attendance-attendance-1` + `attendance-db-1`).
+- The BSS backend reaches it via `ATTENDANCE_CONTROL_URL` / `ATTENDANCE_CONTROL_TOKEN`.
+- **Never** deploy the BSS app stack (`deploy/`, backend, frontend) here — the BSS staging app lives on `3.109.68.143`.
 
 Staging and production are separate servers with separate databases. Data on one does not affect the other.
 
@@ -49,7 +56,7 @@ Another session/agent also deploys straight to prod and commits to the same `ori
 Staging:
 ```bash
 KEY=/home/yasser/BSS_Project/bharat-shram-setu-staging-key.pem
-HOST=ubuntu@ec2-15-206-193-173.ap-south-1.compute.amazonaws.com
+HOST=ubuntu@ec2-3-109-68-143.ap-south-1.compute.amazonaws.com
 rsync -az -e "ssh -i $KEY" --exclude 'venv/' --exclude '.venv/' --exclude '__pycache__/' \
   --exclude '*.pyc' --exclude '.env' --exclude 'media/' --exclude 'staticfiles/' \
   /home/yasser/BSS_Project/FINAL/Backend/ $HOST:~/bss/FINAL/Backend/
