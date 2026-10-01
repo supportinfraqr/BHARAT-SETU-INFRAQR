@@ -90,6 +90,12 @@ def _submissions(request):
     state = (request.data.get("state") or "").strip()
     financial_year = (request.data.get("financialYear") or request.data.get("financial_year") or "").strip()
     month = (request.data.get("month") or "").strip()
+    # Calendar year used in the OCR-checkpoint context (derived when the client
+    # only sends a financial year / period, e.g. "FY 2026-27" or "Jul 2026").
+    year = (request.data.get("year") or "").strip()
+    if not year:
+        _digits = "".join(ch for ch in (financial_year or period) if ch.isdigit())
+        year = _digits[:4] if len(_digits) >= 4 else ""
     location = (request.data.get("location") or "").strip()
     document_type = (request.data.get("documentType") or request.data.get("document_type") or "").strip()
     frequency = (request.data.get("frequency") or "").strip()
