@@ -71,7 +71,8 @@ export async function POST(request: Request) {
       config.apiBaseUrl,
       `/v1/${portalRolePath(session.role)}/submissions`,
       session,
-      { method: 'POST', body: data }
+      { method: 'POST', body: data },
+      { timeoutMs: 60_000 },
     );
     return NextResponse.json(result, {
       status: 201,
