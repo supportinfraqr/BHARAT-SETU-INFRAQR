@@ -136,7 +136,7 @@ def admin_form_name_detail(request, form_id):
 def admin_copy_all_states(request):
     """BSS Admin: copy catalog forms from a source state to all other Indian states."""
     from bss_core.models import CustomFormName
-    from bss_core.seeders.states import INDIA_STATES
+    from bss_core.models.master import INDIA_STATES
     if request.user.role not in ("bss_admin", "admin"):
         return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
     source_state = (request.data.get("sourceState") or "").strip()
