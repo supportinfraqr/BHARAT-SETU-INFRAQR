@@ -3033,3 +3033,48 @@ html:has(.newLoginPage) {
         max-width: 100%;
     }
 }
+
+/* ============================================================
+   VERY SMALL SCREENS / FOLDABLE COVER DISPLAYS (≤ 380px)
+   The logo + wordmark row becomes a centred column so the wordmark
+   and tagline never run off the edge.
+   ============================================================ */
+@media (max-width: 380px) {
+    .newLoginBrandRow {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .newLoginBrandLogo {
+        height: 46px;
+    }
+
+    .newLoginBrandTitle {
+        font-size: 26px;
+    }
+
+    .newLoginTagline {
+        gap: 8px;
+        margin-top: 6px;
+    }
+
+    .newLoginTagline p {
+        font-size: 12px;
+    }
+
+    .newLoginHeroHeading h2 {
+        font-size: 13px;
+    }
+
+    .newLoginFeatureBox h4 {
+        font-size: 14px;
+    }
+
+    .newLoginStatsBanner {
+        padding: 12px 12px;
+    }
+
+    .newLoginBottomMessage {
+        font-size: 12px;
+    }
+}

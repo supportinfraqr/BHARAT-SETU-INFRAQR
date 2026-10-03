@@ -607,3 +607,90 @@ input[type="range"],
   animation: bss-scanline 2.4s ease-in-out infinite;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Mobile fluid layout — phones, foldable cover screens and very
+   small displays. Scoped to phone widths only, so the desktop /
+   large-screen layout is untouched.
+   ───────────────────────────────────────────────────────────── */
+
+/* Foldable cover screens and very small phones can be narrower than
+   the 320px design floor — let them go fluid instead of overflowing. */
+@media (max-width: 360px) {
+  html { min-width: 0; }
+}
+
+@media (max-width: 767px) {
+  /* Long unbreakable tokens (BSS IDs, emails, site/company names) must
+     wrap rather than force the page wider than the screen. */
+  .bss-app-main { overflow-wrap: anywhere; }
+
+  /* Grid children default to min-width:auto (= content width), which lets a
+     long value blow out the column. Let them shrink so text wraps inside the
+     card instead of overflowing. (Flex rows are handled more surgically so
+     horizontal scroll strips keep their full-size items.) */
+  .bss-app-main .grid > * { min-width: 0; }
+
+  /* Horizontal scroll strips (e.g. the Profile section tabs) must keep their
+     items at full width and scroll, never squish them into overlapping text. */
+  .bss-app-main [class~="overflow-x-auto"] > *,
+  .bss-app-main [class~="overflow-x-scroll"] > * { flex: 0 0 auto; }
+
+  /* No card/panel/row may ever be wider than the viewport. */
+  .bss-app-main > *,
+  .bss-app-main section,
+  .bss-app-main .bss-panel { max-width: 100%; }
+
+  /* Most worker pages carry their own `p-6`/`p-4` on the root element; on
+     phones that doubles up with the shell gutter and cramps the content.
+     Drop the horizontal part and let the shell own the gutters. */
+  .bss-app-main > :where(div, section, main) {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* Consistent, comfortable page headings on phones. */
+  .bss-app-main h1 {
+    font-size: clamp(1.25rem, 6vw, 1.5rem);
+    line-height: 1.25;
+  }
+
+  .bss-app-main {
+    padding-left: max(0.875rem, env(safe-area-inset-left));
+    padding-right: max(0.875rem, env(safe-area-inset-right));
+  }
+
+  /* Slightly smaller headings / panel chrome so more fits per screen. */
+  .bss-page-title { font-size: clamp(1.25rem, 5.5vw, 1.5rem); }
+  .bss-panel-header { min-height: 0; padding: 0.85rem 1rem; }
+}
+
+@media (max-width: 400px) {
+  .bss-kpi-grid { gap: 0.5rem !important; }
+  .bss-kpi-card { min-height: 6.5rem; padding: 0.85rem; }
+  .bss-kpi-card strong { font-size: 1.15rem; }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ID / credential cards are a fixed pixel design (400×252 standard,
+   374×560 employment). Below the design width they used to squeeze and
+   collapse the worker's name into a vertical strip. Pin the card to its
+   design width and scale the whole scene down to fit the phone instead.
+   `zoom` scales layout too, so no leftover gap/overflow.
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .bss-app-main .bss-flip-card {
+    width: 400px !important;
+    max-width: 400px !important;
+  }
+
+  .bss-app-main .perspective-1000 { width: 100%; }
+}
+
+@media (max-width: 430px) { .bss-app-main .perspective-1000 { zoom: 0.93; } }
+@media (max-width: 410px) { .bss-app-main .perspective-1000 { zoom: 0.90; } }
+@media (max-width: 390px) { .bss-app-main .perspective-1000 { zoom: 0.87; } }
+@media (max-width: 370px) { .bss-app-main .perspective-1000 { zoom: 0.82; } }
+@media (max-width: 350px) { .bss-app-main .perspective-1000 { zoom: 0.77; } }
+@media (max-width: 330px) { .bss-app-main .perspective-1000 { zoom: 0.72; } }
+@media (max-width: 310px) { .bss-app-main .perspective-1000 { zoom: 0.67; } }
+

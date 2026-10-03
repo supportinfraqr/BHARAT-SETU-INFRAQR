@@ -245,7 +245,7 @@ export default function DocumentsModule() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-start gap-3">
           <button
             type="button"
@@ -260,7 +260,7 @@ export default function DocumentsModule() {
             <p className="text-sm text-gray-500 mt-1">Manage all your mandatory KYC, compliance, and system-generated credentials.</p>
           </div>
         </div>
-        <button type="button" onClick={() => void load()} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:border-gray-300">
+        <button type="button" onClick={() => void load()} className="self-start sm:self-auto whitespace-nowrap inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:border-gray-300">
           <RefreshCcw size={15} className={loading ? 'animate-spin' : ''} /> Refresh
         </button>
       </div>

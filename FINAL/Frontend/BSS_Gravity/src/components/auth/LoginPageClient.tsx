@@ -138,7 +138,7 @@ export default function OriginalLoginPage() {
 
   return (
     <>
-      <link href="/login-style.css?v=20260927" rel="stylesheet" />
+      <link href="/login-style.css?v=20261003" rel="stylesheet" />
       <div className="newLoginPage" aria-busy={isAuthenticating}>
         {/* MAIN SECTION */}
         <div className="newLoginMain">
