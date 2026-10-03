@@ -348,7 +348,7 @@ export default function OriginalLoginPage() {
                         </button>
                         
                         <div className="px-6 pt-6 pb-4 text-center mt-2">
-                          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">{t('secureAuth')}</h2>
+                          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">{t('secureAuth')}</h2>
                         </div>
 
               <div className="px-6 pb-6 flex-1 flex flex-col">

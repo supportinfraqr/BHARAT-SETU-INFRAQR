@@ -2984,3 +2984,46 @@ html:has(.newLoginPage) {
         font-size: 28px;
     }
 }
+
+/* ============================================================
+   MOBILE LOGIN FIX — the "Building a Stronger…" line laid out as one
+   wide nowrap row (text + two tricolour rules) and overflowed the phone
+   width, so it got clipped by overflow-x:hidden. Wrap + centre it and
+   drop the decorative rules on phones. (Appended last so it wins.)
+   ============================================================ */
+@media (max-width: 767px) {
+    /* The stats banner + bottom line were laid out as a ROW (both flex), so the
+       bottom line was pushed to the right edge and clipped. Stack them. */
+    .newLoginHeroBottom {
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        width: 100%;
+    }
+
+    .newLoginBottomMessage {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 8px 14px;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .newLoginBottomMessage .newLoginTriLine {
+        display: none;
+    }
+
+    .newLoginBottomMessage p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    /* Guard: nothing in the hero may exceed the screen. */
+    .newLoginHero * {
+        max-width: 100%;
+    }
+}
