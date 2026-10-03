@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { 
-  Briefcase, Building2, MapPin, CheckCircle2, Home, Search, Link2, Eye, ShieldCheck, Mic
+  Briefcase, Building2, MapPin, CheckCircle2, Home, Search, Link2, Eye, ShieldCheck
 } from 'lucide-react';
 import Link from 'next/link';
 import { useWorker } from '@/contexts/WorkerContext';
@@ -194,14 +194,6 @@ export default function WorkerRozgarSetuPage() {
             No job postings are available right now. Please check back later.
           </p>
         )}
-      </div>
-
-      {/* Floating Voice Guide */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <button className="bg-[#0B192C] text-white px-5 py-3 rounded-full text-xs font-bold flex items-center gap-2 shadow-2xl hover:scale-105 transition-transform">
-          <Mic size={16} className="text-blue-400" />
-          <span>सुनकर सीखें / Listen & Learn</span>
-        </button>
       </div>
     </div>
   );
