@@ -13,8 +13,8 @@ export default function EmployerAttendancePage() {
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Principal employer · Operations</p>
       <h1 className="text-2xl font-bold mt-1 flex items-center gap-2"><Camera size={22} /> Video Attendance</h1>
       <p className="text-sm text-gray-500 mt-1">
-        Start the camera attendance system for any of your sites. The camera turns on and recognised workers are
-        marked present automatically — the same system your contractors can start for their allotted sites.
+        Attendance is captured from the CCTV cameras configured for each site (set them up in CCTV Setup). No laptop or
+        mobile camera is used. Start the site to let the engine mark recognised workers present automatically.
       </p>
     </header>
 

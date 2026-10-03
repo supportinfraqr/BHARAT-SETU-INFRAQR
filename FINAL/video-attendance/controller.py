@@ -60,27 +60,29 @@ def _authorized() -> bool:
     return bool(CONTROL_TOKEN) and request.headers.get("X-Attendance-Token") == CONTROL_TOKEN
 
 
-def _runner(site: str, source: str) -> None:
-    """Own the child process for one site, restarting until stopped."""
+def _runner(site: str, camera: str, source: str) -> None:
+    """Own the child process for one (site, camera), restarting until stopped."""
+    key = f"{site}::{camera}"
     os.makedirs(LOG_DIR, exist_ok=True)
-    log_path = os.path.join(LOG_DIR, f"{site}.log")
+    safe = f"{site}__{camera}".replace("/", "_").replace(":", "_").replace(" ", "_")
+    log_path = os.path.join(LOG_DIR, f"{safe}.log")
     while True:
         with _lock:
-            if not _sessions.get(site, {}).get("active"):
+            if not _sessions.get(key, {}).get("active"):
                 break
         with open(log_path, "ab") as log:
-            log.write(f"\n=== start {time.strftime('%Y-%m-%d %H:%M:%S')} source={source} ===\n".encode())
+            log.write(f"\n=== start {time.strftime('%Y-%m-%d %H:%M:%S')} camera={camera} source={source} ===\n".encode())
             proc = subprocess.Popen(
                 [sys.executable, os.path.join(APP_DIR, "main.py"),
-                 "--no-display", "--site", site, "--source", source],
+                 "--no-display", "--site", site, "--camera", camera, "--source", source],
                 cwd=APP_DIR, stdout=log, stderr=subprocess.STDOUT,
             )
         with _lock:
-            if site in _sessions:
-                _sessions[site]["pid"] = proc.pid
+            if key in _sessions:
+                _sessions[key]["pid"] = proc.pid
         rc = proc.wait()
         with _lock:
-            s = _sessions.get(site)
+            s = _sessions.get(key)
             if s is None or not s.get("active"):
                 if s is not None:
                     s.update(status="stopped", pid=None, returncode=rc)
@@ -90,38 +92,46 @@ def _runner(site: str, source: str) -> None:
         time.sleep(RESTART_DELAY_S)
 
 
-def _start(site: str, source: str) -> dict:
+def _start(site: str, camera: str, source: str) -> dict:
+    key = f"{site}::{camera}"
     with _lock:
-        existing = _sessions.get(site)
+        existing = _sessions.get(key)
         if existing and existing.get("active"):
             return {"ok": True, "alreadyRunning": True, "session": _public(existing)}
         session = {
-            "site": site, "source": source, "active": True, "pid": None,
+            "site": site, "camera": camera, "source": source, "active": True, "pid": None,
             "started_at": time.time(), "restarts": 0, "returncode": None,
         }
-        _sessions[site] = session
-    threading.Thread(target=_runner, args=(site, source), daemon=True).start()
+        _sessions[key] = session
+    threading.Thread(target=_runner, args=(site, camera, source), daemon=True).start()
     return {"ok": True, "alreadyRunning": False, "session": _public(session)}
 
 
-def _stop(site: str) -> dict:
+def _stop(site: str, camera: str | None = None) -> dict:
     with _lock:
-        session = _sessions.get(site)
-        if session is None:
-            return {"ok": True, "alreadyStopped": True}
-        session["active"] = False
-        pid = session.get("pid")
-    if pid:
+        keys = [k for k, s in _sessions.items()
+                if s.get("site") == site and (camera is None or s.get("camera") == camera)]
+        if not keys:
+            return {"ok": True, "alreadyStopped": True, "stopped": []}
+        pids, stopped = [], []
+        for k in keys:
+            session = _sessions[k]
+            session["active"] = False
+            if session.get("pid"):
+                pids.append(session["pid"])
+            stopped.append(_public(session))
+    for pid in pids:
         try:
             os.kill(pid, 15)
         except ProcessLookupError:
             pass
-    return {"ok": True, "alreadyStopped": False}
+    return {"ok": True, "alreadyStopped": False, "stopped": stopped}
 
 
 def _public(session: dict) -> dict:
     return {
         "site": session.get("site"),
+        "camera": session.get("camera"),
         "source": session.get("source"),
         "active": bool(session.get("active")),
         "pid": session.get("pid"),
@@ -152,8 +162,24 @@ def session_start():
     site = str(body.get("site") or "").strip()
     if not site:
         return jsonify(error="site is required"), 400
+    cameras = body.get("cameras")
+    if isinstance(cameras, list) and cameras:
+        started = []
+        for entry in cameras:
+            if not isinstance(entry, dict):
+                continue
+            label = str(entry.get("label") or entry.get("camera") or "camera").strip() or "camera"
+            source = str(entry.get("source") or "").strip()
+            if not source:
+                continue
+            started.append(_start(site, label, source))
+        if not started:
+            return jsonify(error="no camera feeds supplied"), 400
+        return jsonify(ok=True, sessions=[r["session"] for r in started])
+    # Single-source fallback (kept for backward compatibility / manual testing).
     source = str(body.get("source") or "").strip() or DEFAULT_SOURCE
-    return jsonify(**_start(site, source))
+    camera = str(body.get("camera") or "camera").strip() or "camera"
+    return jsonify(**_start(site, camera, source))
 
 
 @app.post("/session/stop")
@@ -164,7 +190,40 @@ def session_stop():
     site = str(body.get("site") or "").strip()
     if not site:
         return jsonify(error="site is required"), 400
-    return jsonify(**_stop(site))
+    camera = str(body.get("camera") or "").strip() or None
+    return jsonify(**_stop(site, camera))
+
+
+@app.post("/probe")
+def probe():
+    """Open a feed and grab one frame — used by the Employer 'Test connection'
+    button before saving a camera."""
+    if not _authorized():
+        return jsonify(error="unauthorized"), 401
+    body = request.get_json(silent=True) or {}
+    source = str(body.get("source") or "").strip()
+    if not source:
+        return jsonify(error="source is required"), 400
+    try:
+        import cv2
+    except Exception as exc:  # pragma: no cover
+        return jsonify(ok=False, error=f"OpenCV unavailable: {exc}"), 200
+    target = int(source) if source.isdigit() else source
+    cap = cv2.VideoCapture(target)
+    try:
+        if hasattr(cv2, "CAP_PROP_OPEN_TIMEOUT_MSEC"):
+            cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 8000)
+        if hasattr(cv2, "CAP_PROP_READ_TIMEOUT_MSEC"):
+            cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 8000)
+        if not cap.isOpened():
+            return jsonify(ok=False, error="Could not open the feed (check IP, port, path and login)."), 200
+        ok, frame = cap.read()
+    finally:
+        cap.release()
+    if not ok or frame is None:
+        return jsonify(ok=False, error="Connected, but no video frame was received."), 200
+    height, width = frame.shape[:2]
+    return jsonify(ok=True, width=int(width), height=int(height)), 200
 
 
 @app.get("/detections")

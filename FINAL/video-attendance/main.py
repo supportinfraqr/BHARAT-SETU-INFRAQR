@@ -198,12 +198,17 @@ def main() -> int:
         entry = next((c for c in config.get("cameras", []) or []
                       if str(c.get("name")) == args.camera), None)
         if entry is None:
-            print(f"[main] unknown camera '{args.camera}' (see --list-cameras)")
-            return 2
-        cam_name = str(entry["name"])
-        apply_source_override(config, str(entry["source"]))
-        if not args.web and entry.get("web_port"):
-            web_port = int(entry["web_port"])
+            # Employer-defined camera (from CCTV Setup): accept the label as long
+            # as an explicit --source is supplied. No config.yaml entry needed.
+            if not args.source:
+                print(f"[main] unknown camera '{args.camera}' (see --list-cameras)")
+                return 2
+            cam_name = str(args.camera)
+        else:
+            cam_name = str(entry["name"])
+            apply_source_override(config, str(entry["source"]))
+            if not args.web and entry.get("web_port"):
+                web_port = int(entry["web_port"])
     if args.source:
         apply_source_override(config, args.source)
 

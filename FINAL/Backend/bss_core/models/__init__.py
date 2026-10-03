@@ -89,6 +89,7 @@ from .learning import (
 from .submissions import SubmissionEvidence
 from .aadhaar import AadhaarChallenge
 from .digilocker import DigiLockerProfile, DigiLockerDocument, DigiLockerSession
+from .cctv import SiteCctvCamera, encrypt_cctv_password, decrypt_cctv_password
 from .entitylocker import EntityLockerAuth
 from .engagement import (
     UserPreference,
@@ -169,6 +170,7 @@ __all__ = [
     "BssStaffProfile",
     "Site", "SiteDocument", "SiteGate", "SiteLicense", "SiteOrder",
     "SiteBocwRegistration", "SiteClraRegistration",
+    "SiteCctvCamera", "encrypt_cctv_password", "decrypt_cctv_password",
     "WorkerContractorBinding", "ContractorEmployerBinding", "ContractorSiteAllotment", "ContractorJob", "RozgarRequest",
     "ConsentChallenge", "SmsOtp",
     "WorkerIdentity", "WorkerAddressMobility", "WorkerFamilyDependant",

@@ -136,8 +136,8 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
       setCamDetections(body.data.sightings ?? []);
       setCamMarked(body.data.markedToday ?? 0);
       setCameraNotice(body.data.running
-        ? `AI CCTV attendance camera started for ${body.data.siteName} — recording live detections for this site.`
-        : `AI CCTV attendance camera stopped for ${body.data.siteName}.`);
+        ? `CCTV attendance started for ${body.data.siteName} — using the site's configured cameras.`
+        : `CCTV attendance stopped for ${body.data.siteName}.`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Camera action failed.');
     } finally { setCamBusy(false); }
@@ -152,10 +152,11 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
         onClick={toggleCamera}
         className={`h-10 px-4 rounded-lg text-white text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors disabled:opacity-60 ${camRunning ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
       >
-        <Camera size={16}/>{camBusy ? 'Working…' : camRunning ? 'Stop AI Camera' : 'Start AI Camera'}
+        <Camera size={16}/>{camBusy ? 'Working…' : camRunning ? 'Stop CCTV Attendance' : 'Start CCTV Attendance'}
       </button>
       <button onClick={() => setQrOpen(true)} className="h-10 px-4 rounded-lg border border-gray-200 text-gray-700 text-sm font-semibold flex items-center gap-2 hover:bg-gray-50"><QrCode size={15}/>Site QR</button>
       {editing ? <><button onClick={() => setEditing(false)} className="h-10 px-4 rounded-lg border border-gray-200 text-gray-700 text-sm font-semibold">Cancel</button><button onClick={saveInline} disabled={busy} className="h-10 px-4 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-60"><Save size={15}/>{busy ? 'Saving…' : 'Save changes'}</button></> : <button onClick={startEdit} className="h-10 px-4 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center gap-2"><Pencil size={15}/>Edit</button>}
+      <Link href="/employer/cctv-setup" className="h-10 px-4 rounded-lg border border-gray-200 text-gray-700 text-sm font-semibold flex items-center gap-2 hover:bg-gray-50"><Camera size={15}/>CCTV Setup</Link>
       <button onClick={() => setConfirmDelete(true)} disabled={busy} className="h-10 px-4 rounded-lg border border-red-200 text-red-600 text-sm font-semibold flex items-center gap-2 hover:bg-red-50"><Trash2 size={15}/>Delete</button>
     </div></div></header>
 
@@ -163,7 +164,7 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-800 font-semibold flex items-center justify-between shadow-xs">
         <span className="flex items-center gap-2">
           <span className={`w-2.5 h-2.5 rounded-full bg-emerald-500 ${camRunning ? 'animate-pulse' : ''}`} />
-          {cameraNotice || `AI CCTV attendance camera running for ${current.name}.`}
+          {cameraNotice || `CCTV attendance running for ${current.name}.`}
           {camRunning && <span className="text-emerald-700/90 font-normal">· {camDetections.length} detection(s) · {camMarked} worker(s) marked today</span>}
         </span>
         <button onClick={() => setCameraNotice('')} className="text-emerald-700 hover:underline">Dismiss</button>

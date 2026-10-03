@@ -23,6 +23,7 @@ from .portals import *  # noqa: F401,F403
 from .letter_templates import *  # noqa: F401,F403
 from .register_templates import *  # noqa: F401,F403
 from .attendance import *  # noqa: F401,F403
+from .cctv import *  # noqa: F401,F403
 from .audit_reports import *  # noqa: F401,F403
 from .admin_bulk import *  # noqa: F401,F403
 from .form_names import *  # noqa: F401,F403

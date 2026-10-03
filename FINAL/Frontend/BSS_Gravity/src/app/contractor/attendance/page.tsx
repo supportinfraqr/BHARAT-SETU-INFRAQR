@@ -115,7 +115,7 @@ export default function ContractorAttendancePage() {
       </div>
     </section>
 
-    {/* Video (camera) attendance — shared panel: start the session + camera */}
+    {/* CCTV attendance — shared panel: uses the employer-configured site cameras */}
     <VideoAttendancePanel role="contractor" sites={sites} />
 
     <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">

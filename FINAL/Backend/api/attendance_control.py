@@ -51,24 +51,41 @@ def _request(method, path, payload=None, params=None, timeout=DEFAULT_TIMEOUT):
         return {}
 
 
-def start_session(site_key, source=None):
-    payload = {"site": str(site_key)}
-    if source:
-        payload["source"] = str(source)
+def start_session(site_key, cameras=None):
+    """Start the CCTV pipelines for a site.
+
+    ``cameras`` is a list of ``{"label", "source", "area"}`` dicts — one engine
+    process is spawned per camera by the controller. Device/webcam sources are
+    never accepted here; attendance only ever runs off configured CCTV feeds.
+    """
+    payload = {"site": str(site_key), "cameras": list(cameras or [])}
     return _request("POST", "/session/start", payload)
 
 
-def stop_session(site_key):
-    return _request("POST", "/session/stop", {"site": str(site_key)})
+def stop_session(site_key, camera=None):
+    payload = {"site": str(site_key)}
+    if camera:
+        payload["camera"] = str(camera)
+    return _request("POST", "/session/stop", payload)
+
+
+def probe(source):
+    """Ask the engine to open a feed and grab one frame (connection test)."""
+    return _request("POST", "/probe", {"source": str(source)}, timeout=30)
 
 
 def list_sessions():
     return _request("GET", "/sessions").get("sessions", [])
 
 
-def session_for(site_key):
+def session_for(site_key, camera=None):
     key = str(site_key)
-    return next((s for s in list_sessions() if str(s.get("site")) == key), None)
+    for session in list_sessions():
+        if str(session.get("site")) != key:
+            continue
+        if camera is None or str(session.get("camera") or "") == str(camera):
+            return session
+    return None
 
 
 def enroll(person, images):

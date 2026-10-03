@@ -61,6 +61,10 @@ class Attendance(models.Model):
     gps_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     gps_long = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     is_geofence_ok = models.BooleanField(null=True, blank=True)
+    # Which configured CCTV camera / attendance area produced this mark (blank
+    # for non-CCTV capture).
+    camera_label = models.CharField(max_length=120, blank=True)
+    camera_area = models.CharField(max_length=120, blank=True)
     is_verified = models.BooleanField(default=False)
     verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name="+")

@@ -1,16 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, CameraOff, Radio, Video } from 'lucide-react';
+import Link from 'next/link';
+import { Camera, CameraOff, Radio, Settings2, Video } from 'lucide-react';
 
 type SiteOption = { id: string; name: string; code?: string };
-type Sighting = { id: number; name: string | null; tsStart: number };
+type Sighting = { id: number; name: string | null; tsStart: number; camera?: string | null };
+type CameraRow = { label: string; area: string; enabled: boolean; configured: boolean; running?: boolean };
 
 /**
- * Video (camera) attendance control — shared by the Contractor and Employer
- * portals. A single "Start" turns the site's face-recognition session on AND
- * opens the device camera, so the camera starts and attendance begins
- * immediately; "Stop" closes the camera and ends the session.
+ * CCTV attendance control — shared by the Contractor and Employer portals.
+ * Attendance runs ONLY from the employer-configured site CCTV feeds (set up in
+ * Employee → CCTV Setup). There is no device/laptop camera here: pressing Start
+ * launches the site's configured camera feeds on the attendance engine, and the
+ * engine marks recognised workers present automatically.
  */
 export default function VideoAttendancePanel({
   role,
@@ -27,139 +30,89 @@ export default function VideoAttendancePanel({
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [sightings, setSightings] = useState<Sighting[]>([]);
+  const [cameras, setCameras] = useState<CameraRow[]>([]);
   const [marked, setMarked] = useState(0);
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [live, setLive] = useState(false);
-  const [frameNames, setFrameNames] = useState<Array<{ name: string; known: boolean }>>([]);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const stoppedManually = useRef(false);
 
   const effectiveSite = siteId || String(sites[0]?.id ?? '');
 
-  const closeCamera = useCallback(() => {
-    setLive(false);
-    setFrameNames([]);
-    setStream(prev => { prev?.getTracks().forEach(track => track.stop()); return null; });
+  const apply = useCallback((data: {
+    running: boolean; sightings?: Sighting[]; markedToday?: number; cameras?: CameraRow[]; siteName?: string;
+  }) => {
+    setRunning(data.running);
+    if (data.sightings) setSightings(data.sightings);
+    if (typeof data.markedToday === 'number') setMarked(data.markedToday);
+    if (data.cameras) setCameras(data.cameras);
   }, []);
 
-  const openCamera = useCallback(async () => {
-    try {
-      const media = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false,
-      });
-      setStream(media);
-      setLive(true);
-      return true;
-    } catch {
-      setError('Camera permission denied — the session is running but no device camera is feeding it.');
-      return false;
-    }
-  }, []);
+  const call = useCallback(async (action: 'status' | 'start' | 'stop' | 'sync') => {
+    const response = await fetch(api, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ siteId: Number(effectiveSite), action }),
+    });
+    const body = await response.json().catch(() => ({})) as {
+      data?: { running: boolean; siteName: string; sightings?: Sighting[]; markedToday?: number; cameras?: CameraRow[] }; error?: string;
+    };
+    if (!response.ok || !body.data) throw new Error(body.error ?? 'CCTV attendance request failed.');
+    apply(body.data);
+    return body.data;
+  }, [api, effectiveSite, apply]);
 
   const start = useCallback(async () => {
     if (!effectiveSite) { setError('Select a site first.'); return; }
     setBusy(true); setError(''); setNotice('');
     try {
-      const response = await fetch(api, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siteId: Number(effectiveSite), action: 'start' }),
-      });
-      const body = await response.json().catch(() => ({})) as {
-        data?: { running: boolean; siteName: string; sightings: Sighting[]; markedToday: number }; error?: string;
-      };
-      if (!response.ok || !body.data) throw new Error(body.error ?? 'Could not start the attendance camera.');
+      stoppedManually.current = false;
+      const data = await call('start');
       setSiteId(effectiveSite);
-      setRunning(body.data.running);
-      setSightings(body.data.sightings ?? []);
-      setMarked(body.data.markedToday ?? 0);
-      const opened = await openCamera();
-      setNotice(opened
-        ? `Attendance started for ${body.data.siteName} — camera on, recognised workers are being marked.`
-        : `Attendance session started for ${body.data.siteName}.`);
+      setNotice(`CCTV attendance running for ${data.siteName} — recognised workers are being marked.`);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not start the attendance camera.');
+      setError(reason instanceof Error ? reason.message : 'Could not start CCTV attendance.');
     } finally { setBusy(false); }
-  }, [api, effectiveSite, openCamera]);
+  }, [call, effectiveSite]);
 
   const stop = useCallback(async () => {
     setBusy(true); setError(''); setNotice('');
-    closeCamera();
+    stoppedManually.current = true;
     try {
-      const response = await fetch(api, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siteId: Number(effectiveSite), action: 'stop' }),
-      });
-      const body = await response.json().catch(() => ({})) as { data?: { running: boolean; siteName: string }; error?: string };
-      if (!response.ok || !body.data) throw new Error(body.error ?? 'Could not stop the attendance camera.');
-      setRunning(body.data.running);
-      setNotice(`Attendance stopped for ${body.data.siteName}.`);
+      const data = await call('stop');
+      setNotice(`CCTV attendance stopped for ${data.siteName}.`);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not stop the attendance camera.');
+      setError(reason instanceof Error ? reason.message : 'Could not stop CCTV attendance.');
     } finally { setBusy(false); }
-  }, [api, effectiveSite, closeCamera]);
+  }, [call]);
 
+  // Load status when the site changes; auto-start once a site has cameras.
   useEffect(() => {
-    if (stream && videoRef.current) {
-      videoRef.current.srcObject = stream;
-      void videoRef.current.play().catch(() => {});
-    }
-  }, [stream]);
+    if (!effectiveSite) return;
+    let active = true;
+    void (async () => {
+      try {
+        const data = await call('status');
+        if (!active) return;
+        const usable = (data.cameras ?? []).some(c => c.enabled && c.configured);
+        if (usable && !data.running && !stoppedManually.current) {
+          const started = await call('start');
+          if (active) setNotice(`CCTV attendance running for ${started.siteName}.`);
+        }
+      } catch { /* handled on explicit start */ }
+    })();
+    return () => { active = false; };
+  }, [effectiveSite, call]);
 
-  // Stop the webcam when leaving the page so the light never lingers.
-  useEffect(() => () => { stream?.getTracks().forEach(track => track.stop()); }, [stream]);
-
-  // While a session is running, poll the pipeline for detections.
+  // While running, poll for detections.
   useEffect(() => {
     if (!running || !effectiveSite) return;
     let active = true;
     const tick = async () => {
-      try {
-        const response = await fetch(api, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ siteId: Number(effectiveSite), action: 'sync' }),
-        });
-        const body = await response.json().catch(() => ({})) as { data?: { sightings: Sighting[]; markedToday: number } };
-        if (active && body.data) { setSightings(body.data.sightings ?? []); setMarked(body.data.markedToday ?? 0); }
-      } catch { /* transient; retry next tick */ }
+      try { await call('sync'); } catch { /* transient; retry next tick */ }
     };
-    void tick();
-    const timer = setInterval(tick, 10_000);
+    const timer = setInterval(() => { if (active) void tick(); }, 10_000);
     return () => { active = false; clearInterval(timer); };
-  }, [running, effectiveSite, api]);
+  }, [running, effectiveSite, call]);
 
-  // While the camera is live, send a frame every few seconds for recognition.
-  useEffect(() => {
-    if (!live) return;
-    let active = true;
-    const tick = async () => {
-      const video = videoRef.current, canvas = canvasRef.current;
-      if (!video || !canvas || !video.videoWidth) return;
-      const scale = Math.min(1, 640 / video.videoWidth);
-      canvas.width = Math.round(video.videoWidth * scale);
-      canvas.height = Math.round(video.videoHeight * scale);
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const image = canvas.toDataURL('image/jpeg', 0.7);
-      try {
-        const response = await fetch(api, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ siteId: Number(effectiveSite), action: 'frame', image }),
-        });
-        const body = await response.json().catch(() => ({})) as {
-          data?: { sightings: Sighting[]; markedToday: number; frame?: { detections?: Array<{ name: string; known: boolean }> } };
-        };
-        if (active && body.data) {
-          setSightings(body.data.sightings ?? []);
-          setMarked(body.data.markedToday ?? 0);
-          setFrameNames(body.data.frame?.detections ?? []);
-        }
-      } catch { /* transient; retry next tick */ }
-    };
-    void tick();
-    const timer = setInterval(tick, 2500);
-    return () => { active = false; clearInterval(timer); };
-  }, [live, effectiveSite, api]);
+  const configuredCount = cameras.filter(c => c.configured).length;
+  const noCameras = cameras.length === 0;
 
   return (
     <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 rounded-2xl border border-slate-700 text-white p-6 shadow-xl space-y-5">
@@ -167,18 +120,18 @@ export default function VideoAttendancePanel({
         <div>
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${running ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
-            <span className={`text-xs font-extrabold uppercase tracking-widest ${running ? 'text-emerald-400' : 'text-slate-400'}`}>{running ? 'Live — tracking' : 'Video attendance'}</span>
+            <span className={`text-xs font-extrabold uppercase tracking-widest ${running ? 'text-emerald-400' : 'text-slate-400'}`}>{running ? 'Live — tracking CCTV' : 'CCTV attendance'}</span>
           </div>
-          <h2 className="text-lg font-bold text-white mt-1">Camera / Video Attendance</h2>
-          <p className="text-xs text-slate-300 mt-1">Pick a site and start the system — the camera turns on and recognised workers are marked present automatically.</p>
+          <h2 className="text-lg font-bold text-white mt-1">CCTV Attendance</h2>
+          <p className="text-xs text-slate-300 mt-1">Attendance is captured from the site&apos;s CCTV cameras configured by the employer. No laptop or mobile camera is used.</p>
         </div>
         <button
           type="button"
-          disabled={busy || sites.length === 0}
+          disabled={busy || sites.length === 0 || noCameras}
           onClick={() => void (running ? stop() : start())}
           className={`h-11 px-5 rounded-xl text-xs font-extrabold shadow-md flex items-center justify-center gap-2 transition-all self-start sm:self-auto disabled:opacity-50 ${running ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950'}`}
         >
-          {running ? <><CameraOff size={16}/> Stop Attendance Camera</> : <><Camera size={16}/> Start Attendance Camera</>}
+          {running ? <><CameraOff size={16}/> Stop CCTV Attendance</> : <><Camera size={16}/> Start CCTV Attendance</>}
         </button>
       </div>
 
@@ -188,7 +141,7 @@ export default function VideoAttendancePanel({
       <div className="grid md:grid-cols-3 gap-4">
         <div className="bg-slate-950/60 rounded-xl p-4 border border-slate-800 space-y-2">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Site</span>
-          <select value={effectiveSite} onChange={e => setSiteId(e.target.value)} disabled={running} className="w-full h-9 bg-slate-900 border border-slate-700 rounded-lg px-2 text-xs font-semibold text-slate-200 focus:outline-none disabled:opacity-60">
+          <select value={effectiveSite} onChange={e => { setSiteId(e.target.value); stoppedManually.current = false; }} disabled={running} className="w-full h-9 bg-slate-900 border border-slate-700 rounded-lg px-2 text-xs font-semibold text-slate-200 focus:outline-none disabled:opacity-60">
             {sites.length === 0 && <option value="">No sites available</option>}
             {sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` · ${s.code}` : ''}</option>)}
           </select>
@@ -196,50 +149,68 @@ export default function VideoAttendancePanel({
         </div>
 
         <div className="bg-slate-950/60 rounded-xl p-4 border border-slate-800 space-y-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Recognised events</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">CCTV cameras</span>
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-black text-white">{sightings.length}</span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">This site</span>
+            <span className="text-2xl font-black text-white">{configuredCount}</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">Configured</span>
           </div>
-          <p className="text-[10px] text-emerald-300">Workers marked today: <strong>{marked}</strong></p>
+          <p className="text-[10px] text-slate-400">{cameras.length - configuredCount} incomplete / disabled</p>
         </div>
 
         <div className="bg-slate-950/60 rounded-xl p-4 border border-slate-800 space-y-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Latest events</span>
-          {sightings.length === 0
-            ? <p className="text-[11px] text-slate-500">No events yet.</p>
-            : <ul className="space-y-1">{sightings.slice(0, 4).map(d => (
-                <li key={d.id} className="text-[11px] text-slate-200 flex justify-between gap-2">
-                  <span>{d.name || 'Unknown / QR'}</span>
-                  <span className="text-slate-500">{new Date((d.tsStart || 0) * 1000).toLocaleTimeString()}</span>
-                </li>
-              ))}</ul>}
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Recognised today</span>
+          <div className="flex items-center justify-between">
+            <span className="text-2xl font-black text-white">{marked}</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Workers marked</span>
+          </div>
+          <p className="text-[10px] text-emerald-300">{sightings.length} live recognition events</p>
         </div>
       </div>
 
       <div className="bg-slate-950/70 rounded-xl border border-slate-800 p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><Video size={12}/> Camera (this device)</span>
-          {live
-            ? <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-300"><Radio size={12}/> Live</span>
-            : <span className="text-[10px] font-bold text-slate-500">Off</span>}
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><Video size={12}/> Site CCTV cameras</span>
+          {running ? <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-300"><Radio size={12}/> Live</span> : <span className="text-[10px] font-bold text-slate-500">Off</span>}
         </div>
-        <div className="grid md:grid-cols-2 gap-4 items-start">
-          <div className="relative rounded-lg overflow-hidden border border-slate-700 bg-black aspect-video">
-            <video ref={videoRef} playsInline muted className="w-full h-full object-cover" />
-            {!live && <div className="absolute inset-0 grid place-items-center text-slate-500 text-xs">Camera off — press Start</div>}
+
+        {noCameras ? (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-200 space-y-2">
+            <p className="font-bold">No CCTV cameras configured for this site yet.</p>
+            {role === 'employer' ? (
+              <>
+                <p>Add the site&apos;s camera feeds (IP address, camera, login) in CCTV Setup, then attendance will use them automatically.</p>
+                <Link href="/employer/cctv-setup" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-amber-400 text-slate-950 font-bold"><Settings2 size={14}/> Open CCTV Setup</Link>
+              </>
+            ) : (
+              <p>Ask your principal employer to configure the site&apos;s CCTV cameras.</p>
+            )}
           </div>
-          <div className="space-y-2">
-            <p className="text-[11px] text-slate-300">Now in frame:</p>
-            {frameNames.length === 0
-              ? <p className="text-[11px] text-slate-500">No face detected yet.</p>
-              : <ul className="space-y-1">{frameNames.map((d, i) => (
-                  <li key={i} className={`text-[11px] font-semibold ${d.known ? 'text-emerald-300' : 'text-amber-300'}`}>{d.known ? `✓ ${d.name}` : 'Unknown face'}</li>
-                ))}</ul>}
-            <p className="text-[11px] text-slate-400">Workers marked today: <strong className="text-emerald-300">{marked}</strong></p>
-            <canvas ref={canvasRef} className="hidden" />
+        ) : (
+          <div className="grid md:grid-cols-2 gap-4 items-start">
+            <ul className="space-y-1.5">
+              {cameras.map(c => (
+                <li key={c.label} className="flex items-center justify-between gap-2 text-[11px]">
+                  <span className="text-slate-200 font-semibold truncate">{c.label}{c.area && c.area !== c.label ? <span className="text-slate-400 font-normal"> · {c.area}</span> : null}</span>
+                  <span className={`text-[10px] font-bold ${!c.enabled ? 'text-slate-500' : c.configured ? (c.running ? 'text-emerald-300' : 'text-sky-300') : 'text-amber-300'}`}>
+                    {!c.enabled ? 'Disabled' : c.configured ? (c.running ? 'Live' : 'Ready') : 'Incomplete'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="space-y-2">
+              <p className="text-[11px] text-slate-300">Latest CCTV recognition events:</p>
+              {sightings.length === 0
+                ? <p className="text-[11px] text-slate-500">No events yet.</p>
+                : <ul className="space-y-1">{sightings.slice(0, 6).map(d => (
+                    <li key={d.id} className="text-[11px] text-slate-200 flex justify-between gap-2">
+                      <span className="truncate">{d.name || 'Unknown / QR'}{d.camera ? <span className="text-slate-500"> · {d.camera}</span> : null}</span>
+                      <span className="text-slate-500">{new Date((d.tsStart || 0) * 1000).toLocaleTimeString()}</span>
+                    </li>
+                  ))}</ul>}
+              {role === 'employer' && <Link href="/employer/cctv-setup" className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-sky-300 hover:text-sky-200"><Settings2 size={13}/> Manage CCTV cameras</Link>}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

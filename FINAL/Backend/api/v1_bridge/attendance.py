@@ -395,7 +395,7 @@ def _worker_for_token(token):
     return User.objects.filter(username=token, role="worker").first()
 
 
-def _mark_worker_attendance(worker, site, verification, score):
+def _mark_worker_attendance(worker, site, verification, score, camera_label="", camera_area=""):
     """Upsert today's CAMERA attendance for one worker (idempotent per day)."""
     from bss_core.models import Attendance
 
@@ -415,6 +415,8 @@ def _mark_worker_attendance(worker, site, verification, score):
         "is_verified": True,
         "remarks": "AI CCTV site attendance",
         "confidence_pct": confidence,
+        "camera_label": camera_label or "",
+        "camera_area": camera_area or "",
     }
     record = Attendance.objects.filter(worker=worker, attendance_date=date.today()).first()
     if record:
@@ -428,23 +430,28 @@ def _mark_worker_attendance(worker, site, verification, score):
 
 def _sync_attendance(site, payload):
     """Best-effort: map the pipeline's recent detections for a site to workers
-    and mark today's attendance. Returns a summary."""
+    and mark today's attendance. Records which camera/area produced each mark."""
+    from bss_core.models import SiteCctvCamera
+
+    area_map = {c.label: (c.area or c.label) for c in SiteCctvCamera.objects.filter(site=site)}
     created = updated = 0
     seen = set()
     candidates = []
     for sighting in payload.get("sightings", []):
         worker = _worker_for_token(sighting.get("name"))
         if worker is not None:
-            candidates.append((worker, "face_image", sighting.get("distance")))
+            cam = str(sighting.get("camera") or "")
+            candidates.append((worker, "face_image", sighting.get("distance"), cam, area_map.get(cam, "")))
     for scan in payload.get("codeScans", []):
         worker = _worker_for_token(scan.get("matchedLabel")) or _worker_for_token(scan.get("payload"))
         if worker is not None:
-            candidates.append((worker, "qr_worker", scan.get("score")))
-    for worker, verification, score in candidates:
+            cam = str(scan.get("camera") or "")
+            candidates.append((worker, "qr_worker", scan.get("score"), cam, area_map.get(cam, "")))
+    for worker, verification, score, camera_label, camera_area in candidates:
         if worker.id in seen:
             continue
         seen.add(worker.id)
-        if _mark_worker_attendance(worker, site, verification, score):
+        if _mark_worker_attendance(worker, site, verification, score, camera_label, camera_area):
             created += 1
         else:
             updated += 1
@@ -479,42 +486,51 @@ def _controllable_site(user, site_id):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def attendance_camera_session(request):
-    """Start/stop the live CCTV attendance pipeline for one site and read its
-    recent detections. Employers control their own sites; contractors only
-    sites allotted to them (APPROVED)."""
+    """Start/stop the site's CCTV attendance engine and read its recent
+    detections. Attendance runs ONLY from the employer-configured CCTV feeds —
+    a device/webcam source is never accepted. Employers control their own
+    sites; contractors only sites allotted to them (APPROVED)."""
+    from bss_core.models import SiteCctvCamera
     from .. import attendance_control as control
+    from .cctv import cameras_for_site
 
     if request.method == "GET":
         site_id = request.query_params.get("siteId")
-        action, source = "status", None
+        action = "status"
     else:
         body = request.data if isinstance(request.data, dict) else {}
         site_id = body.get("siteId")
         action = str(body.get("action") or "status").strip().lower()
-        source = body.get("source")
-        image = body.get("image")
 
     site = _controllable_site(request.user, site_id)
     if site is None:
         return Response({"error": "You do not have access to this site."},
                         status=status.HTTP_403_FORBIDDEN)
 
+    if action == "frame":
+        return Response({"error": "Device-camera attendance is disabled. Attendance is captured from the site's configured CCTV feeds."},
+                        status=status.HTTP_400_BAD_REQUEST)
+
     key = _site_key(site)
-    frame_result = None
+    configured = list(SiteCctvCamera.objects.filter(site=site).order_by("sort_order", "id"))
+    display = [{"label": c.label, "area": c.area or c.label, "enabled": c.enabled,
+                "configured": bool(c.build_source())} for c in configured]
     try:
         if action == "start":
-            control.start_session(key, source=source)
+            cams = cameras_for_site(site)
+            if not cams:
+                return Response({"error": "No CCTV cameras are configured for this site. Add them in CCTV Setup first."},
+                                status=status.HTTP_400_BAD_REQUEST)
+            control.start_session(key, cameras=cams)
         elif action == "stop":
             control.stop_session(key)
-        elif action == "frame" and image:
-            frame_result = control.recognize_frame(key, image)
         session = control.session_for(key)
         payload = control.detections(key, limit=50)
     except control.AttendanceControlError as exc:
         return Response({"error": str(exc)}, status=exc.status_code)
 
     running = bool(session and session.get("active"))
-    marked = _sync_attendance(site, payload) if (action in ("sync", "frame") and (running or action == "frame")) else None
+    marked = _sync_attendance(site, payload) if (action == "sync" and running) else None
 
     return Response({"data": {
         "siteId": site.id,
@@ -522,9 +538,9 @@ def attendance_camera_session(request):
         "siteName": site.site_name,
         "running": running,
         "session": session,
+        "cameras": display,
         "sightings": payload.get("sightings", []),
         "codeScans": payload.get("codeScans", []),
-        "frame": frame_result,
         "marked": marked,
         "markedToday": _attendance_marked_today(site),
     }}, status=status.HTTP_200_OK)

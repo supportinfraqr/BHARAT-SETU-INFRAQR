@@ -33,8 +33,8 @@ export default function EmployerSitesPage() {
       if (!response.ok || !body.data) throw new Error(body.error ?? 'Camera action failed.');
       setCamState(prev => ({ ...prev, [site.id]: body.data!.running }));
       setDefaultNotice(body.data.running
-        ? `AI CCTV attendance started for ${body.data.siteName}.`
-        : `AI CCTV attendance stopped for ${body.data.siteName}.`);
+        ? `CCTV attendance started for ${body.data.siteName}.`
+        : `CCTV attendance stopped for ${body.data.siteName}.`);
     } catch (reason) {
       setDefaultError(reason instanceof Error ? reason.message : 'Camera action failed.');
     } finally { setCamBusyId(null); }
@@ -90,7 +90,7 @@ export default function EmployerSitesPage() {
         <div className="p-4 text-[11px] text-gray-500 flex items-center gap-2"><CalendarDays size={13}/><span>{site.startDate}</span><span>to</span><span>{site.endDate}</span></div>
         <div className="grid grid-cols-4 divide-x divide-gray-100 border-t border-gray-100">
           <Link href={`/employer/sites/${site.id}`} className="h-9 bg-gray-50 text-[11px] font-semibold text-[#073B67] flex items-center justify-center gap-1 hover:bg-gray-100">View <ArrowRight size={13}/></Link>
-          <button type="button" disabled={camBusyId === site.id} onClick={() => void toggleCamera(site)} className={`h-9 text-[11px] font-bold flex items-center justify-center gap-1 disabled:opacity-60 ${camState[site.id] ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'}`}><Camera size={13}/>{camState[site.id] ? 'Stop' : 'AI Cam'}</button>
+          <button type="button" disabled={camBusyId === site.id} onClick={() => void toggleCamera(site)} className={`h-9 text-[11px] font-bold flex items-center justify-center gap-1 disabled:opacity-60 ${camState[site.id] ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'}`}><Camera size={13}/>{camState[site.id] ? 'Stop CCTV' : 'Start CCTV'}</button>
           <button type="button" onClick={() => setQrSite(site)} disabled={!site.qrToken} className="h-9 bg-gray-50 text-[11px] font-semibold text-[#073B67] flex items-center justify-center gap-1 hover:bg-gray-100 disabled:opacity-50"><QrCode size={13}/>QR</button>
           <button type="button" onClick={() => void setDefaultSite(site.id)} disabled={defaultBusy || isDefault} className={`h-9 text-[11px] font-semibold flex items-center justify-center gap-1 disabled:opacity-70 ${isDefault ? 'bg-orange-50 text-[#F47A32]' : 'bg-gray-50 text-[#073B67] hover:bg-gray-100'}`}><Star size={13}/>{isDefault ? 'Default' : 'Default'}</button>
         </div>
