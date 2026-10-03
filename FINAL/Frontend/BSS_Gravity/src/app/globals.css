@@ -206,8 +206,16 @@ html.bss-reduce-motion *, html.bss-reduce-motion *::before, html.bss-reduce-moti
   overscroll-behavior: contain;
   padding-left: max(1rem, env(safe-area-inset-left));
   padding-right: max(1rem, env(safe-area-inset-right));
-  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  /* Clear the floating "Listen & Learn" action so the last items (Language,
+     Sign Out) can always be scrolled to and tapped. */
+  padding-bottom: max(6rem, calc(env(safe-area-inset-bottom) + 5rem));
   -webkit-overflow-scrolling: touch;
+}
+
+/* While the burger menu is open, hide the floating Listen & Learn action so it
+   can never overlap the menu's Language / Sign Out items. */
+body:has(.bss-mobile-menu) .bss-voice-guide {
+  display: none !important;
 }
 
 .bss-mobile-menu a,
