@@ -21,6 +21,12 @@
 - The BSS backend reaches it via `ATTENDANCE_CONTROL_URL` / `ATTENDANCE_CONTROL_TOKEN`.
 - **Never** deploy the BSS app stack (`deploy/`, backend, frontend) here — the BSS staging app lives on `3.109.68.143`.
 
+**Mobile frontend server (separate — frontend only):**
+- Host `43.204.194.237` (`ip-172-31-15-15`), Ubuntu 26.04, key `FINAL/Requirements/mlogin.bharatshramsetu.com.pem` (`chmod 400` first).
+- Serves a **mobile-optimized frontend only** (no backend/db) at **`https://mlogin.bharatshramsetu.com`**: `~/bss/FINAL/deploy-mobile` (compose project **`bss-mobile`** → `frontend` + `nginx`).
+- The Next app talks to the live backend via `BSS_API_BASE_URL`/`BSS_AUTH_API_URL=https://login.bharatshramsetu.com`; `/media` & `/static` are proxied to the main app server. TLS via certbot (`/etc/letsencrypt/live/mlogin.bharatshramsetu.com`).
+- Deploy: rsync `Frontend/BSS_Gravity/` + `deploy-mobile/`, then `sudo docker compose up -d --build frontend` (never touches prod backend/data).
+
 Staging and production are separate servers with separate databases. Data on one does not affect the other.
 
 ## Terminology (important)
