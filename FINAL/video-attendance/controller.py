@@ -23,6 +23,10 @@ import sys
 import threading
 import time
 
+# Cap ffmpeg connect/read waits so a wrong camera address fails fast (8s) on the
+# "Test connection" probe instead of the ffmpeg default (~30s).
+os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS", "rw_timeout;8000000|stimeout;8000000")
+
 from flask import Flask, jsonify, request, send_file
 
 from src.database import Database
