@@ -3001,6 +3001,12 @@ html:has(.newLoginPage) {
         width: 100%;
     }
 
+    /* The blue stats box sat flush against the feature grid — give it breathing
+       room on phones. */
+    .newLoginStatsBanner {
+        margin-top: 32px;
+    }
+
     .newLoginBottomMessage {
         display: flex;
         flex-wrap: wrap;
