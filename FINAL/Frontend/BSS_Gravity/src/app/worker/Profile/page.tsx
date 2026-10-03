@@ -611,7 +611,7 @@ export default function WorkerProfilePage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-12">
+    <div className="bss-profile space-y-8 animate-in fade-in duration-500 pb-12">
       
       <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mt-4">
         <div>

@@ -702,3 +702,44 @@ input[type="range"],
 @media (max-width: 330px) { .bss-app-main .perspective-1000 { zoom: 0.72; } }
 @media (max-width: 310px) { .bss-app-main .perspective-1000 { zoom: 0.67; } }
 
+/* ─────────────────────────────────────────────────────────────
+   Worker Profile — phone densification. The page is form-heavy, so
+   shrink type and card padding on phones only (desktop untouched) so
+   each section reads comfortably on small / very small screens.
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .bss-profile .text-3xl { font-size: 1.45rem; line-height: 1.2; }
+  .bss-profile .text-2xl { font-size: 1.3rem; }
+  .bss-profile .text-xl { font-size: 1.15rem; }
+  .bss-profile .text-lg { font-size: 1.05rem; }
+  .bss-profile .text-base { font-size: 0.9rem; }
+  .bss-profile .text-\[15px\] { font-size: 13px; }
+  .bss-profile .text-\[14px\] { font-size: 12.5px; }
+  .bss-profile .text-\[13px\] { font-size: 12px; }
+  .bss-profile .text-\[12px\] { font-size: 11px; }
+  .bss-profile .text-sm { font-size: 12.5px; }
+  .bss-profile .text-xs { font-size: 10.5px; }
+
+  /* Tighter cards, gaps and section spacing. */
+  .bss-profile .p-6 { padding: 1rem; }
+  .bss-profile .p-5 { padding: 0.9rem; }
+  .bss-profile .gap-x-6 { column-gap: 1rem; }
+  .bss-profile .gap-y-6 { row-gap: 1rem; }
+  .bss-profile .gap-y-5 { row-gap: 0.9rem; }
+  .bss-profile .space-y-8 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.25rem; }
+
+  /* Section tab strip: smaller text + padding so it's easy to swipe. */
+  .bss-profile .hide-scrollbar button { font-size: 12.5px; padding: 0.6rem 0.85rem; }
+
+  /* Keep native fields full-width and no wider than their card. */
+  .bss-profile input,
+  .bss-profile select,
+  .bss-profile textarea { max-width: 100%; }
+}
+
+@media (max-width: 360px) {
+  .bss-profile .text-3xl { font-size: 1.3rem; }
+  .bss-profile .text-\[15px\] { font-size: 12.5px; }
+}
+
+

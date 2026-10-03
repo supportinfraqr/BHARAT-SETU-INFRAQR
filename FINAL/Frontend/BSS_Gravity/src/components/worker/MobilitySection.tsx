@@ -125,7 +125,7 @@ export const MobilitySection = forwardRef<MobilitySectionHandle, Props>(function
   return <div className="space-y-8 animate-in fade-in">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
       <Field label="Mobile Number" icon={<Phone size={14}/>} required error={errors.mobile}>
-        <div className="flex"><span className="bg-[#F5F5F7] border border-black/10 border-r-0 rounded-l-xl px-4 py-3 text-sm font-semibold text-[#86868B]">+91</span><input type="tel" inputMode="numeric" readOnly value={draft.mobile} className={`${inputClass} rounded-l-none bg-[#F5F5F7] text-gray-500 cursor-not-allowed`} /></div>
+        <div className="flex"><span className="shrink-0 bg-[#F5F5F7] border border-black/10 border-r-0 rounded-l-xl px-4 py-3 text-sm font-semibold text-[#86868B]">+91</span><input type="tel" inputMode="numeric" readOnly value={draft.mobile} className={`${inputClass} min-w-0 rounded-l-none bg-[#F5F5F7] text-gray-500 cursor-not-allowed`} /></div>
       </Field>
       <Field label="Alternate Mobile Number" icon={<Phone size={14}/>} error={errors.alternateMobile}>
         <input type="tel" inputMode="numeric" value={draft.alternateMobile} onChange={event => setDraft(current => ({ ...current, alternateMobile: event.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="Optional" className={inputClass}/>
