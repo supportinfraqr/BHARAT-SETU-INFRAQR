@@ -347,7 +347,7 @@ export default function OriginalLoginPage() {
                           <RefreshCw className="h-4 w-4 group-hover:rotate-180 transition-transform duration-500" />
                         </button>
                         
-                        <div className="px-6 pt-6 pb-4 text-center mt-2">
+                        <div className="px-6 pt-14 sm:pt-6 pb-4 text-center mt-2">
                           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">{t('secureAuth')}</h2>
                         </div>
 
