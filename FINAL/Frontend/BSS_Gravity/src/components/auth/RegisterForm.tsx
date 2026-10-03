@@ -34,7 +34,6 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   const [aadhaar, setAadhaar] = useState("");
   const [aadhaarOtp, setAadhaarOtp] = useState("");
   const [aadhaarRef, setAadhaarRef] = useState("");
-  const [aadhaarMobile, setAadhaarMobile] = useState("");
 
   const [step, setStep] = useState<"details" | "otp" | "aadhaar" | "aadhaar-otp">("details");
   const [error, setError] = useState("");
@@ -84,7 +83,6 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   };
   const sendAadhaarOtp = async () => {
     if (!/^\d{12}$/.test(aadhaar)) return setError("Enter a valid 12-digit Aadhaar number.");
-    if (!/^[6-9]\d{9}$/.test(aadhaarMobile.trim())) return setError("Enter the 10-digit mobile number you want to use for this account.");
     setError(""); setNotice(""); setIsCreating(true);
     try {
       const response = await fetch('/api/auth/aadhaar/otp', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ aadhaar }) });
@@ -104,7 +102,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
     if (aadhaarOtp.length !== 6) return setError("Enter the six-digit verification code.");
     setError(""); setIsCreating(true);
     try {
-      const response = await fetch("/api/auth/aadhaar/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aadhaar, referenceId: aadhaarRef, otp: aadhaarOtp, contact: aadhaarMobile.trim(), acceptedTerms: agreedToTerms }) });
+      const response = await fetch("/api/auth/aadhaar/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aadhaar, referenceId: aadhaarRef, otp: aadhaarOtp, acceptedTerms: agreedToTerms }) });
       const result = (await response.json()) as { bssId?: string; redirectTo?: string; error?: string };
       if (!response.ok || !result.bssId) throw new Error(result.error || "Worker ID could not be issued.");
       router.replace(result.redirectTo ?? "/worker/Profile");
@@ -239,15 +237,6 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
                 onChange={e => setAadhaar(e.target.value.replace(/\D/g, '').slice(0,12))}
                 disabled={step === "aadhaar-otp"}
               />
-              <input 
-                type="text" 
-                inputMode="numeric"
-                className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] shadow-[inset_0_2px_5px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10 focus:border-[#1E3A8A]/30 outline-none transition-all font-medium text-gray-800" 
-                placeholder="10-digit mobile number" 
-                value={aadhaarMobile}
-                onChange={e => setAadhaarMobile(e.target.value.replace(/\D/g, '').slice(0,10))}
-                disabled={step === "aadhaar-otp"}
-              />
               {step === "aadhaar-otp" && (
                 <div>
                   <label className="text-[11px] font-bold text-gray-500 uppercase">Verification code</label>
@@ -278,7 +267,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
               </div>
 
               <button 
-                disabled={!agreedToTerms || isCreating || (step === "aadhaar" && (!/^\d{12}$/.test(aadhaar) || !/^[6-9]\d{9}$/.test(aadhaarMobile.trim())))}
+                disabled={!agreedToTerms || isCreating || (step === "aadhaar" && !/^\d{12}$/.test(aadhaar))}
                 onClick={step === "aadhaar" ? sendAadhaarOtp : verifyAadhaar}
                 type="button"
                 className="mt-1 w-full text-white bg-[#1E3A8A] hover:bg-[#152960] rounded-[12px] px-3.5 py-2.5 text-[13px] font-bold flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"

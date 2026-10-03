@@ -362,17 +362,22 @@ def aadhaar_verify(request):
     # usable too). Validate it before spending a Sandbox verification, and make
     # sure it is not already attached to a different account — a phone belongs
     # to exactly one account, so it can never be used to open a new one.
+    # The Aadhaar signup step asks only for the 12-digit Aadhaar (the OTP goes to
+    # the Aadhaar-linked mobile), so `contact` is OPTIONAL here. When supplied it
+    # is linked as a login id; otherwise the worker adds & verifies their mobile
+    # afterwards (MobileClaimModal), which upserts the same credential.
     contact = _normalize_mobile(body.get("contact"))
-    if not contact or contact[0] not in "6789":
+    if contact and contact[0] not in "6789":
         return Response({"error": "Enter the 10-digit mobile number you want to use for this account."},
                         status=status.HTTP_400_BAD_REQUEST)
     aadhaar_cred = UserCredential.objects.filter(identity_type="aadhaar",
                                                  identity_value=aadhaar).first()
-    mobile_owner = UserCredential.objects.filter(identity_type="mobile",
-                                                 identity_value=contact).first()
-    if mobile_owner is not None and (aadhaar_cred is None or mobile_owner.user_id != aadhaar_cred.user_id):
-        return Response({"error": "This mobile number is already registered. Log in with it, or use a different number."},
-                        status=status.HTTP_409_CONFLICT)
+    if contact:
+        mobile_owner = UserCredential.objects.filter(identity_type="mobile",
+                                                     identity_value=contact).first()
+        if mobile_owner is not None and (aadhaar_cred is None or mobile_owner.user_id != aadhaar_cred.user_id):
+            return Response({"error": "This mobile number is already registered. Log in with it, or use a different number."},
+                            status=status.HTTP_409_CONFLICT)
 
     try:
         result = aadhaar_client.verify_otp(reference_id, otp)
@@ -475,13 +480,14 @@ def aadhaar_verify(request):
     if identity is None:
         identity = WorkerIdentity.objects.create(
             user=user, bss_worker_id=bss_ids.new_bss_worker_id())
-    identity.mobile_number = contact
-    identity.save(update_fields=["mobile_number"])
-    UserCredential.objects.filter(user=user, identity_type="mobile").exclude(
-        identity_value=contact).delete()
-    UserCredential.objects.update_or_create(
-        user=user, identity_type="mobile", identity_value=contact,
-        defaults={"is_primary": True, "verified": True})
+    if contact:
+        identity.mobile_number = contact
+        identity.save(update_fields=["mobile_number"])
+        UserCredential.objects.filter(user=user, identity_type="mobile").exclude(
+            identity_value=contact).delete()
+        UserCredential.objects.update_or_create(
+            user=user, identity_type="mobile", identity_value=contact,
+            defaults={"is_primary": True, "verified": True})
 
     if user is None or not user.is_active:
         return Response({"error": "Account is disabled"}, status=status.HTTP_401_UNAUTHORIZED)
