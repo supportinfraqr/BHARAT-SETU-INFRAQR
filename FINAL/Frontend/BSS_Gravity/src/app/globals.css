@@ -742,4 +742,19 @@ input[type="range"],
   .bss-profile .text-\[15px\] { font-size: 12.5px; }
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Data tables on phones — compact type with single-line headers so the
+   header row stops wrapping into a mess. Tables scroll sideways inside
+   their own card (never the page). The Documents register additionally
+   uses single-line cells (--nowrap) so long document names don't break.
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .bss-data-table thead { font-size: 9px; letter-spacing: 0.03em; }
+  .bss-data-table th { padding: 0.5rem; white-space: nowrap; }
+  .bss-data-table th button { white-space: nowrap; }
+  .bss-data-table tbody { font-size: 11px; }
+  .bss-data-table td { padding: 0.5rem; }
+}
+
+
 

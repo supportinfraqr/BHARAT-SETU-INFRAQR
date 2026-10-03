@@ -234,7 +234,7 @@ export default function DocumentsModule() {
           ) : (
             <>
               {d.owner !== 'System' && d.id && <button onClick={() => chooseFile(d)} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border" title="Replace Document"><RefreshCcw size={15} /></button>}
-              {d.owner !== 'System' && !d.id && <button onClick={() => chooseFile(d)} disabled={busy === d.code} className="bg-[#073B67] text-white px-3 py-1.5 rounded font-bold text-xs flex items-center gap-1 disabled:opacity-60"><Upload size={14} />{busy === d.code ? 'Uploading…' : 'Upload'}</button>}
+              {d.owner !== 'System' && !d.id && <button onClick={() => chooseFile(d)} disabled={busy === d.code} className="bg-[#073B67] text-white px-2.5 py-1 rounded font-bold text-[10px] whitespace-nowrap flex items-center gap-1 disabled:opacity-60"><Upload size={12} />{busy === d.code ? 'Uploading…' : 'Upload'}</button>}
             </>
           )}
           {!d.locked && d.owner !== 'System' && d.id && <button onClick={() => remove(d)} className="p-1.5 text-gray-300 hover:text-red-600 bg-gray-50 rounded border" title="Delete Document"><Trash2 size={15} /></button>}
@@ -280,7 +280,7 @@ export default function DocumentsModule() {
         <p className="text-sm text-gray-500">Loading documents…</p>
       ) : (
         <div id="missing-documents">
-          <EnterpriseDataTable title="Document records" rows={documents} columns={columns} rowKey={d => `${d.code}-${d.id ?? 'x'}`} filename="bss-worker-documents" defaultPageSize={15} />
+          <EnterpriseDataTable title="Document records" rows={documents} columns={columns} rowKey={d => `${d.code}-${d.id ?? 'x'}`} filename="bss-worker-documents" defaultPageSize={15} mobileCards />
         </div>
       )}
 
