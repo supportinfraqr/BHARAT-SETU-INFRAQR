@@ -607,6 +607,49 @@ def compliance_batch_download(request, role_path, batch_id):
                         filename=os.path.basename(batch.generated_file.name))
 
 
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def contractor_compliance_batches_zip(request):
+    """Bundle every generated CLRA register file the contractor owns into one ZIP."""
+    import io
+    import zipfile
+
+    from bss_core.models import ComplianceBatch
+
+    user = request.user
+    batch_id = request.query_params.get("batchId")
+    qs = ComplianceBatch.objects.filter(contractor=user)
+    if batch_id:
+        qs = qs.filter(pk=batch_id)
+    qs = qs.exclude(generated_file="").order_by("-year", "-id")
+    if not qs.exists():
+        return Response({"error": "No generated register files to download yet."},
+                        status=status.HTTP_404_NOT_FOUND)
+
+    buf = io.BytesIO()
+    count = 0
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as archive:
+        for batch in qs:
+            try:
+                with batch.generated_file.open("rb") as handle:
+                    data = handle.read()
+            except Exception:  # noqa: BLE001
+                continue
+            base = os.path.basename(batch.generated_file.name) or f"registers-{batch.id}.xlsx"
+            label = f"{batch.state or 'state'}_{batch.month or ''}_{batch.year or ''}_{base}".replace(" ", "_")
+            archive.writestr(label, data)
+            count += 1
+    if not count:
+        return Response({"error": "No generated register files to download yet."},
+                        status=status.HTTP_404_NOT_FOUND)
+    buf.seek(0)
+    filename = "clra-registers.zip" if not batch_id else f"clra-registers-{batch_id}.zip"
+    response = HttpResponse(buf.read(), content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -1006,6 +1049,7 @@ __all__ = [
     "compliance_batch_summary",
     "contractor_clra_validate",
     "contractor_compliance_batches",
+    "contractor_compliance_batches_zip",
     "contractor_site_documents",
     "contractor_submissions",
     "submission_file_download",

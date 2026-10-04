@@ -11,7 +11,8 @@ type DocumentRow = ContractorPortalData['submissions']['documents'][number] & { 
 type CheckpointResult = { key:string; label:string; type:string; required:boolean; passed:boolean; detail:string };
 type OcrCheckpoint = { key?: string; type: string; label: string; value?: string; required?: boolean };
 type DocRowUI = { name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; type: string; requiredFormat: string; note: string; ocrCheckpoints?: OcrCheckpoint[] };
-type EvidenceUpload = { id?: number; accuracy: number; status: 'Validating' | 'Validated' | 'Errors found'; findings?: string[]; noOcr?: boolean; checkpoints?: CheckpointResult[] };
+type AiAudit = { status: 'passed' | 'failed' | 'review' | 'unavailable' | 'error'; valid?: boolean | null; confidence?: number | null; summary?: string; findings?: string[]; missing?: string[]; issues?: string[]; provider?: string; providerLabel?: string; model?: string; message?: string };
+type EvidenceUpload = { id?: number; accuracy: number; status: 'Validating' | 'Validated' | 'Errors found'; findings?: string[]; noOcr?: boolean; checkpoints?: CheckpointResult[]; format?: string; formatOk?: boolean; allowedFormats?: string[]; chars?: number; ai?: AiAudit };
 type Tab = 'submissions' | 'create';
 
 const FREQUENCIES = ['Monthly', 'Quarterly', 'Half Yearly', 'Yearly'] as const;
@@ -425,33 +426,57 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
   const missingEvidence = additionalDocs.filter(doc => doc.mandatory && doc.requiresDocument && uploads[doc.name]?.status !== 'Validated');
   const isPartialSubmission = missingEvidence.length > 0;
 
-  async function uploadEvidence(doc: { name: string; frequency: string; mandatory: boolean; ocrCheckpoints?: OcrCheckpoint[] }, next?: File) {
+  async function uploadEvidence(doc: { name: string; frequency: string; mandatory: boolean; requiredFormat?: string; ocrCheckpoints?: OcrCheckpoint[] }, next?: File) {
     if (!next) return;
     setRemovedKeys(prev => prev.filter(k => k !== doc.name));
     setError('');
-    const acceptable = ['application/pdf', 'image/jpeg', 'image/png'].includes(next.type) && next.size <= 10 * 1024 * 1024;
-    if (!acceptable) {
-      setUploads(current => ({ ...current, [doc.name]: { accuracy: 0, status: 'Errors found', findings: ['Choose a PDF, JPEG or PNG document up to 10 MB.'] } }));
+    if (next.size > 10 * 1024 * 1024) {
+      setUploads(current => ({ ...current, [doc.name]: { accuracy: 0, status: 'Errors found', findings: ['Choose a document up to 10 MB.'] } }));
       return;
     }
     setUploads(current => ({ ...current, [doc.name]: { accuracy: 0, status: 'Validating' } }));
-    const form = new FormData();
-    form.set('file', next); form.set('type', doc.name);
-    form.set('site', ctxSite); form.set('employer', ctxEmployer);
-    form.set('state', ctxState); form.set('financialYear', fy); form.set('month', month);
-    form.set('documentType', doc.name); form.set('frequency', doc.frequency);
-    form.set('mandatory', doc.mandatory ? 'true' : 'false');
-    form.set('period', `${createPeriod} ${fy.replace('FY ', '')}`);
     const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 60_000);
+    const timer = window.setTimeout(() => controller.abort(), 120_000);
     try {
+      // 1) Persist the file (no OCR — validation is done by AI below).
+      const form = new FormData();
+      form.set('file', next); form.set('type', doc.name);
+      form.set('site', ctxSite); form.set('employer', ctxEmployer);
+      form.set('state', ctxState); form.set('financialYear', fy); form.set('month', month);
+      form.set('documentType', doc.name); form.set('frequency', doc.frequency);
+      form.set('mandatory', doc.mandatory ? 'true' : 'false');
+      form.set('period', `${createPeriod} ${fy.replace('FY ', '')}`);
+      form.set('noOcr', '1');
       const response = await fetch('/api/portal/uploads', { method: 'POST', body: form, signal: controller.signal });
-      const result = await response.json().catch(() => ({})) as { data?: { id:number; accuracy:number | null; validated:boolean; noOcr?:boolean; findings:string[]; checkpoints?:CheckpointResult[] }; error?:string };
-      if (!response.ok || !result.data) throw new Error(result.error ?? 'Document could not be validated.');
-      const data = result.data;
-      setUploads(current => ({ ...current, [doc.name]: { id: data.id, accuracy: data.accuracy ?? 0, status: data.validated ? 'Validated' : 'Errors found', noOcr: data.noOcr, findings: data.findings, checkpoints: data.checkpoints } }));
+      const result = await response.json().catch(() => ({})) as { data?: { id:number }; error?:string };
+      if (!response.ok || !result.data?.id) throw new Error(result.error ?? 'Document could not be saved.');
+      const id = result.data.id;
+
+      // 2) Run the AI audit (format check + content validation).
+      const auditForm = new FormData();
+      auditForm.set('file', next); auditForm.set('formName', doc.name);
+      auditForm.set('requiredFormat', doc.requiredFormat || '');
+      auditForm.set('site', ctxSite);
+      const auditResponse = await fetch('/api/portal/audit-document', { method: 'POST', body: auditForm, signal: controller.signal });
+      const auditResult = await auditResponse.json().catch(() => ({})) as { data?: { format:string; formatOk:boolean; allowedFormats:string[]; chars:number; extractError?:string; ai?: AiAudit }; error?:string };
+      if (!auditResponse.ok || !auditResult.data) throw new Error(auditResult.error ?? 'AI audit failed.');
+      const d = auditResult.data;
+      const ai: AiAudit = d.ai ?? { status: 'error', message: 'No audit result.' };
+      const formatOk = d.formatOk !== false;
+      const findings = [
+        ...(formatOk ? [] : [`Format not allowed — required: ${(d.allowedFormats?.length ? d.allowedFormats.join(', ') : doc.requiredFormat) || 'PDF / DOC / Excel'}.`]),
+        ...(d.extractError ? [`Could not read the document text: ${d.extractError}`] : []),
+        ...(ai.message ? [ai.message] : []),
+        ...(ai.summary ? [ai.summary] : []),
+        ...(ai.findings ?? []), ...(ai.issues ?? []), ...(ai.missing ?? []),
+      ];
+      const ok = formatOk && ai.status !== 'failed' && ai.status !== 'error';
+      setUploads(current => ({ ...current, [doc.name]: {
+        id, accuracy: 0, status: ok ? 'Validated' : 'Errors found',
+        format: d.format, formatOk, allowedFormats: d.allowedFormats, chars: d.chars, ai, findings,
+      } }));
     } catch (reason) {
-      setUploads(current => ({ ...current, [doc.name]: { accuracy: 0, status: 'Errors found', findings: [reason instanceof Error ? reason.message : 'Document could not be validated.'] } }));
+      setUploads(current => ({ ...current, [doc.name]: { accuracy: 0, status: 'Errors found', findings: [reason instanceof Error ? reason.message : 'Document could not be audited.'] } }));
     } finally {
       window.clearTimeout(timer);
     }
@@ -558,7 +583,7 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
             <th className="py-2.5 px-3">Mandatory</th>
             <th className="py-2.5 px-3">Required Format</th>
             <th className="py-2.5 px-3">Note</th>
-            <th className="py-2.5 px-3">OCR Checklist</th>
+            <th className="py-2.5 px-3">AI Audit</th>
             <th className="py-2.5 px-3">Submit</th>
           </tr>
         </thead>
@@ -569,7 +594,6 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
             const submittedRow = isSubmitted
               ? submittedDocuments.find(d => d.type?.toLowerCase() === doc.name.toLowerCase() || d.type?.toLowerCase().includes(doc.name.toLowerCase()))
               : undefined;
-            const viewHref = up?.id != null ? `/api/portal/uploads/${up.id}` : submittedRow?.id ? `/api/contractor/submissions/${submittedRow.id}/file` : '';
             const isReturned = isSubmitted && submittedRow?.status === 'Returned';
             const locked = isSubmitted && !isReturned;
             return (
@@ -587,17 +611,27 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
                 <td className="py-3 px-3 text-gray-600 text-[11px]">{doc.requiredFormat || '—'}</td>
                 <td className="py-3 px-3 text-gray-500 text-[11px] max-w-[220px]" title={doc.note || ''}>{doc.note || '—'}</td>
                 <td className="py-3 px-3">
-                  {(doc.ocrCheckpoints?.length ?? 0) === 0 ? (
-                    <span className="text-gray-300 text-[11px]">—</span>
+                  {!up ? (
+                    <span className="text-gray-300 text-[11px]">Upload to run the AI audit</span>
+                  ) : up.status === 'Validating' ? (
+                    <span className="text-[10px] font-bold text-blue-700">Auditing…</span>
                   ) : (
-                    <ul className="space-y-0.5 text-[10px]">
-                      {(doc.ocrCheckpoints ?? []).map((cp, i) => {
-                        const res = up?.checkpoints?.find(r => (cp.key && r.key === cp.key) || r.label === cp.label);
-                        const mark = res ? (res.passed ? '✓' : '✗') : '•';
-                        const tone = res ? (res.passed ? 'text-green-700' : 'text-red-700 font-semibold') : 'text-gray-400';
-                        return <li key={i} className={`${tone} flex items-start gap-1`} title={res?.detail || cp.label}><span>{mark}</span><span>{cp.label}</span></li>;
-                      })}
-                    </ul>
+                    <div className="space-y-1 text-[10px] max-w-[240px]">
+                      <span className={`block font-bold ${up.formatOk ? 'text-green-700' : 'text-red-700'}`}>
+                        {up.formatOk ? '✓' : '✗'} Format{up.format ? ` · ${up.format.toUpperCase()}` : ''}
+                      </span>
+                      {up.ai && (
+                        <span className={`block font-bold ${up.ai.status === 'passed' ? 'text-green-700' : up.ai.status === 'failed' || up.ai.status === 'error' ? 'text-red-700' : 'text-amber-700'}`}>
+                          AI audit: {up.ai.status === 'passed' ? 'Passed' : up.ai.status === 'failed' ? 'Failed' : up.ai.status === 'unavailable' ? 'Not configured' : up.ai.status === 'error' ? 'Error' : 'Review'}{up.ai.confidence != null ? ` · ${up.ai.confidence}%` : ''}
+                        </span>
+                      )}
+                      {up.ai?.providerLabel && <span className="block text-gray-400">via {up.ai.providerLabel}{up.ai.model ? ` · ${up.ai.model}` : ''}</span>}
+                      {up.findings?.length ? (
+                        <button type="button" onClick={() => setViewErrors({ name: doc.name, findings: up.findings ?? [], uploadId: up.id })} className="text-left font-semibold text-gray-600 hover:underline">
+                          {up.findings.length} finding{up.findings.length === 1 ? '' : 's'} — view
+                        </button>
+                      ) : null}
+                    </div>
                   )}
                 </td>
                 <td className="py-3 px-3">
@@ -606,7 +640,7 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
                       <span className={`text-[11px] font-semibold inline-flex items-center gap-1 ${submittedRow?.status === 'Verified' ? 'text-green-700' : 'text-emerald-700'}`}>
                         <Lock size={12}/> {submittedRow?.status === 'Verified' ? 'Verified' : 'Submitted'}
                       </span>
-                      {viewHref && <a href={viewHref} target="_blank" rel="noreferrer" className="text-[11px] text-blue-700 font-semibold hover:underline">View</a>}
+                      {submittedRow?.id && <a href={`/api/contractor/submissions/${submittedRow.id}/file`} className="text-[11px] text-blue-700 font-semibold hover:underline inline-flex items-center gap-1"><Download size={11}/>Download document</a>}
                     </div>
                   ) : (
                     <div className="flex flex-col gap-1.5">
@@ -615,7 +649,7 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
                         <label className="h-7 px-3 rounded-md border border-gray-300 text-xs font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-slate-100 bg-white shadow-xs">
                           <Upload size={12} className="text-gray-600"/>
                           {up?.id != null ? 'Re-upload' : 'Upload'}
-                          <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => uploadEvidence(doc, e.target.files?.[0])}/>
+                          <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xlsx,.xls,.csv" className="hidden" onChange={e => uploadEvidence(doc, e.target.files?.[0])}/>
                         </label>
                         <button
                           type="button"
@@ -626,18 +660,21 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
                         {up?.id != null && (
                           <button type="button" onClick={() => handleRemoveEvidence(doc.name)} className="text-[11px] text-red-600 font-semibold hover:underline">Remove</button>
                         )}
+                        {up?.id != null && (
+                          <a href={`/api/contractor/submissions/${up.id}/file`} className="text-[11px] text-blue-700 font-semibold hover:underline inline-flex items-center gap-1"><Download size={11}/>Download</a>
+                        )}
                       </div>
                       {up?.status === 'Validating' ? (
-                        <span className="text-[10px] font-bold text-blue-700">Validating…</span>
+                        <span className="text-[10px] font-bold text-blue-700">Auditing…</span>
                       ) : up?.status === 'Errors found' ? (
                         <div className="flex flex-wrap items-center gap-2">
-                          <button type="button" onClick={() => setViewErrors({ name: doc.name, findings: up.findings ?? [], uploadId: up.id })} className="text-left text-[10px] font-bold text-red-700 hover:underline">Errors found — view reasons</button>
+                          <span className="text-[10px] font-bold text-red-700">AI audit flagged this file</span>
                           {up?.id != null && (
-                            <button type="button" onClick={() => void submitSingleForm(doc.name, up.id, true)} disabled={busy} className="h-6 px-2 rounded-md border border-red-300 text-[10px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-40">Submit forcefully</button>
+                            <button type="button" onClick={() => void submitSingleForm(doc.name, up.id, true)} disabled={busy} className="h-6 px-2 rounded-md border border-red-300 text-[10px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-40">Submit anyway</button>
                           )}
                         </div>
                       ) : up?.status === 'Validated' ? (
-                        <span className="text-[10px] font-bold text-green-700">Validated — ready to submit</span>
+                        <span className="text-[10px] font-bold text-green-700">Audited — ready to submit</span>
                       ) : (
                         <span className="text-[10px] font-medium text-amber-700">Pending submission</span>
                       )}
@@ -903,63 +940,90 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
 
       <div className="p-5 grid lg:grid-cols-[340px_1fr] gap-6">
         <div className="space-y-4">
-          <div className="rounded-xl bg-blue-50/80 border border-blue-100 text-blue-900 px-3.5 py-3 text-xs leading-5">
-            Submitting for <strong>{createPeriod} {fy.replace('FY ', '')}</strong> ({createFreq}). Supports full or part submissions.
+          {/* Gradient context hero — distinct look for the Compliance Records tab */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#073B67] via-[#0b4c86] to-[#062D4F] text-white p-4 shadow-md">
+            <div className="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-white/5" />
+            <div className="absolute -right-2 top-10 w-16 h-16 rounded-full bg-white/5" />
+            <div className="relative flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/60">Submitting for</p>
+                <p className="text-xl font-extrabold leading-tight mt-0.5">{createPeriod} {fy.replace('FY ', '')}</p>
+                <p className="text-[11px] text-white/75 mt-0.5">{createFreq} · {activeSiteObj?.state || '—'}</p>
+              </div>
+              <span className="w-12 h-12 rounded-2xl bg-white/10 border border-white/15 grid place-items-center flex-shrink-0"><FileUp size={22}/></span>
+            </div>
+            <div className="relative mt-3 flex flex-wrap gap-1.5 text-[11px]">
+              <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/15 truncate max-w-full">{activeSiteObj?.name || 'No site'}</span>
+              {activeSiteObj?.employer && <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/15 truncate max-w-full">{activeSiteObj.employer}</span>}
+            </div>
+            <p className="relative mt-3 text-[11px] text-white/70 leading-5">Full or part submissions supported. Each upload runs the <strong className="text-white">AI audit</strong> before you save.</p>
           </div>
 
-          <label className="text-xs font-bold text-gray-700 block">Site
-            <select value={activeSiteObj?.name || ''} onChange={e => setSiteName(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-white font-semibold">
-              {contractor.sites.map(s => (
-                <option key={s.id} value={s.name}>
-                  {s.name}{s.employer ? ` (${s.employer})` : ''}{s.state ? ` — ${s.state}` : ''}
-                </option>
-              ))}
-            </select>
-            {activeSiteObj?.employer && (
-              <span className="mt-1 block text-[11px] text-gray-500 font-medium">
-                Principal Employer: <strong className="text-slate-800">{activeSiteObj.employer}</strong>
-              </span>
-            )}
-          </label>
+          {/* Selector pills */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm space-y-3">
+            <label className="block">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Site</span>
+              <select value={activeSiteObj?.name || ''} onChange={e => setSiteName(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-slate-50 font-semibold">
+                {contractor.sites.map(s => (
+                  <option key={s.id} value={s.name}>
+                    {s.name}{s.employer ? ` (${s.employer})` : ''}{s.state ? ` — ${s.state}` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <label className="text-xs font-bold text-gray-700 block">Financial Year (From Registration)
-            <select value={fy} onChange={e => setFy(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-white font-semibold">{availableYears.map(f => <option key={f}>{f}</option>)}</select>
-          </label>
+            <div className="grid grid-cols-2 gap-2.5">
+              <label className="block">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Financial Year</span>
+                <select value={fy} onChange={e => setFy(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-slate-50 font-semibold">{availableYears.map(f => <option key={f}>{f}</option>)}</select>
+              </label>
+              <label className="block">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Frequency</span>
+                <select value={createFreq} onChange={e => { const f = e.target.value as Frequency; setCreateFreq(f); setCreatePeriod(clampPeriods(periodsFor(f), fy, bindingFY, bindingMonthIdx)[0] ?? periodsFor(f)[0]); }} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-slate-50 font-semibold">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select>
+              </label>
+            </div>
 
-          <label className="text-xs font-bold text-gray-700 block">Frequency
-            <select value={createFreq} onChange={e => { const f = e.target.value as Frequency; setCreateFreq(f); setCreatePeriod(clampPeriods(periodsFor(f), fy, bindingFY, bindingMonthIdx)[0] ?? periodsFor(f)[0]); }} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-white font-semibold">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select>
-          </label>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Period</span>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {visibleCreatePeriods.map(p => (
+                  <button key={p} type="button" onClick={() => setCreatePeriod(p)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors ${createPeriod === p ? 'bg-[#073B67] text-white border-[#073B67] shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}>{p}</button>
+                ))}
+              </div>
+            </div>
 
-          <label className="text-xs font-bold text-gray-700 block">Period
-            <select value={createPeriod} onChange={e => setCreatePeriod(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-white font-semibold">{visibleCreatePeriods.map(p => <option key={p}>{p}</option>)}</select>
-          </label>
-
-          <button
-            type="button"
-            onClick={() => setAllowPast(v => !v)}
-            className={`w-full h-10 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${allowPast ? 'bg-[#073B67] text-white border-[#073B67]' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
-          >
-            {allowPast ? '✓ Submitting past documents' : 'Submit past documents'}
-          </button>
-          {allowPast && <p className="text-[11px] text-gray-500">Earlier financial years are now selectable — pick the year and period the documents belong to.</p>}
+            <button
+              type="button"
+              onClick={() => setAllowPast(v => !v)}
+              className={`w-full h-10 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${allowPast ? 'bg-[#073B67] text-white border-[#073B67]' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+            >
+              {allowPast ? '✓ Submitting past documents' : 'Submit past documents'}
+            </button>
+            {allowPast && <p className="text-[11px] text-gray-500">Earlier financial years are now selectable — pick the year and period the documents belong to.</p>}
+          </div>
         </div>
 
         <div>
           <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
             <p className="text-xs font-extrabold uppercase tracking-wider text-gray-500">1 · CLRA Registers</p>
-            <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-              <button type="button" onClick={() => setClraMode('generated')} className={`h-7 px-3 text-[11px] font-bold ${clraMode === 'generated' ? 'bg-[#073B67] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Fetch generated</button>
-              <button type="button" onClick={() => setClraMode('manual')} className={`h-7 px-3 text-[11px] font-bold border-l border-gray-200 ${clraMode === 'manual' ? 'bg-[#073B67] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Upload manually</button>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- file download (API route), not page navigation */}
+              <a href="/api/portal/compliance-batches/zip" className="h-7 px-3 rounded-lg border border-gray-200 bg-white text-[11px] font-bold text-gray-700 flex items-center gap-1 hover:bg-gray-50" title="Download every generated CLRA register as a ZIP"><Download size={12}/>Download all CLRA</a>
+              <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                <button type="button" onClick={() => setClraMode('generated')} className={`h-7 px-3 text-[11px] font-bold ${clraMode === 'generated' ? 'bg-[#073B67] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Fetch generated</button>
+                <button type="button" onClick={() => setClraMode('manual')} className={`h-7 px-3 text-[11px] font-bold border-l border-gray-200 ${clraMode === 'manual' ? 'bg-[#073B67] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Upload manually</button>
+              </div>
             </div>
           </div>
 
           {clraMode === 'generated' ? (
             generatedForCreate.length
               ? <div className="space-y-2 mb-6">{generatedForCreate.map(b => (
-                  <div key={b.id} className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 flex items-center gap-3">
-                    <span className="flex-1 min-w-0"><strong className="block text-xs text-gray-900">{b.state} · {b.site || b.siteCode}</strong><span className="block text-[10px] text-gray-400 mt-0.5">{b.month} {b.year} · {b.notes}</span></span>
+                  <div key={b.id} className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 flex items-center gap-3" title={`${b.locationCount} site(s) · ${b.employeeCount} worker(s) · generated ${b.generatedOn}`}>
+                    <span className="flex-1 min-w-0"><strong className="block text-xs text-gray-900">{b.state} · {b.site || b.siteCode}</strong><span className="block text-[10px] text-gray-500 mt-0.5">{b.month} {b.year} · {b.locationCount} site(s) · {b.employeeCount} worker(s) · {b.generatedOn}</span></span>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${b.status === 'Verified' ? 'bg-green-50 text-green-700 border border-green-200' : b.status === 'Submitted' ? 'bg-blue-50 text-blue-700' : (b.status === 'Returned' || b.status === 'Rejected') ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>{b.status === 'Verified' ? 'Verified' : (b.status === 'Returned' || b.status === 'Rejected') ? 'Returned' : b.status === 'Submitted' ? 'Submitted' : 'Generated · Ready'}</span>
-                    <button type="button" onClick={() => setBatchView(String(b.id))} className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold flex items-center gap-1.5 flex-shrink-0 hover:bg-white">View documents</button>
+                    <a href={`/api/portal/compliance-batches/${b.id}`} download className="h-8 px-3 rounded-lg border border-gray-200 bg-white text-[11px] font-semibold flex items-center gap-1.5 flex-shrink-0 hover:bg-gray-50"><Download size={12}/>Download</a>
+                    <button type="button" onClick={() => setBatchView(String(b.id))} className="h-8 px-3 rounded-lg border border-gray-200 bg-white text-[11px] font-semibold flex items-center gap-1.5 flex-shrink-0 hover:bg-gray-50">Documents</button>
                     {b.status !== 'Submitted' && b.status !== 'Verified' && <button type="button" onClick={() => void submitBatch(b.id)} disabled={busy} className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold flex items-center gap-1.5 flex-shrink-0 hover:bg-[#062D4F] disabled:opacity-40"><FileUp size={12}/>Submit</button>}
                   </div>
                 ))}</div>
