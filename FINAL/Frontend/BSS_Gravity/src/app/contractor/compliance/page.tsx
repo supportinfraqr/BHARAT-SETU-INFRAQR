@@ -15,13 +15,6 @@ type ValidationIssue = { row:number; field:string; message:string };
 type ValidationReport = { errors:ValidationIssue[]; warnings:ValidationIssue[]; rowCount:number; validRows:number; siteCount:number; locationCount:number; sites:string[]; state?:string; templates?:Array<{ formCode:string; title:string; columns:number; unmapped:string[]; coverage:number }>; bss?:{ checked:number; known:number; unknown:number; unknownSample:string[] } };
 type RegRow = { id:number; state:string; formCode:string; title:string; frequency?:string; criticality?:string; columns:string[]; isMandatory?:boolean; outputFormat?:string };
 
-function daysLeft(expiry: string): number | null {
-  if (!expiry) return null;
-  const d = new Date(expiry);
-  if (Number.isNaN(d.getTime())) return null;
-  return Math.ceil((d.getTime() - Date.now()) / 86_400_000);
-}
-
 const MONTHS_FY = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
 const CAL_MONTH: Record<string, number> = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 };
 // Due is decided by the current date: monthly always; quarterly/half-yearly/
@@ -278,21 +271,6 @@ export default function ContractorCompliancePage() {
     finally { setBusy(false); }
   };
 
-  const columns: DataColumn<Row>[] = [
-    { id:'item', header:'Compliance item', value:r => r.item },
-    { id:'category', header:'Category', value:r => r.category },
-    { id:'reference', header:'Reference', value:r => r.reference },
-    { id:'employer', header:'Employer', value:r => r.employer },
-    { id:'site', header:'Site', value:r => r.site, render:r => { const site = contractor.sites.find(s => s.name === r.site); return <div><p className="text-gray-900">{r.site}</p>{site && <p className="font-mono text-[10px] text-gray-400">{site.code}</p>}</div>; } },
-    { id:'worker', header:'Worker', value:r => r.worker ?? 'Organisation level' },
-    { id:'issue', header:'Issued', value:r => r.issue },
-    { id:'expiry', header:'Expires', value:r => r.expiry },
-    { id:'daysLeft', header:'Days left', value:r => r.expiry, render:r => { const n = daysLeft(r.expiry); return n === null ? <span className="text-gray-300">—</span> : <span className={n < 0 ? 'text-red-700 font-semibold' : n <= 30 ? 'text-orange-700 font-semibold' : 'text-gray-700'}>{n < 0 ? `${-n}d overdue` : `${n}d`}</span>; } },
-    { id:'verification', header:'Verification', value:r => r.verification },
-    { id:'status', header:'Status', value:r => r.status, render:r => <span className={r.status === 'Active' ? 'text-green-700' : r.status === 'Expiring' ? 'text-orange-700' : 'text-red-700'}>{r.status}</span> },
-    { id:'evidence', header:'Evidence', filterable:false, value:r => r.id, render:() => <a href="/contractor/submissions" className="text-blue-700 font-semibold hover:underline text-xs">Submissions</a> },
-  ];
-
   const batchByState = contractor.complianceBatches.reduce<Record<string, ContractorPortalData['complianceBatches'][number]>>((acc, b) => {
     const key = b.state;
     if (!acc[key] || `${b.year}${b.month}` > `${acc[key].year}${acc[key].month}`) acc[key] = b;
@@ -377,21 +355,15 @@ export default function ContractorCompliancePage() {
     </section>
 
     <div className="flex border-b overflow-x-auto">
-      {([['master', 'Master File & CLRA Generation'], ['records', 'Compliance Records'], ['registers', 'Register-wise Listing'], ['report', 'Contractor Report']] as Array<[Tab, string]>).map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${tab === id ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>{label}</button>)}
+      {([['master', 'Master File & CLRA Generation'], ['records', 'Generated Compliance Batches'], ['registers', 'Register-wise Listing'], ['report', 'Contractor Report']] as Array<[Tab, string]>).map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${tab === id ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>{label}</button>)}
     </div>
 
-    {tab === 'records' && <div className="space-y-5">
-      <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">Site codes, verification state and expiry tracking are shown per record.</div>
-      {rowsData.length
-        ? <EnterpriseDataTable title="Compliance register" rows={rowsData} columns={columns} rowKey={r => r.id} filename="contractor-compliance"/>
-        : <p className="py-6 text-center text-sm text-gray-400">No manual compliance records yet — add a record or import a CSV to track licence / registration expiry.</p>}
-      <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Generated CLRA Register Records</h2><p className="text-xs text-gray-400 mt-0.5">Every generated batch — download the register workbook or view the master file used.</p></header>
-        {contractor.complianceBatches.length
-          ? <EnterpriseDataTable title="Generated batches" rows={contractor.complianceBatches} columns={batchCols} rowKey={r => r.id} filename="generated-compliance-batches"/>
-          : <p className="p-5 text-sm text-gray-400">No registers generated yet — use the <strong>Master File &amp; CLRA Generation</strong> tab.</p>}
-      </section>
-    </div>}
+    {tab === 'records' && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+      <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Generated Compliance Batches</h2><p className="text-xs text-gray-400 mt-0.5">Month, Year, State, Site, Site Code, employee &amp; location counts, Generated On/By — download the register workbook or view the master file used.</p></header>
+      {contractor.complianceBatches.length
+        ? <EnterpriseDataTable title="Generated batches" rows={contractor.complianceBatches} columns={batchCols} rowKey={r => r.id} filename="generated-compliance-batches"/>
+        : <p className="p-5 text-sm text-gray-400">No registers generated yet — use the <strong>Master File &amp; CLRA Generation</strong> tab.</p>}
+    </section>}
 
     {tab === 'registers' && <section className="space-y-4">
       <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">Statutory registers and forms applicable to your sites — per <strong>State + Form</strong>, with criticality, frequency, and whether a register has been generated (download the generated batch).</div>
@@ -447,7 +419,7 @@ export default function ContractorCompliancePage() {
         </div>
       </section>}
 
-      <div className="grid lg:grid-cols-2 gap-5">
+      <div className="grid gap-5">
       <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
         <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">CLRA Register Generation</h2><p className="text-xs text-gray-400 mt-0.5">Upload the master file — sites are read from the sheet and a separate register set is generated for each site.</p></header>
         <div className="p-5 space-y-4">
@@ -487,12 +459,8 @@ export default function ContractorCompliancePage() {
                 <tbody className="divide-y divide-gray-100">{report.templates!.map(t => <tr key={t.formCode}><td className="px-3 py-1.5 font-mono text-[#073B67]">{t.formCode}</td><td className="px-3 py-1.5 text-gray-700">{t.title || '—'}</td><td className="px-3 py-1.5 text-gray-500">{t.columns}</td><td className="px-3 py-1.5">{t.columns === 0 ? <span className="text-gray-400">—</span> : <><span className={t.coverage === 100 ? 'text-green-700 font-semibold' : 'text-amber-700 font-semibold'}>{t.coverage}%</span>{t.unmapped.length ? <span className="text-gray-400"> · {t.unmapped.length} unmapped</span> : null}</>}</td></tr>)}</tbody></table></div>}
             </div>
           </div>}
-          <p className="text-[11px] text-gray-400">Registers are generated in bulk from the uploaded master data, keyed by State and Site/Location, and listed in the generated batches below.</p>
+          <p className="text-[11px] text-gray-400">Registers are generated in bulk from the uploaded master data, keyed by State and Site/Location, and listed under the <strong>Generated Compliance Batches</strong> tab.</p>
         </div>
-      </section>
-      <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Generated Compliance Batches</h2><p className="text-xs text-gray-400 mt-0.5">Month, Year, State, Site, Site Code, employee & location counts, Generated On/By.</p></header>
-        <EnterpriseDataTable title="Generated batches" rows={contractor.complianceBatches} columns={batchCols} rowKey={r => r.id} filename="generated-compliance-batches"/>
       </section>
       </div>
 
