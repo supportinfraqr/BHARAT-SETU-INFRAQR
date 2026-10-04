@@ -43,6 +43,7 @@ const accessGroup = { key: 'Users & Access', icon: Users, items: [
 const auditOpsGroup = { key: 'Audit & Reports', icon: BookOpenCheck, items: [
   ['Activity Report', '/admin/activity'],
   ['Audit Reports', '/admin/audit-reports'],
+  ['AI Audit Settings', '/admin/audit-settings'],
 ] as const };
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
