@@ -109,7 +109,6 @@ export default function AiAuditSettingsPage() {
         provider: form.provider,
         model: form.model,
         label: form.label,
-        baseUrl: form.baseUrl,
         enabled: form.enabled,
         apiKey: form.apiKey || undefined,
         clearKey: form.clearKey,
@@ -224,10 +223,6 @@ export default function AiAuditSettingsPage() {
               <input type="password" value={form.apiKey} onChange={e => setForm({ ...form, apiKey: e.target.value, clearKey: false })} placeholder={form.hasKey ? '•••••••••• (stored)' : 'paste the provider API key'} className={input} autoComplete="off" />
               {form.hasKey && <button type="button" onClick={() => setForm({ ...form, apiKey: '', clearKey: true })} className="mt-1 text-[11px] text-gray-400 hover:text-red-600">Remove stored key</button>}
             </div>
-            <div className="sm:col-span-2">
-              <label className={label}>Base URL (optional)</label>
-              <input value={form.baseUrl} onChange={e => setForm({ ...form, baseUrl: e.target.value })} placeholder="https://api.openai.com/v1" className={input} />
-            </div>
             <div className="flex items-center gap-2 pt-1">
               <input id="ai-enabled" type="checkbox" checked={form.enabled} onChange={e => setForm({ ...form, enabled: e.target.checked })} className="w-4 h-4" />
               <label htmlFor="ai-enabled" className="text-sm text-gray-600">Enabled</label>
@@ -267,7 +262,7 @@ export default function AiAuditSettingsPage() {
                                    : <span className="text-[10px] font-bold text-orange-600 bg-orange-50 border border-orange-100 rounded-full px-2 py-0.5">No key</span>)
                       : <span className="text-[10px] font-bold text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">Disabled</span>}
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-1 font-mono truncate">{c.maskedKey || 'no key stored'}{c.baseUrl ? ` · ${c.baseUrl}` : ''}</p>
+                  <p className="text-[11px] text-gray-400 mt-1 font-mono truncate">{c.maskedKey || 'no key stored'}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {!c.isDefault && <button type="button" onClick={() => void makeDefault(c)} disabled={busy} className="h-9 px-3 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 disabled:opacity-50">Set active</button>}
