@@ -8,31 +8,10 @@ import type { ContractorPortalData } from '@/types/portal';
 import { exportMatrixToXlsx } from '@/lib/exportXlsx';
 import { openPrintHtml } from '@/lib/documentEngine/render';
 
-type Tab = 'records' | 'registers' | 'master' | 'report';
+type Tab = 'records' | 'master' | 'report';
 type ValidationIssue = { row:number; field:string; message:string };
 type ValidationReport = { errors:ValidationIssue[]; warnings:ValidationIssue[]; rowCount:number; validRows:number; siteCount:number; locationCount:number; sites:string[]; state?:string; templates?:Array<{ formCode:string; title:string; columns:number; unmapped:string[]; coverage:number }>; bss?:{ checked:number; known:number; unknown:number; unknownSample:string[] } };
-type RegRow = { id:number; state:string; formCode:string; title:string; frequency?:string; criticality?:string; columns:string[]; isMandatory?:boolean; outputFormat?:string };
 
-const MONTHS_FY = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
-const CAL_MONTH: Record<string, number> = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 };
-// Due is decided by the current date: monthly always; quarterly/half-yearly/
-// yearly only once their period has ended (yearly = after the FY closes in March).
-function periodInfo(month: string, year: string, frequency?: string): { label: string; due: boolean; periodEnd?: string } {
-  const f = (frequency || '').toLowerCase();
-  const y = Number(year);
-  const idx = MONTHS_FY.indexOf(month);
-  if (idx < 0 || !Number.isFinite(y)) return { label: `${month} ${year}`.trim(), due: true };
-  const fyStart = idx >= 9 ? y - 1 : y;
-  const fyLabel = `${fyStart}-${String(fyStart + 1).slice(-2)}`;
-  let endIdx: number; let label: string;
-  if (f.startsWith('quarter')) { endIdx = (Math.floor(idx / 3) + 1) * 3 - 1; label = `Q${Math.floor(idx / 3) + 1} ${fyLabel}`; }
-  else if (f.startsWith('half')) { endIdx = idx < 6 ? 5 : 11; label = `H${idx < 6 ? 1 : 2} ${fyLabel}`; }
-  else if (f.startsWith('year') || f.startsWith('annual')) { endIdx = 11; label = `FY ${fyLabel}`; }
-  else return { label: `${month} ${y}`, due: true };
-  const endYear = fyStart + (endIdx >= 9 ? 1 : 0);
-  const end = new Date(endYear, CAL_MONTH[MONTHS_FY[endIdx]], 0); // last day of the end month
-  return { label, due: Date.now() >= end.getTime(), periodEnd: end.toISOString().slice(0, 10) };
-}
 const MONTHS = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
 
 const FREQUENCIES = ['Monthly', 'Quarterly', 'Half Yearly', 'Yearly'] as const;
@@ -94,7 +73,6 @@ export default function ContractorCompliancePage() {
   const [siteBoards, setSiteBoards] = useState<Array<{ siteId:number; gated:boolean; adoptedCount:number; total:number }>>([]);
   const [report, setReport] = useState<ValidationReport | null>(null);
   const [batchView, setBatchView] = useState<string | null>(null);
-  const [registerRows, setRegisterRows] = useState<RegRow[]>([]);
 
   // States the contractor is allowed to register for — derived from allotted sites.
   const allowedStates = Array.from(new Set(
@@ -144,16 +122,6 @@ export default function ContractorCompliancePage() {
       .catch(() => {});
     return () => { active = false; };
   }, [activeState]);
-
-  // Full register library for Register-wise Listing (all states).
-  useEffect(() => {
-    let active = true;
-    void fetch('/api/contractor/clra/templates?library=1', { cache:'no-store' })
-      .then(response => (response.ok ? response.json() : null))
-      .then((body: { rows?: RegRow[] } | null) => { if (active && body?.rows) setRegisterRows(body.rows); })
-      .catch(() => {});
-    return () => { active = false; };
-  }, []);
 
   const downloadMasterTemplate = () => {
     window.open('/api/contractor/clra/master-template', '_blank');
@@ -218,12 +186,6 @@ export default function ContractorCompliancePage() {
     finally { setBusy(false); }
   };
 
-  const batchByState = contractor.complianceBatches.reduce<Record<string, ContractorPortalData['complianceBatches'][number]>>((acc, b) => {
-    const key = b.state;
-    if (!acc[key] || `${b.year}${b.month}` > `${acc[key].year}${acc[key].month}`) acc[key] = b;
-    return acc;
-  }, {});
-
   // State + period rollup (sites · employees) over every batch, newest first.
   const stateSummary = useMemo(() => {
     const rows = contractor.complianceStateSummary ?? [];
@@ -235,20 +197,6 @@ export default function ContractorCompliancePage() {
       return a.state.localeCompare(b.state);
     });
   }, [contractor.complianceStateSummary]);
-
-  const registerLibColumns: DataColumn<RegRow>[] = [
-    { id:'state', header:'State', value:r => r.state },
-    { id:'form', header:'Form No.', value:r => r.formCode, render:r => <span className="font-mono text-blue-700 font-semibold">{r.formCode}</span> },
-    { id:'title', header:'Register / Form', value:r => r.title || '—' },
-    { id:'type', header:'Type', value:r => (r.columns.length ? 'Register' : 'Form') },
-    { id:'criticality', header:'Criticality', value:r => r.criticality || '—', render:r => r.criticality ? <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.criticality === 'High' ? 'bg-red-50 text-red-700' : r.criticality === 'Medium' ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>{r.criticality}</span> : <span className="text-gray-300">—</span> },
-    { id:'frequency', header:'Frequency', value:r => r.frequency || '—' },
-    { id:'due', header:'Due', value:r => r.frequency || '', render:r => { const p = periodInfo(month, year, r.frequency); return p.due ? <span className="text-green-700 font-semibold text-[11px]">Due · {p.label}</span> : <span className="text-gray-400 text-[11px]">Auto later · {p.label} (from {p.periodEnd})</span>; } },
-    { id:'columns', header:'Columns', value:r => r.columns.length },
-    { id:'mandatory', header:'Mandatory', value:r => (r.isMandatory ? 'Yes' : 'No'), render:r => r.isMandatory ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-50 text-green-700">Yes</span> : <span className="text-gray-300 text-xs">—</span> },
-    { id:'generated', header:'Generated', value:r => r.state, render:r => { const b = batchByState[r.state]; return b ? <span className="text-green-700 font-semibold text-[11px]">Generated · {b.month} {b.year}</span> : <span className="text-gray-400 text-[11px]">Not generated</span>; } },
-    { id:'action', header:'Action', filterable:false, value:r => r.id, render:r => { const b = batchByState[r.state]; return b?.hasFile ? <a href={`/api/portal/compliance-batches/${b.id}`} download className="text-blue-700 font-semibold text-xs inline-flex items-center gap-1 hover:underline"><Download size={12}/>Download</a> : <span className="text-gray-300 text-xs">—</span>; } },
-  ];
 
   const batchCols: DataColumn<ContractorPortalData['complianceBatches'][number]>[] = [
     ...batchColumns.filter(col => col.id !== 'actions'),
@@ -291,7 +239,7 @@ export default function ContractorCompliancePage() {
     </section>
 
     <div className="flex border-b overflow-x-auto">
-      {([['master', 'Master File & CLRA Generation'], ['records', 'Compliance Records'], ['registers', 'Register-wise Listing'], ['report', 'Contractor Report']] as Array<[Tab, string]>).map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${tab === id ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>{label}</button>)}
+      {([['master', 'Master File & CLRA Generation'], ['records', 'Compliance Records'], ['report', 'Contractor Report']] as Array<[Tab, string]>).map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${tab === id ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>{label}</button>)}
     </div>
 
     {tab === 'records' && <div className="space-y-5">
@@ -303,11 +251,6 @@ export default function ContractorCompliancePage() {
           : <p className="p-5 text-sm text-gray-400">No registers generated yet — use the <strong>Master File &amp; CLRA Generation</strong> tab.</p>}
       </section>
     </div>}
-
-    {tab === 'registers' && <section className="space-y-4">
-      <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">Statutory registers and forms applicable to your sites — per <strong>State + Form</strong>, with criticality, frequency, and whether a register has been generated (download the generated batch).</div>
-      <EnterpriseDataTable title="Register-wise listing" rows={registerRows} columns={registerLibColumns} rowKey={r => String(r.id)} filename="statutory-registers"/>
-    </section>}
 
     {tab === 'master' && <div className="space-y-5">
       {/* Allowed Site States Banner */}
