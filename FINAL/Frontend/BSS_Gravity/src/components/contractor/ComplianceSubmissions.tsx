@@ -97,9 +97,9 @@ function isFutureMonth(fy: string, monthName: string): boolean {
   return calYear * 12 + calMonth > now.getFullYear() * 12 + (now.getMonth() + 1);
 }
 
-export default function ComplianceSubmissionPage() {
+export default function ComplianceSubmissions({ embedded = false }: { embedded?: boolean }) {
   const { contractor, replaceContractor, refresh, employerScope, scoped } = useContractor();
-  const [tab, setTab] = useState<Tab>('submissions');
+  const [tab, setTab] = useState<Tab>(embedded ? 'create' : 'submissions');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -652,9 +652,8 @@ export default function ComplianceSubmissionPage() {
     </div>
   );
 
-  return <div className="space-y-6 pb-12">
-    {/* Clean Top Header */}
-    <header className="bss-page-header flex-col sm:flex-row justify-between items-start sm:items-center">
+  return <div className={embedded ? 'space-y-4' : 'space-y-6 pb-12'}>
+    {!embedded && <header className="bss-page-header flex-col sm:flex-row justify-between items-start sm:items-center">
       <div>
         <p className="bss-eyebrow">Contractor Data Exchange</p>
         <h1 className="bss-page-title mt-1">Compliance Submissions</h1>
@@ -666,20 +665,19 @@ export default function ComplianceSubmissionPage() {
           <span>Registered: <strong>{new Date(contractor.identity.incorpDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</strong></span>
         </div>
       )}
-    </header>
+    </header>}
 
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
     {error && <p role="alert" className="bss-alert bss-alert-error flex items-center gap-2"><AlertCircle size={15}/>{error}</p>}
 
-    <section className="bss-kpi-grid grid grid-cols-2 md:grid-cols-4 gap-3">
+    {!embedded && <section className="bss-kpi-grid grid grid-cols-2 md:grid-cols-4 gap-3">
       <Metric label="Total Submissions" value={submittedDocuments.length} icon={FileUp} tone="bg-blue-50 text-blue-700"/>
       <Metric label="Verified Packages" value={verified} icon={CheckCircle2} tone="bg-green-50 text-green-700"/>
       <Metric label="Pending Review" value={pending} icon={FileCheck2} tone="bg-amber-50 text-amber-700"/>
       <Metric label="Employer Scope" value={employerScope === 'all' ? contractor.employers.length : 1} icon={ShieldCheck} tone="bg-indigo-50 text-indigo-700"/>
-    </section>
+    </section>}
 
-    {/* Tab Selector */}
-    <div className="flex border-b border-gray-200 overflow-x-auto">
+    {!embedded && <div className="flex border-b border-gray-200 overflow-x-auto">
       <button 
         onClick={() => setTab('submissions')} 
         className={`px-5 py-3 text-xs font-bold border-b-2 whitespace-nowrap transition-colors ${tab === 'submissions' ? 'border-[#073B67] text-[#073B67]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
@@ -692,7 +690,7 @@ export default function ComplianceSubmissionPage() {
       >
         📤 Submit Compliance Package
       </button>
-    </div>
+    </div>}
 
     {tab === 'submissions' && <div className="space-y-4">
       {/* Filters Card */}

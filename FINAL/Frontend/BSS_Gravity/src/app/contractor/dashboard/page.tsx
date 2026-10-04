@@ -80,7 +80,7 @@ export default function ContractorDashboardPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/contractor/submissions" className="h-10 px-4 rounded-lg border border-gray-200 bg-white text-gray-800 text-sm font-semibold flex items-center gap-2 hover:bg-gray-50">
+          <Link href="/contractor/compliance" className="h-10 px-4 rounded-lg border border-gray-200 bg-white text-gray-800 text-sm font-semibold flex items-center gap-2 hover:bg-gray-50">
             <Upload size={15}/> Upload data
           </Link>
           <Link href="/contractor/workers" className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black">
@@ -228,7 +228,7 @@ export default function ContractorDashboardPage() {
           <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
               <h2 className="text-sm font-semibold text-gray-950">Compliance Submission List</h2>
-              <Link href="/contractor/submissions" className="text-xs font-medium text-[#0066CC] hover:underline">{t('ui.viewAll')}</Link>
+              <Link href="/contractor/compliance" className="text-xs font-medium text-[#0066CC] hover:underline">{t('ui.viewAll')}</Link>
             </div>
             <div className="divide-y divide-gray-100">
               {recentSubmissions.map((submission) => (

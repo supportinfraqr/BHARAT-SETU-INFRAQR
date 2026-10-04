@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Download, FileSpreadsheet, FileText, Landmark, TriangleAlert, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
+import ComplianceSubmissions from '@/components/contractor/ComplianceSubmissions';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorPortalData } from '@/types/portal';
 import { exportMatrixToXlsx } from '@/lib/exportXlsx';
@@ -293,12 +294,15 @@ export default function ContractorCompliancePage() {
       {([['master', 'Master File & CLRA Generation'], ['records', 'Compliance Records'], ['registers', 'Register-wise Listing'], ['report', 'Contractor Report']] as Array<[Tab, string]>).map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${tab === id ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>{label}</button>)}
     </div>
 
-    {tab === 'records' && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-      <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Generated Compliance Batches</h2><p className="text-xs text-gray-400 mt-0.5">Month, Year, State, Site, Site Code, employee &amp; location counts, Generated On/By — download the register workbook or view the master file used.</p></header>
-      {contractor.complianceBatches.length
-        ? <EnterpriseDataTable title="Generated batches" rows={contractor.complianceBatches} columns={batchCols} rowKey={r => r.id} filename="generated-compliance-batches"/>
-        : <p className="p-5 text-sm text-gray-400">No registers generated yet — use the <strong>Master File &amp; CLRA Generation</strong> tab.</p>}
-    </section>}
+    {tab === 'records' && <div className="space-y-5">
+      <ComplianceSubmissions embedded />
+      <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Generated Compliance Batches</h2><p className="text-xs text-gray-400 mt-0.5">Month, Year, State, Site, Site Code, employee &amp; location counts, Generated On/By — download the register workbook or view the master file used.</p></header>
+        {contractor.complianceBatches.length
+          ? <EnterpriseDataTable title="Generated batches" rows={contractor.complianceBatches} columns={batchCols} rowKey={r => r.id} filename="generated-compliance-batches"/>
+          : <p className="p-5 text-sm text-gray-400">No registers generated yet — use the <strong>Master File &amp; CLRA Generation</strong> tab.</p>}
+      </section>
+    </div>}
 
     {tab === 'registers' && <section className="space-y-4">
       <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">Statutory registers and forms applicable to your sites — per <strong>State + Form</strong>, with criticality, frequency, and whether a register has been generated (download the generated batch).</div>
