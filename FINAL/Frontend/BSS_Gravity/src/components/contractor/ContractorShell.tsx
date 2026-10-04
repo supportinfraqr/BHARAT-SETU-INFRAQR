@@ -52,7 +52,7 @@ export default function ContractorShell({ children }: { children:React.ReactNode
   return <div className="bss-shell min-h-screen text-[#1D1D1F] flex flex-col">
     <header ref={headerRef} className="bss-shell-header sticky top-0 z-50 w-full bg-white/85 backdrop-blur-xl border-b border-black/5">
       <div className="bss-shell-bar max-w-[1200px] mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-3">
-        <Link href="/contractor/dashboard" className="flex items-center gap-2 shrink-0" aria-label="Bharat Shram Setu contractor dashboard"><Image src="/bss-original-logo.png" width={154} height={40} className="h-6 w-auto" alt="Bharat Shram Setu"/><BrandText className="hidden lg:block text-base"/></Link>
+        <Link href="/contractor/dashboard" className="flex items-center gap-2 shrink-0" aria-label="Bharat Shram Setu contractor dashboard"><Image src="/bss-original-logo.png" width={154} height={40} className="h-9 sm:h-6 w-auto" alt="Bharat Shram Setu"/><BrandText className="hidden lg:block text-base"/></Link>
 
         <nav aria-label={t('nav.primary')} className="bss-desktop-nav items-center gap-0.5">
           {groups.map(group => 'href' in group ? (

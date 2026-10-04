@@ -80,7 +80,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
     <header ref={headerRef} className="bss-shell-header sticky top-0 z-50 bg-white border-b border-gray-200 shadow-[0_1px_3px_0_rgba(100,116,139,0.18)]">
       <div className="bss-shell-bar w-full max-w-[1280px] mx-auto px-6 md:px-12 h-16 flex items-center justify-between min-[1181px]:justify-center gap-5">
         <Link href="/employer/dashboard" className="flex items-center gap-2 shrink-0">
-          <Image src="/bss-original-logo.png" width={154} height={40} className="h-8 w-auto" alt="Bharat Shram Setu"/>
+          <Image src="/bss-original-logo.png" width={154} height={40} className="h-9 sm:h-8 w-auto" alt="Bharat Shram Setu"/>
           <BrandText className="hidden lg:block text-base"/>
         </Link>
         <div className="min-w-0 flex items-center justify-center gap-4 mx-4 md:mx-8">
