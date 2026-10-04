@@ -145,7 +145,7 @@ export default function AiAuditSettingsPage() {
   const makeDefault = async (c: Credential) => {
     setBusy(true); setError(''); setNotice('');
     try {
-      const response = await fetch(`/api/admin/ai/providers/${c.id}/default`, { method: 'POST' });
+      const response = await fetch(`/api/admin/ai/providers/${c.id}/default`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const body = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(body.error ?? 'Could not set the default provider.');
       setNotice(`${c.providerLabel} · ${c.model} is now the active audit engine.`);

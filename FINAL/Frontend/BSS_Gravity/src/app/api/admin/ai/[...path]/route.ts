@@ -16,7 +16,8 @@ async function forward(request: Request, ctx: Ctx, method: 'GET' | 'POST' | 'PUT
     const { path } = await ctx.params;
     const suffix = (path || []).join('/');
     const search = new URL(request.url).search;
-    const body = method === 'POST' || method === 'PUT'
+    const hasBody = (request.headers.get('content-length') || '0') !== '0' || Boolean(request.headers.get('content-type'));
+    const body = (method === 'POST' || method === 'PUT') && hasBody
       ? await readJsonObject(request, 100_000)
       : undefined;
     const result = await upstreamRequest(config.apiBaseUrl, `/v1/admin/ai/${suffix}${search}`, session, {
