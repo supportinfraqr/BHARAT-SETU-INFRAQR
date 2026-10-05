@@ -938,7 +938,7 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
         </div>
       </header>
 
-      <div className="p-5 grid lg:grid-cols-[340px_1fr] gap-6">
+      <div className="p-5 space-y-5">
         <div className="space-y-4">
           {/* Gradient context hero — distinct look for the Compliance Records tab */}
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#073B67] via-[#0b4c86] to-[#062D4F] text-white p-4 shadow-md">
@@ -959,20 +959,19 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
             <p className="relative mt-3 text-[11px] text-white/70 leading-5">Full or part submissions supported. Each upload runs the <strong className="text-white">AI audit</strong> before you save.</p>
           </div>
 
-          {/* Selector pills */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm space-y-3">
-            <label className="block">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Site</span>
-              <select value={activeSiteObj?.name || ''} onChange={e => setSiteName(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-slate-50 font-semibold">
-                {contractor.sites.map(s => (
-                  <option key={s.id} value={s.name}>
-                    {s.name}{s.employer ? ` (${s.employer})` : ''}{s.state ? ` — ${s.state}` : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="grid grid-cols-2 gap-2.5">
+          {/* Selectors — horizontal bar */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
+            <div className="grid sm:grid-cols-3 gap-3">
+              <label className="block">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Site</span>
+                <select value={activeSiteObj?.name || ''} onChange={e => setSiteName(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-slate-50 font-semibold">
+                  {contractor.sites.map(s => (
+                    <option key={s.id} value={s.name}>
+                      {s.name}{s.employer ? ` (${s.employer})` : ''}{s.state ? ` — ${s.state}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label className="block">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Financial Year</span>
                 <select value={fy} onChange={e => setFy(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-slate-50 font-semibold">{availableYears.map(f => <option key={f}>{f}</option>)}</select>
@@ -983,7 +982,7 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
               </label>
             </div>
 
-            <div>
+            <div className="mt-3">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Period</span>
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {visibleCreatePeriods.map(p => (
@@ -992,14 +991,16 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setAllowPast(v => !v)}
-              className={`w-full h-10 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${allowPast ? 'bg-[#073B67] text-white border-[#073B67]' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
-            >
-              {allowPast ? '✓ Submitting past documents' : 'Submit past documents'}
-            </button>
-            {allowPast && <p className="text-[11px] text-gray-500">Earlier financial years are now selectable — pick the year and period the documents belong to.</p>}
+            <div className="mt-3 flex items-center gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setAllowPast(v => !v)}
+                className={`h-9 px-4 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors ${allowPast ? 'bg-[#073B67] text-white border-[#073B67]' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+              >
+                {allowPast ? '✓ Submitting past documents' : 'Submit past documents'}
+              </button>
+              {allowPast && <p className="text-[11px] text-gray-500">Earlier financial years are now selectable — pick the year and period the documents belong to.</p>}
+            </div>
           </div>
         </div>
 
