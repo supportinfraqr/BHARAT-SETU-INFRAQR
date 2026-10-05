@@ -181,10 +181,13 @@ def _run_ai_audit(form_name, text, required_format, site_name="", extra=None):
             " - the rows look like the site's master data (worker names / BSS IDs / wages / dates),\n"
             " - totals/period/state are consistent.\n"
             'Set "templateConformant" false if any required template column heading is missing.\n'
+            "List EVERY problem POINTWISE — one problem per item, specific and self-contained (no grouping, "
+            'no prose). Also return it under "problems".\n'
             "Return JSON with exactly these keys: "
             '{"valid": true|false, "templateConformant": true|false, "confidence": 0-100, '
             '"summary": "one line", "matchedColumns": ["..."], "missing": ["..."], "issues": ["..."], '
-            '"findings": ["..."], "checkpointResults": [{"label": "...", "passed": true|false, "detail": "..."}]}.\n\n'
+            '"problems": ["pointwise problem", "..."], "findings": ["..."], '
+            '"checkpointResults": [{"label": "...", "passed": true|false, "detail": "..."}]}.\n\n'
             "----- UPLOADED REGISTER TEXT (may be OCR, ignore minor noise) -----\n"
             f"{text}"
         )
@@ -202,9 +205,12 @@ def _run_ai_audit(form_name, text, required_format, site_name="", extra=None):
             f"Site: {site_name or 'n/a'}\n\n"
             "Audit the extracted document text below. Decide whether it is the correct document, whether its "
             "content is plausible/complete, and whether each required condition is met (report per condition).\n"
+            "List EVERY problem POINTWISE — one problem per item, specific and self-contained (no grouping, "
+            'no prose). Also return it under "problems".\n'
             "Return JSON with exactly these keys: "
             '{"valid": true|false, "confidence": 0-100, "summary": "one line", '
             '"findings": ["..."], "missing": ["..."], "issues": ["..."], '
+            '"problems": ["pointwise problem", "..."], '
             '"checkpointResults": [{"label": "...", "passed": true|false, "detail": "..."}]}.\n\n'
             "----- DOCUMENT TEXT (may be OCR, so ignore minor noise) -----\n"
             f"{text}"
@@ -244,6 +250,7 @@ def _run_ai_audit(form_name, text, required_format, site_name="", extra=None):
         "matchedColumns": parsed.get("matchedColumns") or [],
         "missing": parsed.get("missing") or [],
         "issues": parsed.get("issues") or [],
+        "problems": parsed.get("problems") or [],
         "checkpointResults": results,
         "provider": cred.provider,
         "providerLabel": AI_PROVIDERS.get(cred.provider, {}).get("label", cred.provider),

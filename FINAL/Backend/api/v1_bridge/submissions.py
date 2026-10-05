@@ -1286,6 +1286,81 @@ def compliance_batch_register_pdf(request, batch_id, template_id):
     return FileResponse(io.BytesIO(pdf), as_attachment=True, filename=filename)
 
 
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def compliance_batch_register_issues(request, batch_id, template_id):
+    """Download the AI-audit problems for one register (Excel)."""
+    import io
+
+    from django.http import FileResponse
+
+    from bss_core.models import RegisterTemplate
+
+    from .audit_issues import build_issues_xlsx, problems_from_audit
+    batch = _visible_batch(request.user, batch_id)
+    if batch is None:
+        return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
+    template = RegisterTemplate.objects.filter(pk=template_id).first()
+    audit = (batch.register_audits or {}).get(str(template_id)) or {}
+    name = (template.title if template else f"Register {template_id}")
+    form = (template.form_code if template else "")
+    meta = [
+        ("Contractor", payloads._party_name(batch.contractor)),
+        ("Principal employer", payloads._org_name(batch.site.employer) if (batch.site and batch.site.employer_id) else ""),
+        ("Site", batch.site.site_name if batch.site else ""),
+        ("State", batch.state),
+        ("Period", f"{batch.month} {batch.year}".strip()),
+        ("Register", f"{form} · {name}".strip(" ·")),
+        ("AI status", audit.get("status") or "—"),
+        ("Confidence", f"{audit.get('confidence')}%" if audit.get("confidence") is not None else "—"),
+    ]
+    data = build_issues_xlsx(f"AI Audit Issues — {name}", meta, problems_from_audit(audit))
+    filename = f"{(form or 'register')}-{name}-issues.xlsx".replace(" ", "_")
+    return FileResponse(io.BytesIO(data), as_attachment=True, filename=filename)
+
+
+def _visible_evidence(user, submission_id):
+    """A SubmissionEvidence the caller may inspect (own / staff / employer's site)."""
+    from bss_core.models import Site
+    ev = SubmissionEvidence.objects.filter(pk=submission_id).first()
+    if ev is None:
+        return None
+    if ev.user_id == user.id:
+        return ev
+    if user.role in ("bss_admin", "bss_staff", "government", "admin"):
+        return ev
+    if user.role == "employer" and ev.site:
+        if Site.objects.filter(employer=user, site_name=ev.site).exists():
+            return ev
+    return None
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def submission_audit_issues(request, submission_id):
+    """Download the AI-audit problems for one uploaded document (Excel)."""
+    import io
+
+    from django.http import FileResponse
+
+    from .audit_issues import build_issues_xlsx, problems_from_evidence
+    ev = _visible_evidence(request.user, submission_id)
+    if ev is None:
+        return Response({"error": "submission not found"}, status=status.HTTP_404_NOT_FOUND)
+    name = ev.doc_type or ev.document_type or "Document"
+    meta = [
+        ("Document", name),
+        ("Site", ev.site), ("State", ev.state),
+        ("Period", ev.period or f"{ev.month} {ev.financial_year}".strip()),
+        ("AI status", ev.ai_status or "—"),
+    ]
+    data = build_issues_xlsx(f"AI Audit Issues — {name}", meta, problems_from_evidence(ev))
+    filename = f"{name}-issues.xlsx".replace(" ", "_").replace("/", "-")
+    return FileResponse(io.BytesIO(data), as_attachment=True, filename=filename)
+
+
 __all__ = [
     "_handle_submission_review",
     "_submissions",
@@ -1293,8 +1368,10 @@ __all__ = [
     "compliance_batch_master_download",
     "compliance_batch_register",
     "compliance_batch_register_export",
+    "compliance_batch_register_issues",
     "compliance_batch_register_pdf",
     "compliance_batch_run_audits",
+    "submission_audit_issues",
     "compliance_batch_site_documents",
     "compliance_batch_summary",
     "contractor_clra_validate",
