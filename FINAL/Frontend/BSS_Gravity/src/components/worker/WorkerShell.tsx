@@ -11,6 +11,7 @@ import NotificationBell from '@/components/worker/NotificationBell';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import MobileClaimModal from '@/components/worker/MobileClaimModal';
 import WorkerOnboardingGate from '@/components/worker/WorkerOnboardingGate';
+import MpinSetupGate from '@/components/auth/MpinSetupGate';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
 
@@ -142,6 +143,7 @@ export default function WorkerShell({ children }: { children:React.ReactNode }) 
       </nav>}
     </header>
     <main key={pathname} className="bss-app-main bss-content-fade flex-1 w-full max-w-[1000px] mx-auto py-6 md:py-10 px-4 md:px-8">{children}</main>
+    <MpinSetupGate />
     <WorkerOnboardingGate />
     <MobileClaimModal />
   </div>;

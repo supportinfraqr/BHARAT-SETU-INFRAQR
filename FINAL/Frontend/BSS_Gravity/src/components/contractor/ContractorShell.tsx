@@ -9,6 +9,7 @@ import { SignOutButton } from '@/components/auth/SignOutButton';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import BrandText from '@/components/BrandText';
 import NotificationBell from '@/components/worker/NotificationBell';
+import MpinSetupGate from '@/components/auth/MpinSetupGate';
 import { useContractor } from '@/contexts/ContractorContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -88,5 +89,6 @@ export default function ContractorShell({ children }: { children:React.ReactNode
       </nav>}
     </header>
     <main key={pathname} className="bss-app-main bss-content-fade flex-1 w-full max-w-[1200px] mx-auto py-6 md:py-10 px-4 md:px-8">{children}</main>
+    <MpinSetupGate />
   </div>;
 }

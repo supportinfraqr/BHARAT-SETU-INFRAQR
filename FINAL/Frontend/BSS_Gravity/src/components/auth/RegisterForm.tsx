@@ -31,11 +31,8 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [contact, setContact] = useState("");
   const [otp, setOtp] = useState("");
-  const [aadhaar, setAadhaar] = useState("");
-  const [aadhaarOtp, setAadhaarOtp] = useState("");
-  const [aadhaarRef, setAadhaarRef] = useState("");
 
-  const [step, setStep] = useState<"details" | "otp" | "aadhaar" | "aadhaar-otp">("details");
+  const [step, setStep] = useState<"details" | "otp">("details");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -76,41 +73,6 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
     } catch (issuanceError) { setError(issuanceError instanceof Error ? issuanceError.message : "Registration could not be completed."); }
     finally { setIsCreating(false); }
   };
-  const startAadhaar = () => {
-    setError("");
-    if (selectedRole !== "Worker") return setError("Aadhaar eKYC onboarding is available for workers.");
-    setStep("aadhaar");
-  };
-  const sendAadhaarOtp = async () => {
-    if (!/^\d{12}$/.test(aadhaar)) return setError("Enter a valid 12-digit Aadhaar number.");
-    setError(""); setNotice(""); setIsCreating(true);
-    try {
-      const response = await fetch('/api/auth/aadhaar/otp', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ aadhaar }) });
-      const result = await response.json().catch(() => ({})) as { referenceId?: string; error?: string; message?: string; reused?: boolean };
-      if (result.referenceId) setAadhaarRef(result.referenceId);
-      // Always advance to the OTP screen so the user can enter the OTP they
-      // received — even if Sandbox rate-limited the resend.
-      if (!response.ok || !result.referenceId) setError(result.error ?? 'OTP already sent — enter it below.');
-      setStep("aadhaar-otp");
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Aadhaar OTP could not be sent.');
-      setStep("aadhaar-otp");
-    }
-    finally { setIsCreating(false); }
-  };
-  const verifyAadhaar = async () => {
-    if (aadhaarOtp.length !== 6) return setError("Enter the six-digit verification code.");
-    setError(""); setIsCreating(true);
-    try {
-      const response = await fetch("/api/auth/aadhaar/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aadhaar, referenceId: aadhaarRef, otp: aadhaarOtp, acceptedTerms: agreedToTerms }) });
-      const result = (await response.json()) as { bssId?: string; redirectTo?: string; error?: string };
-      if (!response.ok || !result.bssId) throw new Error(result.error || "Worker ID could not be issued.");
-      router.replace(result.redirectTo ?? "/worker/Profile");
-      router.refresh();
-    } catch (issuanceError) { setError(issuanceError instanceof Error ? issuanceError.message : "Worker ID could not be issued."); }
-    finally { setIsCreating(false); }
-  };
-
   const roles = [
     { id: 'Worker', icon: HardHat, label: t('worker') },
     { id: 'Contractor', icon: Briefcase, label: t('contractor') },
@@ -223,77 +185,6 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
                 </span>
               </button>
             </div>
-          )}
-
-          {/* WORKER AADHAAR eKYC */}
-          {selectedRole === "Worker" && (step === "aadhaar" || step === "aadhaar-otp") && (
-            <div className="flex flex-col gap-3">
-              <input 
-                type="text" 
-                inputMode="numeric"
-                className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] tracking-[0.15em] shadow-[inset_0_2px_5px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10 focus:border-[#1E3A8A]/30 outline-none transition-all font-medium text-gray-800" 
-                placeholder="12-digit Aadhaar number" 
-                value={aadhaar}
-                onChange={e => setAadhaar(e.target.value.replace(/\D/g, '').slice(0,12))}
-                disabled={step === "aadhaar-otp"}
-              />
-              {step === "aadhaar-otp" && (
-                <div>
-                  <label className="text-[11px] font-bold text-gray-500 uppercase">Verification code</label>
-                  <input value={aadhaarOtp} onChange={e=>setAadhaarOtp(e.target.value.replace(/\D/g, '').slice(0,6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit OTP" className="mt-2 w-full bg-[#F5F5F7] border rounded-xl px-3.5 py-2.5 text-center tracking-[0.4em] font-bold"/>
-                  <div className="flex justify-between items-center mt-2">
-                    <button type="button" onClick={() => setStep("aadhaar")} className="cursor-pointer text-xs font-semibold text-gray-500 hover:text-[#1E3A8A] transition-colors">‹ Edit</button>
-                    <ResendOtp onSend={sendAadhaarOtp} />
-                  </div>
-                </div>
-              )}
-              {step === "aadhaar" && (
-                <button type="button" onClick={() => setStep("details")} className="cursor-pointer text-xs font-semibold text-gray-500 hover:text-[#1E3A8A] self-start transition-colors">‹ Use mobile number instead</button>
-              )}
-
-              {error && <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
-
-              <div className="flex items-start gap-2 mt-2">
-                <input 
-                  type="checkbox" 
-                  id="terms-aadhaar"
-                  checked={agreedToTerms}
-                  onChange={(e) => setAgreedToTerms(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 text-[#1E3A8A] bg-gray-100 border-gray-300 rounded cursor-pointer"
-                />
-                <label htmlFor="terms-aadhaar" className="text-xs text-gray-500 leading-snug cursor-pointer pt-0.5">
-                  I agree to the <a href="/policy" target="_blank" className="text-[#1E3A8A] hover:underline">Privacy Policy</a> and <a href="/terms" target="_blank" className="text-[#1E3A8A] hover:underline">Terms & Conditions</a>.
-                </label>
-              </div>
-
-              <button 
-                disabled={!agreedToTerms || isCreating || (step === "aadhaar" && !/^\d{12}$/.test(aadhaar))}
-                onClick={step === "aadhaar" ? sendAadhaarOtp : verifyAadhaar}
-                type="button"
-                className="mt-1 w-full text-white bg-[#1E3A8A] hover:bg-[#152960] rounded-[12px] px-3.5 py-2.5 text-[13px] font-bold flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {isCreating ? "Please wait…" : step === "aadhaar" ? "Send OTP to Aadhaar-linked mobile" : "Verify Aadhaar & create Worker ID"}
-              </button>
-            </div>
-          )}
-
-          {/* ALTERNATIVE LOGIN FOR WORKERS */}
-          {selectedRole === "Worker" && (step === "details" || step === "otp") && (
-            <>
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-3 bg-white text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('orRegisterWith')}</span>
-                </div>
-              </div>
-
-              <button type="button" onClick={startAadhaar} className="w-full cursor-pointer flex items-center justify-center gap-2.5 py-2.5 px-3 rounded-[14px] border border-gray-200 bg-white text-gray-700 hover:border-[#1E3A8A] hover:bg-blue-50 hover:text-[#1E3A8A] transition-all shadow-sm active:scale-[0.99]">
-                <img src="/bss-brand/aadhaar.svg" alt="Aadhaar" className="h-6 w-6" />
-                <span className="text-[13px] font-bold">{t('aadhaar')}</span>
-              </button>
-            </>
           )}
 
         </div>
