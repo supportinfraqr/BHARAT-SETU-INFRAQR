@@ -439,9 +439,9 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
   const isPartialSubmission = missingEvidence.length > 0;
   // The single Final Submit is enabled only once every mandatory document is uploaded.
   const mandatoryDocs = additionalDocs.filter(doc => doc.mandatory && doc.requiresDocument);
-  const allMandatoryUploaded = mandatoryDocs.length > 0
-    ? mandatoryDocs.every(doc => uploads[doc.name]?.id != null)
-    : additionalDocs.some(doc => uploads[doc.name]?.id != null);
+  // Vacuously true when nothing is mandatory, so the common Submit is enabled
+  // as soon as no mandatory document is outstanding.
+  const allMandatoryUploaded = mandatoryDocs.every(doc => uploads[doc.name]?.id != null);
 
   async function uploadEvidence(doc: DocRowUI, next?: File) {
     if (!next) return;
@@ -553,34 +553,49 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
     { id:'audit', header:'AI Audit', value:b => b.auditStatus || '', render:b => auditPill(b.auditStatus) },
     { id:'status', header:'Status', value:b => b.status, render:b => <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${b.status === 'Verified' ? 'bg-green-50 text-green-700 border-green-200' : b.status === 'Submitted' ? 'bg-blue-50 text-blue-700 border-blue-200' : (b.status === 'Returned' || b.status === 'Rejected') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>{b.status === 'Verified' ? 'Verified' : (b.status === 'Returned' || b.status === 'Rejected') ? 'Returned' : b.status === 'Submitted' ? 'Submitted' : 'Generated · Ready'}</span> },
     { id:'documents', header:'Documents', filterable:false, value:b => b.id, render:b => <button type="button" onClick={() => setBatchView(String(b.id))} className="h-8 px-3 rounded-lg border border-gray-200 bg-white text-[11px] font-semibold hover:bg-gray-50">Documents</button> },
-    { id:'action', header:'Action', filterable:false, value:b => b.id, render:b => <div className="flex items-center gap-2">{b.hasFile && <a href={`/api/portal/compliance-batches/zip?batchId=${b.id}`} className="h-8 px-3 rounded-lg border border-gray-200 bg-white text-[11px] font-semibold inline-flex items-center gap-1.5 hover:bg-gray-50"><Download size={12}/>Download ZIP</a>}{b.status !== 'Submitted' && b.status !== 'Verified' && <button type="button" onClick={() => void submitBatch(b.id)} disabled={busy || !submitReady(b)} title={submitReady(b) ? 'Submit this register package' : (b.auditStatus === 'failed' ? 'AI audit flagged issues — fix and re-run the audit first.' : 'Submission opens once every register is audited and passed.')} className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold inline-flex items-center gap-1.5 hover:bg-[#062D4F] disabled:opacity-40 disabled:cursor-not-allowed"><FileUp size={12}/>Submit</button>}</div> },
+    { id:'action', header:'Action', filterable:false, value:b => b.id, render:b => <div className="flex items-center gap-2">{b.hasFile && <a href={`/api/portal/compliance-batches/zip?batchId=${b.id}`} className="h-8 px-3 rounded-lg border border-gray-200 bg-white text-[11px] font-semibold inline-flex items-center gap-1.5 hover:bg-gray-50"><Download size={12}/>Download ZIP</a>}</div> },
   ];
 
   const verified = submittedDocuments.filter(row => row.status === 'Verified').length;
   const pending = submittedDocuments.filter(row => row.status !== 'Verified' && row.status !== 'Returned').length;
 
-  async function submitBatch(batchId: string) {
-    setBusy(true); setError(''); setNotice('');
-    const ctxBatch = contractor.complianceBatches.find(b => b.id === batchId);
-    const siteObj = contractor.sites.find(s => s.name === (ctxBatch?.site || '')) ?? activeSiteObj;
+  // One common submit for the whole package: the generated CLRA registers for
+  // this context plus every uploaded additional form, in a single request.
+  async function submitAll() {
+    setError(''); setNotice('');
+    const siteObj = activeSiteObj;
     const empName = siteObj?.employer || ctxEmployer;
-    const subSiteName = ctxBatch?.site || siteObj?.name || ctxSite;
-    const stName = ctxBatch?.state || siteObj?.state || ctxState;
+    const subSiteName = siteObj?.name || ctxSite;
+    const stName = siteObj?.state || ctxState;
+    const pendingUploads = additionalDocs
+      .filter(d => uploads[d.name]?.id != null && !submittedNames.has(d.name))
+      .map(d => uploads[d.name]?.id as number);
+    const openBatches = generatedForCreate.filter(b => b.status !== 'Submitted' && b.status !== 'Verified');
+    if (openBatches.some(b => !submitReady(b))) {
+      setError('Every register must pass the level-1 AI audit before the package can be submitted.');
+      return;
+    }
+    const batchIds = openBatches.map(b => b.id);
+    if (!pendingUploads.length && !batchIds.length) {
+      setNotice('Nothing ready to submit — upload documents or generate registers first.');
+      return;
+    }
+    setBusy(true);
     try {
       const response = await fetch('/api/portal/compliances', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: 'submit', employer: empName, site: subSiteName, period: `${createPeriod} ${fy.replace('FY ', '')}`, financialYear: fy, state: stName, month, location: '', complianceType: '', docName: '', uploadIds: [], batchIds: [batchId] }),
+        body: JSON.stringify({ kind: 'submit', employer: empName, site: subSiteName, period: `${createPeriod} ${fy.replace('FY ', '')}`, financialYear: fy, state: stName, month, location: '', complianceType: '', docName: '', uploadIds: pendingUploads, batchIds }),
       });
       const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['auditReports'][number]; error?: string };
-      if (!response.ok || !result.data) throw new Error(result.error ?? 'Registers could not be submitted.');
+      if (!response.ok || !result.data) throw new Error(result.error ?? 'The submission could not be completed.');
       replaceContractor({ ...contractor, auditReports: [result.data, ...contractor.auditReports] });
-      setNotice(`Registers submitted! Ref No: ${result.data.uniqueNo}. Detailed audit report is being generated.`);
-      // Level-2: hand off to the Contractor Report tab, which auto-generates the
-      // detailed branded audit report for this site/period.
+      setOptimisticSubmitted(prev => Array.from(new Set([...prev, ...additionalDocs.filter(d => uploads[d.name]?.id != null).map(d => d.name)])));
+      setUploads({});
+      setNotice(`Submitted! Ref No: ${result.data.uniqueNo}. The detailed audit report is ready in the Contractor Report tab.`);
       onSubmitted?.({ site: subSiteName, month, financialYear: fy });
       void refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Registers could not be submitted.');
+      setError(reason instanceof Error ? reason.message : 'The submission could not be completed.');
     } finally { setBusy(false); }
   }
 
@@ -619,19 +634,6 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'The audit report could not be generated.');
     } finally { setBusy(false); }
-  }
-
-  async function submitAllAdditional() {
-    const pending = additionalDocs.filter(d => uploads[d.name]?.id != null && !submittedNames.has(d.name));
-    if (!pending.length) { setError(''); setNotice('Upload the documents first — there is nothing ready to submit.'); return; }
-    setError(''); setNotice('');
-    let done = 0;
-    for (const d of pending) {
-      const id = uploads[d.name]?.id;
-      if (id == null) continue;
-      try { await submitSingleForm(d.name, id, true); done += 1; } catch { /* keep going */ }
-    }
-    setNotice(`Submitted ${done} of ${pending.length} document(s).`);
   }
 
   const documentColumns: DataColumn<DocumentRow>[] = [
@@ -1159,7 +1161,7 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
                     Part Submissions Allowed ({missingEvidence.length} pending)
                   </span>
                 )}
-                <button type="button" onClick={() => void submitAllAdditional()} disabled={busy || !allMandatoryUploaded} title={allMandatoryUploaded ? 'Submit every uploaded form' : 'Upload all mandatory documents to enable'} className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold flex items-center gap-1.5 hover:bg-[#062D4F] disabled:opacity-50"><FileUp size={13}/>{busy ? 'Submitting…' : 'Final Submit (all forms)'}</button>
+                <button type="button" onClick={() => void submitAll()} disabled={busy || !allMandatoryUploaded} title={allMandatoryUploaded ? 'Submit all generated registers and uploaded forms in one package' : 'Upload all mandatory documents to enable'} className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold flex items-center gap-1.5 hover:bg-[#062D4F] disabled:opacity-50"><FileUp size={13}/>{busy ? 'Submitting…' : 'Submit All (Registers + Forms)'}</button>
               </div>
             </div>
 
