@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Download, RefreshCw, X } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 
 type RegisterAudit = { status?:string; valid?:boolean; confidence?:number; summary?:string; findings?:string[]; matchedColumns?:string[]; missing?:string[]; issues?:string[]; providerLabel?:string; model?:string; message?:string };
 type DocRow = { purpose:string; form:string; frequency:string; mandatory:boolean; templateId:number | null; outputFormat?:string; audit?:RegisterAudit | null };
@@ -36,7 +36,6 @@ export default function BatchDrilldown({ batchId, role, onClose }: { batchId:str
   const [site, setSite] = useState<SiteDocs | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [auditNonce, setAuditNonce] = useState(0);
   const base = `/api/${role}/compliance-batches/${batchId}`;
 
   useEffect(() => {
@@ -68,7 +67,7 @@ export default function BatchDrilldown({ batchId, role, onClose }: { batchId:str
       }
     }, 5000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [siteName, base, auditNonce]);
+  }, [siteName, base]);
 
   async function openSite(name: string) {
     setBusy(true); setError('');
@@ -78,19 +77,6 @@ export default function BatchDrilldown({ batchId, role, onClose }: { batchId:str
       if (!response.ok || !body.data) throw new Error(body.error ?? 'Site documents could not be loaded.');
       setSite(body.data);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Site documents could not be loaded.'); }
-    finally { setBusy(false); }
-  }
-
-  async function rerunAudits() {
-    setBusy(true); setError('');
-    try {
-      const response = await fetch(`${base}/ai-audit`, { method: 'POST' });
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({})) as { error?:string };
-        throw new Error(body.error ?? 'AI audit could not be started.');
-      }
-      setAuditNonce(n => n + 1);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'AI audit could not be started.'); }
     finally { setBusy(false); }
   }
 
@@ -124,7 +110,6 @@ export default function BatchDrilldown({ batchId, role, onClose }: { batchId:str
         <div className="rounded-xl border border-gray-100 p-4">
           <div className="flex items-center justify-between gap-2 mb-2">
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Applicable documents — {site.site}{site.siteCode ? ` (${site.siteCode})` : ''} · {site.state}</p>
-            <button type="button" disabled={busy} onClick={() => void rerunAudits()} className="text-[11px] font-semibold text-blue-700 hover:underline disabled:opacity-50 inline-flex items-center gap-1"><RefreshCw size={11}/>Re-run AI audit</button>
           </div>
           {site.documents.length
             ? <ul className="space-y-1.5">{site.documents.map((doc, i) => <li key={i} className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2 text-xs"><span className="text-gray-700">{doc.purpose}</span><span className="flex items-center gap-2 text-gray-400">{doc.form}{doc.mandatory ? ' · mandatory' : ''}{doc.templateId ? <><AuditBadge audit={doc.audit}/>{doc.outputFormat === 'xlsx' ? <a href={`${base}/register/${doc.templateId}/xlsx`} className="text-blue-700 font-semibold hover:underline">Download Excel</a> : <span className="text-gray-400">PDF</span>}</> : <span className="text-gray-300">no template</span>}</span></li>)}</ul>
