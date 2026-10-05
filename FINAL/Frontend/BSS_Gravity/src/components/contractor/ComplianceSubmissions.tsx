@@ -437,6 +437,11 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
   const totalMandatoryDocsCount = additionalDocs.filter(doc => doc.mandatory && doc.requiresDocument).length;
   const missingEvidence = additionalDocs.filter(doc => doc.mandatory && doc.requiresDocument && uploads[doc.name]?.status !== 'Validated');
   const isPartialSubmission = missingEvidence.length > 0;
+  // The single Final Submit is enabled only once every mandatory document is uploaded.
+  const mandatoryDocs = additionalDocs.filter(doc => doc.mandatory && doc.requiresDocument);
+  const allMandatoryUploaded = mandatoryDocs.length > 0
+    ? mandatoryDocs.every(doc => uploads[doc.name]?.id != null)
+    : additionalDocs.some(doc => uploads[doc.name]?.id != null);
 
   async function uploadEvidence(doc: DocRowUI, next?: File) {
     if (!next) return;
@@ -1113,12 +1118,17 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
                 {totalMandatoryDocsCount > 0 ? ` · ${uploadedMandatoryCount}/${totalMandatoryDocsCount} Mandatory` : ''})
               </p>
               <div className="flex items-center gap-2">
-                {isPartialSubmission && (
+                {!allMandatoryUploaded && (
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                    {mandatoryDocs.filter(doc => uploads[doc.name]?.id == null).length} mandatory pending
+                  </span>
+                )}
+                {allMandatoryUploaded && isPartialSubmission && (
                   <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
                     Part Submissions Allowed ({missingEvidence.length} pending)
                   </span>
                 )}
-                <button type="button" onClick={() => void submitAllAdditional()} disabled={busy || additionalDocs.length === 0} className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold flex items-center gap-1.5 hover:bg-[#062D4F] disabled:opacity-50"><FileUp size={13}/>{busy ? 'Submitting…' : 'Final Submit (all forms)'}</button>
+                <button type="button" onClick={() => void submitAllAdditional()} disabled={busy || !allMandatoryUploaded} title={allMandatoryUploaded ? 'Submit every uploaded form' : 'Upload all mandatory documents to enable'} className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold flex items-center gap-1.5 hover:bg-[#062D4F] disabled:opacity-50"><FileUp size={13}/>{busy ? 'Submitting…' : 'Final Submit (all forms)'}</button>
               </div>
             </div>
 
