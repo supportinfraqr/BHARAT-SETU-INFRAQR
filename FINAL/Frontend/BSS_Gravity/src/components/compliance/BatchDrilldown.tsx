@@ -115,19 +115,11 @@ export default function BatchDrilldown({ batchId, role, onClose }: { batchId:str
             ? <ul className="space-y-1.5">{site.documents.map((doc, i) => <li key={i} className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2 text-xs"><span className="text-gray-700">{doc.purpose}</span><span className="flex items-center gap-2 text-gray-400">{doc.form}{doc.mandatory ? ' · mandatory' : ''}{doc.templateId ? <><AuditBadge audit={doc.audit}/>{doc.outputFormat === 'xlsx' ? <a href={`${base}/register/${doc.templateId}/xlsx`} className="text-blue-700 font-semibold hover:underline">Download Excel</a> : <span className="text-gray-400">PDF</span>}</> : <span className="text-gray-300">no template</span>}</span></li>)}</ul>
             : <p className="text-xs text-gray-400">The applicability matrix has no form rows for {site.state}.</p>}
         </div>
-        <div className="rounded-xl border border-gray-100 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Register templates ({site.templates.length})</p>
-          {site.templates.length
-            ? <div className="flex flex-wrap gap-2">{site.templates.map(t => <span key={t.id} className="inline-flex items-center gap-2 rounded-lg border border-gray-100 px-3 py-1.5 text-xs"><strong className="font-mono text-[#073B67]">{t.formCode}</strong><span className="text-gray-400">{t.columns} field(s)</span><AuditBadge audit={t.audit}/>{t.outputFormat === 'xlsx' ? <a href={`${base}/register/${t.id}/xlsx`} className="text-blue-700 font-semibold hover:underline">Download Excel</a> : <span className="text-gray-400">PDF</span>}</span>)}</div>
-            : <p className="text-xs text-gray-400">No templates configured for {site.state}.</p>}
-        </div>
       </div>}
     </div>
   </section></div>;
 }
 
 function hasPendingAudit(data: SiteDocs): boolean {
-  const pendingDoc = data.documents.some(doc => doc.templateId != null && !doc.audit);
-  const pendingTemplate = data.templates.some(tpl => !tpl.audit);
-  return pendingDoc || pendingTemplate;
+  return data.documents.some(doc => doc.templateId != null && !doc.audit);
 }
