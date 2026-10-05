@@ -135,6 +135,43 @@ export default function WorkerProfilePage() {
     }
   };
 
+  // Downscale + JPEG-compress a captured/selected image so 5 photos fit in
+  // localStorage and under the upload size limit.
+  const compressImage = (dataUrl: string, max = 640, quality = 0.75): Promise<string> =>
+    new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, max / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { resolve(dataUrl); return; }
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } catch { resolve(dataUrl); }
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+
+  // Merge one photo into the slot map (functional update avoids stale state) and
+  // persist, tolerating a full localStorage instead of losing the in-memory set.
+  const addFacePhoto = useCallback((slot: number, dataUrl: string) => {
+    setFacePhotos(prev => {
+      const updated = { ...prev, [slot]: dataUrl };
+      try {
+        const storageKey = `bss_face_photos_${worker.identity.bssId || worker.identity.aadhaar || 'current'}`;
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Failed to persist face photos:', e);
+      }
+      return updated;
+    });
+  }, [worker.identity.bssId, worker.identity.aadhaar]);
+
   // Restore face photos from localStorage on component mount
   useEffect(() => {
     try {
@@ -143,22 +180,11 @@ export default function WorkerProfilePage() {
       if (saved) {
         const parsed = JSON.parse(saved) as Record<number, string>;
         if (parsed && typeof parsed === 'object') {
-          setFacePhotos(parsed);
+          setFacePhotos(prev => ({ ...parsed, ...prev }));
         }
       }
     } catch (e) {
       console.error('Failed to load saved face photos:', e);
-    }
-  }, [worker.identity.bssId, worker.identity.aadhaar]);
-
-  // Persist face photos to localStorage whenever updated
-  const saveFacePhotos = useCallback((newPhotos: Record<number, string>) => {
-    setFacePhotos(newPhotos);
-    try {
-      const storageKey = `bss_face_photos_${worker.identity.bssId || worker.identity.aadhaar || 'current'}`;
-      localStorage.setItem(storageKey, JSON.stringify(newPhotos));
-    } catch (e) {
-      console.error('Failed to persist face photos:', e);
     }
   }, [worker.identity.bssId, worker.identity.aadhaar]);
 
@@ -202,8 +228,11 @@ export default function WorkerProfilePage() {
     if (ctx) {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-      saveFacePhotos({ ...facePhotos, [activeFaceSlot]: dataUrl });
-      void enrollFacePhoto(dataUrl);
+      const slot = activeFaceSlot;
+      void compressImage(dataUrl).then(compressed => {
+        addFacePhoto(slot, compressed);
+        void enrollFacePhoto(compressed);
+      });
       setDirty(true);
     }
     stopCamera();
@@ -880,17 +909,10 @@ export default function WorkerProfilePage() {
                       reader.onload = (event) => {
                         const dataUrl = event.target?.result as string;
                         if (dataUrl) {
-                          setFacePhotos(prev => {
-                            const updated = { ...prev, [slot]: dataUrl };
-                            try {
-                              const storageKey = `bss_face_photos_${worker.identity.bssId || worker.identity.aadhaar || 'current'}`;
-                              localStorage.setItem(storageKey, JSON.stringify(updated));
-                            } catch (err) {
-                              console.error('Failed to save to localStorage:', err);
-                            }
-                            return updated;
+                          void compressImage(dataUrl).then(compressed => {
+                            addFacePhoto(slot, compressed);
+                            void enrollFacePhoto(compressed);
                           });
-                          void enrollFacePhoto(dataUrl);
                           setDirty(true);
                         }
                       };
