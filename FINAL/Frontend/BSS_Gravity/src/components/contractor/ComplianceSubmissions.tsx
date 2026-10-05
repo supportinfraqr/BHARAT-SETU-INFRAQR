@@ -566,7 +566,7 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
     const empName = siteObj?.employer || ctxEmployer;
     const subSiteName = siteObj?.name || ctxSite;
     const stName = siteObj?.state || ctxState;
-    const pendingUploads = additionalDocs
+    const pendingUploads = [...additionalDocs, ...registerForms]
       .filter(d => uploads[d.name]?.id != null && !submittedNames.has(d.name))
       .map(d => uploads[d.name]?.id as number);
     const openBatches = generatedForCreate.filter(b => b.status !== 'Submitted' && b.status !== 'Verified');
@@ -584,7 +584,7 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
       const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['auditReports'][number]; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error ?? 'The submission could not be completed.');
       replaceContractor({ ...contractor, auditReports: [result.data, ...contractor.auditReports] });
-      setOptimisticSubmitted(prev => Array.from(new Set([...prev, ...additionalDocs.filter(d => uploads[d.name]?.id != null).map(d => d.name)])));
+      setOptimisticSubmitted(prev => Array.from(new Set([...prev, ...[...additionalDocs, ...registerForms].filter(d => uploads[d.name]?.id != null).map(d => d.name)])));
       setUploads({});
       setNotice(`Submitted! Ref No: ${result.data.uniqueNo}. The detailed audit report is ready in the Contractor Report tab.`);
       onSubmitted?.({ site: subSiteName, month, financialYear: fy });

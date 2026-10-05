@@ -408,6 +408,20 @@ def build_package_report(batches, meta=None):
             "total": total, "clean": passed_ct, "passed": passed}
 
 
+def _report_pdf(html, filename):
+    """Render branded report HTML to a PDF attachment response."""
+    try:
+        from weasyprint import HTML
+
+        pdf = HTML(string=html, base_url="https://login.bharatshramsetu.com/").write_pdf()
+    except Exception as exc:  # noqa: BLE001
+        return Response({"error": f"PDF could not be generated: {exc}"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -423,32 +437,57 @@ def contractor_compliance_report(request):
         cr = ComplianceReport.objects.filter(pk=int(report_id), employer=request.user).first()
         if cr is None:
             return Response({"error": "Report not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        from api import clra
+
+        from .compliance_verification import build_verification_report, verification_report_html
         batch_ids = [int(x) for x in (cr.batch_ids or []) if str(x).isdigit()]
         batches = list(ComplianceBatch.objects.filter(id__in=batch_ids, contractor=request.user)
                        .select_related("site"))
-        meta = {"site": cr.site_name, "period": cr.period, "fy": cr.financial_year,
-                "refNo": cr.unique_no}
-        report = build_package_report(batches, meta)
-        if not report["documents"]:
-            # Evidence-only package → fall back to its uploaded documents.
-            subs = list(SubmissionEvidence.objects.filter(user=request.user, unique_no=cr.unique_no))
-            report = build_submission_report(subs, meta)
-    else:
-        site = (request.query_params.get("site") or "").strip()
-        period = (request.query_params.get("period") or "").strip()
-        fy = (request.query_params.get("fy") or "").strip()
-        submissions = _scope_submissions(request.user, site=site, period=period, fy=fy)
-        meta = {"site": site, "period": period, "fy": fy}
-        report = build_submission_report(submissions, meta)
+        # Master rows drive the C1-C8 parameter computation.
+        rows = []
+        for batch in batches:
+            if not batch.master_file:
+                continue
+            try:
+                batch.master_file.open("rb")
+                rows.extend(clra.parse_master(batch.master_file))
+            except Exception:  # noqa: BLE001
+                continue
+        # Manual register uploads + additional forms (their level-1 AI audit).
+        files = []
+        for ev in SubmissionEvidence.objects.filter(user=request.user, unique_no=cr.unique_no):
+            findings = [str(x) for x in (ev.validation_findings or []) if str(x).strip()]
+            files.append({
+                "name": ev.doc_type or ev.document_type or "Document",
+                "kind": "Additional form / manual register",
+                "status": str(ev.status or "pending").lower(),
+                "summary": findings[0] if findings else "",
+                "findings": findings[1:],
+            })
+        meta = {
+            "site": cr.site_name, "period": cr.period, "fy": cr.financial_year,
+            "refNo": cr.unique_no, "employer": cr.client_name,
+            "contractor": payloads._party_name(cr.employer) if cr.employer_id else "",
+        }
+        report = build_verification_report(rows, meta, batches, files=files)
+        html = verification_report_html(meta, report)
+        if (request.query_params.get("download") or "").lower() == "pdf":
+            return _report_pdf(html, f"bss-verification-report-{cr.unique_no or cr.id}.pdf")
+        return Response({"data": {
+            "html": html, "verdict": report["verdict"], "totals": report["totals"],
+            "parameters": report["parameters"], "files": report["files"],
+            "criteria": [], "documents": [], "total": report["totals"]["applicable"],
+            "clean": report["totals"]["counts"]["C1"], "passed": 0,
+        }}, status=status.HTTP_200_OK)
+
+    site = (request.query_params.get("site") or "").strip()
+    period = (request.query_params.get("period") or "").strip()
+    fy = (request.query_params.get("fy") or "").strip()
+    submissions = _scope_submissions(request.user, site=site, period=period, fy=fy)
+    meta = {"site": site, "period": period, "fy": fy}
+    report = build_submission_report(submissions, meta)
     html = _submission_report_html(meta, report)
     if (request.query_params.get("download") or "").lower() == "pdf":
-        try:
-            from weasyprint import HTML
-
-            pdf = HTML(string=html, base_url="https://login.bharatshramsetu.com/").write_pdf()
-        except Exception as exc:  # noqa: BLE001
-            return Response({"error": f"PDF could not be generated: {exc}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        response = HttpResponse(pdf, content_type="application/pdf")
-        response["Content-Disposition"] = 'attachment; filename="bss-compliance-submission-report.pdf"'
-        return response
+        return _report_pdf(html, "bss-compliance-submission-report.pdf")
     return Response({"data": {**{k: report[k] for k in ("criteria", "documents", "verdict", "total", "clean", "passed")}, "html": html}}, status=status.HTTP_200_OK)
