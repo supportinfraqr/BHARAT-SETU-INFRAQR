@@ -479,7 +479,7 @@ export default function OriginalLoginPage() {
         </div>
 
           {/* BACK FACE (REGISTER) */}
-          <div className={`col-start-1 row-start-1 backface-hidden w-full flex flex-col justify-center rotate-y-180 ${!isFlipped ? 'pointer-events-none z-0' : 'z-10'}`}>
+          <div className={`col-start-1 row-start-1 backface-hidden w-full flex flex-col justify-start rotate-y-180 ${!isFlipped ? 'pointer-events-none z-0' : 'z-10'}`}>
             <RegisterForm onSwitchToLogin={() => setIsFlipped(false)} currentLang={lang} onLangChange={setLang} t={t} />
           </div>
 

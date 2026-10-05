@@ -83,7 +83,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   ];
 
   return (
-    <div className="bg-white rounded-[24px] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15),_0_0_20px_-5px_rgba(0,0,0,0.05)] ring-1 ring-black/5 w-full overflow-hidden flex flex-col relative min-h-[520px]">
+    <div className="bg-white rounded-[24px] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15),_0_0_20px_-5px_rgba(0,0,0,0.05)] ring-1 ring-black/5 w-full overflow-hidden flex flex-col relative">
       
       <LanguageSelector currentLang={currentLang} onLangChange={onLangChange} />
       
@@ -131,7 +131,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
         </div>
 
         {/* DETAILS SECTION */}
-        <div className="flex-1">
+        <div>
 
           {/* STANDARD MOBILE REGISTRATION */}
           {(step === "details" || step === "otp") && (
@@ -190,7 +190,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
         </div>
       </div>
 
-      <div className="p-4 bg-gray-50/80 border-t border-gray-100 text-center mt-auto">
+      <div className="p-4 bg-gray-50/80 border-t border-gray-100 text-center">
         <p className="text-sm text-gray-600">
           {t('alreadyHaveAccount')} <button onClick={onSwitchToLogin} className="cursor-pointer text-[#1E3A8A] font-bold hover:underline">{t('loginHere')}</button>
         </p>
