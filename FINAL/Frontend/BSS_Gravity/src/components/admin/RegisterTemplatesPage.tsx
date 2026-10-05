@@ -1283,6 +1283,9 @@ export default function RegisterTemplatesPage() {
   const [builder, setBuilder] = useState<BuilderDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const [cpCatalog, setCpCatalog] = useState<AiCheck[]>([]);
+  const [customLabel, setCustomLabel] = useState('');
+  const [customValue, setCustomValue] = useState('');
+  const [customRequired, setCustomRequired] = useState(true);
 
   // The AI checkpoint catalog (same list the Additional Forms admin uses).
   useEffect(() => {
@@ -1535,6 +1538,24 @@ export default function RegisterTemplatesPage() {
                     </div>
                   );
                 })}
+              </div>
+              {builder.aiChecks.filter(c => c.type === 'custom').length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {builder.aiChecks.filter(c => c.type === 'custom').map((c, i) => (
+                    <li key={`${c.label}-${i}`} className="flex items-center justify-between gap-2 rounded-lg border border-blue-200 bg-white px-2 py-1 text-[11px]">
+                      <span className="text-gray-800 truncate">{c.label}{c.value ? ` — expects “${c.value}”` : ''}{c.required === false ? ' (optional)' : ''}</span>
+                      <button type="button" onClick={() => patch('aiChecks', builder.aiChecks.filter(x => x !== c))} className="text-gray-400 hover:text-red-600" aria-label="Remove checkpoint"><X size={12}/></button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="mt-2 space-y-1.5">
+                <input value={customLabel} onChange={e => setCustomLabel(e.target.value)} placeholder="Add a custom checkpoint the AI must verify" className="w-full h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
+                <div className="flex items-center gap-2">
+                  <input value={customValue} onChange={e => setCustomValue(e.target.value)} placeholder="Expected text (optional)" className="flex-1 h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
+                  <label className="flex items-center gap-1 text-[11px] text-gray-600 whitespace-nowrap"><input type="checkbox" checked={customRequired} onChange={e => setCustomRequired(e.target.checked)} className="accent-[#073B67]"/>required</label>
+                  <button type="button" onClick={() => { const label = customLabel.trim(); if (!label) return; patch('aiChecks', [...builder.aiChecks, { type: 'custom', label, value: customValue.trim() || undefined, required: customRequired }]); setCustomLabel(''); setCustomValue(''); setCustomRequired(true); }} disabled={!customLabel.trim()} className="h-9 px-3 rounded-lg border border-[#073B67] text-[#073B67] text-xs font-bold disabled:opacity-50">Add</button>
+                </div>
               </div>
               <p className="mt-2 text-[11px] text-gray-500">{builder.aiChecks.length} checkpoint(s) selected{builder.aiChecks.length === 0 ? ' — uploads use integrity checks only.' : '.'}</p>
             </div>
