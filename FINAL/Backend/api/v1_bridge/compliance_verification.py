@@ -226,14 +226,17 @@ def build_verification_report(rows, meta=None, batches=None, files=None):
 
 
 def _ai_assessment(meta, report):
-    """Ask the configured AI provider for the report's executive assessment.
+    """Ask the configured AI provider for a structured executive assessment.
 
-    Returns an HTML fragment ('' when no provider is configured or it fails)."""
+    Returns a dict (or None when no provider is configured / it fails)."""
     from . import ai_audit
 
-    cred = ai_audit._default_credential()
+    try:
+        cred = ai_audit._default_credential()
+    except Exception:  # noqa: BLE001 — never let a credential lookup break the report
+        return None
     if cred is None or not cred.has_key:
-        return ""
+        return None
     t = report["totals"]
     params = "\n".join(
         f"- {p['label']} ({p['population']}): applicable {p['applicable']}, verified {p['verified']}, "
@@ -251,12 +254,11 @@ def _ai_assessment(meta, report):
     ) or "- none"
     system = (
         "You are a senior Indian labour-law compliance auditor for the Bharat Shram Setu (BSS) portal. "
-        "Assess a contractor's submitted CLRA compliance package and write a concise, factual executive "
-        "assessment. Reply with a clean semantic HTML fragment only — no <html>, <head>, <style>, no "
-        "markdown fences. Use <h3> sections: Executive Summary; Scope & Basis of Review; Key Findings; "
-        "Material Exceptions; Recommendations; Verdict. Ground every statement in the numbers provided "
-        "and never invent data. Map severity to the C1-C8 classification (C5 = critical) and name the "
-        "affected verification parameters. Keep it board-ready and under ~450 words."
+        "Assess a contractor's submitted CLRA compliance package and reply with ONLY a compact JSON "
+        "object — no prose, no markdown, no code fences. Ground every statement strictly in the numbers "
+        "provided and never invent data. Use the C1-C8 classification (C1 compliant … C5 critical … "
+        "C6 pending). Assign a realistic remediation owner from: Contractor, Compliance, HR, Payroll, "
+        "Operations, Site Admin, Safety; and a due date within 30 days (YYYY-MM-DD)."
     )
     prompt = (
         f"Contractor: {meta.get('contractor') or 'n/a'} · Principal employer: {meta.get('employer') or 'n/a'}\n"
@@ -269,13 +271,69 @@ def _ai_assessment(meta, report):
         f"C4 {t['counts'][C4]}, C5 {t['counts'][C5]}, C6 {t['counts'][C6]}.\n\n"
         f"Per-parameter results:\n{params}\n\n"
         f"File-level level-1 AI audits:\n{files}\n\n"
-        "Return ONLY the HTML fragment for the report body."
+        "Return JSON with EXACTLY these keys: "
+        '{"executive_summary": "board-ready 4-6 sentences", '
+        '"key_findings": ["..."], '
+        '"material_exceptions": [{"parameter": "", "classification": "C3|C4|C5", "issue": "", '
+        '"corrective_action": "", "owner": "", "due_date": "YYYY-MM-DD"}], '
+        '"recommendations": ["..."], '
+        '"verdict": "Passed|Passed with observations|Needs attention"}. '
+        "Only list a material exception where the parameter actually shows C3/C4/C5."
     )
     try:
         raw = ai_audit._call_provider(cred, system, prompt)
     except Exception:  # noqa: BLE001
+        return None
+    parsed = ai_audit._parse_json_block(raw)
+    if not isinstance(parsed, dict):
+        text = str(raw or "").strip().replace("```html", "").replace("```", "").strip()
+        return {"narrative_html": text} if text else None
+    return {
+        "executive_summary": str(parsed.get("executive_summary") or "").strip(),
+        "key_findings": [str(x) for x in (parsed.get("key_findings") or []) if str(x).strip()],
+        "material_exceptions": [e for e in (parsed.get("material_exceptions") or []) if isinstance(e, dict)],
+        "recommendations": [str(x) for x in (parsed.get("recommendations") or []) if str(x).strip()],
+        "verdict": str(parsed.get("verdict") or "").strip(),
+    }
+
+
+def _render_ai(ai):
+    """Render the AI assessment as branded HTML (escaped — never trusted markup)."""
+    if not ai:
         return ""
-    return str(raw or "").strip().replace("```html", "").replace("```", "").strip()
+    if ai.get("narrative_html"):
+        return f"<h3>AI executive assessment</h3><div class='ai'>{ai['narrative_html']}</div>"
+    parts = ["<h3>AI executive assessment</h3>"]
+    if ai.get("executive_summary"):
+        parts.append(f"<p>{_esc(ai['executive_summary'])}</p>")
+    if ai.get("key_findings"):
+        parts.append("<p class='aih'>Key findings</p><ul>"
+                     + "".join(f"<li>{_esc(x)}</li>" for x in ai["key_findings"]) + "</ul>")
+    exceptions = ai.get("material_exceptions") or []
+    if exceptions:
+        rows = "".join(
+            "<tr>"
+            f"<td class='lbl'>{_esc(str(e.get('parameter') or ''))}</td>"
+            f"<td class='code'>{_esc(str(e.get('classification') or ''))}</td>"
+            f"<td class='det'>{_esc(str(e.get('issue') or ''))}</td>"
+            f"<td class='det'>{_esc(str(e.get('corrective_action') or ''))}</td>"
+            f"<td>{_esc(str(e.get('owner') or ''))}</td>"
+            f"<td>{_esc(str(e.get('due_date') or ''))}</td>"
+            "</tr>"
+            for e in exceptions
+        )
+        parts.append(
+            "<p class='aih'>Material exceptions &amp; CAPA</p>"
+            "<table class='grid'><thead><tr><th class='lbl'>Parameter</th><th>Class</th>"
+            "<th class='lbl'>Issue</th><th class='lbl'>Corrective action</th><th>Owner</th><th>Due</th>"
+            f"</tr></thead><tbody>{rows}</tbody></table>"
+        )
+    if ai.get("recommendations"):
+        parts.append("<p class='aih'>Recommendations</p><ul>"
+                     + "".join(f"<li>{_esc(x)}</li>" for x in ai["recommendations"]) + "</ul>")
+    if ai.get("verdict"):
+        parts.append(f"<p>AI verdict: <strong>{_esc(ai['verdict'])}</strong></p>")
+    return "".join(parts)
 
 
 def verification_report_html(meta, report):
@@ -283,9 +341,7 @@ def verification_report_html(meta, report):
     logo_img = f"<img src='{logo}' alt='BSS' style='height:44px;width:auto;'>" if logo else ""
     t = report["totals"]
     crit_tone = "ok" if report["verdict"] == "Passed" else ("warn" if report["verdict"].startswith("Passed") else "bad")
-    ai_body = _ai_assessment(meta, report)
-    ai_block = (f"<h3>AI executive assessment</h3><div class='ai'>{ai_body}</div>"
-                if ai_body else "")
+    ai_block = _render_ai(_ai_assessment(meta, report))
 
     param_rows = []
     for p in report["parameters"]:
@@ -342,6 +398,8 @@ def verification_report_html(meta, report):
   .brand {{ display:flex; align-items:center; gap:12px; border-bottom:3px solid #073B67; padding-bottom:10px; }}
   .brand h1 {{ margin:0; font-size:18px; color:#073B67; }} .brand p {{ margin:2px 0 0; color:#64748b; font-size:11px; }}
   h3 {{ color:#073B67; font-size:12px; margin:16px 0 6px; text-transform:uppercase; letter-spacing:.06em; }}
+  .aih {{ font-weight:700; color:#073B67; margin:10px 0 4px; }}
+  .ai ul {{ margin:4px 0; padding-left:18px; }}
   table {{ width:100%; border-collapse:collapse; }}
   .meta {{ margin:12px 0; }} .meta td {{ padding:5px 9px; border:1px solid #e2e8f0; }}
   .meta .mk {{ background:#f8fafc; color:#64748b; width:16%; font-weight:600; }}
