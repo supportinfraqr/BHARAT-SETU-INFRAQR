@@ -436,6 +436,11 @@ def _centered_classes(style_text):
     return out
 
 
+# Preamble classes that are headings/titles even when the source CSS doesn't
+# explicitly centre them (e.g. ``p.lead`` is the register title in some forms).
+_HEADING_CLASSES = {"formtitle", "title", "rule", "lead", "subtitle", "heading"}
+
+
 def _attr(attrs, name):
     m = re.search(name + r'\s*=\s*"([^"]*)"', attrs or "", re.I)
     if m:
@@ -453,6 +458,8 @@ def _is_centered(tag, attrs, centered_classes):
         return True
     classes = [c for c in re.split(r"\s+", _attr(attrs, "class").strip()) if c]
     if any(c in centered_classes for c in classes):
+        return True
+    if any(c in _HEADING_CLASSES for c in classes):
         return True
     # Headings default to centred when nothing says otherwise; body <p> default left.
     return tag.lower() in ("h1", "h2")
