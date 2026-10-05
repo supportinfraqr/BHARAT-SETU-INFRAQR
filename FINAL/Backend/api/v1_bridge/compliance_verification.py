@@ -225,11 +225,67 @@ def build_verification_report(rows, meta=None, batches=None, files=None):
             "verdict": verdict, "critical": critical, "high": high, "meta": meta}
 
 
+def _ai_assessment(meta, report):
+    """Ask the configured AI provider for the report's executive assessment.
+
+    Returns an HTML fragment ('' when no provider is configured or it fails)."""
+    from . import ai_audit
+
+    cred = ai_audit._default_credential()
+    if cred is None or not cred.has_key:
+        return ""
+    t = report["totals"]
+    params = "\n".join(
+        f"- {p['label']} ({p['population']}): applicable {p['applicable']}, verified {p['verified']}, "
+        f"C1 {p['counts'][C1]}, C2 {p['counts'][C2]}, C3 {p['counts'][C3]}, "
+        f"C4 {p['counts'][C4]}, C5 {p['counts'][C5]}, C6 {p['counts'][C6]}, "
+        f"coverage {p['coverage']}%, exception {p['exception']}%"
+        for p in report["parameters"]
+    )
+    files = "\n".join(
+        f"- {f['name']} [{f.get('kind') or ''}] — level-1 {f['status']}"
+        + (f", confidence {f['confidence']}%" if f.get("confidence") is not None else "")
+        + (f": {f['summary']}" if f.get("summary") else "")
+        + (("; " + "; ".join(f["findings"][:4])) if f.get("findings") else "")
+        for f in report["files"]
+    ) or "- none"
+    system = (
+        "You are a senior Indian labour-law compliance auditor for the Bharat Shram Setu (BSS) portal. "
+        "Assess a contractor's submitted CLRA compliance package and write a concise, factual executive "
+        "assessment. Reply with a clean semantic HTML fragment only — no <html>, <head>, <style>, no "
+        "markdown fences. Use <h3> sections: Executive Summary; Scope & Basis of Review; Key Findings; "
+        "Material Exceptions; Recommendations; Verdict. Ground every statement in the numbers provided "
+        "and never invent data. Map severity to the C1-C8 classification (C5 = critical) and name the "
+        "affected verification parameters. Keep it board-ready and under ~450 words."
+    )
+    prompt = (
+        f"Contractor: {meta.get('contractor') or 'n/a'} · Principal employer: {meta.get('employer') or 'n/a'}\n"
+        f"Site: {meta.get('site') or 'n/a'} · Period: {meta.get('period') or 'n/a'} · "
+        f"FY: {meta.get('fy') or 'n/a'} · Ref: {meta.get('refNo') or 'n/a'}\n\n"
+        f"Verification summary: applicable {t['applicable']}, verified {t['verified']}; "
+        f"coverage {t['coverage']}%, overall compliance {t['compliance']}%, exception rate "
+        f"{t['exception']}%, critical rate {t['critical']}%, pending {t['pending']}%. "
+        f"Classification counts: C1 {t['counts'][C1]}, C2 {t['counts'][C2]}, C3 {t['counts'][C3]}, "
+        f"C4 {t['counts'][C4]}, C5 {t['counts'][C5]}, C6 {t['counts'][C6]}.\n\n"
+        f"Per-parameter results:\n{params}\n\n"
+        f"File-level level-1 AI audits:\n{files}\n\n"
+        "Return ONLY the HTML fragment for the report body."
+    )
+    try:
+        raw = ai_audit._call_provider(cred, system, prompt)
+    except Exception:  # noqa: BLE001
+        return ""
+    return str(raw or "").strip().replace("```html", "").replace("```", "").strip()
+
+
 def verification_report_html(meta, report):
     logo = _logo_data_uri()
     logo_img = f"<img src='{logo}' alt='BSS' style='height:44px;width:auto;'>" if logo else ""
     t = report["totals"]
     crit_tone = "ok" if report["verdict"] == "Passed" else ("warn" if report["verdict"].startswith("Passed") else "bad")
+    ai_body = _ai_assessment(meta, report)
+    ai_block = (f"<h3>AI executive assessment</h3><div class='ai'>{ai_body}</div>"
+                if ai_body else "")
 
     param_rows = []
     for p in report["parameters"]:
@@ -319,6 +375,8 @@ def verification_report_html(meta, report):
   <div class="kpis">{metric_cards}</div>
   <p>Auditor verdict: <span class="verdict {crit_tone}">{_esc(report['verdict'])}</span>
      &nbsp; Open critical: <strong>{report['critical']}</strong> · Open high: <strong>{report['high']}</strong></p>
+
+  {ai_block}
 
   <h3>Operational compliance — verification matrix</h3>
   <table class="grid"><thead><tr>
