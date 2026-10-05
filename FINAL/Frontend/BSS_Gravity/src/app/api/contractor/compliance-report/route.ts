@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const session = await requireApiSession('Contractor');
     const config = getRuntimeConfig();
     const search = new URL(request.url).search;
-    if (new URL(request.url).searchParams.get('format') === 'pdf') {
+    if (new URL(request.url).searchParams.get('download') === 'pdf') {
       const upstream = await upstreamStream(config.apiBaseUrl, `/v1/contractor/compliance-report${search}`, session);
       const headers = new Headers();
       for (const name of ['Content-Type', 'Content-Length', 'Content-Disposition']) {

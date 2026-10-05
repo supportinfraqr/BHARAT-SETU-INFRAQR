@@ -443,7 +443,7 @@ export default function ContractorCompliancePage() {
         </div>
         <div className="px-4 pb-4 flex flex-wrap gap-2">
           <button onClick={() => void loadSubmissionReport()} disabled={repBusy} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-bold flex items-center gap-2 disabled:opacity-50"><Sparkles size={15}/>{repBusy ? 'Working…' : 'Final Submit & generate report'}</button>
-          <a href={`/api/contractor/compliance-report?format=pdf&${repQuery}`} className="h-10 px-4 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 inline-flex items-center gap-2 hover:bg-gray-50"><Download size={15}/>Download PDF</a>
+          <a href={`/api/contractor/compliance-report?download=pdf&${repQuery}`} className="h-10 px-4 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 inline-flex items-center gap-2 hover:bg-gray-50"><Download size={15}/>Download PDF</a>
         </div>
         {repError && <p className="px-4 pb-4 text-sm text-red-700">{repError}</p>}
       </section>

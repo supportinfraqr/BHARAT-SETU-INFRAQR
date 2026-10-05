@@ -362,7 +362,7 @@ def contractor_compliance_report(request):
     meta = {"site": site, "period": period, "fy": fy}
     report = build_submission_report(submissions, meta)
     html = _submission_report_html(meta, report)
-    if (request.query_params.get("format") or "").lower() == "pdf":
+    if (request.query_params.get("download") or "").lower() == "pdf":
         try:
             from weasyprint import HTML
 
