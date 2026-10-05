@@ -539,6 +539,7 @@ def _employer_submissions(user):
     rows = []
     my_sites = set(Site.objects.filter(employer=user).values_list("site_name", flat=True))
     from bss_core.models import ComplianceBatch, CustomFormName
+    from .contractor import _contractor_compliance_batch_row
     form_meta = {}
     for f in CustomFormName.objects.filter(is_active=True).values("name", "description", "requires_document"):
         form_meta.setdefault((f["name"] or "").strip().lower(), f)
@@ -624,6 +625,8 @@ def _employer_submissions(user):
             "batchId": str(batches[0].id) if batches else "",
             "hasFile": any(bool(x.generated_file) for x in batches),
             "registerCount": len(batches), "formCount": len(evidence),
+            "batches": [_contractor_compliance_batch_row(b) for b in batches],
+            "forms": [{"id": str(ev.id), "name": _d(ev.doc_type), "status": _submission_review_label(ev.status)} for ev in evidence],
         })
 
     for c in user.compliance_docs.all()[:20] if hasattr(user, "compliance_docs") else []:

@@ -82,11 +82,11 @@ export default function EmployerComplianceSubmissionPage() {
     finally { setBusy(false); }
   }
 
-  async function viewEvidence(row: EmployerSubmission) {
+  async function viewEvidence(id: string) {
     setError('');
     setNotice('');
     try {
-      const response = await fetch(`/api/employer/submissions/${row.id}/token`, { method: 'POST' });
+      const response = await fetch(`/api/employer/submissions/${id}/token`, { method: 'POST' });
       const json = await response.json() as { token?: string; error?: string };
       if (!response.ok || !json.token) throw new Error(json.error || 'No secure preview link.');
       window.open(`/api/employer/submissions/file/${encodeURIComponent(json.token)}`, '_blank', 'noopener,noreferrer');
@@ -141,15 +141,15 @@ export default function EmployerComplianceSubmissionPage() {
     ? <div className="flex gap-3"><button disabled={busy} onClick={() => void review(row, 'Verified')} className="text-green-700 font-semibold hover:underline whitespace-nowrap">Accept all</button><button disabled={busy} onClick={() => { setRejectNote(''); setRejectRow(row); }} className="text-red-700 font-semibold hover:underline">Reject</button></div>
     : <span className="text-gray-400">No action</span>;
 
-  const submissionColumns: DataColumn<EmployerSubmission>[] = [
-    { id:'contractor', header:'Contractor', value:row => row.contractor, render:contractorCell },
-    { id:'site', header:'Site', value:row => row.site },
-    { id:'type', header:'Submission', value:row => row.type, render:row => <div><strong className="text-gray-900">{row.type}</strong>{row.batchId && <div className="flex items-center gap-3 mt-0.5"><button type="button" onClick={() => setBatchView(row.batchId as string)} className="text-[11px] text-blue-600 font-semibold hover:underline">View documents</button><a href={`/api/employer/compliance-batches/${row.batchId}/file`} className="text-[11px] text-blue-600 hover:underline">Download registers</a></div>}{row.source === 'evidence' && <button type="button" disabled={busy} onClick={() => viewEvidence(row)} className="block text-[11px] text-blue-600 hover:underline mt-0.5">View evidence</button>}{row.note && <p className="text-[10px] text-red-600 mt-0.5">Note: {row.note}</p>}</div> },
-    { id:'period', header:'Period', value:row => row.period },
-    { id:'submitted', header:'Submitted', value:row => row.submittedAt.slice(0, 10) },
-    { id:'status', header:'Status', value:row => row.status, render:statusCell },
-    { id:'actions', header:'Action', filterable:false, value:row => row.status, render:actionCell },
-  ];
+  const auditBadge = (status?: string) => {
+    const s = status || 'pending';
+    const tone = s === 'passed' ? 'bg-green-50 text-green-700 border-green-200'
+      : s === 'failed' ? 'bg-red-50 text-red-700 border-red-200'
+      : s === 'unavailable' ? 'bg-slate-100 text-slate-500 border-slate-200'
+      : 'bg-amber-50 text-amber-700 border-amber-200';
+    const label = s === 'passed' ? 'Passed' : s === 'failed' ? 'Issues' : s === 'unavailable' ? 'No provider' : s === 'review' ? 'Review' : 'Auditing…';
+    return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${tone}`}>{label}</span>;
+  };
 
   const reportColumns: DataColumn<EmployerSubmission>[] = [
     { id:'contractor', header:'Contractor', value:row => row.contractor, render:contractorCell },
@@ -213,7 +213,54 @@ export default function EmployerComplianceSubmissionPage() {
       ))}
     </div>
 
-    {tab === 'records' && <EnterpriseDataTable title={`Contractor submissions (${registers.length})`} rows={registers} columns={submissionColumns} rowKey={row => row.id} filename="employer-compliance-submissions"/>}
+    {tab === 'records' && <div className="space-y-4">
+      {registers.length === 0
+        ? <p className="text-sm text-gray-400 bg-white border border-gray-200 rounded-2xl p-5">No contractor submissions yet.</p>
+        : registers.map(row => (
+          <section key={row.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+            <header className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <strong className="text-gray-900">{row.contractor || row.type || '—'}</strong>
+                  {row.contractorId && <span className="font-mono text-[10px] text-gray-400">{row.contractorId}</span>}
+                  <Status value={row.status}/>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{row.period}{row.site ? ` · ${row.site}` : ''}{row.kind === 'package' ? ` · ${row.registerCount ?? 0} register batch(es) · ${row.formCount ?? 0} form(s)` : ''}</p>
+                {row.note && <p className="text-[11px] text-red-600 mt-1">Note: {row.note}</p>}
+              </div>
+              <div className="shrink-0">{actionCell(row)}</div>
+            </header>
+            {row.batches && row.batches.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead><tr className="bg-slate-50 border-b border-gray-200 text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+                    <th className="py-2.5 px-3">Site</th><th className="py-2.5 px-3">Month / Year</th><th className="py-2.5 px-3">Workers</th><th className="py-2.5 px-3">Registers</th><th className="py-2.5 px-3">AI Audit</th><th className="py-2.5 px-3">Master File</th><th className="py-2.5 px-3">Status</th><th className="py-2.5 px-3">Action</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-gray-100 text-xs">
+                    {row.batches.map(b => <tr key={b.id} className="hover:bg-slate-50/70">
+                      <td className="py-2.5 px-3"><p className="font-semibold text-gray-900">{b.site || '—'}</p>{b.siteCode && <p className="font-mono text-[10px] text-gray-400">{b.siteCode}</p>}</td>
+                      <td className="py-2.5 px-3 text-gray-600">{b.month} {b.year}</td>
+                      <td className="py-2.5 px-3 font-bold text-[#073B67]">{b.employeeCount}</td>
+                      <td className="py-2.5 px-3">{b.registerCount ?? 0}</td>
+                      <td className="py-2.5 px-3">{auditBadge(b.auditStatus)}</td>
+                      <td className="py-2.5 px-3"><a href={`/api/employer/compliance-batches/${b.id}/master`} download className="text-blue-700 font-semibold hover:underline">Download</a></td>
+                      <td className="py-2.5 px-3 text-gray-600">{b.status}</td>
+                      <td className="py-2.5 px-3 whitespace-nowrap"><button type="button" onClick={() => setBatchView(String(b.id))} className="text-[11px] text-blue-600 font-semibold hover:underline">View documents</button><a href={`/api/employer/compliance-batches/${b.id}/file`} className="text-[11px] text-blue-600 hover:underline ml-2">Download ZIP</a></td>
+                    </tr>)}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {row.forms && row.forms.length > 0 && (
+              <div className="px-5 py-3 border-t border-gray-100">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Additional forms ({row.forms.length})</p>
+                <div className="flex flex-wrap gap-1.5">{row.forms.map(f => <button key={f.id} type="button" onClick={() => void viewEvidence(f.id)} className="text-[11px] px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200">{f.name}</button>)}</div>
+              </div>
+            )}
+            {row.source === 'evidence' && <div className="px-5 py-3 border-t border-gray-100"><button type="button" onClick={() => void viewEvidence(row.id)} className="text-[11px] text-blue-600 hover:underline">View evidence</button></div>}
+          </section>
+        ))}
+    </div>}
 
     {tab === 'reports' && <EnterpriseDataTable title={`Detailed AI reports (${filtered.length})`} rows={filtered} columns={reportColumns} rowKey={row => row.id} filename="employer-ai-reports"/>}
 

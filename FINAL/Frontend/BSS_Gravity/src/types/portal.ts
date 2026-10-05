@@ -477,6 +477,8 @@ export type EmployerSubmission = {
   hasFile?: boolean;
   registerCount?: number;
   formCount?: number;
+  batches?: Array<{ id:string; site:string; siteCode:string; month:string; year:string; state?:string; employeeCount:number; registerCount?:number; auditStatus?:string; hasFile?:boolean; status?:string }>;
+  forms?: Array<{ id:string; name:string; status:string }>;
 };
 
 export type EmployerUser = {
