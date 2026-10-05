@@ -1211,6 +1211,51 @@ def compliance_batch_register_export(request, batch_id, template_id):
     return FileResponse(io.BytesIO(data), as_attachment=True, filename=filename)
 
 
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def compliance_batch_register_pdf(request, batch_id, template_id):
+    """Render one register (State+Form template) from a batch as a PDF download."""
+    import io
+
+    from django.http import FileResponse
+
+    from api import clra
+    from bss_core.models import RegisterTemplate
+    batch = _visible_batch(request.user, batch_id)
+    if batch is None:
+        return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
+    template = RegisterTemplate.objects.filter(pk=template_id).first()
+    if template is None:
+        return Response({"error": "template not found"}, status=status.HTTP_404_NOT_FOUND)
+    rows = _batch_master_rows(batch)
+    employer_name = payloads._org_name(batch.site.employer) if (batch.site and batch.site.employer) else ""
+    html = clra.render_register_html(
+        {"formCode": template.form_code, "title": template.title, "state": template.state,
+         "columns": list(template.columns or []), "html": template.html or "",
+         "perRow": template.per_row,
+         "fieldMappings": {m.column: m.field_key for m in template.field_mappings.all()},
+         "calculationRules": [{"targetField": r.target_field, "formula": r.formula}
+                              for r in template.calculation_rules.all()]},
+        rows,
+        contractor=payloads._party_name(batch.contractor),
+        employer=employer_name,
+        site=(batch.site.site_name if batch.site else ""),
+        site_code=(batch.site.site_code if batch.site else ""),
+        state=batch.state, month=batch.month, year=batch.year,
+        financial_year=batch.financial_year, generated_on=payloads._dts(timezone.now())[:10],
+    )
+    try:
+        from weasyprint import HTML
+
+        pdf = HTML(string=html, base_url="https://login.bharatshramsetu.com/").write_pdf()
+    except Exception as exc:  # noqa: BLE001
+        return Response({"error": f"PDF could not be generated: {exc}"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    filename = f"{template.state}-{template.form_code}.pdf".replace(" ", "_")
+    return FileResponse(io.BytesIO(pdf), as_attachment=True, filename=filename)
+
+
 __all__ = [
     "_handle_submission_review",
     "_submissions",
@@ -1218,6 +1263,7 @@ __all__ = [
     "compliance_batch_master_download",
     "compliance_batch_register",
     "compliance_batch_register_export",
+    "compliance_batch_register_pdf",
     "compliance_batch_run_audits",
     "compliance_batch_site_documents",
     "compliance_batch_summary",
