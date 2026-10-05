@@ -183,6 +183,8 @@ _v1_patterns = _v1(
     ("admin/verification/queue", v1_bridge.admin_verification_queue, "v1_admin_verification_queue"),
     ("admin/verification/review", v1_bridge.admin_verification_review, "v1_admin_verification_review"),
     ("contractor/attendance", v1_bridge.attendance_uploaded, "v1_attendance_uploaded"),
+    ("contractor/submissions/<int:submission_id>/ai-report", v1_bridge.contractor_ai_audit_report, "v1_contractor_ai_audit_report"),
+    ("contractor/submissions/<int:submission_id>/ai-report.pdf", v1_bridge.contractor_ai_audit_report_pdf, "v1_contractor_ai_audit_report_pdf"),
     ("contractor/audit-document", v1_bridge.contractor_audit_document, "v1_contractor_audit_document"),
     ("audit-reports/filters", v1_bridge.audit_report_filters, "v1_audit_report_filters"),
     ("audit-reports/generate", v1_bridge.audit_report_generate, "v1_audit_report_generate"),

@@ -26,6 +26,7 @@ from .attendance import *  # noqa: F401,F403
 from .cctv import *  # noqa: F401,F403
 from .ai import *  # noqa: F401,F403
 from .ai_audit import *  # noqa: F401,F403
+from .ai_report import *  # noqa: F401,F403
 from .audit_reports import *  # noqa: F401,F403
 from .admin_bulk import *  # noqa: F401,F403
 from .form_names import *  # noqa: F401,F403

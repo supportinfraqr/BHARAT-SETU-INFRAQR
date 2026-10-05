@@ -6,6 +6,7 @@ import EnterpriseDataTable, { type DataColumn } from '@/components/worker/Enterp
 import BatchDrilldown from '@/components/compliance/BatchDrilldown';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorPortalData } from '@/types/portal';
+import { openPrintHtml } from '@/lib/documentEngine/render';
 
 type DocumentRow = ContractorPortalData['submissions']['documents'][number] & { fileName?: string; checksum?: string };
 type CheckpointResult = { key:string; label:string; type:string; required:boolean; passed:boolean; detail:string };
@@ -565,6 +566,18 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
     } finally { setBusy(false); setSubmittingName(null); }
   }
 
+  async function viewAuditReport(submissionId: string | number, label: string) {
+    setBusy(true); setError('');
+    try {
+      const response = await fetch(`/api/contractor/submissions/${submissionId}/ai-report`, { cache: 'no-store' });
+      const body = await response.json().catch(() => ({})) as { data?: { html?: string }; error?: string };
+      if (!response.ok || !body.data?.html) throw new Error(body.error ?? 'The audit report could not be generated.');
+      openPrintHtml(body.data.html, `${label} — BSS AI Audit Report`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The audit report could not be generated.');
+    } finally { setBusy(false); }
+  }
+
   const documentColumns: DataColumn<DocumentRow>[] = [
     { id:'type', header: 'Document / Package', value: row => row.type, render: row => <div><strong className="text-gray-900 font-semibold">{row.type}</strong>{row.fileName && <p className="text-[10px] text-gray-400 mt-0.5">{row.fileName}</p>}{row.source === 'evidence' && row.id && <a href={`/api/contractor/submissions/${row.id}/file`} target="_blank" rel="noreferrer" className="block text-[10px] text-blue-600 hover:underline mt-0.5">View evidence</a>}{row.findings && row.findings.length > 0 && <button type="button" onClick={() => setViewErrors({ name: row.type, findings: row.findings ?? [] })} className="block text-[10px] text-red-600 font-semibold hover:underline mt-0.5">View errors ({row.findings.length})</button>}</div> },
     { id:'uniqueNo', header: 'Package Ref No.', value: row => row.uniqueNo ?? '—', render: row => row.uniqueNo ? <span className="font-mono text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">{row.uniqueNo}</span> : <span className="text-gray-300">—</span> },
@@ -681,6 +694,8 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
                         <Lock size={12}/> {submittedRow?.status === 'Verified' ? 'Verified' : 'Submitted'}
                       </span>
                       {submittedRow?.id && <a href={`/api/contractor/submissions/${submittedRow.id}/file`} className="text-[11px] text-blue-700 font-semibold hover:underline inline-flex items-center gap-1"><Download size={11}/>Download document</a>}
+                      {submittedRow?.id && <button type="button" onClick={() => void viewAuditReport(submittedRow.id, doc.name)} className="text-[11px] text-[#073B67] font-semibold hover:underline text-left">View AI report</button>}
+                      {submittedRow?.id && <a href={`/api/contractor/submissions/${submittedRow.id}/ai-report?format=pdf`} className="text-[11px] text-blue-700 font-semibold hover:underline inline-flex items-center gap-1"><Download size={11}/>AI report (PDF)</a>}
                     </div>
                   ) : (
                     <div className="flex flex-col gap-1.5">
