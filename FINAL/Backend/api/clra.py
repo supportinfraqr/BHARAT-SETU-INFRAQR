@@ -120,7 +120,10 @@ _COLUMN_RULES = (
     (("spouse",), "fatherName"),
     (("sex",), "gender"),
     (("gender",), "gender"),
-    (("name",), "name"),
+    # NB: the generic "name" and "deduction" fallbacks are applied in
+    # match_column() *after* the explicit rules, guarded so they never match a
+    # related-person / narrative column ("Name of person in whose presence…",
+    # "Whether workman showed cause against deduction").
     (("designation",), "designation"),
     (("nature of employment",), "designation"),
     (("nature of work",), "designation"),
@@ -149,9 +152,14 @@ _COLUMN_RULES = (
     (("gross", "wage"), "grossWages"),
     (("wages earned",), "grossWages"),
     (("amount of wages",), "grossWages"),
-    (("deduction",), "totalDeductions"),
     (("net",), "netSalary"),
 )
+
+# Narrative / related-person columns that must never receive the workman's own
+# name (e.g. "Name of person in whose presence employee's was heard").
+_NON_NAME_COLUMN_RE = re.compile(
+    r"father|husband|spouse|guardian|person|witness|presence|heard|contractor|"
+    r"employer|principal|nominee|signator|authoris|authoriz", re.I)
 
 
 def match_column(label):
@@ -162,6 +170,16 @@ def match_column(label):
     for needles, key in _COLUMN_RULES:
         if all(n in text for n in needles):
             return key
+    # The workman's own name — but never a related person, signatory or narrative
+    # column ("Name of person in whose presence…", "Father's/Husband's name").
+    if "name" in text and not _NON_NAME_COLUMN_RE.search(text):
+        return "name"
+    # Total deductions — but not a register-subject column like "Amount of
+    # deduction imposed" or "Whether workman showed cause against deduction".
+    if re.search(r"\btotal\b", text) and "deduction" in text:
+        return "totalDeductions"
+    if text in ("deduction", "deductions"):
+        return "totalDeductions"
     return ""
 
 
@@ -509,13 +527,98 @@ def _header_lines_from_html(html_text, template, rows, context):
     return lines
 
 
+# Footer declarations like "No fine imposed during the month of …" are only
+# valid on an empty register.
+_EMPTY_DECL_RE = re.compile(r"^\s*(no\b|there\s+is\s+no\b|nil\b)", re.I)
+# Master-file fields that identify a worker/period rather than record a register
+# entry; a value only in these does not make a register non-empty.
+_IDENTITY_KEYS = {
+    "sl", "name", "fatherName", "gender", "designation", "department",
+    "bssId", "doj", "mobile", "site", "siteCode", "location", "employer",
+    "contractor", "state", "month", "year", "financialYear", "recordCount",
+    "generatedOn",
+}
+
+
+def _mapped_keys(template):
+    """The (column, master-key) pairs a register maps, fuzzy fallback included."""
+    columns = [str(c) for c in (template.get("columns") or [])]
+    field_mappings = template.get("fieldMappings") or {}
+    return [(col, field_mappings.get(col) or match_column(col)) for col in columns]
+
+
+def _row_has_register_data(template, row, context, index):
+    """True when a row holds a value in a register-specific (non-identity) column."""
+    for _col, key in _mapped_keys(template):
+        if not key or str(key).startswith("backend:"):
+            continue
+        # Mappings may use the master-sheet header (Employee_Name); resolve it to
+        # the canonical key before deciding whether it is an identity field.
+        canonical = HEADER_ALIASES.get(str(key).lower(), key)
+        if canonical in _IDENTITY_KEYS:
+            continue
+        value = resolve_cell(key, row, context, index=index)
+        if value not in (None, "", 0, "0"):
+            return True
+    return False
+
+
+def _register_has_data(template, rows, context):
+    """True when any row records a register entry (not just worker identity)."""
+    enriched = apply_calculation_rules(rows, template.get("calculationRules"))
+    return any(_row_has_register_data(template, row, context, index)
+               for index, row in enumerate(enriched, start=1))
+
+
+def _has_empty_declaration(template):
+    """True when the register layout carries a "No X during the month …" line."""
+    html_text = str(template.get("html") or "")
+    if not html_text:
+        return False
+    idx = html_text.lower().rfind("</table>")
+    tail = html_text[idx + len("</table>"):] if idx != -1 else html_text
+    for match in _DOC_P_RE.finditer(tail):
+        plain = re.sub(r"\s+", " ", _TAG_RE.sub("", match.group(1))).strip()
+        if _EMPTY_DECL_RE.match(plain):
+            return True
+    return False
+
+
+def _render_rows(template, rows, context):
+    """Rows to render for a register.
+
+    Event registers (those carrying an emptiness declaration, e.g. Fines /
+    Deductions / Advances / Overtime) list **only** the workers that actually
+    have an entry — an empty one lists no workers and prints the declaration."""
+    if not _has_empty_declaration(template):
+        return rows
+    enriched = apply_calculation_rules(rows, template.get("calculationRules"))
+    return [row for index, row in enumerate(enriched, start=1)
+            if _row_has_register_data(template, row, context, index)]
+
+
+def _strip_empty_declarations(html_text):
+    """Remove "No X during the month …" paragraphs (used once a register has data)."""
+    if not html_text:
+        return html_text
+    def repl(match):
+        plain = re.sub(r"\s+", " ", _TAG_RE.sub("", match.group(1))).strip()
+        return "" if _EMPTY_DECL_RE.match(plain) else match.group(0)
+    return _DOC_P_RE.sub(repl, html_text)
+
+
 def _footer_lines_from_html(html_text, template, rows, context):
     """Authored footer ``<p>`` lines (after the last table) as plain text, with
     data placeholders resolved — so a register's declaration (e.g. "There is no
     deduction for damage or Loss during the month of …") appears at the bottom of
-    the generated Excel register, with the period tokens filled in."""
+    the generated Excel register, with the period tokens filled in.
+
+    A "No X during the month …" declaration is dropped when the register actually
+    holds entries for its subject columns — printing "none" beside real rows is
+    contradictory."""
     if not html_text:
         return []
+    has_data = _register_has_data(template, rows, context)
     text = str(html_text)
     idx = text.lower().rfind("</table>")
     tail = text[idx + len("</table>"):] if idx != -1 else ""
@@ -529,8 +632,11 @@ def _footer_lines_from_html(html_text, template, rows, context):
         inner = inner.replace("{{FORM_CODE}}", str(template.get("formCode", "")))
         plain = _TAG_RE.sub("", inner)
         plain = re.sub(r"\s+", " ", unescape(plain).replace("\xa0", " ")).strip()
-        if plain and re.search(r"[A-Za-z0-9]", plain):
-            lines.append(plain)
+        if not (plain and re.search(r"[A-Za-z0-9]", plain)):
+            continue
+        if has_data and _EMPTY_DECL_RE.match(plain):
+            continue
+        lines.append(plain)
     return lines
 
 
@@ -547,12 +653,13 @@ def _write_template_sheet(wb, template, rows, context=None):
     field_mappings = template.get("fieldMappings") or {}
     mapping = [(field_mappings.get(col) or match_column(col)) for col in columns]
     rows = apply_calculation_rules(rows, template.get("calculationRules"))
+    render_rows = _render_rows(template, rows, context)
 
     # Faithful source layout: the register's own printed preamble (title, [See
     # rule …], Key:value header lines) then the data grid. No added title/form/
     # state rows, no branding, no dates — nothing the source doesn't have.
-    header_lines = _header_lines_from_html(template.get("html"), template, rows, context)
-    footer_lines = _footer_lines_from_html(template.get("html"), template, rows, context)
+    header_lines = _header_lines_from_html(template.get("html"), template, render_rows, context)
+    footer_lines = _footer_lines_from_html(template.get("html"), template, render_rows, context)
     # A day-range line like "1…… 31" is the sub-header of the "Dates" column (the
     # source muster roll prints it under that heading, matching the master file's
     # Day1…Day31). Lift it out of the footer and render it under the column header
@@ -594,14 +701,14 @@ def _write_template_sheet(wb, template, rows, context=None):
         cell.alignment = Alignment(horizontal="center")
         data_start += 1
 
-    for i, row in enumerate(rows, start=1):
+    for i, row in enumerate(render_rows, start=1):
         for col, key in enumerate(mapping, start=1):
             value = resolve_cell(key, row, context, index=i)
             if value is not None:
                 ws.cell(row=data_start + i - 1, column=col, value=value)
     # Declaration / footer lines (e.g. "No fine imposed during the month of …")
     # rendered below the table with the period tokens resolved.
-    footer_cursor = data_start + len(rows)
+    footer_cursor = data_start + len(render_rows)
     for line in footer_lines:
         cell = ws.cell(row=footer_cursor, column=1, value=line)
         cell.font = Font(size=10, italic=True)
@@ -763,8 +870,10 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
         contractor=contractor, employer=employer, site=site, site_code=site_code,
         state=state, month=month, year=year, financial_year=financial_year,
         record_count=len(rows), generated_on=generated_on)
+    render_rows = _render_rows(template, rows, context)
+    context = dict(context, record_count=len(render_rows))
     body = []
-    for index, row in enumerate(rows, start=1):
+    for index, row in enumerate(render_rows, start=1):
         cells = []
         for key in mapping:
             value = resolve_cell(key, row, context, index=index)
@@ -773,12 +882,14 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
 
     admin_html = (template.get("html") or "").strip()
     if admin_html:
+        if render_rows and _has_empty_declaration(template):
+            admin_html = _strip_empty_declarations(admin_html)
         tokens = {
             "TITLE": _esc(title), "FORM_CODE": _esc(template.get("formCode", "")),
             "STATE": _esc(template.get("state", "")), "CONTRACTOR_NAME": _esc(contractor),
             "EMPLOYER_NAME": _esc(employer), "SITE_NAME": _esc(site), "SITE_CODE": _esc(site_code),
             "MONTH": _esc(month), "YEAR": _esc(year), "FINANCIAL_YEAR": _esc(financial_year),
-            "GENERATED_ON": _esc(generated_on), "RECORD_COUNT": str(len(rows)),
+            "GENERATED_ON": _esc(generated_on), "RECORD_COUNT": str(len(render_rows)),
             "ACT": _esc(template.get("act", "")),
             "HEAD": head, "ROWS": "".join(body),
         }
@@ -786,7 +897,7 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
             inner = _DOC_BLOCK_RE.sub("", admin_html)
             admin_html = (f"{{{{#rows}}}}\n{inner}\n"
                           f'<div style="page-break-after:always" aria-hidden="true"></div>\n{{{{/rows}}}}')
-        out = render_doc_body(admin_html, rows, context)
+        out = render_doc_body(admin_html, render_rows, context)
         for key, value in tokens.items():
             out = out.replace("{{" + key + "}}", value).replace("{{ " + key + " }}", value)
         return out
