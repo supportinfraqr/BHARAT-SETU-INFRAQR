@@ -202,6 +202,7 @@ _v1_patterns = _v1(
     ("employer/compliance-batches/<int:batch_id>/summary", v1_bridge.compliance_batch_summary, "v1_employer_compliance_batch_summary"),
     ("employer/compliance-batches/<int:batch_id>/master", v1_bridge.compliance_batch_master_download, "v1_employer_compliance_batch_master"),
     ("employer/compliance-batches/<int:batch_id>/ai-audit", v1_bridge.compliance_batch_run_audits, "v1_employer_compliance_batch_ai_audit"),
+    ("employer/compliance-batches/<int:batch_id>/verification-report", v1_bridge.employer_batch_verification_report, "v1_employer_batch_verification_report"),
     ("employer/compliance-batches/<int:batch_id>/site-documents", v1_bridge.compliance_batch_site_documents, "v1_employer_compliance_batch_site_documents"),
     ("employer/compliance-batches/<int:batch_id>/register/<int:template_id>", v1_bridge.compliance_batch_register, "v1_employer_compliance_batch_register"),
     ("employer/compliance-batches/<int:batch_id>/register/<int:template_id>/xlsx", v1_bridge.compliance_batch_register_export, "v1_employer_compliance_batch_register_xlsx"),

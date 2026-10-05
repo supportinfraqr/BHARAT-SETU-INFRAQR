@@ -491,3 +491,37 @@ def contractor_compliance_report(request):
     if (request.query_params.get("download") or "").lower() == "pdf":
         return _report_pdf(html, "bss-compliance-submission-report.pdf")
     return Response({"data": {**{k: report[k] for k in ("criteria", "documents", "verdict", "total", "clean", "passed")}, "html": html}}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def employer_batch_verification_report(request, batch_id):
+    """Detailed verification report for one CLRA register batch — employer view."""
+    from api import clra
+
+    from .compliance_verification import build_verification_report, verification_report_html
+    from .submissions import _visible_batch
+    batch = _visible_batch(request.user, batch_id)
+    if batch is None:
+        return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
+    rows = []
+    if batch.master_file:
+        try:
+            batch.master_file.open("rb")
+            rows.extend(clra.parse_master(batch.master_file))
+        except Exception:  # noqa: BLE001
+            pass
+    meta = {
+        "site": batch.site.site_name if batch.site else "",
+        "period": f"{batch.month} {batch.year}".strip(),
+        "fy": batch.financial_year, "refNo": f"BATCH-{batch.id}",
+        "contractor": payloads._party_name(batch.contractor) if batch.contractor_id else "",
+        "employer": payloads._org_name(batch.site.employer) if (batch.site and batch.site.employer_id) else "",
+    }
+    report = build_verification_report(rows, meta, [batch], files=[])
+    html = verification_report_html(meta, report)
+    if (request.query_params.get("download") or "").lower() == "pdf":
+        return _report_pdf(html, f"bss-verification-report-batch-{batch.id}.pdf")
+    return Response({"data": {"html": html, "verdict": report["verdict"], "totals": report["totals"]}},
+                    status=status.HTTP_200_OK)

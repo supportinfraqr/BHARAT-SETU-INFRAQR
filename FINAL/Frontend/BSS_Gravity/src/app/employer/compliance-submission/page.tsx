@@ -43,6 +43,7 @@ export default function EmployerComplianceSubmissionPage() {
   const [freqFilter, setFreqFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState('all');
   const [batchView, setBatchView] = useState<string | null>(null);
+  const [tab, setTab] = useState<'records' | 'reports'>('records');
 
   const years = useMemo(() => {
     const set = new Set<string>();
@@ -105,7 +106,24 @@ export default function EmployerComplianceSubmissionPage() {
     }
   }
 
-  const aiReportCell = (row: EmployerSubmission) => (
+  async function viewBatchReport(batchId: string) {
+    setError(''); setNotice('');
+    try {
+      const response = await fetch(`/api/employer/compliance-batches/${batchId}/verification-report`, { cache: 'no-store' });
+      const body = await response.json().catch(() => ({})) as { data?: { html?: string }; error?: string };
+      if (!response.ok || !body.data?.html) throw new Error(body.error || 'The report could not be generated.');
+      openPrintHtml(body.data.html, 'BSS Contractor Compliance & Verification Report');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The report could not be generated.');
+    }
+  }
+
+  const aiReportCell = (row: EmployerSubmission) => row.batchId ? (
+    <div className="flex flex-col gap-1">
+      <button type="button" onClick={() => void viewBatchReport(row.batchId as string)} className="text-[11px] text-[#073B67] font-semibold hover:underline text-left">View report</button>
+      <a href={`/api/employer/compliance-batches/${row.batchId}/verification-report?download=pdf`} className="text-[11px] text-blue-700 font-semibold hover:underline">Download PDF</a>
+    </div>
+  ) : (
     <div className="flex flex-col gap-1">
       <button type="button" onClick={() => void viewAiReport(row)} className="text-[11px] text-[#073B67] font-semibold hover:underline text-left">View report</button>
       <a href={`/api/employer/submissions/${row.id}/ai-report?format=pdf`} className="text-[11px] text-blue-700 font-semibold hover:underline">Download PDF</a>
@@ -124,7 +142,6 @@ export default function EmployerComplianceSubmissionPage() {
     { id:'type', header:'Registers', value:row => row.type, render:row => <div><strong className="text-gray-900">{row.type}</strong>{row.batchId && <div className="flex items-center gap-3 mt-0.5"><button type="button" onClick={() => setBatchView(row.batchId as string)} className="text-[11px] text-blue-600 font-semibold hover:underline">View documents</button><a href={`/api/employer/compliance-batches/${row.batchId}/file`} className="text-[11px] text-blue-600 hover:underline">Download registers</a></div>}</div> },
     { id:'submitted', header:'Submitted', value:row => row.submittedAt.slice(0, 10) },
     { id:'status', header:'Status', value:row => row.status, render:statusCell },
-    { id:'aiReport', header:'AI audit report', filterable:false, value:row => row.id, render:aiReportCell },
     { id:'actions', header:'Action', filterable:false, value:row => row.status, render:actionCell },
   ];
 
@@ -139,8 +156,17 @@ export default function EmployerComplianceSubmissionPage() {
     { id:'period', header:'Period', value:row => row.period },
     { id:'submitted', header:'Submitted', value:row => row.submittedAt.slice(0, 10) },
     { id:'status', header:'Status', value:row => row.status, render:statusCell },
-    { id:'aiReport', header:'AI audit report', filterable:false, value:row => row.id, render:aiReportCell },
     { id:'actions', header:'Action', filterable:false, value:row => row.status, render:actionCell },
+  ];
+
+  const reportColumns: DataColumn<EmployerSubmission>[] = [
+    { id:'contractor', header:'Contractor', value:row => row.contractor, render:contractorCell },
+    { id:'site', header:'Site', value:row => row.site },
+    { id:'type', header:'Submission', value:row => row.type },
+    { id:'period', header:'Period', value:row => row.period },
+    { id:'submitted', header:'Submitted', value:row => row.submittedAt.slice(0, 10) },
+    { id:'status', header:'Status', value:row => row.status, render:statusCell },
+    { id:'aiReport', header:'Detailed AI report', filterable:false, value:row => row.id, render:aiReportCell },
   ];
 
   const pending = filtered.filter(item => item.status === 'Pending review');
@@ -189,8 +215,18 @@ export default function EmployerComplianceSubmissionPage() {
     {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">{error}</p>}
     {notice && <p role="status" className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl p-3">{notice}</p>}
 
-    <EnterpriseDataTable title={`1 · CLRA Registers (${registers.length})`} rows={registers} columns={registerColumns} rowKey={row => row.id} filename="employer-clra-registers"/>
-    <EnterpriseDataTable title={`2 · Additional Forms (${forms.length})`} rows={forms} columns={formColumns} rowKey={row => row.id} filename="employer-additional-forms"/>
+    <div className="flex border-b overflow-x-auto">
+      {([['records', 'Compliance Records'], ['reports', 'Reports']] as Array<['records' | 'reports', string]>).map(([id, label]) => (
+        <button key={id} onClick={() => setTab(id)} className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${tab === id ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>{label}</button>
+      ))}
+    </div>
+
+    {tab === 'records' && <>
+      <EnterpriseDataTable title={`1 · CLRA Registers (${registers.length})`} rows={registers} columns={registerColumns} rowKey={row => row.id} filename="employer-clra-registers"/>
+      <EnterpriseDataTable title={`2 · Additional Forms (${forms.length})`} rows={forms} columns={formColumns} rowKey={row => row.id} filename="employer-additional-forms"/>
+    </>}
+
+    {tab === 'reports' && <EnterpriseDataTable title={`Detailed AI reports (${filtered.length})`} rows={filtered} columns={reportColumns} rowKey={row => row.id} filename="employer-ai-reports"/>}
 
     {batchView && <BatchDrilldown batchId={batchView} role="employer" onClose={() => setBatchView(null)} />}
   </div>;
