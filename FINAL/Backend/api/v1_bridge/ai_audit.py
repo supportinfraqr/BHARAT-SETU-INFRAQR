@@ -215,7 +215,22 @@ def _run_ai_audit(form_name, text, required_format, site_name="", extra=None):
         return {"status": "error", "message": f"AI audit failed: {exc}",
                 "provider": cred.provider, "model": cred.model}
     parsed = _parse_json_block(raw) or {}
+    results = parsed.get("checkpointResults") or []
+    # Enforce the checklist: a failed REQUIRED checkpoint (or a missing required
+    # template column) fails the file regardless of what the model set `valid` to.
+    required_labels = {
+        str(cp.get("label") or "").strip().lower()
+        for cp in (extra.get("aiChecks") or [])
+        if isinstance(cp, dict) and cp.get("required", True) and str(cp.get("label") or "").strip()
+    }
+    required_failed = any(
+        isinstance(r, dict) and r.get("passed") is False
+        and str(r.get("label") or "").strip().lower() in required_labels
+        for r in results
+    )
     valid = parsed.get("valid")
+    if required_failed or parsed.get("templateConformant") is False:
+        valid = False
     status = "passed" if valid is True else "failed" if valid is False else "review"
     if status == "review" and parsed.get("templateConformant") is False:
         status = "failed"
@@ -229,7 +244,7 @@ def _run_ai_audit(form_name, text, required_format, site_name="", extra=None):
         "matchedColumns": parsed.get("matchedColumns") or [],
         "missing": parsed.get("missing") or [],
         "issues": parsed.get("issues") or [],
-        "checkpointResults": parsed.get("checkpointResults") or [],
+        "checkpointResults": results,
         "provider": cred.provider,
         "providerLabel": AI_PROVIDERS.get(cred.provider, {}).get("label", cred.provider),
         "model": cred.model,
