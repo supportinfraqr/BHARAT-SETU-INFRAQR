@@ -1284,7 +1284,7 @@ export default function RegisterTemplatesPage() {
   const [busy, setBusy] = useState(false);
   const [cpCatalog, setCpCatalog] = useState<AiCheck[]>([]);
 
-  // The AI checklist catalog (same list the Additional Forms admin uses).
+  // The AI checkpoint catalog (same list the Additional Forms admin uses).
   useEffect(() => {
     let active = true;
     void fetch('/api/admin/form-names', { cache: 'no-store' })
@@ -1516,7 +1516,7 @@ export default function RegisterTemplatesPage() {
 
           <div className="p-5 space-y-5">
             <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-xl">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-blue-900">AI audit checklist</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-blue-900">AI checkpoints</p>
               <p className="mt-0.5 text-[11px] text-gray-500">Tick the conditions the AI must verify when the contractor uploads this register/form. The AI also checks the register matches the template columns.</p>
               <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                 {cpCatalog.map(cp => {

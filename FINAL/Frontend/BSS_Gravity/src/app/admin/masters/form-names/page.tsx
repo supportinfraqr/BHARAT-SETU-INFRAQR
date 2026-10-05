@@ -131,7 +131,7 @@ export default function AdminFormNamesPage() {
                   {rows.map((f, i) => (
                     <tr key={f.id} className="hover:bg-slate-50/70">
                       <td className="py-2.5 px-3 text-gray-400 font-semibold">{i + 1}</td>
-                      <td className="py-2.5 px-3 font-semibold text-gray-900">{f.name}{f.aiChecks?.length ? <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{f.aiChecks.length} AI check{f.aiChecks.length === 1 ? '' : 's'}</span> : null}</td>
+                      <td className="py-2.5 px-3 font-semibold text-gray-900">{f.name}{f.aiChecks?.length ? <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{f.aiChecks.length} AI checkpoint{f.aiChecks.length === 1 ? '' : 's'}</span> : null}</td>
                       <td className="py-2.5 px-3"><span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">Admin</span></td>
                       <td className="py-2.5 px-3 text-gray-600">{f.frequency || '—'}</td>
                       <td className="py-2.5 px-3"><span className="text-[10px] font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">Optional</span></td>
@@ -154,7 +154,7 @@ export default function AdminFormNamesPage() {
         <label className="block text-xs font-semibold text-gray-700">Required format<select value={requiresDocument ? 'upload' : 'submission'} onChange={e => setRequiresDocument(e.target.value === 'upload')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-2 text-sm bg-white"><option value="upload">PDF / JPEG / PNG (document upload)</option><option value="submission">Submission only (no file)</option></select></label>
         <label className="block text-xs font-semibold text-gray-700">Note<input value={description} onChange={e => setDescription(e.target.value)} placeholder="Optional guidance shown to contractors" className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm"/></label>
         <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-blue-900">AI audit checklist</p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-blue-900">AI checkpoints</p>
           <p className="mt-0.5 text-[11px] text-gray-500">Tick the conditions the AI must verify when the contractor uploads it. <em>Signature/seal are matched by their printed label, not the handwriting.</em></p>
           <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             {catalog.map(cp => {

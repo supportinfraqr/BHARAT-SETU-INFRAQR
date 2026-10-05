@@ -362,6 +362,7 @@ CHECKPOINT_CATALOG = [
     {"key": "period", "type": "period", "label": "Reporting period (month / year) present"},
     {"key": "seal", "type": "seal", "label": "Seal / Company stamp"},
     {"key": "title", "type": "title", "label": "Form title / heading"},
+    {"key": "columns", "type": "columns", "label": "Register matches the template columns"},
     {"key": "licence", "type": "keyword", "label": "Licence / registration number"},
     {"key": "amount", "type": "amount", "label": "Amount / figures"},
     {"key": "readable", "type": "readable", "label": "Readable / not blank"},
