@@ -209,11 +209,12 @@ def _handle_compliances(user, body, method):
                 if s.validation_findings or s.checkpoint_results:
                     s.forced_submit = True
                     s.save(update_fields=["forced_submit"])
-        # Mark the included generated register batches as submitted so they can
-        # no longer be re-submitted from the Create tab.
+        # Mark the included generated register batches as submitted (and clear any
+        # previous rejection note) so they can no longer be re-submitted from the
+        # Create tab and the employer sees them as a fresh review.
         if batch_ids:
             ComplianceBatch.objects.filter(
-                contractor=user, id__in=batch_ids).update(status="SUBMITTED")
+                contractor=user, id__in=batch_ids).update(status="SUBMITTED", review_note="")
         return payloads._contractor_audit_report_row(report)
 
     rows_in = body.get("bulk") if isinstance(body.get("bulk"), list) else [body]

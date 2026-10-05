@@ -538,7 +538,7 @@ def _employer_submissions(user):
 
     rows = []
     my_sites = set(Site.objects.filter(employer=user).values_list("site_name", flat=True))
-    from bss_core.models import ComplianceBatch, CustomFormName
+    from bss_core.models import ComplianceBatch, ComplianceReport, CustomFormName
     from .contractor import _contractor_compliance_batch_row
     form_meta = {}
     for f in CustomFormName.objects.filter(is_active=True).values("name", "description", "requires_document"):
@@ -591,8 +591,22 @@ def _employer_submissions(user):
               .select_related("contractor", "site").order_by("-generated_on", "-id")):
         packages.setdefault((b.contractor_id, b.year, b.month), {"batches": [], "evidence": []})["batches"].append(b)
 
+    # The latest submission round per (contractor, year, month): evidence from an
+    # earlier (rejected) round must not keep a re-submitted package as "Rejected".
+    latest_round = {}
+    for rep in ComplianceReport.objects.filter(employer_id__in={cid for cid, _, _ in packages}):
+        rm = re.match(r"\s*([A-Za-z]+)", rep.period or "")
+        ry = re.search(r"(20\d{2})", rep.period or "")
+        key = (rep.employer_id, ry.group(1) if ry else "", rm.group(1) if rm else "")
+        if rep.unique_no and (key not in latest_round or rep.unique_no > latest_round[key]):
+            latest_round[key] = rep.unique_no
+
     for (cid, year, month), grp in packages.items():
-        batches, evidence = grp["batches"], grp["evidence"]
+        batches = grp["batches"]
+        evidence = grp["evidence"]
+        latest_no = latest_round.get((cid, year, month), "")
+        if latest_no:
+            evidence = [e for e in evidence if (not e.unique_no) or e.unique_no >= latest_no]
         statuses = [str(x.status).upper() for x in batches] + [str(x.status).upper() for x in evidence]
         if any(s in ("RETURNED", "REJECTED") for s in statuses):
             status = "Rejected"
@@ -607,7 +621,8 @@ def _employer_submissions(user):
         sites = sorted({x.site.site_name for x in batches if x.site} | {x.site for x in evidence if x.site})
         stamps = [x.generated_on for x in batches if x.generated_on] + [x.created_at for x in evidence if x.created_at]
         latest = max(stamps, key=str) if stamps else None
-        notes = [x.review_note for x in batches if x.review_note] + [x.review_note for x in evidence if x.review_note]
+        notes = [x.review_note for x in batches if x.review_note and str(x.status).upper() in ("RETURNED", "REJECTED")]
+        notes += [e.review_note for e in evidence if e.review_note and str(e.status).upper() in ("RETURNED", "REJECTED")]
         rows.append({
             "id": f"pkg-{cid}-{year}-{month}",
             "contractor": name,
