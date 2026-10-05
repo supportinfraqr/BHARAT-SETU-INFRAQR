@@ -617,6 +617,8 @@ class ComplianceBatch(models.Model):
     # AI audit of each generated register (register-template id -> audit result),
     # produced in the background right after the batch is generated.
     register_audits = models.JSONField(default=dict, blank=True)
+    # Employer's reason when a submission is returned to the contractor.
+    review_note = models.CharField(max_length=500, blank=True)
     status = models.CharField(max_length=20, choices=STATUS, default="GENERATED")
     # When a site+period is regenerated, the previous batch is kept for audit but
     # marked SUPERSEDED and points at the batch that replaced it.

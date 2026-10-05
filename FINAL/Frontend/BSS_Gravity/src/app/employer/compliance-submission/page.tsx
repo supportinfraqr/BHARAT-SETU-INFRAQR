@@ -44,6 +44,8 @@ export default function EmployerComplianceSubmissionPage() {
   const [periodFilter, setPeriodFilter] = useState('all');
   const [batchView, setBatchView] = useState<string | null>(null);
   const [tab, setTab] = useState<'records' | 'reports'>('records');
+  const [rejectRow, setRejectRow] = useState<EmployerSubmission | null>(null);
+  const [rejectNote, setRejectNote] = useState('');
 
   const years = useMemo(() => {
     const set = new Set<string>();
@@ -66,17 +68,16 @@ export default function EmployerComplianceSubmissionPage() {
     return true;
   }), [employer.submissions, siteFilter, yearFilter, freqFilter, periodFilter]);
 
-  const registers = filtered.filter(s => s.kind === 'register');
-  const forms = filtered.filter(s => s.kind === 'form');
+  const registers = filtered.filter(s => s.kind === 'package' || s.kind === 'register' || s.kind === 'form');
 
-  async function review(row: EmployerSubmission, status: 'Verified' | 'Rejected') {
+  async function review(row: EmployerSubmission, status: 'Verified' | 'Rejected', note = '') {
     setBusy(true);
     setError('');
     setNotice('');
     try {
-      await mutate('submissions', 'PATCH', { id: row.id, status });
-      replaceEmployer({ ...employer, submissions: employer.submissions.map(item => item.id === row.id ? { ...item, status } : item) });
-      setNotice(`${row.type} for ${row.site} ${status === 'Verified' ? 'marked accepted' : 'rejected'}.`);
+      await mutate('submissions', 'PATCH', { id: row.id, status, note });
+      replaceEmployer({ ...employer, submissions: employer.submissions.map(item => item.id === row.id ? { ...item, status, note } : item) });
+      setNotice(`${row.type} ${status === 'Verified' ? 'accepted' : 'rejected'}.`);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Submission could not be updated.'); }
     finally { setBusy(false); }
   }
@@ -118,41 +119,32 @@ export default function EmployerComplianceSubmissionPage() {
     }
   }
 
-  const aiReportCell = (row: EmployerSubmission) => row.batchId ? (
-    <div className="flex flex-col gap-1">
-      <button type="button" onClick={() => void viewBatchReport(row.batchId as string)} className="text-[11px] text-[#073B67] font-semibold hover:underline text-left">View report</button>
-      <a href={`/api/employer/compliance-batches/${row.batchId}/verification-report?download=pdf`} className="text-[11px] text-blue-700 font-semibold hover:underline">Download PDF</a>
-    </div>
-  ) : (
-    <div className="flex flex-col gap-1">
-      <button type="button" onClick={() => void viewAiReport(row)} className="text-[11px] text-[#073B67] font-semibold hover:underline text-left">View report</button>
-      <a href={`/api/employer/submissions/${row.id}/ai-report?format=pdf`} className="text-[11px] text-blue-700 font-semibold hover:underline">Download PDF</a>
-    </div>
-  );
+  const aiReportCell = (row: EmployerSubmission) => {
+    if (row.kind === 'package') {
+      return row.batchId ? (
+        <div className="flex flex-col gap-1">
+          <button type="button" onClick={() => void viewBatchReport(row.batchId as string)} className="text-[11px] text-[#073B67] font-semibold hover:underline text-left">View report</button>
+          <a href={`/api/employer/compliance-batches/${row.batchId}/verification-report?download=pdf`} className="text-[11px] text-blue-700 font-semibold hover:underline">Download PDF</a>
+        </div>
+      ) : <span className="text-gray-400 text-xs">—</span>;
+    }
+    return (
+      <div className="flex flex-col gap-1">
+        <button type="button" onClick={() => void viewAiReport(row)} className="text-[11px] text-[#073B67] font-semibold hover:underline text-left">View report</button>
+        <a href={`/api/employer/submissions/${row.id}/ai-report?format=pdf`} className="text-[11px] text-blue-700 font-semibold hover:underline">Download PDF</a>
+      </div>
+    );
+  };
 
   const contractorCell = (row: EmployerSubmission) => <div><strong className="text-gray-900">{row.contractor || '—'}</strong>{row.contractorId && <p className="font-mono text-[10px] text-gray-400">{row.contractorId}</p>}</div>;  const statusCell = (row: EmployerSubmission) => <Status value={row.status}/>;
   const actionCell = (row: EmployerSubmission) => row.status === 'Pending review'
-    ? <div className="flex gap-3"><button disabled={busy} onClick={() => review(row, 'Verified')} className="text-green-700 font-semibold hover:underline whitespace-nowrap">Mark Accepted</button><button disabled={busy} onClick={() => review(row, 'Rejected')} className="text-red-700 font-semibold hover:underline">Reject</button></div>
+    ? <div className="flex gap-3"><button disabled={busy} onClick={() => void review(row, 'Verified')} className="text-green-700 font-semibold hover:underline whitespace-nowrap">Accept all</button><button disabled={busy} onClick={() => { setRejectNote(''); setRejectRow(row); }} className="text-red-700 font-semibold hover:underline">Reject</button></div>
     : <span className="text-gray-400">No action</span>;
 
-  const registerColumns: DataColumn<EmployerSubmission>[] = [
+  const submissionColumns: DataColumn<EmployerSubmission>[] = [
     { id:'contractor', header:'Contractor', value:row => row.contractor, render:contractorCell },
     { id:'site', header:'Site', value:row => row.site },
-    { id:'period', header:'Period', value:row => row.period },
-    { id:'type', header:'Registers', value:row => row.type, render:row => <div><strong className="text-gray-900">{row.type}</strong>{row.batchId && <div className="flex items-center gap-3 mt-0.5"><button type="button" onClick={() => setBatchView(row.batchId as string)} className="text-[11px] text-blue-600 font-semibold hover:underline">View documents</button><a href={`/api/employer/compliance-batches/${row.batchId}/file`} className="text-[11px] text-blue-600 hover:underline">Download registers</a></div>}</div> },
-    { id:'submitted', header:'Submitted', value:row => row.submittedAt.slice(0, 10) },
-    { id:'status', header:'Status', value:row => row.status, render:statusCell },
-    { id:'actions', header:'Action', filterable:false, value:row => row.status, render:actionCell },
-  ];
-
-  const formColumns: DataColumn<EmployerSubmission>[] = [
-    { id:'contractor', header:'Contractor', value:row => row.contractor, render:contractorCell },
-    { id:'site', header:'Site', value:row => row.site },
-    { id:'type', header:'Document Name', value:row => row.type, render:row => <div><strong className="text-gray-900">{row.type}</strong>{row.source === 'evidence' && <button type="button" disabled={busy} onClick={() => viewEvidence(row)} className="block text-[11px] text-blue-600 hover:underline mt-0.5">View evidence</button>}</div> },
-    { id:'frequency', header:'Frequency', value:row => row.frequency || '—' },
-    { id:'mandatory', header:'Mandatory', value:row => row.mandatory ? 'Yes' : 'No', render:row => row.mandatory ? <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">Mandatory</span> : <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">Optional</span> },
-    { id:'requiredFormat', header:'Required Format', value:row => row.requiredFormat || '—' },
-    { id:'note', header:'Note', value:row => row.note || '—', render:row => <span className="text-gray-500 inline-block max-w-[240px]" title={row.note || ''}>{row.note || '—'}</span> },
+    { id:'type', header:'Submission', value:row => row.type, render:row => <div><strong className="text-gray-900">{row.type}</strong>{row.batchId && <div className="flex items-center gap-3 mt-0.5"><button type="button" onClick={() => setBatchView(row.batchId as string)} className="text-[11px] text-blue-600 font-semibold hover:underline">View documents</button><a href={`/api/employer/compliance-batches/${row.batchId}/file`} className="text-[11px] text-blue-600 hover:underline">Download registers</a></div>}{row.source === 'evidence' && <button type="button" disabled={busy} onClick={() => viewEvidence(row)} className="block text-[11px] text-blue-600 hover:underline mt-0.5">View evidence</button>}{row.note && <p className="text-[10px] text-red-600 mt-0.5">Note: {row.note}</p>}</div> },
     { id:'period', header:'Period', value:row => row.period },
     { id:'submitted', header:'Submitted', value:row => row.submittedAt.slice(0, 10) },
     { id:'status', header:'Status', value:row => row.status, render:statusCell },
@@ -221,12 +213,24 @@ export default function EmployerComplianceSubmissionPage() {
       ))}
     </div>
 
-    {tab === 'records' && <>
-      <EnterpriseDataTable title={`1 · CLRA Registers (${registers.length})`} rows={registers} columns={registerColumns} rowKey={row => row.id} filename="employer-clra-registers"/>
-      <EnterpriseDataTable title={`2 · Additional Forms (${forms.length})`} rows={forms} columns={formColumns} rowKey={row => row.id} filename="employer-additional-forms"/>
-    </>}
+    {tab === 'records' && <EnterpriseDataTable title={`Contractor submissions (${registers.length})`} rows={registers} columns={submissionColumns} rowKey={row => row.id} filename="employer-compliance-submissions"/>}
 
     {tab === 'reports' && <EnterpriseDataTable title={`Detailed AI reports (${filtered.length})`} rows={filtered} columns={reportColumns} rowKey={row => row.id} filename="employer-ai-reports"/>}
+
+    {rejectRow && <div className="fixed inset-0 z-[90] bg-black/50 grid place-items-center p-4" onMouseDown={e => { if (e.target === e.currentTarget) setRejectRow(null); }}>
+      <section role="dialog" aria-modal="true" className="w-full max-w-md bg-white rounded-2xl shadow-xl">
+        <header className="p-5 border-b border-gray-100"><h2 className="font-semibold text-gray-950">Reject submission</h2><p className="text-xs text-gray-500 mt-1">{rejectRow.contractor || 'Contractor'} · {rejectRow.site} · {rejectRow.period}</p></header>
+        <div className="p-5">
+          <label htmlFor="reject-note" className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Reason / notes for the contractor</label>
+          <textarea id="reject-note" value={rejectNote} onChange={e => setRejectNote(e.target.value)} rows={4} placeholder="Describe what needs fixing so they can correct and resubmit…" className="mt-1.5 w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200" />
+          <p className="text-[11px] text-gray-400 mt-2">This rejects the whole submission (CLRA registers + additional forms) for this period. The contractor can fix it and resubmit.</p>
+        </div>
+        <footer className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+          <button type="button" onClick={() => setRejectRow(null)} className="h-9 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button>
+          <button type="button" disabled={busy} onClick={() => { const row = rejectRow; setRejectRow(null); void review(row as EmployerSubmission, 'Rejected', rejectNote.trim()); }} className="h-9 px-4 rounded-lg bg-red-600 text-white text-xs font-bold disabled:opacity-40">Reject submission</button>
+        </footer>
+      </section>
+    </div>}
 
     {batchView && <BatchDrilldown batchId={batchView} role="employer" onClose={() => setBatchView(null)} />}
   </div>;

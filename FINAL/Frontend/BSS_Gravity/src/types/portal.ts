@@ -248,7 +248,7 @@ export type ContractorRegister = {
 
 export type ContractorComplianceBatch = {
   id: string; financialYear: string; month: string; year: string; state: string; site: string; siteCode: string; employeeCount: number; locationCount: number; generatedOn: string; generatedBy: string; status: 'Generated' | 'Pending' | 'Submitted' | 'Verified' | 'Returned' | 'Rejected' | 'Failed';
-  rowsCount?: number; hasFile?: boolean; notes?: string; registerCount?: number; auditStatus?: 'pending' | 'passed' | 'failed' | 'review' | 'unavailable';
+  rowsCount?: number; hasFile?: boolean; notes?: string; registerCount?: number; auditStatus?: 'pending' | 'passed' | 'failed' | 'review' | 'unavailable'; reviewNote?: string;
 };
 
 export type ContractorAuditReport = {
@@ -465,7 +465,7 @@ export type EmployerSubmission = {
   submittedAt: string;
   status: 'Pending review' | 'Verified' | 'Rejected';
   source?: 'evidence' | 'register' | 'submission';
-  kind?: 'register' | 'form';
+  kind?: 'register' | 'form' | 'package';
   financialYear?: string;
   month?: string;
   frequency?: string;
@@ -475,6 +475,8 @@ export type EmployerSubmission = {
   note?: string;
   batchId?: string;
   hasFile?: boolean;
+  registerCount?: number;
+  formCount?: number;
 };
 
 export type EmployerUser = {

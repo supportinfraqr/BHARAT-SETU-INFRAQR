@@ -353,6 +353,35 @@ def _handle_submission_review(user, body):
         batch.save(update_fields=["status", "updated_at"])
         return batch.id
 
+    if raw_id.startswith("pkg-"):
+        # One contractor + period: accept/reject the CLRA registers AND the
+        # additional forms together, storing the employer's note on return.
+        from django.db.models import Q
+
+        from bss_core.models import ComplianceBatch
+        parts = raw_id.split("-", 3)
+        if len(parts) != 4:
+            raise PortalMutationError("Submission not found.", 404)
+        _, cid, year, month = parts
+        note = str(body.get("note") or "").strip()[:500]
+        batches = (ComplianceBatch.objects
+                   .filter(contractor_id=cid, year=year, month=month, site__employer=user)
+                   .exclude(status="SUPERSEDED"))
+        evidence = (SubmissionEvidence.objects
+                    .filter(user_id=cid, month=month)
+                    .filter(Q(financial_year__icontains=year) | Q(period__icontains=year)))
+        if not batches.exists() and not evidence.exists():
+            raise PortalMutationError("Submission not found.", 404)
+        if decision == "VERIFIED":
+            batches.update(status="VERIFIED", review_note="", updated_at=timezone.now())
+            evidence.update(status="VERIFIED", review_note="")
+        elif decision in ("REJECTED", "RETURNED"):
+            batches.update(status="RETURNED", review_note=note, updated_at=timezone.now())
+            evidence.update(status="RETURNED", review_note=note)
+        else:
+            raise PortalMutationError("Select a valid submission decision.", 422)
+        return raw_id
+
     if raw_id.startswith("grp-"):
         # A grouped register submission: contractor + year + month across sites.
         from bss_core.models import ComplianceBatch

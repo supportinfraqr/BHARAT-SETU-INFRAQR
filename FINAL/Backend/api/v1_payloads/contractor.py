@@ -1039,6 +1039,7 @@ def _contractor_compliance_batch_row(b):
         "rowsCount": b.rows_count,
         "registerCount": register_count,
         "auditStatus": audit_status,
+        "reviewNote": _d(getattr(b, "review_note", "")),
         "hasFile": bool(b.generated_file),
         "notes": _d(b.notes),
         "status": {"GENERATED": "Generated", "PENDING": "Pending",

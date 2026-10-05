@@ -45,6 +45,8 @@ class SubmissionEvidence(models.Model):
     # True when the contractor chose to submit despite failed OCR checkpoints —
     # kept so the override is on record alongside the validation findings.
     forced_submit = models.BooleanField(default=False)
+    # Employer's reason when the submission is returned to the contractor.
+    review_note = models.CharField(max_length=500, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -534,19 +534,29 @@ def _employer_gate_passes(user):
 
 
 def _employer_submissions(user):
+    import re
+
     rows = []
-    # Scope to THIS employer: a contractor bound to several employers must not
-    # leak its submissions for another employer's site. The query already scopes
-    # by the contractor/worker bindings; the site must belong to this employer.
-    # (The submission's free-text employer name is unreliable — a demo employer
-    # may have no profile name — so it is not used as a hard filter.)
     my_sites = set(Site.objects.filter(employer=user).values_list("site_name", flat=True))
-    # Ad-hoc form metadata (Required Format / Note) keyed by name, so an evidence
-    # row can show the same columns the contractor saw when uploading.
-    from bss_core.models import CustomFormName
+    from bss_core.models import ComplianceBatch, CustomFormName
     form_meta = {}
     for f in CustomFormName.objects.filter(is_active=True).values("name", "description", "requires_document"):
         form_meta.setdefault((f["name"] or "").strip().lower(), f)
+
+    def ev_month(ev):
+        if ev.month:
+            return ev.month
+        m = re.match(r"\s*([A-Za-z]+)", ev.period or "")
+        return m.group(1) if m else ""
+
+    def ev_year(ev):
+        m = re.search(r"(20\d{2})", ev.period or "") or re.search(r"(20\d{2})", ev.financial_year or "")
+        return m.group(1) if m else ""
+
+    # One submission unit = contractor + period (month). CLRA register batches and
+    # the contractor's additional forms for that month are reviewed together.
+    packages: dict = {}
+
     uploaded = (SubmissionEvidence.objects
                 .filter(Q(user__worker_bindings__site__employer=user)
                         | Q(user__contractor_bindings__site__employer=user))
@@ -555,26 +565,67 @@ def _employer_submissions(user):
     for ev in uploaded:
         if ev.site and my_sites and ev.site not in my_sites:
             continue
-        cp = getattr(ev.user, "contractor_profile", None) if ev.user.role == "contractor" else None
+        if ev.user.role == "contractor":
+            packages.setdefault((ev.user_id, ev_year(ev), ev_month(ev)), {"batches": [], "evidence": []})["evidence"].append(ev)
+            continue
         meta = form_meta.get(_d(ev.doc_type).strip().lower())
         rows.append({
             "id": str(ev.id),
-            "contractor": _d(cp.contractor_name if cp else ""),
-            "contractorId": _bss_contractor_code(ev.user_id) if ev.user.role == "contractor" else "",
+            "contractor": "", "contractorId": "",
             "site": _d(ev.site), "type": _d(ev.doc_type),
             "period": _d(ev.period),
             "submittedAt": _dts(ev.created_at),
             "status": _submission_review_label(ev.status),
-            "source": "evidence",
-            "kind": "form",
-            "financialYear": _d(ev.financial_year),
-            "month": _d(ev.month),
-            "frequency": _d(ev.frequency),
-            "mandatory": bool(ev.is_mandatory),
+            "source": "evidence", "kind": "form",
+            "financialYear": _d(ev.financial_year), "month": _d(ev.month),
+            "frequency": _d(ev.frequency), "mandatory": bool(ev.is_mandatory),
             "documentType": _d(ev.document_type),
             "requiredFormat": ("Submission only" if meta and not meta["requires_document"] else "PDF / JPEG / PNG"),
             "note": _d(meta["description"]) if meta else "",
         })
+
+    for b in (ComplianceBatch.objects
+              .filter(site__employer=user,
+                      status__in=["SUBMITTED", "VERIFIED", "RETURNED", "REJECTED"])
+              .select_related("contractor", "site").order_by("-generated_on", "-id")):
+        packages.setdefault((b.contractor_id, b.year, b.month), {"batches": [], "evidence": []})["batches"].append(b)
+
+    for (cid, year, month), grp in packages.items():
+        batches, evidence = grp["batches"], grp["evidence"]
+        statuses = [str(x.status).upper() for x in batches] + [str(x.status).upper() for x in evidence]
+        if any(s in ("RETURNED", "REJECTED") for s in statuses):
+            status = "Rejected"
+        elif statuses and all(s in ("VERIFIED",) for s in statuses):
+            status = "Verified"
+        else:
+            status = "Pending review"
+        cp = getattr(batches[0].contractor, "contractor_profile", None) if batches else None
+        if cp is None and evidence:
+            cp = getattr(evidence[0].user, "contractor_profile", None)
+        name = _d(cp.contractor_name if cp else ((batches[0].contractor.username if batches else (evidence[0].user.username if evidence else ""))))
+        sites = sorted({x.site.site_name for x in batches if x.site} | {x.site for x in evidence if x.site})
+        stamps = [x.generated_on for x in batches if x.generated_on] + [x.created_at for x in evidence if x.created_at]
+        latest = max(stamps) if stamps else None
+        notes = [x.review_note for x in batches if x.review_note] + [x.review_note for x in evidence if x.review_note]
+        rows.append({
+            "id": f"pkg-{cid}-{year}-{month}",
+            "contractor": name,
+            "contractorId": _bss_contractor_code(cid) if cid else "",
+            "site": ", ".join(sites),
+            "type": f"Compliance Submission · {month} {year} ({len(batches)} register batch(es) · {len(evidence)} form(s))",
+            "period": _d(f"{month} {year}".strip()),
+            "submittedAt": _dts(latest) if latest else "",
+            "status": status,
+            "source": "submission", "kind": "package",
+            "financialYear": _d(batches[0].financial_year if batches else (evidence[0].financial_year if evidence else "")),
+            "month": _d(month),
+            "frequency": "", "mandatory": True, "documentType": "CLRA + Forms",
+            "requiredFormat": "", "note": _d(notes[-1]) if notes else "",
+            "batchId": str(batches[0].id) if batches else "",
+            "hasFile": any(bool(x.generated_file) for x in batches),
+            "registerCount": len(batches), "formCount": len(evidence),
+        })
+
     for c in user.compliance_docs.all()[:20] if hasattr(user, "compliance_docs") else []:
         rows.append({
             "id": str(c.id), "contractor": "", "contractorId": "",
@@ -582,53 +633,9 @@ def _employer_submissions(user):
             "type": _d(c.master.act if c.master else ""),
             "period": _d(c.period), "submittedAt": _dts(c.updated_at),
             "status": _submission_review_label(c.status),
-            "source": "register",
-            "kind": "register",
+            "source": "register", "kind": "register",
             "financialYear": "", "month": "", "frequency": "",
-            "mandatory": True, "documentType": "",
-            "requiredFormat": "", "note": "",
-        })
-
-    # Contractor CLRA register submissions for THIS employer's sites, grouped as
-    # ONE reviewable unit per contractor + period (however many register batches
-    # / sites it covers). Approve/Reject then applies to the whole submission.
-    from bss_core.models import ComplianceBatch
-    grouped = {}
-    for b in (ComplianceBatch.objects
-              .filter(site__employer=user,
-                      status__in=["SUBMITTED", "VERIFIED", "RETURNED", "REJECTED"])
-              .select_related("contractor", "site").order_by("-generated_on", "-id")):
-        grouped.setdefault((b.contractor_id, b.year, b.month), []).append(b)
-    for (cid, year, month), batches in grouped.items():
-        statuses = [str(x.status).upper() for x in batches]
-        if any(s in ("RETURNED", "REJECTED") for s in statuses):
-            status = "Rejected"
-        elif all(s == "VERIFIED" for s in statuses):
-            status = "Verified"
-        else:
-            status = "Pending review"
-        cp = getattr(batches[0].contractor, "contractor_profile", None) if cid else None
-        sites = sorted({x.site.site_name for x in batches if x.site})
-        latest = max((x.generated_on for x in batches if x.generated_on), default=None)
-        rows.append({
-            "id": f"grp-{cid}-{year}-{month}",
-            "contractor": _d(cp.contractor_name if cp else (batches[0].contractor.username if cid else "")),
-            "contractorId": _bss_contractor_code(cid) if cid else "",
-            "site": ", ".join(sites),
-            "type": f"CLRA Register Submission · {month} {year} ({len(batches)} register batch(es))",
-            "period": _d(f"{month} {year}".strip()),
-            "submittedAt": _dts(latest) if latest else "",
-            "status": status,
-            "source": "submission",
-            "kind": "register",
-            "financialYear": _d(batches[0].financial_year),
-            "month": _d(month),
-            "frequency": "Monthly",
-            "mandatory": True,
-            "documentType": "CLRA Registers",
-            "requiredFormat": "", "note": "",
-            "batchId": str(batches[0].id),
-            "hasFile": any(bool(x.generated_file) for x in batches),
+            "mandatory": True, "documentType": "", "requiredFormat": "", "note": "",
         })
     return rows
 
