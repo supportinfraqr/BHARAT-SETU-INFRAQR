@@ -38,9 +38,11 @@ class SubmissionEvidence(models.Model):
     checksum_sha256 = models.CharField(max_length=64, blank=True)
     ocr_accuracy = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     validation_findings = models.JSONField(default=list, blank=True)
-    # Per-checkpoint OCR results for additional forms, e.g.
+    # Per-checkpoint AI results for additional forms, e.g.
     # [{"key":"signature","label":"Signature","required":true,"passed":true,"detail":"..."}].
     checkpoint_results = models.JSONField(default=list, blank=True)
+    # AI audit verdict for the uploaded file (passed / failed / review / unavailable).
+    ai_status = models.CharField(max_length=20, blank=True)
     status = models.CharField(max_length=20, choices=STATUS, default="PENDING")
     # True when the contractor chose to submit despite failed OCR checkpoints —
     # kept so the override is on record alongside the validation findings.

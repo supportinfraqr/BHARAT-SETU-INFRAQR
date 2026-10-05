@@ -504,6 +504,8 @@ def _contractor_submissions(user):
             "daysLeft": days_left, "mandatory": bool(ev.is_mandatory),
             "frequency": _d(ev.frequency), "documentType": _d(ev.document_type),
             "accuracy": _num(ev.ocr_accuracy),
+            "aiStatus": _d(ev.ai_status),
+            "checkpoints": list(ev.checkpoint_results or []),
             "findings": list(ev.validation_findings or []),
             "source": "evidence",
             "fileName": _d(ev.original_name), "checksum": _d(ev.checksum_sha256),

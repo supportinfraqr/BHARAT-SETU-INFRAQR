@@ -5,7 +5,7 @@ import { Copy, Loader2, Plus, X } from 'lucide-react';
 import { INDIA_STATES } from '@/data/indiaStates';
 
 type Checkpoint = { key?: string; type: string; label: string; value?: string; required?: boolean };
-type ExtraForm = { id: number; state: string; name: string; mandatory: boolean; requiresDocument: boolean; frequency: string; description: string; scope: string; ocrCheckpoints?: Checkpoint[] };
+type ExtraForm = { id: number; state: string; name: string; mandatory: boolean; requiresDocument: boolean; frequency: string; description: string; scope: string; aiChecks?: Checkpoint[] };
 
 export default function AdminFormNamesPage() {
   const [state, setState] = useState(INDIA_STATES[0] ?? '');
@@ -62,14 +62,14 @@ export default function AdminFormNamesPage() {
     if (!name.trim()) return;
     setBusy(true); setError(''); setNotice('');
     const formName = name.trim();
-    const ocrCheckpoints: Checkpoint[] = catalog
+    const aiChecks: Checkpoint[] = catalog
       .filter(cp => selectedCps[cp.key ?? cp.type]?.checked)
       .map(cp => ({ key: cp.key, type: cp.type, label: cp.label, required: selectedCps[cp.key ?? cp.type]?.required ?? true }));
-    if (customKeyword.trim()) ocrCheckpoints.push({ type: 'keyword', label: customKeyword.trim(), value: customKeyword.trim(), required: true });
+    if (customKeyword.trim()) aiChecks.push({ type: 'keyword', label: customKeyword.trim(), value: customKeyword.trim(), required: true });
     try {
       const response = await fetch('/api/admin/form-names', {
         method:'POST', headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ state, name: formName, frequency: frequency.trim(), requiresDocument, description: description.trim(), ocrCheckpoints }),
+        body: JSON.stringify({ state, name: formName, frequency: frequency.trim(), requiresDocument, description: description.trim(), aiChecks }),
       });
       const body = await response.json().catch(() => ({})) as { error?:string };
       if (!response.ok) throw new Error(body.error ?? 'The form could not be added.');
@@ -131,7 +131,7 @@ export default function AdminFormNamesPage() {
                   {rows.map((f, i) => (
                     <tr key={f.id} className="hover:bg-slate-50/70">
                       <td className="py-2.5 px-3 text-gray-400 font-semibold">{i + 1}</td>
-                      <td className="py-2.5 px-3 font-semibold text-gray-900">{f.name}{f.ocrCheckpoints?.length ? <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{f.ocrCheckpoints.length} OCR check{f.ocrCheckpoints.length === 1 ? '' : 's'}</span> : null}</td>
+                      <td className="py-2.5 px-3 font-semibold text-gray-900">{f.name}{f.aiChecks?.length ? <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{f.aiChecks.length} AI check{f.aiChecks.length === 1 ? '' : 's'}</span> : null}</td>
                       <td className="py-2.5 px-3"><span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">Admin</span></td>
                       <td className="py-2.5 px-3 text-gray-600">{f.frequency || '—'}</td>
                       <td className="py-2.5 px-3"><span className="text-[10px] font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-600">Optional</span></td>
@@ -154,8 +154,8 @@ export default function AdminFormNamesPage() {
         <label className="block text-xs font-semibold text-gray-700">Required format<select value={requiresDocument ? 'upload' : 'submission'} onChange={e => setRequiresDocument(e.target.value === 'upload')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-2 text-sm bg-white"><option value="upload">PDF / JPEG / PNG (document upload)</option><option value="submission">Submission only (no file)</option></select></label>
         <label className="block text-xs font-semibold text-gray-700">Note<input value={description} onChange={e => setDescription(e.target.value)} placeholder="Optional guidance shown to contractors" className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm"/></label>
         <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-blue-900">Verification checkpoints (OCR)</p>
-          <p className="mt-0.5 text-[11px] text-gray-500">Tick what the uploaded document must contain — verified by OCR when the contractor uploads it. <em>Signature/seal are matched by their printed label, not the handwriting.</em></p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-blue-900">AI audit checklist</p>
+          <p className="mt-0.5 text-[11px] text-gray-500">Tick the conditions the AI must verify when the contractor uploads it. <em>Signature/seal are matched by their printed label, not the handwriting.</em></p>
           <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             {catalog.map(cp => {
               const key = cp.key ?? cp.type;

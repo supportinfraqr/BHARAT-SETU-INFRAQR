@@ -641,7 +641,10 @@ def _employer_submissions(user):
             "hasFile": any(bool(x.generated_file) for x in batches),
             "registerCount": len(batches), "formCount": len(evidence),
             "batches": [_contractor_compliance_batch_row(b) for b in batches],
-            "forms": [{"id": str(ev.id), "name": _d(ev.doc_type), "status": _submission_review_label(ev.status)} for ev in evidence],
+            "forms": [{"id": str(ev.id), "name": _d(ev.doc_type), "status": _submission_review_label(ev.status),
+                       "aiStatus": _d(getattr(ev, "ai_status", "")),
+                       "checkpoints": list(ev.checkpoint_results or []),
+                       "findings": list(ev.validation_findings or [])} for ev in evidence],
         })
 
     for c in user.compliance_docs.all()[:20] if hasattr(user, "compliance_docs") else []:

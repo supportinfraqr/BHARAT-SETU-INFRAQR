@@ -13,9 +13,9 @@ type SiteBoard = {
   adoptedCount: number; total: number; gated: boolean; forms: RegisterForm[];
 };
 type Checkpoint = { key?: string; type: string; label: string; value?: string; required?: boolean };
-type ExtraForm = { id: number; state: string; name: string; mandatory: boolean; requiresDocument: boolean; frequency: string; description: string; scope: string; selected?: boolean; ocrCheckpoints?: Checkpoint[] };
+type ExtraForm = { id: number; state: string; name: string; mandatory: boolean; requiresDocument: boolean; frequency: string; description: string; scope: string; selected?: boolean; aiChecks?: Checkpoint[] };
 type ExtraDraft = {
-  adds: { name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; description: string; ocrCheckpoints: Checkpoint[] }[];
+  adds: { name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; description: string; aiChecks: Checkpoint[] }[];
   removes: number[];
   catalog: Record<number, { selected: boolean; mandatory: boolean }>;
 };
@@ -130,7 +130,7 @@ export default function ClraRegistersPage() {
     for (const add of draft.adds) {
       const response = await fetch('/api/employer/form-names', {
         method:'POST', headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ state: site?.state ?? '', siteId, name: add.name, mandatory: add.mandatory, frequency: add.frequency, requiresDocument: add.requiresDocument, description: add.description, ocrCheckpoints: add.ocrCheckpoints ?? [] }),
+        body: JSON.stringify({ state: site?.state ?? '', siteId, name: add.name, mandatory: add.mandatory, frequency: add.frequency, requiresDocument: add.requiresDocument, description: add.description, aiChecks: add.aiChecks ?? [] }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({})) as { error?:string };
@@ -242,7 +242,7 @@ export default function ClraRegistersPage() {
               state: board.state, siteId: target.siteId, name: ef.name,
               mandatory: ef.mandatory, frequency: ef.frequency,
               requiresDocument: ef.requiresDocument, description: ef.description,
-              ocrCheckpoints: ef.ocrCheckpoints ?? [],
+              aiChecks: ef.aiChecks ?? [],
             }),
           });
         }
@@ -253,7 +253,7 @@ export default function ClraRegistersPage() {
               state: board.state, siteId: target.siteId, name: add.name,
               mandatory: add.mandatory, frequency: add.frequency,
               requiresDocument: add.requiresDocument, description: add.description,
-              ocrCheckpoints: add.ocrCheckpoints ?? [],
+              aiChecks: add.aiChecks ?? [],
             }),
           });
         }
@@ -299,15 +299,15 @@ export default function ClraRegistersPage() {
       setError('A form with this name is already added for this site.');
       return;
     }
-    const ocrCheckpoints: Checkpoint[] = cpCatalog
+    const aiChecks: Checkpoint[] = cpCatalog
       .filter(cp => selectedCps[cp.key ?? cp.type]?.checked)
       .map(cp => ({ key: cp.key, type: cp.type, label: cp.label, required: selectedCps[cp.key ?? cp.type]?.required ?? true }));
-    if (customKeyword.trim()) ocrCheckpoints.push({ type: 'keyword', label: customKeyword.trim(), value: customKeyword.trim(), required: true });
+    if (customKeyword.trim()) aiChecks.push({ type: 'keyword', label: customKeyword.trim(), value: customKeyword.trim(), required: true });
     setDrafts(current => ({
       ...current,
       [board.siteId]: {
         ...draft,
-        adds: [...draft.adds, { name, frequency: efFrequency.trim(), mandatory: efMandatory, requiresDocument: efRequiresDocument, description: efDescription.trim(), ocrCheckpoints }],
+        adds: [...draft.adds, { name, frequency: efFrequency.trim(), mandatory: efMandatory, requiresDocument: efRequiresDocument, description: efDescription.trim(), aiChecks }],
       },
     }));
     setEfName(''); setEfMandatory(false); setEfFrequency(''); setEfRequiresDocument(true); setEfDescription(''); setSelectedCps({}); setCustomKeyword('');
@@ -426,11 +426,11 @@ export default function ClraRegistersPage() {
                 {(() => {
                   const draft = siteDraft(board.siteId);
                   const rows = [
-                    ...extraForms.filter(f => f.scope === 'employer' && !draft.removes.includes(f.id)).map(f => ({ key: `e-${f.id}`, name: f.name, mandatory: f.mandatory, frequency: f.frequency, requiresDocument: f.requiresDocument, description: f.description, pending: false, ocrCount: f.ocrCheckpoints?.length ?? 0, cancel: () => stageRemoveExtraForm(f.id) })),
-                    ...draft.adds.map(a => ({ key: `n-${a.name}`, name: a.name, mandatory: a.mandatory, frequency: a.frequency, requiresDocument: a.requiresDocument, description: a.description, pending: true, ocrCount: a.ocrCheckpoints?.length ?? 0, cancel: () => cancelStagedAdd(a.name) })),
+                    ...extraForms.filter(f => f.scope === 'employer' && !draft.removes.includes(f.id)).map(f => ({ key: `e-${f.id}`, name: f.name, mandatory: f.mandatory, frequency: f.frequency, requiresDocument: f.requiresDocument, description: f.description, pending: false, aiCount: f.aiChecks?.length ?? 0, cancel: () => stageRemoveExtraForm(f.id) })),
+                    ...draft.adds.map(a => ({ key: `n-${a.name}`, name: a.name, mandatory: a.mandatory, frequency: a.frequency, requiresDocument: a.requiresDocument, description: a.description, pending: true, aiCount: a.aiChecks?.length ?? 0, cancel: () => cancelStagedAdd(a.name) })),
                   ];
                   return rows.length
-                    ? <ul className="divide-y divide-gray-100 rounded-xl border border-gray-100 overflow-hidden">{rows.map(r => <li key={r.key} className="flex items-center justify-between gap-3 px-3 py-2 text-xs"><span className="text-gray-800">{r.name}{r.pending && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">New</span>}{r.ocrCount > 0 && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{r.ocrCount} OCR check{r.ocrCount === 1 ? '' : 's'}</span>}{r.mandatory ? <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700">Mandatory</span> : <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">Optional</span>}{r.frequency && <span className="ml-2 text-gray-400">{r.frequency}</span>}{r.requiresDocument === false && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">Submission only</span>}{r.description && <span className="ml-2 text-gray-400" title={r.description}>{r.description}</span>}</span><button type="button" onClick={r.cancel} className="text-gray-400 hover:text-red-600" aria-label="Remove"><X size={14}/></button></li>)}</ul>
+                    ? <ul className="divide-y divide-gray-100 rounded-xl border border-gray-100 overflow-hidden">{rows.map(r => <li key={r.key} className="flex items-center justify-between gap-3 px-3 py-2 text-xs"><span className="text-gray-800">{r.name}{r.pending && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">New</span>}{r.aiCount > 0 && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{r.aiCount} AI check{r.aiCount === 1 ? '' : 's'}</span>}{r.mandatory ? <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700">Mandatory</span> : <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">Optional</span>}{r.frequency && <span className="ml-2 text-gray-400">{r.frequency}</span>}{r.requiresDocument === false && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">Submission only</span>}{r.description && <span className="ml-2 text-gray-400" title={r.description}>{r.description}</span>}</span><button type="button" onClick={r.cancel} className="text-gray-400 hover:text-red-600" aria-label="Remove"><X size={14}/></button></li>)}</ul>
                     : <p className="text-[11px] text-gray-400">None yet — use <strong>Add form</strong>.</p>;
                 })()}
               </div>
@@ -463,8 +463,8 @@ export default function ClraRegistersPage() {
         <label className="block text-xs font-semibold text-gray-700">Note<input value={efDescription} onChange={e => setEfDescription(e.target.value)} placeholder="Optional guidance shown to contractors" className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm"/></label>
         <label className="flex items-center gap-2 text-xs font-semibold text-gray-700"><input type="checkbox" checked={efMandatory} onChange={e => setEfMandatory(e.target.checked)} className="accent-[#073B67] w-4 h-4"/>Mandatory</label>
         {cpCatalog.length > 0 && <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-blue-900">Verification checkpoints (OCR)</p>
-          <p className="mt-0.5 text-[11px] text-gray-500">Tick what the uploaded document must contain — verified by OCR when the contractor uploads it. <em>Signature/seal are matched by their printed label, not the handwriting.</em></p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-blue-900">AI audit checklist</p>
+          <p className="mt-0.5 text-[11px] text-gray-500">Tick the conditions the AI must verify when the contractor uploads it. <em>Signature/seal are matched by their printed label, not the handwriting.</em></p>
           <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             {cpCatalog.map(cp => {
               const key = cp.key ?? cp.type;

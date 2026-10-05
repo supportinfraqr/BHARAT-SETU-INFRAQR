@@ -39,7 +39,7 @@ def _row(obj):
         "requiresDocument": obj.requires_document,
         "frequency": obj.frequency,
         "description": obj.description,
-        "ocrCheckpoints": list(obj.ocr_checkpoints or []),
+        "aiChecks": list(obj.ai_checks or []),
         "scope": "admin" if obj.employer_id is None else "employer",
         "siteId": obj.site_id,
         "active": obj.is_active,
@@ -76,7 +76,7 @@ def _create(request, *, employer, site=None):
         "requires_document": bool(body.get("requiresDocument", True)),
         "frequency": str(body.get("frequency") or "")[:40],
         "description": str(body.get("description") or "")[:255],
-        "ocr_checkpoints": _clean_checkpoints(body.get("ocrCheckpoints")),
+        "ai_checks": _clean_checkpoints(body.get("aiChecks")),
         "sort_order": int(body.get("sortOrder") or 0),
         "created_by": str(body.get("createdBy") or "")[:120],
     }
@@ -86,8 +86,8 @@ def _create(request, *, employer, site=None):
         obj.is_mandatory = mandatory
         if body.get("requiresDocument") is not None:
             obj.requires_document = bool(body.get("requiresDocument"))
-        if body.get("ocrCheckpoints") is not None:
-            obj.ocr_checkpoints = _clean_checkpoints(body.get("ocrCheckpoints"))
+        if body.get("aiChecks") is not None:
+            obj.ai_checks = _clean_checkpoints(body.get("aiChecks"))
         if body.get("frequency") is not None:
             obj.frequency = str(body.get("frequency") or "")[:40]
         if body.get("description") is not None:
@@ -158,7 +158,7 @@ def admin_copy_all_states(request):
                     "requires_document": sf.requires_document,
                     "frequency": sf.frequency,
                     "description": sf.description,
-                    "ocr_checkpoints": list(sf.ocr_checkpoints or []),
+                    "ai_checks": list(sf.ai_checks or []),
                     "sort_order": sf.sort_order,
                     "created_by": sf.created_by,
                 },

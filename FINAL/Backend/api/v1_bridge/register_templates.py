@@ -21,7 +21,7 @@ def _template_row(t):
         "outputFormat": t.resolved_output_format(),
         "columns": list(t.columns or []),
         "fields": list(t.fields or []),
-        "ocrCheckpoints": list(t.ocr_checkpoints or []),
+        "aiChecks": list(t.ai_checks or []),
         "meta": {**((t.meta or {})), "scope": "per-worker" if t.per_row else "whole"},
         "html": t.html or "",
         "perRow": t.per_row,
@@ -237,7 +237,7 @@ def _create_template(request, body):
         act=act, frequency=frequency, criticality=criticality, is_mandatory=is_mandatory,
         source_format=source_format, output_format=output_format,
         columns=columns, fields=fields, html=html, per_row=per_row,
-        ocr_checkpoints=_clean_checkpoints(body.get("ocrCheckpoints")),
+        ai_checks=_clean_checkpoints(body.get("aiChecks")),
         is_active=body.get("active", True), format_available=True,
         meta={"authored": True, "author": str(request.user)},
     )
@@ -444,8 +444,8 @@ def register_template_detail(request, template_id):
             template.html = _auto_form_html(
                 template.title, template.form_code, template.state,
                 template.template_type, template.fields, template.columns)
-    if "ocrCheckpoints" in body:
-        template.ocr_checkpoints = _clean_checkpoints(body.get("ocrCheckpoints"))
+    if "aiChecks" in body:
+        template.ai_checks = _clean_checkpoints(body.get("aiChecks"))
     template.save()
     if isinstance(body.get("fieldMappings"), list):
         from bss_core.models import RegisterFieldMapping

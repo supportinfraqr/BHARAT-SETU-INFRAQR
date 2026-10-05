@@ -126,6 +126,21 @@ def _parse_json_block(raw):
         return None
 
 
+def _format_checks(checkpoints):
+    """Render an admin AI checklist into prompt lines."""
+    lines = []
+    for cp in checkpoints or []:
+        if not isinstance(cp, dict):
+            continue
+        label = str(cp.get("label") or cp.get("key") or cp.get("type") or "").strip()
+        if not label:
+            continue
+        value = str(cp.get("value") or "").strip()
+        required = "required" if cp.get("required", True) else "optional"
+        lines.append(f"- {label}" + (f" (expected: {value})" if value else "") + f" [{required}]")
+    return "\n".join(lines)
+
+
 def _run_ai_audit(form_name, text, required_format, site_name="", extra=None):
     from bss_core.models import AI_PROVIDERS
 
@@ -137,12 +152,13 @@ def _run_ai_audit(form_name, text, required_format, site_name="", extra=None):
     if not text.strip():
         return {"status": "unavailable", "message": "No readable text could be extracted from this document."}
 
+    checks = _format_checks(extra.get("aiChecks"))
     if str(extra.get("docKind") or "").lower() == "register":
         system = (
             "You are a strict Indian labour-law compliance auditor for the Bharat Shram Setu (BSS) portal. "
-            "You verify that an uploaded statutory REGISTER is the correct register, that its column headings "
-            "match the required template, and that its rows are consistent with the employer's master data. "
-            "Reply ONLY with a compact JSON object."
+            "You verify that an uploaded statutory REGISTER is the correct register, that it MATCHES the "
+            "required template (headings + structure), that its rows are consistent with the employer's "
+            "master data, and that every listed condition is met. Reply ONLY with a compact JSON object."
         )
         columns = extra.get("templateColumns") or []
         if isinstance(columns, list):
@@ -154,35 +170,42 @@ def _run_ai_audit(form_name, text, required_format, site_name="", extra=None):
             f"Table: Master file (site data) × {extra.get('period') or ''} ({extra.get('state') or ''})\n"
             f"Template columns (the register MUST contain these headings): {columns or 'not specified'}\n"
             f"Master-data field mapping: {mapped or 'not specified'}\n"
+            f"Required conditions (verify each):\n{checks or '- none specified'}\n"
             f"Site: {site_name or 'n/a'}\n"
             f"Expected file format: {required_format or 'PDF / Excel'}\n\n"
-            "Compare the uploaded register to the template columns AND to the employer's master data. Verify:\n"
+            "Compare the uploaded register to the template (columns + structure) AND to the employer's "
+            "master data. Verify:\n"
             " - it is the correct register/form for this state & period,\n"
-            " - the required column headings are present (list any missing),\n"
-            " - the rows look like the site's master data (worker names / BSS IDs / wages / dates where the "
-            "template requires them),\n"
+            " - it MATCHES the template: the required column headings are present (list any missing),\n"
+            " - each required condition above is met (report per condition),\n"
+            " - the rows look like the site's master data (worker names / BSS IDs / wages / dates),\n"
             " - totals/period/state are consistent.\n"
+            'Set "templateConformant" false if any required template column heading is missing.\n'
             "Return JSON with exactly these keys: "
-            '{"valid": true|false, "confidence": 0-100, "summary": "one line", '
-            '"matchedColumns": ["..."], "missing": ["..."], "issues": ["..."], "findings": ["..."]}.\n\n'
+            '{"valid": true|false, "templateConformant": true|false, "confidence": 0-100, '
+            '"summary": "one line", "matchedColumns": ["..."], "missing": ["..."], "issues": ["..."], '
+            '"findings": ["..."], "checkpointResults": [{"label": "...", "passed": true|false, "detail": "..."}]}.\n\n'
             "----- UPLOADED REGISTER TEXT (may be OCR, ignore minor noise) -----\n"
             f"{text}"
         )
     else:
         system = (
             "You are a strict Indian labour-law compliance auditor for the Bharat Shram Setu (BSS) portal. "
-            "You verify that an uploaded document genuinely is the required statutory form and that its "
-            "content looks correct and complete. Reply ONLY with a compact JSON object."
+            "You verify that an uploaded document genuinely is the required statutory form, that its content "
+            "looks correct and complete, and that every listed condition is met. Reply ONLY with a compact "
+            "JSON object."
         )
         prompt = (
             f"Required document: {form_name}\n"
             f"Expected file format: {required_format or 'not specified'}\n"
+            f"Required conditions (verify each):\n{checks or '- none specified'}\n"
             f"Site: {site_name or 'n/a'}\n\n"
-            "Audit the extracted document text below. Decide whether it is the correct document and its "
-            "content is plausible/complete.\n"
+            "Audit the extracted document text below. Decide whether it is the correct document, whether its "
+            "content is plausible/complete, and whether each required condition is met (report per condition).\n"
             "Return JSON with exactly these keys: "
             '{"valid": true|false, "confidence": 0-100, "summary": "one line", '
-            '"findings": ["..."], "missing": ["..."], "issues": ["..."]}.\n\n'
+            '"findings": ["..."], "missing": ["..."], "issues": ["..."], '
+            '"checkpointResults": [{"label": "...", "passed": true|false, "detail": "..."}]}.\n\n'
             "----- DOCUMENT TEXT (may be OCR, so ignore minor noise) -----\n"
             f"{text}"
         )
@@ -194,15 +217,19 @@ def _run_ai_audit(form_name, text, required_format, site_name="", extra=None):
     parsed = _parse_json_block(raw) or {}
     valid = parsed.get("valid")
     status = "passed" if valid is True else "failed" if valid is False else "review"
+    if status == "review" and parsed.get("templateConformant") is False:
+        status = "failed"
     return {
         "status": status,
         "valid": valid,
+        "templateConformant": parsed.get("templateConformant"),
         "confidence": parsed.get("confidence"),
         "summary": parsed.get("summary") or (raw[:400] if raw else ""),
         "findings": parsed.get("findings") or [],
         "matchedColumns": parsed.get("matchedColumns") or [],
         "missing": parsed.get("missing") or [],
         "issues": parsed.get("issues") or [],
+        "checkpointResults": parsed.get("checkpointResults") or [],
         "provider": cred.provider,
         "providerLabel": AI_PROVIDERS.get(cred.provider, {}).get("label", cred.provider),
         "model": cred.model,
@@ -250,6 +277,7 @@ def contractor_audit_document(request):
         "fieldMappings": _json_list(request.data.get("fieldMappings")),
         "period": request.data.get("period"),
         "state": request.data.get("state"),
+        "aiChecks": _json_list(request.data.get("aiChecks")) or _json_list(request.data.get("ocrCheckpoints")),
     }
     audit = _run_ai_audit(form_name, text, required_format, site_name, extra)
     return Response({"data": {

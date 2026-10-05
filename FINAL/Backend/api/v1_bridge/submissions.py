@@ -107,23 +107,31 @@ def _submissions(request):
     user = request.user
 
     checksum = ""
-    accuracy = None
+    confidence = None
+    ai_status = ""
     findings = []
     checkpoint_results = []
     checkpoints = []
+    required_format = (request.data.get("requiredFormat") or request.data.get("required_format") or "").strip()
     if file_obj:
         checksum = payloads.sha256_checksum(file_obj)
-        # A document can carry an OCR verification checklist: additional forms
-        # from the form name (CustomFormName), manual CLRA register uploads from
-        # the register template (RegisterTemplate).
         from bss_core.models import CustomFormName, RegisterTemplate
+
+        from . import ai_audit
+        # A document can carry an AI audit checklist: additional forms from the
+        # form name (CustomFormName), manual CLRA register uploads from the
+        # register template (RegisterTemplate). Registers are additionally
+        # verified against the template columns. OCR is only a text source for
+        # the AI — never the verdict.
         form_key = (document_type or ftype).strip()
         form_name = form_key
+        form = None
+        template = None
         if form_key:
             form = (CustomFormName.objects.filter(is_active=True, name__iexact=form_key)
                     .filter(Q(state__iexact=state) | Q(state="")).first())
-            if form and form.ocr_checkpoints:
-                checkpoints = list(form.ocr_checkpoints)
+            if form and form.ai_checks:
+                checkpoints = list(form.ai_checks)
                 form_name = form.name
             else:
                 template = (RegisterTemplate.objects.filter(is_active=True)
@@ -132,30 +140,50 @@ def _submissions(request):
                     # Manual register uploads send "<form code> — <title>".
                     code = form_key.replace("\u2014", "-").split(" - ")[0].strip()
                     template = RegisterTemplate.objects.filter(is_active=True, form_code__iexact=code).first()
-                if template and template.ocr_checkpoints:
-                    checkpoints = list(template.ocr_checkpoints)
+                if template:
+                    if template.ai_checks:
+                        checkpoints = list(template.ai_checks)
                     form_name = template.title or template.form_code
-        has_checkpoints = bool(checkpoints)
-        if has_checkpoints or not no_ocr:
-            ocr_text = None
+
+        text = ""
+        try:
+            file_obj.seek(0)
+            text = ai_audit._extract_text(file_obj.read(), file_obj.name)
+        except Exception:  # noqa: BLE001
+            text = ""
+        finally:
             try:
                 file_obj.seek(0)
-                ocr_text = ocr_client.extract_text(file_obj.read(), file_obj.name, timeout=25)
-            except Exception:  # OCR service down/slow — fall back to integrity checks
-                ocr_text = None
-            finally:
-                try:
-                    file_obj.seek(0)
-                except (AttributeError, OSError):
-                    pass
-            if has_checkpoints:
-                accuracy, checkpoint_results, findings = ocr_client.verify_checkpoints(
-                    checkpoints, ocr_text or "",
-                    context={"contractor": payloads._party_name(user), "employer": employer,
-                             "site": site, "month": month, "year": year, "period": period,
-                             "worker": "", "form_name": form_name})
-            else:
-                accuracy, findings = compliance.validate_evidence(file_obj, ftype, ocr_text=ocr_text)
+            except (AttributeError, OSError):
+                pass
+        if text.startswith("__EXTRACT_ERROR__"):
+            text = ""
+
+        is_register = template is not None
+        extra = {
+            "docKind": "register" if is_register else "",
+            "templateTitle": (template.title if is_register else form_name),
+            "templateColumns": list(template.columns or []) if is_register else [],
+            "fieldMappings": [{"column": m.column, "fieldKey": m.field_key}
+                              for m in template.field_mappings.all()] if is_register else [],
+            "period": f"{month} {year}".strip() or period,
+            "state": state,
+            "aiChecks": checkpoints,
+        }
+        audit = ai_audit._run_ai_audit(form_name, text, required_format, site, extra)
+        ai_status = str(audit.get("status") or "")
+        if isinstance(audit.get("confidence"), (int, float)):
+            confidence = audit["confidence"]
+        checkpoint_results = audit.get("checkpointResults") or []
+        collected = []
+        if audit.get("summary"):
+            collected.append(str(audit["summary"]))
+        collected += [str(x) for x in (audit.get("findings") or [])]
+        collected += [f"Issue: {x}" for x in (audit.get("issues") or [])]
+        collected += [f"Missing: {x}" for x in (audit.get("missing") or [])]
+        if ai_status == "unavailable" and audit.get("message"):
+            collected = [str(audit["message"])]
+        findings = collected
 
     submission_id = (request.data.get("submissionId") or "").strip()
     if submission_id:
@@ -192,7 +220,8 @@ def _submissions(request):
     submission.file_size = file_obj.size if file_obj else 0
     submission.mime_type = file_obj.content_type if file_obj else ""
     submission.checksum_sha256 = checksum
-    submission.ocr_accuracy = accuracy
+    submission.ocr_accuracy = confidence
+    submission.ai_status = ai_status
     submission.validation_findings = findings
     submission.checkpoint_results = checkpoint_results
     submission.status = "PENDING"
@@ -210,11 +239,12 @@ def _submissions(request):
             "frequency": frequency, "mandatory": is_mandatory,
             "submittedAt": payloads._dts(timezone.now()),
             "fileName": submission.original_name, "checksum": checksum,
-            "accuracy": accuracy,
+            "accuracy": confidence,
+            "aiStatus": ai_status,
             "noOcr": no_ocr,
             "checkpoints": checkpoint_results,
-            "requiredCheckpoints": checkpoints,
-            "validated": no_ocr or (accuracy is not None and accuracy >= 100),
+            "requiredChecks": checkpoints,
+            "validated": ai_status == "passed",
             "findings": findings,
         }
     }, status=status.HTTP_201_CREATED)
@@ -1081,7 +1111,7 @@ def contractor_site_documents(request):
                               "outputFormat": "", "custom": True, "scope": "admin",
                               "requiresDocument": bool(obj.requires_document),
                               "type": "Admin", "requiredFormat": _required_format(obj.requires_document),
-                              "note": obj.description, "ocrCheckpoints": list(obj.ocr_checkpoints or [])})
+                              "note": obj.description, "aiChecks": list(obj.ai_checks or [])})
         for obj in (CustomFormName.objects.filter(is_active=True, state__iexact=state,
                                                   employer=employer)
                     .filter(Q(site=site) | Q(site__isnull=True)).order_by("sort_order", "name")):
@@ -1090,7 +1120,7 @@ def contractor_site_documents(request):
                               "outputFormat": "", "custom": True, "scope": "employer",
                               "requiresDocument": bool(obj.requires_document),
                               "type": "Employer", "requiredFormat": _required_format(obj.requires_document),
-                              "note": obj.description, "ocrCheckpoints": list(obj.ocr_checkpoints or [])})
+                              "note": obj.description, "aiChecks": list(obj.ai_checks or [])})
         # Only the ad-hoc form names above are "additional forms". The statutory
         # matrix (FORM II, FORM VII, …) is the register side — generated or not —
         # and must never be listed here, or registers appear twice on the page.

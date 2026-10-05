@@ -9,11 +9,11 @@ import type { ContractorPortalData } from '@/types/portal';
 import { openPrintHtml } from '@/lib/documentEngine/render';
 
 type DocumentRow = ContractorPortalData['submissions']['documents'][number] & { fileName?: string; checksum?: string };
-type CheckpointResult = { key:string; label:string; type:string; required:boolean; passed:boolean; detail:string };
-type OcrCheckpoint = { key?: string; type: string; label: string; value?: string; required?: boolean };
-type DocRowUI = { name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; type: string; requiredFormat: string; note: string; ocrCheckpoints?: OcrCheckpoint[]; docKind?: 'register' | 'form'; templateId?: number; columns?: string[]; outputFormat?: string; fieldMappings?: Array<{ column: string; fieldKey: string }> };
-type AiAudit = { status: 'passed' | 'failed' | 'review' | 'unavailable' | 'error'; valid?: boolean | null; confidence?: number | null; summary?: string; findings?: string[]; missing?: string[]; issues?: string[]; provider?: string; providerLabel?: string; model?: string; message?: string };
-type EvidenceUpload = { id?: number; accuracy: number; status: 'Validating' | 'Validated' | 'Errors found'; findings?: string[]; noOcr?: boolean; checkpoints?: CheckpointResult[]; format?: string; formatOk?: boolean; allowedFormats?: string[]; chars?: number; ai?: AiAudit };
+type AiCheckResult = { key?:string; type?:string; label?:string; required?:boolean; passed?:boolean; detail?:string };
+type AiCheck = { key?: string; type: string; label: string; value?: string; required?: boolean };
+type DocRowUI = { name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; type: string; requiredFormat: string; note: string; aiChecks?: AiCheck[]; docKind?: 'register' | 'form'; templateId?: number; columns?: string[]; outputFormat?: string; fieldMappings?: Array<{ column: string; fieldKey: string }> };
+type AiAudit = { status: 'passed' | 'failed' | 'review' | 'unavailable' | 'error'; valid?: boolean | null; templateConformant?: boolean | null; confidence?: number | null; summary?: string; findings?: string[]; missing?: string[]; issues?: string[]; matchedColumns?: string[]; checkpointResults?: Array<{ label?: string; passed?: boolean; detail?: string }>; provider?: string; providerLabel?: string; model?: string; message?: string };
+type EvidenceUpload = { id?: number; accuracy: number; status: 'Validating' | 'Validated' | 'Errors found'; findings?: string[]; noOcr?: boolean; checkpoints?: AiCheckResult[]; format?: string; formatOk?: boolean; allowedFormats?: string[]; chars?: number; ai?: AiAudit };
 type Tab = 'submissions' | 'create';
 
 const FREQUENCIES = ['Monthly', 'Quarterly', 'Half Yearly', 'Yearly'] as const;
@@ -339,11 +339,11 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
     setDocsBusy(true);
     void fetch(`/api/contractor/clra/site-documents${docsSiteId ? `?siteId=${encodeURIComponent(docsSiteId)}` : ''}`, { cache:'no-store' })
       .then(response => (response.ok ? response.json() : null))
-      .then((body: { data?: { documents?: Array<{ form:string; purpose:string; frequency:string; mandatory:boolean; requiresDocument?:boolean; custom?:boolean; templateId?:number|null; type?:string; requiredFormat?:string; note?:string; ocrCheckpoints?: OcrCheckpoint[] }> } } | null) => {
+      .then((body: { data?: { documents?: Array<{ form:string; purpose:string; frequency:string; mandatory:boolean; requiresDocument?:boolean; custom?:boolean; templateId?:number|null; type?:string; requiredFormat?:string; note?:string; aiChecks?: AiCheck[] }> } } | null) => {
         if (!active) return;
         const docs = (body?.data?.documents || [])
           .filter(doc => doc.custom || !doc.templateId)
-          .map(doc => ({ name: doc.form || doc.purpose, frequency: doc.custom ? (doc.frequency || '') : '', mandatory: !!doc.mandatory, requiresDocument: doc.custom ? doc.requiresDocument !== false : true, type: doc.type || '', requiredFormat: doc.requiredFormat || '', note: doc.note || '', ocrCheckpoints: doc.ocrCheckpoints || [], docKind: 'form' as const }));
+          .map(doc => ({ name: doc.form || doc.purpose, frequency: doc.custom ? (doc.frequency || '') : '', mandatory: !!doc.mandatory, requiresDocument: doc.custom ? doc.requiresDocument !== false : true, type: doc.type || '', requiredFormat: doc.requiredFormat || '', note: doc.note || '', aiChecks: doc.aiChecks || [], docKind: 'form' as const }));
         setAdditionalDocs(docs);
       })
       .catch(() => { if (active) setAdditionalDocs([]); })
@@ -358,7 +358,7 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
     setRegistersBusy(true);
     void fetch(`/api/contractor/clra/templates${docsSiteId ? `?siteId=${encodeURIComponent(docsSiteId)}` : ''}`, { cache:'no-store' })
       .then(response => (response.ok ? response.json() : null))
-      .then((body: { rows?: Array<{ id?:number; formCode:string; title:string; frequency?:string; isMandatory?:boolean; ocrCheckpoints?: OcrCheckpoint[]; columns?:string[]; outputFormat?:string; fieldMappings?:Array<{column:string;fieldKey:string}> }> } | null) => {
+      .then((body: { rows?: Array<{ id?:number; formCode:string; title:string; frequency?:string; isMandatory?:boolean; aiChecks?: AiCheck[]; columns?:string[]; outputFormat?:string; fieldMappings?:Array<{column:string;fieldKey:string}> }> } | null) => {
         if (!active) return;
         setRegisterForms((body?.rows || []).map(r => {
           const fmt = (r.outputFormat || '').toLowerCase();
@@ -370,7 +370,7 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
             type: 'CLRA Register',
             requiredFormat: fmt === 'xlsx' ? 'Excel (XLSX)' : 'PDF',
             note: r.columns?.length ? `${r.columns.length} template column(s)` : '',
-            ocrCheckpoints: r.ocrCheckpoints || [],
+            aiChecks: r.aiChecks || [],
             docKind: 'register' as const,
             templateId: r.id,
             columns: r.columns || [],
@@ -486,6 +486,7 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
       auditForm.set('templateTitle', doc.name);
       auditForm.set('templateColumns', JSON.stringify(doc.columns || []));
       auditForm.set('fieldMappings', JSON.stringify(doc.fieldMappings || []));
+      auditForm.set('aiChecks', JSON.stringify(doc.aiChecks || []));
       auditForm.set('period', `${createPeriod} ${fy.replace('FY ', '')}`);
       auditForm.set('state', ctxState);
       const auditResponse = await fetch('/api/portal/audit-document', { method: 'POST', body: auditForm, signal: controller.signal });
@@ -504,7 +505,8 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
       const ok = formatOk && ai.status !== 'failed' && ai.status !== 'error';
       setUploads(current => ({ ...current, [doc.name]: {
         id, accuracy: 0, status: ok ? 'Validated' : 'Errors found',
-        format: d.format, formatOk, allowedFormats: d.allowedFormats, chars: d.chars, ai, findings,
+        format: d.format, formatOk, allowedFormats: d.allowedFormats, chars: d.chars, ai,
+        checkpoints: ai.checkpointResults ?? [], findings,
       } }));
     } catch (reason) {
       setUploads(current => ({ ...current, [doc.name]: { accuracy: 0, status: 'Errors found', findings: [reason instanceof Error ? reason.message : 'Document could not be audited.'] } }));
@@ -645,7 +647,7 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
     { id:'employer', header: 'Principal Employer', value: row => row.employer },
     { id:'site', header: 'Site / Location', value: row => `${row.site}${row.state ? ` (${row.state})` : ''}` },
     { id:'period', header: 'Period / FY', value: row => `${row.period}${row.financialYear ? ` · ${row.financialYear}` : ''}` },
-    { id:'accuracy', header: 'OCR Accuracy', value: row => row.accuracy ?? '—', render: row => row.accuracy != null ? <span className={`font-bold ${row.accuracy >= 100 ? 'text-green-700' : 'text-amber-700'}`}>{row.accuracy}%</span> : '—' },
+    { id:'ai', header: 'AI Audit', value: row => row.aiStatus ?? '', render: row => { const s = row.aiStatus || ''; const tone = s === 'passed' ? 'bg-green-50 text-green-700 border-green-200' : s === 'failed' ? 'bg-red-50 text-red-700 border-red-200' : s === 'unavailable' ? 'bg-slate-100 text-slate-500 border-slate-200' : s === 'review' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-500 border-slate-200'; const label = s === 'passed' ? 'Passed' : s === 'failed' ? 'Issues' : s === 'review' ? 'Review' : s === 'unavailable' ? 'Not audited' : (s || '—'); const cps = row.checkpoints || []; return <div><span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${tone}`}>{label}</span>{cps.length > 0 && <p className="text-[9px] text-gray-400 mt-0.5">{cps.filter(c => c.passed).length}/{cps.length} checks</p>}</div>; } },
     { id:'created', header: 'Submitted On', value: row => row.submittedAt, render: row => new Date(row.submittedAt).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) },
     { 
       id:'status', 

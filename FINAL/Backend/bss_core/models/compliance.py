@@ -69,9 +69,9 @@ class RegisterTemplate(models.Model):
     # Statutory metadata (absorbed from the RegisterDocumentMaster master).
     criticality = models.CharField(max_length=20, blank=True)
     is_mandatory = models.BooleanField(default=False)
-    # OCR verification checklist for a manually-uploaded register, same shape as
-    # CustomFormName.ocr_checkpoints: [{"type","label","value","required"}].
-    ocr_checkpoints = models.JSONField(default=list, blank=True)
+    # AI audit checklist for a manually-uploaded register, same shape as
+    # CustomFormName.ai_checks: [{"type","label","value","required"}].
+    ai_checks = models.JSONField(default=list, blank=True)
     source_format = models.CharField(max_length=10, blank=True)  # xlsx / xls / docx
     # Per-template output: registers export XLSX, forms export PDF. Blank =
     # derive from template_type (register -> xlsx, otherwise -> pdf).
@@ -735,11 +735,12 @@ class CustomFormName(models.Model):
     requires_document = models.BooleanField(default=True)
     frequency = models.CharField(max_length=40, blank=True)
     description = models.CharField(max_length=255, blank=True)
-    # OCR verification checklist: a list of checkpoints the uploaded evidence
-    # must satisfy, e.g. [{"type":"signature","label":"Signature","required":true},
+    # AI audit checklist: a list of conditions the uploaded evidence must
+    # satisfy, e.g. [{"type":"signature","label":"Signature","required":true},
     # {"type":"name","label":"Contractor name","value":"contractor"},
     # {"type":"keyword","label":"Licence no","value":"LICENCE"}].
-    ocr_checkpoints = models.JSONField(default=list, blank=True)
+    # Checked by the AI on upload.
+    ai_checks = models.JSONField(default=list, blank=True)
     is_active = models.BooleanField(default=True)
     sort_order = models.SmallIntegerField(default=0)
     created_by = models.CharField(max_length=120, blank=True)
