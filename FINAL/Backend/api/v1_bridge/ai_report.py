@@ -232,3 +232,144 @@ def contractor_ai_audit_report_pdf(request, submission_id):
     response = HttpResponse(pdf, content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Whole-submission report: one report covering every document the contractor
+# uploaded for a site + period (the "Contractor Report" tab).
+# ─────────────────────────────────────────────────────────────────────────
+
+def _level1_highlights(ev):
+    """A few level-1 audit highlights for one uploaded document."""
+    out = []
+    if not ev.file:
+        return ["No file attached."]
+    out.append(f"Format: {(ev.mime_type or 'unknown')}")
+    if ev.file_size:
+        out.append(f"Size: {round((ev.file_size or 0) / 1024)} KB")
+    findings = [str(f) for f in (ev.validation_findings or []) if str(f).strip()]
+    out.extend(findings[:4])
+    if not findings:
+        out.append("Content check: no issues detected at level 1.")
+    return out
+
+
+def _scope_submissions(user, site="", period="", fy=""):
+    from bss_core.models import SubmissionEvidence
+
+    qs = SubmissionEvidence.objects.filter(user=user)
+    if site:
+        qs = qs.filter(site=site)
+    if period:
+        qs = qs.filter(period=period)
+    if fy:
+        qs = qs.filter(financial_year=fy)
+    return list(qs.order_by("doc_type", "id"))
+
+
+def build_submission_report(submissions, meta=None):
+    meta = meta or {}
+    docs = []
+    for ev in submissions:
+        highlights = _level1_highlights(ev)
+        passed = bool(ev.file) and not (ev.validation_findings or []) and str(ev.status).upper() not in ("RETURNED", "REJECTED")
+        docs.append({
+            "id": ev.id,
+            "type": _html.escape(str(ev.doc_type or ev.document_type or "Document")),
+            "status": _html.escape(str(ev.status or "")),
+            "fileName": _html.escape(str(ev.original_name or "")),
+            "period": _html.escape(str(ev.period or ev.month or "")),
+            "passed": passed,
+            "highlights": [ _html.escape(h) for h in highlights ],
+        })
+    total = len(docs)
+    with_file = sum(1 for d in docs if d["fileName"])
+    clean = sum(1 for d in docs if d["passed"])
+    criteria = [
+        {"label": "Documents uploaded", "passed": total > 0, "detail": f"{total} document(s)"},
+        {"label": "Every document has a file attached", "passed": total > 0 and with_file == total, "detail": f"{with_file}/{total}"},
+        {"label": "No level-1 content issues", "passed": total > 0 and clean == total, "detail": f"{clean}/{total} clean"},
+        {"label": "All documents submitted for review", "passed": total > 0 and all(str(d["status"]).upper() in ("PENDING", "UPLOADED", "SUBMITTED", "VERIFIED") for d in docs), "detail": ""},
+    ]
+    passed = sum(1 for c in criteria if c["passed"])
+    verdict = "Passed" if total and passed == len(criteria) else ("Passed with observations" if passed >= len(criteria) - 1 else "Needs attention")
+    return {"criteria": criteria, "documents": docs, "verdict": verdict, "total": total, "clean": clean, "passed": passed}
+
+
+def _submission_report_html(meta, report):
+    logo = _logo_data_uri()
+    logo_img = f"<img src='{logo}' alt='BSS' style='height:46px;width:auto;'>" if logo else ""
+    crit_rows = "".join(
+        f"<tr><td class='mark {'ok' if c['passed'] else 'bad'}'>{'✓' if c['passed'] else '✗'}</td>"
+        f"<td class='lbl'>{_fmt(c['label'])}</td><td class='det'>{_fmt(c['detail'])}</td></tr>"
+        for c in report["criteria"]
+    )
+    doc_blocks = []
+    for d in report["documents"]:
+        hl = "".join(f"<li>{h}</li>" for h in d["highlights"])
+        doc_blocks.append(
+            f"<div class='doc'><div class='dhead'><span class='{'ok' if d['passed'] else 'bad'}'>{'✓' if d['passed'] else '✗'}</span>"
+            f"<strong>{d['type']}</strong><span class='st'>{d['status']}</span></div>"
+            f"<p class='sub'>{d['fileName'] or 'no file'} · {d['period']}</p><ul>{hl}</ul></div>"
+        )
+    vcls = "ok" if report["verdict"] == "Passed" else ("warn" if report["verdict"].startswith("Passed") else "bad")
+    return f"""<!doctype html><html><head><meta charset="utf-8"><title>BSS Compliance Submission Report</title>
+<style>
+  @page {{ size: A4; margin: 18mm 16mm; }}
+  body {{ font-family:'Helvetica Neue',Arial,sans-serif; color:#0f172a; font-size:12px; line-height:1.5; }}
+  .brand {{ display:flex; align-items:center; gap:12px; border-bottom:3px solid #073B67; padding-bottom:12px; }}
+  .brand h1 {{ margin:0; font-size:19px; color:#073B67; }} .brand p {{ margin:2px 0 0; color:#64748b; font-size:11px; }}
+  .meta {{ width:100%; border-collapse:collapse; margin:14px 0; }}
+  .meta td {{ padding:6px 10px; border:1px solid #e2e8f0; }} .meta td.k {{ background:#f8fafc; color:#64748b; width:32%; font-weight:600; }}
+  h3 {{ color:#073B67; font-size:13px; margin:16px 0 6px; }}
+  .crit {{ width:100%; border-collapse:collapse; }} .crit td {{ border:1px solid #e2e8f0; padding:6px 10px; }}
+  .crit .mark {{ width:34px; text-align:center; font-weight:800; font-size:15px; }} .crit .lbl {{ font-weight:600; }} .crit .det {{ color:#64748b; }}
+  .doc {{ border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; margin:8px 0; }}
+  .dhead {{ display:flex; align-items:center; gap:8px; }} .dhead .st {{ margin-left:auto; color:#64748b; font-size:10px; text-transform:uppercase; font-weight:700; }}
+  .doc .sub {{ color:#94a3b8; margin:2px 0 4px; font-size:11px; }} .doc ul {{ margin:0; padding-left:16px; }} .doc li {{ font-size:11px; color:#334155; }}
+  .ok {{ color:#15803d; }} .bad {{ color:#b91c1c; }} .warn {{ color:#b45309; }}
+  .verdict {{ display:inline-block; padding:6px 14px; border-radius:999px; font-weight:800; letter-spacing:.05em; border:1px solid currentColor; }}
+  .foot {{ margin-top:22px; padding-top:10px; border-top:1px solid #e2e8f0; color:#94a3b8; font-size:10px; }}
+</style></head><body>
+  <div class="brand">{logo_img}<div><h1>Bharat Shram Setu</h1><p>Compliance Submission Report · One Nation, One ID, One Platform</p></div></div>
+  <table class="meta">
+    <tr><td class="k">Site</td><td>{_fmt(meta.get('site'))}</td></tr>
+    <tr><td class="k">Period</td><td>{_fmt(meta.get('period'))}</td></tr>
+    <tr><td class="k">Financial Year</td><td>{_fmt(meta.get('fy'))}</td></tr>
+    <tr><td class="k">Documents</td><td>{report['total']} uploaded · {report['clean']} clean at level 1</td></tr>
+  </table>
+  <h3>Overall criteria</h3>
+  <table class="crit">{crit_rows}</table>
+  <h3>Documents &amp; level-1 highlights</h3>
+  {''.join(doc_blocks) or '<p>No documents uploaded for this site and period yet.</p>'}
+  <h3>Auditor verdict</h3>
+  <p><span class="verdict {vcls}">{report['verdict']}</span></p>
+  <div class="foot">Generated by the BSS compliance engine. This report summarises the uploaded submission and the automated level-1 checks; it does not replace statutory filing.</div>
+</body></html>"""
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def contractor_compliance_report(request):
+    """Whole-submission compliance report for a contractor's site + period."""
+    if request.user.role != "contractor":
+        return Response({"error": "Contractors only."}, status=status.HTTP_403_FORBIDDEN)
+    site = (request.query_params.get("site") or "").strip()
+    period = (request.query_params.get("period") or "").strip()
+    fy = (request.query_params.get("fy") or "").strip()
+    submissions = _scope_submissions(request.user, site=site, period=period, fy=fy)
+    meta = {"site": site, "period": period, "fy": fy}
+    report = build_submission_report(submissions, meta)
+    html = _submission_report_html(meta, report)
+    if (request.query_params.get("format") or "").lower() == "pdf":
+        try:
+            from weasyprint import HTML
+
+            pdf = HTML(string=html, base_url="https://login.bharatshramsetu.com/").write_pdf()
+        except Exception as exc:  # noqa: BLE001
+            return Response({"error": f"PDF could not be generated: {exc}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        response = HttpResponse(pdf, content_type="application/pdf")
+        response["Content-Disposition"] = 'attachment; filename="bss-compliance-submission-report.pdf"'
+        return response
+    return Response({"data": {**{k: report[k] for k in ("criteria", "documents", "verdict", "total", "clean", "passed")}, "html": html}}, status=status.HTTP_200_OK)
