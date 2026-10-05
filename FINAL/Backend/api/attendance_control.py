@@ -93,6 +93,16 @@ def enroll(person, images):
     return _request("POST", "/enroll", {"person": str(person), "images": list(images)}, timeout=60)
 
 
+def check_faces(images):
+    """Detect-only face check (no save/enrol) → per-image {index, face, reason}."""
+    return _request("POST", "/check-face", {"images": list(images)}, timeout=60)
+
+
+def enroll_status(person):
+    """How many face vectors are enrolled for a person."""
+    return _request("GET", "/enroll/status", params={"person": str(person)}, timeout=15)
+
+
 def recognize_frame(site_key, image):
     """Send one browser-captured frame (base64 jpeg) for recognition."""
     return _request("POST", "/frame", {"site": str(site_key), "image": image}, timeout=30)

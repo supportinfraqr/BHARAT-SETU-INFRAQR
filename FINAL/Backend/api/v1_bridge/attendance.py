@@ -355,9 +355,25 @@ def worker_face_enroll(request):
     body = request.data if isinstance(request.data, dict) else {}
     images = body.get("images") or ([body.get("image")] if body.get("image") else [])
     images = [str(i) for i in images if i]
-    if not images:
-        return Response({"error": "No images supplied."}, status=status.HTTP_400_BAD_REQUEST)
+    if len(images) != 5:
+        return Response({"error": "All 5 face photos are mandatory — add all five before saving."},
+                        status=status.HTTP_400_BAD_REQUEST)
 
+    # 1) Validate EVERY photo has a detectable face BEFORE saving anything, so a
+    #    non-face image (e.g. a bottle) is rejected and nothing is persisted.
+    try:
+        check = control.check_faces(images)
+    except control.AttendanceControlError as exc:
+        return Response({"error": str(exc)}, status=exc.status_code)
+    results = check.get("results") or []
+    failed = [r.get("index") for r in results if not r.get("face")]
+    if len(results) != len(images) or failed:
+        return Response({
+            "error": "Some photos failed the face check (no face / too small / blurry). Retake the highlighted ones.",
+            "photoErrors": failed, "results": results,
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # 2) All five valid → save the raw photos and enrol the vectors.
     saved = 0
     for index, data_url in enumerate(images):
         try:
@@ -378,7 +394,48 @@ def worker_face_enroll(request):
         "person": person,
         "saved": saved,
         "enrolled": result.get("added", 0),
+        "results": results,
     }}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_face_check(request):
+    """Detect-only face check for one photo (no save) — live UI feedback."""
+    from .. import attendance_control as control
+    if request.user.role != "worker":
+        return Response({"error": "Only workers can check their own face."},
+                        status=status.HTTP_403_FORBIDDEN)
+    body = request.data if isinstance(request.data, dict) else {}
+    images = body.get("images") or ([body.get("image")] if body.get("image") else [])
+    images = [str(i) for i in images if i]
+    if not images:
+        return Response({"error": "No image supplied."}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        result = control.check_faces(images)
+    except control.AttendanceControlError as exc:
+        return Response({"error": str(exc)}, status=exc.status_code)
+    return Response({"data": result}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_face_status(request):
+    """How many face photos are enrolled for the current worker."""
+    from bss_core.models import WorkerIdentity
+    from .. import attendance_control as control
+    identity = WorkerIdentity.objects.filter(user=request.user).first()
+    person = str(getattr(identity, "bss_worker_id", "") or "").strip()
+    enrolled = 0
+    if person:
+        try:
+            enrolled = int(control.enroll_status(person).get("enrolled", 0))
+        except Exception:  # noqa: BLE001 — pipeline offline just reports 0
+            enrolled = 0
+    return Response({"data": {"person": person, "enrolled": enrolled}},
+                    status=status.HTTP_200_OK)
 
 
 def _worker_for_token(token):

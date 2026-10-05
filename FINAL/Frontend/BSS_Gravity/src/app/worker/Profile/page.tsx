@@ -117,23 +117,74 @@ export default function WorkerProfilePage() {
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [faceEnrollStatus, setFaceEnrollStatus] = useState('');
+  const [faceChecks, setFaceChecks] = useState<Record<number, { state: 'checking' | 'ok' | 'error'; message?: string }>>({});
+  const [faceSaveBusy, setFaceSaveBusy] = useState(false);
+  const [faceEnrolled, setFaceEnrolled] = useState(0);
 
-  const enrollFacePhoto = async (dataUrl: string) => {
-    setFaceEnrollStatus('Enrolling this photo for AI attendance…');
+  // Validate ONE staged photo (detect-only) and only keep it if a face is found.
+  const checkFacePhoto = async (slot: number, dataUrl: string) => {
+    setFaceChecks(prev => ({ ...prev, [slot]: { state: 'checking' } }));
     try {
-      const response = await fetch('/api/worker/face-enroll', {
+      const response = await fetch('/api/worker/face-check', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ images: [dataUrl] }),
       });
-      const body = await response.json().catch(() => ({})) as { data?: { enrolled: number; saved: number }; error?: string };
-      if (!response.ok || !body.data) throw new Error(body.error ?? 'Enrolment failed.');
-      setFaceEnrollStatus(body.data.enrolled > 0
-        ? `Enrolled for AI attendance (${body.data.enrolled} photo${body.data.enrolled === 1 ? '' : 's'}).`
-        : 'Photo saved, but no face was detected — try a clearer, front-facing shot.');
+      const body = await response.json().catch(() => ({})) as { data?: { results?: Array<{ face?: boolean; reason?: string }> }; error?: string };
+      if (!response.ok || !body.data) throw new Error(body.error ?? 'The photo could not be checked.');
+      const result = body.data.results?.[0];
+      if (result?.face) {
+        addFacePhoto(slot, dataUrl);
+        setFaceChecks(prev => ({ ...prev, [slot]: { state: 'ok' } }));
+        setFaceEnrollStatus('');
+      } else {
+        setFaceChecks(prev => ({ ...prev, [slot]: { state: 'error', message: result?.reason === 'invalid_image' ? 'Not a valid image' : 'No face detected — retake' } }));
+        setFaceEnrollStatus('A photo was rejected (no face found). Please use a clear, front-facing photo.');
+      }
     } catch (reason) {
-      setFaceEnrollStatus(reason instanceof Error ? reason.message : 'Enrolment failed.');
+      setFaceChecks(prev => ({ ...prev, [slot]: { state: 'error', message: reason instanceof Error ? reason.message : 'Check failed' } }));
     }
   };
+
+  // Explicit Save & Enroll — sends all 5 together; the server re-checks every
+  // photo and only saves/enrols when all five are valid faces.
+  const saveFaceEnrollment = async () => {
+    const slots = [1, 2, 3, 4, 5];
+    if (slots.some(s => !facePhotos[s])) { setFaceEnrollStatus('Add all 5 face photos before saving.'); return; }
+    setFaceSaveBusy(true); setFaceEnrollStatus('Validating and enrolling your 5 photos…');
+    try {
+      const response = await fetch('/api/worker/face-enroll', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: slots.map(s => facePhotos[s]) }),
+      });
+      const body = await response.json().catch(() => ({})) as { data?: { enrolled: number; saved: number }; error?: string; photoErrors?: number[] };
+      if (!response.ok || !body.data) {
+        if (body.photoErrors?.length) {
+          setFaceChecks(prev => {
+            const next = { ...prev };
+            body.photoErrors!.forEach(i => { next[i + 1] = { state: 'error', message: 'No face detected — retake' }; });
+            return next;
+          });
+        }
+        throw new Error(body.error ?? 'Enrolment failed.');
+      }
+      setFaceEnrolled(body.data.enrolled);
+      setFaceEnrollStatus(`Enrolled ${body.data.enrolled} of 5 photos for AI attendance.`);
+    } catch (reason) {
+      setFaceEnrollStatus(reason instanceof Error ? reason.message : 'Enrolment failed.');
+    } finally { setFaceSaveBusy(false); }
+  };
+
+  // Load the server-side enrolled count on mount (source of truth).
+  useEffect(() => {
+    let active = true;
+    void fetch('/api/worker/face-status', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((body: { data?: { enrolled?: number } } | null) => {
+        if (active && body?.data && typeof body.data.enrolled === 'number') setFaceEnrolled(body.data.enrolled);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [worker.identity.bssId]);
 
   // Downscale + JPEG-compress a captured/selected image so 5 photos fit in
   // localStorage and under the upload size limit.
@@ -229,10 +280,7 @@ export default function WorkerProfilePage() {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
       const slot = activeFaceSlot;
-      void compressImage(dataUrl).then(compressed => {
-        addFacePhoto(slot, compressed);
-        void enrollFacePhoto(compressed);
-      });
+      void compressImage(dataUrl).then(compressed => { void checkFacePhoto(slot, compressed); });
       setDirty(true);
     }
     stopCamera();
@@ -909,10 +957,7 @@ export default function WorkerProfilePage() {
                       reader.onload = (event) => {
                         const dataUrl = event.target?.result as string;
                         if (dataUrl) {
-                          void compressImage(dataUrl).then(compressed => {
-                            addFacePhoto(slot, compressed);
-                            void enrollFacePhoto(compressed);
-                          });
+                          void compressImage(dataUrl).then(compressed => { void checkFacePhoto(slot, compressed); });
                           setDirty(true);
                         }
                       };
@@ -975,19 +1020,33 @@ export default function WorkerProfilePage() {
                             <Upload size={14} className="shrink-0 transition-transform group-hover/btn:scale-110" />
                           </button>
                         </div>
+                        {faceChecks[idx]?.state === 'checking' && <span className="text-[9.5px] text-slate-400 mt-1">Checking…</span>}
+                        {faceChecks[idx]?.state === 'ok' && <span className="text-[9.5px] text-emerald-600 font-semibold mt-1">✓ Face OK</span>}
+                        {faceChecks[idx]?.state === 'error' && <span className="text-[9.5px] text-red-600 font-semibold mt-1 max-w-[120px] leading-tight">{faceChecks[idx].message || 'Retake'}</span>}
                       </div>
                     );
                   })}
                 </div>
                 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-600 bg-white/80 rounded-xl p-3.5 border border-slate-200/60 gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-600 bg-white/80 rounded-xl p-3.5 border border-slate-200/60 gap-3">
                   <span className="flex items-center gap-2 font-medium">
                     <CheckCircle size={15} className="text-emerald-600 flex-shrink-0" />
-                    Photos are encrypted and embedded directly into the site&apos;s CCTV vector engine.
+                    Each photo is checked for a face; nothing is saved until all 5 are valid.
                   </span>
-                  <span className="font-bold text-[#073B67] whitespace-nowrap">
-                    {Object.keys(facePhotos).length || (worker.identity.photoUrl ? 1 : 0)} / 5 Photos Enrolled
-                  </span>
+                  <div className="flex items-center gap-3 self-end sm:self-auto">
+                    <span className="font-bold text-[#073B67] whitespace-nowrap">
+                      {faceEnrolled > 0 ? `${faceEnrolled} / 5 Enrolled` : `${[1, 2, 3, 4, 5].filter(i => facePhotos[i]).length} / 5 Selected`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void saveFaceEnrollment()}
+                      disabled={faceSaveBusy || [1, 2, 3, 4, 5].some(i => !facePhotos[i])}
+                      title="Add all 5 valid face photos to enable"
+                      className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1.5 hover:bg-[#062D4F] disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Fingerprint size={14} />{faceSaveBusy ? 'Saving…' : 'Save & Enroll'}
+                    </button>
+                  </div>
                 </div>
                 {faceEnrollStatus && <p role="status" className="text-[11px] font-semibold text-[#073B67] mt-2">{faceEnrollStatus}</p>}
               </div>

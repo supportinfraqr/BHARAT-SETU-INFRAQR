@@ -236,6 +236,20 @@ class Database:
             for pid, name, blob in rows
         ]
 
+    def count_embeddings(self, person_id: int, model_name: Optional[str] = None) -> int:
+        """Number of stored face vectors for a person (all models, or one)."""
+        if model_name:
+            row = self.conn.execute(
+                "SELECT COUNT(*) FROM face_embeddings WHERE person_id = %s AND model_name = %s",
+                (person_id, model_name),
+            ).fetchone()
+        else:
+            row = self.conn.execute(
+                "SELECT COUNT(*) FROM face_embeddings WHERE person_id = %s",
+                (person_id,),
+            ).fetchone()
+        return int(row[0]) if row else 0
+
     def start_sighting(self, track_id: int, person_id: Optional[int], name: Optional[str]) -> int:
         cur = self.conn.execute(
             "INSERT INTO sightings(track_id, person_id, name, camera, site, ts_start) VALUES(%s, %s, %s, %s, %s, %s) RETURNING id",

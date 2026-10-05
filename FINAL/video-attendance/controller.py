@@ -377,6 +377,53 @@ def enroll():
     return jsonify(person=person, submitted=len(frames), added=added)
 
 
+@app.post("/check-face")
+def check_face():
+    """Detect-only face check for each supplied image (no save, no enrol).
+
+    Used to reject non-face / too-small / blurry photos before anything is
+    persisted. Returns per-image {index, face, reason, box}."""
+    if not _authorized():
+        return jsonify(error="unauthorized"), 401
+    body = request.get_json(silent=True) or {}
+    images = body.get("images") or ([body.get("image")] if body.get("image") else [])
+    if not images:
+        return jsonify(error="images are required"), 400
+    engine, _ = _face_engine()
+    results = []
+    for idx, item in enumerate(images):
+        frame = _decode_image(str(item))
+        if frame is None:
+            results.append({"index": idx, "face": False, "reason": "invalid_image"})
+            continue
+        observations = engine.recognize_frame(frame)
+        if not observations:
+            results.append({"index": idx, "face": False, "reason": "no_face"})
+            continue
+        best = max(
+            observations,
+            key=lambda o: (o.face_box[2] - o.face_box[0]) * (o.face_box[3] - o.face_box[1])
+            if o.face_box else 0,
+        )
+        results.append({"index": idx, "face": True, "reason": "ok",
+                        "box": list(best.face_box) if best.face_box else None})
+    return jsonify(count=len(results), faces=sum(1 for r in results if r["face"]), results=results)
+
+
+@app.get("/enroll/status")
+def enroll_status():
+    """How many face vectors are enrolled for a person (BSS worker id)."""
+    if not _authorized():
+        return jsonify(error="unauthorized"), 401
+    person = str(request.args.get("person") or "").strip()
+    if not person:
+        return jsonify(error="person is required"), 400
+    _, db = _face_engine()
+    row = db.get_person_by_name(person) if db is not None else None
+    enrolled = db.count_embeddings(row[0]) if (db is not None and row) else 0
+    return jsonify(person=person, enrolled=enrolled)
+
+
 if __name__ == "__main__":
     print(f"[controller] listening on 0.0.0.0:{CONTROL_PORT} "
           f"(default source: {DEFAULT_SOURCE})", flush=True)

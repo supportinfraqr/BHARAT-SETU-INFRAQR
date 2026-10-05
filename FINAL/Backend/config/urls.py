@@ -163,6 +163,8 @@ _v1_patterns = _v1(
     ("admin/ai/providers/<int:credential_id>", v1_bridge.admin_ai_provider_detail, "v1_admin_ai_provider_detail"),
     ("admin/ai/providers/<int:credential_id>/default", v1_bridge.admin_ai_provider_default, "v1_admin_ai_provider_default"),
     ("worker/face-enroll", v1_bridge.worker_face_enroll, "v1_worker_face_enroll"),
+    ("worker/face-check", v1_bridge.worker_face_check, "v1_worker_face_check"),
+    ("worker/face-status", v1_bridge.worker_face_status, "v1_worker_face_status"),
     ("contractor/gst/status", v1_bridge.gst_verification_status, "v1_contractor_gst_status"),
     ("contractor/gst/verify", v1_bridge.gst_verification_verify, "v1_contractor_gst_verify"),
     ("contractor/gst/initiate", v1_bridge.gst_verification_initiate, "v1_contractor_gst_initiate"),
