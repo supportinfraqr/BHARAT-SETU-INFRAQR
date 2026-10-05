@@ -539,6 +539,7 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
       replaceContractor({ ...contractor, auditReports: [result.data, ...contractor.auditReports] });
       // Flip the row to Submitted immediately; the full portal refresh runs in the background.
       setOptimisticSubmitted(prev => (prev.includes(docName) ? prev : [...prev, docName]));
+      setUploads(current => { const next = { ...current }; delete next[docName]; return next; });
       setNotice(`Submitted successfully! Ref No: ${result.data.uniqueNo} (${docName})${force ? ' — submitted despite OCR issues' : ''}.`);
       void refresh();
     } catch (reason) {
@@ -611,7 +612,9 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
                 <td className="py-3 px-3 text-gray-600 text-[11px]">{doc.requiredFormat || '—'}</td>
                 <td className="py-3 px-3 text-gray-500 text-[11px] max-w-[220px]" title={doc.note || ''}>{doc.note || '—'}</td>
                 <td className="py-3 px-3">
-                  {!up ? (
+                  {locked ? (
+                    <span className="text-[10px] font-bold text-emerald-700">✓ Submitted</span>
+                  ) : !up ? (
                     <span className="text-gray-300 text-[11px]">Upload to run the AI audit</span>
                   ) : up.status === 'Validating' ? (
                     <span className="text-[10px] font-bold text-blue-700">Auditing…</span>
