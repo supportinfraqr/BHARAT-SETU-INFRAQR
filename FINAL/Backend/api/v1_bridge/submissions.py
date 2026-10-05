@@ -791,6 +791,23 @@ def compliance_batch_summary(request, batch_id):
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
+def compliance_batch_master_download(request, batch_id):
+    """Download the master file a batch was generated from."""
+    from django.http import FileResponse
+    batch = _visible_batch(request.user, batch_id)
+    if batch is None:
+        return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
+    if not batch.master_file:
+        return Response({"error": "No master file was stored for this batch."},
+                        status=status.HTTP_404_NOT_FOUND)
+    batch.master_file.open("rb")
+    name = os.path.basename(batch.master_file.name or "master.xlsx")
+    return FileResponse(batch.master_file, as_attachment=True, filename=name)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def compliance_batch_site_documents(request, batch_id):
     """Documents applicable to one site of a batch: employer mapping + state templates."""
     from bss_core.models import EmployerDocumentMapping
@@ -1045,6 +1062,7 @@ __all__ = [
     "_handle_submission_review",
     "_submissions",
     "compliance_batch_download",
+    "compliance_batch_master_download",
     "compliance_batch_register",
     "compliance_batch_register_export",
     "compliance_batch_site_documents",
