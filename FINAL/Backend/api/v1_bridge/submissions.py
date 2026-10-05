@@ -535,7 +535,8 @@ def contractor_compliance_batches(request):
     for plan in plans:
         site, state, group_rows = plan["site"], plan["state"], plan["rows"]
         templates = [
-            {"formCode": t.form_code, "title": t.title, "state": t.state,
+            {"id": t.id,
+             "formCode": t.form_code, "title": t.title, "state": t.state,
              "frequency": t.frequency or "Monthly",
              "period": clra.reporting_period(month, year, t.frequency)["label"],
              "columns": list(t.columns or []), "html": t.html or "",
@@ -582,6 +583,11 @@ def contractor_compliance_batches(request):
             old.superseded_by = batch
             old.save(update_fields=["status", "superseded_by", "updated_at"])
         created.append(payloads._contractor_compliance_batch_row(batch))
+        _schedule_register_audits(
+            batch.id, templates, group_rows, site.site_name, site.site_code, state,
+            month, year, fy, payloads._party_name(user),
+            (payloads._org_name(site.employer) if site.employer_id else ""),
+            str(generated_on))
 
     return Response({"data": created}, status=status.HTTP_201_CREATED)
 
@@ -611,7 +617,9 @@ def compliance_batch_download(request, role_path, batch_id):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def contractor_compliance_batches_zip(request):
-    """Bundle every generated CLRA register file the contractor owns into one ZIP."""
+    """Bundle every document a generated CLRA batch owns — the generated register
+    workbook, the source master file and the signature — into one ZIP (per batch
+    folder when several batches are included)."""
     import io
     import zipfile
 
@@ -633,20 +641,25 @@ def contractor_compliance_batches_zip(request):
     count = 0
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as archive:
         for batch in qs:
-            try:
-                with batch.generated_file.open("rb") as handle:
-                    data = handle.read()
-            except Exception:  # noqa: BLE001
-                continue
-            base = os.path.basename(batch.generated_file.name) or f"registers-{batch.id}.xlsx"
-            label = f"{batch.state or 'state'}_{batch.month or ''}_{batch.year or ''}_{base}".replace(" ", "_")
-            archive.writestr(label, data)
-            count += 1
+            folder = (f"{batch.state or 'state'}_{batch.month or ''}_{batch.year or ''}"
+                      f"_batch{batch.id}").replace(" ", "_")
+            for field in ("generated_file", "master_file", "signature_file"):
+                stored = getattr(batch, field, None)
+                if not stored:
+                    continue
+                try:
+                    with stored.open("rb") as handle:
+                        data = handle.read()
+                except Exception:  # noqa: BLE001
+                    continue
+                base = os.path.basename(stored.name) or f"{field}-{batch.id}"
+                archive.writestr(f"{folder}/{base}", data)
+                count += 1
     if not count:
         return Response({"error": "No generated register files to download yet."},
                         status=status.HTTP_404_NOT_FOUND)
     buf.seek(0)
-    filename = "clra-registers.zip" if not batch_id else f"clra-registers-{batch_id}.zip"
+    filename = "clra-documents.zip" if not batch_id else f"clra-documents-{batch_id}.zip"
     response = HttpResponse(buf.read(), content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
@@ -749,6 +762,72 @@ def _batch_master_rows(batch):
         return clra.parse_master(batch.master_file)
     except Exception:  # noqa: BLE001 — a missing/corrupt file just yields no rows
         return []
+
+
+def _html_to_text(html):
+    import re as _re
+    from html import unescape
+
+    text = _re.sub(r"<(style|script)\b.*?</\1>", " ", str(html or ""), flags=_re.S | _re.I)
+    text = _re.sub(r"<[^>]+>", " ", text)
+    text = unescape(text).replace("\xa0", " ")
+    return _re.sub(r"[ \t]+", " ", text).strip()
+
+
+def _run_register_audits(batch_id, templates, rows, site_name, site_code, state,
+                         month, year, financial_year, contractor, employer, generated_on):
+    """Background: AI-audit each generated register and store the result on the
+    batch (best effort — never raises into the request that spawned it)."""
+    from django.db import connections
+
+    try:
+        from bss_core.models import ComplianceBatch
+
+        from api import clra
+
+        from . import ai_audit
+        batch = ComplianceBatch.objects.filter(pk=batch_id).first()
+        if batch is None:
+            return
+        results = dict(batch.register_audits or {})
+        for template in templates:
+            template_id = template.get("id")
+            if template_id is None:
+                continue
+            try:
+                html = clra.render_register_html(
+                    template, rows, contractor=contractor, employer=employer,
+                    site=site_name, site_code=site_code, state=state, month=month,
+                    year=year, financial_year=financial_year, generated_on=generated_on)
+                audit = ai_audit._run_ai_audit(
+                    form_name=template.get("title") or template.get("formCode") or "Register",
+                    text=_html_to_text(html), required_format="Excel", site_name=site_name,
+                    extra={"docKind": "register", "templateTitle": template.get("title"),
+                           "templateColumns": template.get("columns") or [],
+                           "fieldMappings": [{"column": c, "fieldKey": k}
+                                             for c, k in (template.get("fieldMappings") or {}).items()],
+                           "period": f"{month} {year}", "state": state})
+            except Exception as exc:  # noqa: BLE001
+                audit = {"status": "error", "message": f"AI audit failed: {exc}"}
+            results[str(template_id)] = audit
+            batch.register_audits = results
+            batch.save(update_fields=["register_audits", "updated_at"])
+    except Exception:  # noqa: BLE001 — background job: swallow everything
+        pass
+    finally:
+        connections.close_all()
+
+
+def _schedule_register_audits(*args):
+    """Kick off the register audits in a daemon thread once the batch is committed."""
+    import threading
+
+    from django.db import transaction
+
+    def _start():
+        threading.Thread(target=_run_register_audits, args=args, daemon=True).start()
+
+    transaction.on_commit(_start)
 
 
 def _visible_batch(user, batch_id):
@@ -906,6 +985,13 @@ def compliance_batch_site_documents(request, batch_id):
         "columns": len(t.columns or []), "hasFile": bool(t.source_file),
         "outputFormat": t.resolved_output_format(),
     } for t in templates_list]
+    # Attach the AI audit of each generated register (produced at generation time).
+    audits = batch.register_audits or {}
+    for doc in documents:
+        if doc.get("templateId") is not None:
+            doc["audit"] = audits.get(str(doc["templateId"]))
+    for t in templates:
+        t["audit"] = audits.get(str(t["id"]))
     return Response({"data": {
         "site": site.site_name if site else site_name, "siteCode": site.site_code if site else "",
         "state": state, "documents": documents, "templates": templates,
@@ -982,6 +1068,44 @@ def contractor_site_documents(request):
     return Response({"data": {"site": site.site_name, "siteCode": site.site_code or "",
                               "state": state, "documents": documents}},
                     status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def compliance_batch_run_audits(request, batch_id):
+    """(Re)run the AI audit for every register in a batch (in the background).
+
+    Useful when the audit ran before an AI provider was configured."""
+    batch = _visible_batch(request.user, batch_id)
+    if batch is None:
+        return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
+    from bss_core.models import RegisterTemplate
+
+    from .register_templates import applicable_templates, employer_adopted_ids
+    state = batch.state
+    templates_list, _ = applicable_templates(state)
+    if batch.site and batch.site.employer_id:
+        adopted = employer_adopted_ids(batch.site.employer, state, site=batch.site)
+        if adopted:
+            templates_list = [t for t in templates_list if t.id in adopted]
+    templates = [{
+        "id": t.id, "formCode": t.form_code, "title": t.title, "state": t.state,
+        "frequency": t.frequency or "Monthly", "period": "",
+        "columns": list(t.columns or []), "html": t.html or "", "perRow": t.per_row,
+        "act": t.act,
+        "calculationRules": [{"targetField": r.target_field, "formula": r.formula}
+                             for r in t.calculation_rules.all()],
+        "fieldMappings": {m.column: m.field_key for m in t.field_mappings.all()},
+    } for t in templates_list]
+    rows = _batch_master_rows(batch)
+    employer_name = payloads._org_name(batch.site.employer) if (batch.site and batch.site.employer) else ""
+    _schedule_register_audits(
+        batch.id, templates, rows, batch.site.site_name if batch.site else "",
+        batch.site.site_code if batch.site else "", state, batch.month, batch.year,
+        batch.financial_year, payloads._party_name(batch.contractor), employer_name,
+        payloads._dts(timezone.now())[:10])
+    return Response({"data": {"status": "scheduled"}}, status=status.HTTP_202_ACCEPTED)
 
 
 @api_view(["GET"])
@@ -1065,6 +1189,7 @@ __all__ = [
     "compliance_batch_master_download",
     "compliance_batch_register",
     "compliance_batch_register_export",
+    "compliance_batch_run_audits",
     "compliance_batch_site_documents",
     "compliance_batch_summary",
     "contractor_clra_validate",

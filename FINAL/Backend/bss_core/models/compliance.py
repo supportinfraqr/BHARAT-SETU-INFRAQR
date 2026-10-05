@@ -611,6 +611,9 @@ class ComplianceBatch(models.Model):
     generated_file = models.FileField(upload_to="compliance/batches/%Y/%m/", blank=True)
     rows_count = models.IntegerField(default=0)
     notes = models.CharField(max_length=255, blank=True)
+    # AI audit of each generated register (register-template id -> audit result),
+    # produced in the background right after the batch is generated.
+    register_audits = models.JSONField(default=dict, blank=True)
     status = models.CharField(max_length=20, choices=STATUS, default="GENERATED")
     # When a site+period is regenerated, the previous batch is kept for audit but
     # marked SUPERSEDED and points at the batch that replaced it.
