@@ -220,7 +220,6 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
   const [regOnlyMandatory, setRegOnlyMandatory] = useState(false);
   const [templateView, setTemplateView] = useState<DocRowUI | null>(null);
   const [optimisticSubmitted, setOptimisticSubmitted] = useState<string[]>([]);
-  const [submittingName, setSubmittingName] = useState<string | null>(null);
 
   const rawDocuments = contractor.submissions.documents as DocumentRow[];
   const documents = useMemo(() => scoped(rawDocuments, row => row.employer), [scoped, rawDocuments]);
@@ -543,7 +542,7 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
 
   async function submitSingleForm(docName: string, uploadId?: number, force = false) {
     if (!uploadId) return;
-    setBusy(true); setSubmittingName(docName); setError(''); setNotice('');
+    setBusy(true); setError(''); setNotice('');
     const siteObj = activeSiteObj;
     const empName = siteObj?.employer || ctxEmployer;
     const subSiteName = siteObj?.name || ctxSite;
@@ -563,7 +562,7 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
       void refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Document could not be submitted.');
-    } finally { setBusy(false); setSubmittingName(null); }
+    } finally { setBusy(false); }
   }
 
   async function viewAuditReport(submissionId: string | number, label: string) {
@@ -576,6 +575,19 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'The audit report could not be generated.');
     } finally { setBusy(false); }
+  }
+
+  async function submitAllAdditional() {
+    const pending = additionalDocs.filter(d => uploads[d.name]?.id != null && !submittedNames.has(d.name));
+    if (!pending.length) { setError(''); setNotice('Upload the documents first — there is nothing ready to submit.'); return; }
+    setError(''); setNotice('');
+    let done = 0;
+    for (const d of pending) {
+      const id = uploads[d.name]?.id;
+      if (id == null) continue;
+      try { await submitSingleForm(d.name, id, true); done += 1; } catch { /* keep going */ }
+    }
+    setNotice(`Submitted ${done} of ${pending.length} document(s).`);
   }
 
   const documentColumns: DataColumn<DocumentRow>[] = [
@@ -706,12 +718,6 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
                           {up?.id != null ? 'Re-upload' : 'Upload'}
                           <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xlsx,.xls,.csv" className="hidden" onChange={e => uploadEvidence(doc, e.target.files?.[0])}/>
                         </label>
-                        <button
-                          type="button"
-                          onClick={() => up?.id != null && void submitSingleForm(doc.name, up.id, up?.status === 'Errors found')}
-                          disabled={busy || up?.id == null}
-                          className="h-7 px-3 rounded-md bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] disabled:opacity-40 shadow-xs"
-                        >{submittingName === doc.name ? 'Submitting…' : 'Submit'}</button>
                         {up?.id != null && (
                           <button type="button" onClick={() => handleRemoveEvidence(doc.name)} className="text-[11px] text-red-600 font-semibold hover:underline">Remove</button>
                         )}
@@ -722,16 +728,11 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
                       {up?.status === 'Validating' ? (
                         <span className="text-[10px] font-bold text-blue-700">Auditing…</span>
                       ) : up?.status === 'Errors found' ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[10px] font-bold text-red-700">AI audit flagged this file</span>
-                          {up?.id != null && (
-                            <button type="button" onClick={() => void submitSingleForm(doc.name, up.id, true)} disabled={busy} className="h-6 px-2 rounded-md border border-red-300 text-[10px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-40">Submit anyway</button>
-                          )}
-                        </div>
+                        <span className="text-[10px] font-bold text-red-700">AI audit flagged this file — fix and re-upload.</span>
                       ) : up?.status === 'Validated' ? (
-                        <span className="text-[10px] font-bold text-green-700">Audited — ready to submit</span>
+                        <span className="text-[10px] font-bold text-green-700">Uploaded — will be submitted with the package</span>
                       ) : (
-                        <span className="text-[10px] font-medium text-amber-700">Pending submission</span>
+                        <span className="text-[10px] font-medium text-amber-700">Upload a document</span>
                       )}
                     </div>
                   )}
@@ -1106,16 +1107,19 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
           )}
 
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <p className="text-xs font-extrabold uppercase tracking-wider text-gray-500">
                 2 · Additional Forms ({submittedEvidenceCount}/{additionalDocs.length} Submitted
                 {totalMandatoryDocsCount > 0 ? ` · ${uploadedMandatoryCount}/${totalMandatoryDocsCount} Mandatory` : ''})
               </p>
-              {isPartialSubmission && (
-                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                  Part Submissions Allowed ({missingEvidence.length} pending)
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {isPartialSubmission && (
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                    Part Submissions Allowed ({missingEvidence.length} pending)
+                  </span>
+                )}
+                <button type="button" onClick={() => void submitAllAdditional()} disabled={busy || additionalDocs.length === 0} className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold flex items-center gap-1.5 hover:bg-[#062D4F] disabled:opacity-50"><FileUp size={13}/>{busy ? 'Submitting…' : 'Final Submit (all forms)'}</button>
+              </div>
             </div>
 
             {docsBusy ? (

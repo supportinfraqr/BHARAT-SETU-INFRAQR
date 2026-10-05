@@ -42,7 +42,6 @@ const accessGroup = { key: 'Users & Access', icon: Users, items: [
 ] as const };
 const auditOpsGroup = { key: 'Audit & Reports', icon: BookOpenCheck, items: [
   ['Activity Report', '/admin/activity'],
-  ['Audit Reports', '/admin/audit-reports'],
   ['AI Audit Settings', '/admin/audit-settings'],
 ] as const };
 
@@ -104,7 +103,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         <Link href="/admin" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-50">Overview</Link>
         <Link href="/admin/payroll" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm font-semibold text-[#073B67] hover:bg-gray-50">Payroll</Link>
         {flat.map(item => <Link key={`${item[0]}-${item[1]}`} href={item[1]} onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-gray-50">{item[0]}</Link>)}
-        <Link href="/admin/audit-reports" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm font-semibold text-[#073B67] hover:bg-gray-50">Audit Reports</Link>
         <Link href="/admin/bulk-register" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm font-semibold text-[#073B67] hover:bg-gray-50">Bulk Register</Link>
         <Link href="/admin/activity" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-50">Activity Report</Link>
         <SignOutButton className="w-full flex items-center gap-2 px-4 py-3 text-red-600"/>

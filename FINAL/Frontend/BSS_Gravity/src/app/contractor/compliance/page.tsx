@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Download, FileCheck2, FileSpreadsheet, FileText, Landmark, Sparkles, TriangleAlert, X } from 'lucide-react';
+import { CheckCircle2, Download, FileCheck2, FileSpreadsheet, FileText, Landmark, Loader2, TriangleAlert, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import ComplianceSubmissions from '@/components/contractor/ComplianceSubmissions';
 import { useContractor } from '@/contexts/ContractorContext';
@@ -240,6 +240,14 @@ export default function ContractorCompliancePage() {
     return q.toString();
   })();
 
+  // Auto-generate the whole-submission report when the tab opens or the scope changes.
+  useEffect(() => {
+    if (tab !== 'report') return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- auto-generate on tab open
+    void loadSubmissionReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- regenerate only when the scope changes
+  }, [tab, repSite, repPeriod, repFy, activeSite?.name]);
+
   return <div className="space-y-6 pb-12">
     <header className="flex flex-col sm:flex-row justify-between gap-4">
       <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Master data</p><h1 className="text-2xl font-bold mt-1">Contractor Compliance</h1><p className="text-sm text-gray-500 mt-1">Statutory, site and worker-level evidence — registers, master file CLRA generation and contractor reports.</p></div>
@@ -441,8 +449,10 @@ export default function ContractorCompliancePage() {
           <label className="block"><span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Period</span>
             <select value={repPeriod} onChange={e => setRepPeriod(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-slate-50 font-semibold"><option value="">All periods</option>{MONTHS.map(m => <option key={m}>{m}</option>)}</select></label>
         </div>
-        <div className="px-4 pb-4 flex flex-wrap gap-2">
-          <button onClick={() => void loadSubmissionReport()} disabled={repBusy} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-bold flex items-center gap-2 disabled:opacity-50"><Sparkles size={15}/>{repBusy ? 'Working…' : 'Final Submit & generate report'}</button>
+        <div className="px-4 pb-4 flex flex-wrap items-center gap-3">
+          {repBusy
+            ? <span className="text-xs text-gray-400 inline-flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Generating report…</span>
+            : <span className="text-xs text-gray-400">Report generated automatically from your submitted documents.</span>}
           <a href={`/api/contractor/compliance-report?download=pdf&${repQuery}`} className="h-10 px-4 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 inline-flex items-center gap-2 hover:bg-gray-50"><Download size={15}/>Download PDF</a>
         </div>
         {repError && <p className="px-4 pb-4 text-sm text-red-700">{repError}</p>}
