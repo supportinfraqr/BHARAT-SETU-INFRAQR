@@ -6,6 +6,7 @@ import ComplianceSubmissions from '@/components/contractor/ComplianceSubmissions
 import BatchDrilldown from '@/components/compliance/BatchDrilldown';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorPortalData } from '@/types/portal';
+import { openPrintHtml } from '@/lib/documentEngine/render';
 
 type Tab = 'records' | 'master' | 'report';
 type ValidationIssue = { row:number; field:string; message:string };
@@ -75,10 +76,6 @@ export default function ContractorCompliancePage() {
   const [siteBoards, setSiteBoards] = useState<Array<{ siteId:number; gated:boolean; adoptedCount:number; total:number }>>([]);
   const [report, setReport] = useState<ValidationReport | null>(null);
   const [batchView, setBatchView] = useState<string | null>(null);
-  const [repSite, setRepSite] = useState('');
-  const [repFy, setRepFy] = useState('');
-  const [repPeriod, setRepPeriod] = useState('');
-  const [repData, setRepData] = useState<{ criteria: Array<{label:string;passed:boolean;detail:string}>; documents: Array<{id:number;type:string;status:string;fileName:string;period:string;passed:boolean;highlights:string[]}>; verdict: string; total: number; clean: number } | null>(null);
   const [repBusy, setRepBusy] = useState(false);
   const [repError, setRepError] = useState('');
 
@@ -217,39 +214,18 @@ export default function ContractorCompliancePage() {
     ) },
   ];
 
-  async function loadSubmissionReport() {
-    setRepBusy(true); setRepError(''); setNotice('');
+  // Level-2: open the detailed AI audit report for a single submission.
+  async function viewDetailedReport(submissionId: string, label: string) {
+    setRepBusy(true); setRepError('');
     try {
-      const q = new URLSearchParams();
-      const site = repSite || activeSite?.name || '';
-      if (site) q.set('site', site);
-      if (repPeriod) q.set('period', repPeriod);
-      if (repFy) q.set('fy', repFy);
-      const response = await fetch(`/api/contractor/compliance-report?${q.toString()}`, { cache: 'no-store' });
-      const body = await response.json().catch(() => ({})) as { data?: typeof repData; error?: string };
-      if (!response.ok || !body.data) throw new Error(body.error ?? 'The report could not be generated.');
-      setRepData(body.data);
+      const response = await fetch(`/api/contractor/submissions/${submissionId}/ai-report`, { cache: 'no-store' });
+      const body = await response.json().catch(() => ({})) as { data?: { html?: string }; error?: string };
+      if (!response.ok || !body.data?.html) throw new Error(body.error ?? 'The detailed report could not be generated.');
+      openPrintHtml(body.data.html, `${label} — BSS Detailed AI Audit Report`);
     } catch (reason) {
-      setRepError(reason instanceof Error ? reason.message : 'The report could not be generated.');
+      setRepError(reason instanceof Error ? reason.message : 'The detailed report could not be generated.');
     } finally { setRepBusy(false); }
   }
-
-  const repQuery = (() => {
-    const q = new URLSearchParams();
-    const site = repSite || activeSite?.name || '';
-    if (site) q.set('site', site);
-    if (repPeriod) q.set('period', repPeriod);
-    if (repFy) q.set('fy', repFy);
-    return q.toString();
-  })();
-
-  // Auto-generate the whole-submission report when the tab opens or the scope changes.
-  useEffect(() => {
-    if (tab !== 'report') return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- auto-generate on tab open
-    void loadSubmissionReport();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- regenerate only when the scope changes
-  }, [tab, repSite, repPeriod, repFy, activeSite?.name]);
 
   return <div className="space-y-6 pb-12">
     <header className="flex flex-col sm:flex-row justify-between gap-4">
@@ -286,12 +262,9 @@ export default function ContractorCompliancePage() {
     </div>
 
     {tab === 'records' && <div className="space-y-5">
-      <ComplianceSubmissions embedded onSubmitted={ctx => {
-        setRepSite(ctx.site);
-        setRepPeriod(ctx.month);
-        setRepFy(ctx.financialYear);
+      <ComplianceSubmissions embedded onSubmitted={() => {
         setTab('report');
-        setNotice('Registers submitted — detailed audit report generated in the Contractor Report tab.');
+        setNotice('Registers submitted — the detailed audit report is ready in the Contractor Report tab.');
       }} />
       <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
         <header className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
@@ -443,49 +416,45 @@ export default function ContractorCompliancePage() {
           <div className="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-white/5" />
           <div className="relative flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/60">Whole submission</p>
-              <h2 className="text-lg font-extrabold mt-0.5">Compliance Submission Report</h2>
-              <p className="text-[11px] text-white/75 mt-1 max-w-xl">Pick the site and period. We collect every uploaded document, run the level-1 checks and produce one branded PDF report for the whole submission.</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/60">Per submission</p>
+              <h2 className="text-lg font-extrabold mt-0.5">Detailed AI Audit Reports</h2>
+              <p className="text-[11px] text-white/75 mt-1 max-w-xl">Every submitted package gets its own detailed AI audit report — triggered when you submit, ready to view or download as a branded PDF.</p>
             </div>
             <span className="w-12 h-12 rounded-2xl bg-white/10 border border-white/15 grid place-items-center flex-shrink-0"><FileCheck2 size={22}/></span>
           </div>
         </div>
-        <div className="p-4 grid sm:grid-cols-3 gap-3">
-          <label className="block"><span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Site</span>
-            <select value={repSite || activeSite?.name || ''} onChange={e => setRepSite(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-slate-50 font-semibold">{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}</select></label>
-          <label className="block"><span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Financial Year</span>
-            <select value={repFy} onChange={e => setRepFy(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-slate-50 font-semibold"><option value="">All years</option>{yearOptions.map(y => { const lbl = `FY ${y}-${String(Number(y) + 1).slice(-2)}`; return <option key={y} value={lbl}>{lbl}</option>; })}</select></label>
-          <label className="block"><span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Period</span>
-            <select value={repPeriod} onChange={e => setRepPeriod(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-xs bg-slate-50 font-semibold"><option value="">All periods</option>{MONTHS.map(m => <option key={m}>{m}</option>)}</select></label>
+        {repError && <p className="px-4 pt-4 text-sm text-red-700">{repError}</p>}
+        {repBusy && <p className="px-4 pt-4 text-xs text-gray-400 inline-flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Generating detailed report…</p>}
+        <div className="p-4">
+          {contractor.auditReports.length === 0
+            ? <p className="text-sm text-gray-400 py-4 text-center">No submissions yet — submit a register package and its detailed report will appear here.</p>
+            : <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead><tr className="bg-slate-50 border-b border-gray-200 text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
+                    <th className="py-2.5 px-3">Ref No.</th>
+                    <th className="py-2.5 px-3">Site</th>
+                    <th className="py-2.5 px-3">Period</th>
+                    <th className="py-2.5 px-3">Submitted</th>
+                    <th className="py-2.5 px-3">Score</th>
+                    <th className="py-2.5 px-3">Detailed AI Report</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-gray-100 text-xs">
+                    {contractor.auditReports.map(r => <tr key={r.id} className="hover:bg-slate-50/70">
+                      <td className="py-2.5 px-3 font-mono font-semibold text-blue-700">{r.uniqueNo || '—'}</td>
+                      <td className="py-2.5 px-3 text-gray-700">{r.site || '—'}</td>
+                      <td className="py-2.5 px-3 text-gray-600">{r.period || '—'}</td>
+                      <td className="py-2.5 px-3 text-gray-500">{r.reportDate || '—'}</td>
+                      <td className="py-2.5 px-3 font-bold text-[#073B67]">{r.scorePercent != null ? `${r.scorePercent}%` : (r.score || '—')}</td>
+                      <td className="py-2.5 px-3"><div className="flex items-center gap-3">
+                        <button type="button" disabled={repBusy} onClick={() => void viewDetailedReport(r.id, r.uniqueNo || r.site || 'Submission')} className="text-blue-700 font-semibold hover:underline disabled:opacity-50">View report</button>
+                        <a href={`/api/contractor/submissions/${r.id}/ai-report?format=pdf`} className="text-gray-600 font-semibold hover:underline inline-flex items-center gap-1"><Download size={12}/>PDF</a>
+                      </div></td>
+                    </tr>)}
+                  </tbody>
+                </table>
+              </div>}
         </div>
-        <div className="px-4 pb-4 flex flex-wrap items-center gap-3">
-          {repBusy
-            ? <span className="text-xs text-gray-400 inline-flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Generating report…</span>
-            : <span className="text-xs text-gray-400">Report generated automatically from your submitted documents.</span>}
-          <a href={`/api/contractor/compliance-report?download=pdf&${repQuery}`} className="h-10 px-4 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 inline-flex items-center gap-2 hover:bg-gray-50"><Download size={15}/>Download PDF</a>
-        </div>
-        {repError && <p className="px-4 pb-4 text-sm text-red-700">{repError}</p>}
       </section>
-
-      {repData && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <header className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
-          <div><h2 className="text-sm font-semibold text-gray-950">Report preview</h2><p className="text-xs text-gray-400 mt-0.5">{repData.total} document(s) · {repData.clean} clean at level 1</p></div>
-          <span className={`text-[11px] font-bold px-3 py-1 rounded-full border ${repData.verdict === 'Passed' ? 'text-green-700 bg-green-50 border-green-100' : repData.verdict.startsWith('Passed') ? 'text-amber-700 bg-amber-50 border-amber-100' : 'text-red-700 bg-red-50 border-red-100'}`}>{repData.verdict}</span>
-        </header>
-        <div className="p-5 space-y-4">
-          <ul className="grid sm:grid-cols-2 gap-2">
-            {repData.criteria.map(c => <li key={c.label} className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${c.passed ? 'border-green-100 bg-green-50/50 text-green-800' : 'border-red-100 bg-red-50/50 text-red-800'}`}><span className="font-bold">{c.passed ? '✓' : '✗'}</span><span className="flex-1"><strong>{c.label}</strong>{c.detail ? <span className="text-gray-500"> · {c.detail}</span> : null}</span></li>)}
-          </ul>
-          <div className="space-y-2">
-            {repData.documents.map(d => <div key={d.id} className="rounded-xl border border-gray-100 p-3">
-              <div className="flex items-center gap-2"><span className={`font-bold ${d.passed ? 'text-green-700' : 'text-red-700'}`}>{d.passed ? '✓' : '✗'}</span><strong className="text-sm text-gray-900">{d.type}</strong><span className="ml-auto text-[10px] font-bold uppercase text-gray-400">{d.status}</span></div>
-              <p className="text-[11px] text-gray-400 mt-0.5">{d.fileName || 'no file'} · {d.period}</p>
-              <ul className="mt-1.5 text-[11px] text-slate-600 list-disc pl-4 space-y-0.5">{d.highlights.map((h, i) => <li key={i}>{h}</li>)}</ul>
-            </div>)}
-            {!repData.documents.length && <p className="text-sm text-gray-400 text-center py-4">No documents uploaded for this site/period yet.</p>}
-          </div>
-        </div>
-      </section>}
     </div>}
 
     {batchView && <BatchDrilldown batchId={batchView} role="contractor" onClose={() => setBatchView(null)} />}
