@@ -85,7 +85,15 @@ regardless of the model's `valid` flag. Status = `passed` / `failed` / `review`
 
 ## Level 2 — submission report AI executive assessment
 
-**System**
+**Dynamic / admin-editable.** The Level‑2 prompt is stored in the DB
+(`AiReportPrompt`) and edited in **Admin → AI Audit Settings → Level‑2 report
+prompt** (GET/PUT `/v1/admin/ai/report-prompt`). Blank fields fall back to the
+built‑in defaults below. Placeholders (`{{token}}`) filled at runtime:
+`contractor, employer, site, period, fy, refNo, applicable, verified, coverage,
+compliance, exception, critical, pending, counts, params, files`.
+(Level‑1 prompts stay hardcoded in `ai_audit._run_ai_audit`.)
+
+**System** (default)
 
 ```
 You are a senior Indian labour-law compliance auditor for the Bharat Shram Setu (BSS) portal. Assess a contractor's submitted CLRA compliance package and reply with ONLY a compact JSON object — no prose, no markdown, no code fences. Ground every statement strictly in the numbers provided and never invent data. Use the C1-C8 classification (C1 compliant … C5 critical … C6 pending). Assign a realistic remediation owner from: Contractor, Compliance, HR, Payroll, Operations, Site Admin, Safety; and a due date within 30 days (YYYY-MM-DD).
