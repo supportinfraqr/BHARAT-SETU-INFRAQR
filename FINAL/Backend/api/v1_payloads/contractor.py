@@ -1012,6 +1012,22 @@ def _contractor_registers(user):
 
 
 def _contractor_compliance_batch_row(b):
+    audits = b.register_audits or {}
+    first = (b.notes or "").strip().split(" ", 1)[0]
+    register_count = int(first) if first.isdigit() else len(audits)
+    statuses = [str((a or {}).get("status") or "") for a in audits.values()]
+    if not audits:
+        audit_status = "pending"
+    elif any(s == "failed" for s in statuses):
+        audit_status = "failed"
+    elif any(s in ("", "pending") for s in statuses):
+        audit_status = "pending"
+    elif all(s == "passed" for s in statuses):
+        audit_status = "passed"
+    elif all(s == "unavailable" for s in statuses):
+        audit_status = "unavailable"
+    else:
+        audit_status = "review"
     return {
         "id": str(b.id), "financialYear": _d(b.financial_year),
         "month": _d(b.month), "year": _d(b.year), "state": _d(b.state),
@@ -1021,6 +1037,8 @@ def _contractor_compliance_batch_row(b):
         "generatedOn": _dts(b.generated_on) if b.generated_on else "",
         "generatedBy": _d(b.generated_by),
         "rowsCount": b.rows_count,
+        "registerCount": register_count,
+        "auditStatus": audit_status,
         "hasFile": bool(b.generated_file),
         "notes": _d(b.notes),
         "status": {"GENERATED": "Generated", "PENDING": "Pending",
