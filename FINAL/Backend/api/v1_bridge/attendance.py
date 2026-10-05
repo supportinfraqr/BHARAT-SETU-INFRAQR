@@ -373,7 +373,16 @@ def worker_face_enroll(request):
             "photoErrors": failed, "results": results,
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    # 2) All five valid → save the raw photos and enrol the vectors.
+    # 2) All five valid → replace any previous photos, save the raw files (kept
+    #    for audit/re-enrolment), record them, then enrol the vectors.
+    from bss_core.models import WorkerFacePhoto
+    for old in WorkerFacePhoto.objects.filter(user=request.user):
+        try:
+            default_storage.delete(old.path)
+        except Exception:  # noqa: BLE001
+            pass
+        old.delete()
+
     saved = 0
     for index, data_url in enumerate(images):
         try:
@@ -382,7 +391,8 @@ def worker_face_enroll(request):
         except Exception:
             continue
         name = f"worker_face_photos/{person}/{datetime.utcnow():%Y%m%d%H%M%S}_{index}.jpg"
-        default_storage.save(name, ContentFile(raw))
+        path = default_storage.save(name, ContentFile(raw))
+        WorkerFacePhoto.objects.create(user=request.user, person=person, slot=index + 1, path=path)
         saved += 1
 
     try:
@@ -436,6 +446,38 @@ def worker_face_status(request):
             enrolled = 0
     return Response({"data": {"person": person, "enrolled": enrolled}},
                     status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_face_photos(request):
+    """The raw face photos kept for the current worker (to show them back)."""
+    from bss_core.models import WorkerFacePhoto
+    photos = WorkerFacePhoto.objects.filter(user=request.user).order_by("slot", "id")
+    return Response({"data": [
+        {"id": p.id, "slot": p.slot, "url": f"/v1/worker/face-photos/{p.id}/file"}
+        for p in photos
+    ]}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_face_photo_file(request, photo_id):
+    """Stream one stored face photo (owner only)."""
+    from django.core.files.storage import default_storage
+    from django.http import FileResponse
+
+    from bss_core.models import WorkerFacePhoto
+    photo = WorkerFacePhoto.objects.filter(pk=photo_id, user=request.user).first()
+    if photo is None or not photo.path:
+        return Response({"error": "not found"}, status=status.HTTP_404_NOT_FOUND)
+    try:
+        handle = default_storage.open(photo.path, "rb")
+    except Exception:  # noqa: BLE001
+        return Response({"error": "file missing"}, status=status.HTTP_404_NOT_FOUND)
+    return FileResponse(handle, content_type="image/jpeg")
 
 
 def _worker_for_token(token):

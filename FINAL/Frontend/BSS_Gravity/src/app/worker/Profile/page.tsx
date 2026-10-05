@@ -120,6 +120,7 @@ export default function WorkerProfilePage() {
   const [faceChecks, setFaceChecks] = useState<Record<number, { state: 'checking' | 'ok' | 'error'; message?: string }>>({});
   const [faceSaveBusy, setFaceSaveBusy] = useState(false);
   const [faceEnrolled, setFaceEnrolled] = useState(0);
+  const [enrolledPhotos, setEnrolledPhotos] = useState<Record<number, string>>({});
 
   // Validate ONE staged photo (detect-only) and only keep it if a face is found.
   const checkFacePhoto = async (slot: number, dataUrl: string) => {
@@ -168,6 +169,7 @@ export default function WorkerProfilePage() {
         throw new Error(body.error ?? 'Enrolment failed.');
       }
       setFaceEnrolled(body.data.enrolled);
+      setEnrolledPhotos(prev => ({ ...prev, ...facePhotos }));
       setFaceEnrollStatus(`Enrolled ${body.data.enrolled} of 5 photos for AI attendance.`);
     } catch (reason) {
       setFaceEnrollStatus(reason instanceof Error ? reason.message : 'Enrolment failed.');
@@ -181,6 +183,21 @@ export default function WorkerProfilePage() {
       .then(r => (r.ok ? r.json() : null))
       .then((body: { data?: { enrolled?: number } } | null) => {
         if (active && body?.data && typeof body.data.enrolled === 'number') setFaceEnrolled(body.data.enrolled);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [worker.identity.bssId]);
+
+  // Load the stored face photos so they show back after logout / on another device.
+  useEffect(() => {
+    let active = true;
+    void fetch('/api/worker/face-photos', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((body: { data?: Array<{ id: number; slot: number }> } | null) => {
+        if (!active || !body?.data) return;
+        const map: Record<number, string> = {};
+        body.data.forEach(p => { if (p.slot) map[p.slot] = `/api/worker/face-photos/${p.id}/file`; });
+        setEnrolledPhotos(map);
       })
       .catch(() => {});
     return () => { active = false; };
@@ -969,7 +986,7 @@ export default function WorkerProfilePage() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                   {[1, 2, 3, 4, 5].map((idx) => {
-                    const imgUrl = facePhotos[idx] || (idx === 1 ? worker.identity.photoUrl : '');
+                    const imgUrl = facePhotos[idx] || enrolledPhotos[idx] || (idx === 1 ? worker.identity.photoUrl : '');
                     return (
                       <div
                         key={idx}

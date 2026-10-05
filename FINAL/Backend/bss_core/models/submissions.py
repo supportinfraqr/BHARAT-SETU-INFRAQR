@@ -57,3 +57,24 @@ class SubmissionEvidence(models.Model):
 
     def __str__(self):
         return f"{self.role}/{self.original_name}"
+
+
+class WorkerFacePhoto(models.Model):
+    """A raw face-enrollment photo stored for a worker (kept for audit/re-enrolment).
+
+    Referenced so the profile can show the photos back and report how many are
+    enrolled, independent of the browser that uploaded them."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="face_photos")
+    person = models.CharField(max_length=64, blank=True, db_index=True)
+    slot = models.PositiveSmallIntegerField(default=0)
+    path = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "worker_face_photo"
+        indexes = [models.Index(fields=["user", "slot"], name="idx_worker_face_user")]
+        ordering = ["slot", "id"]
+
+    def __str__(self):
+        return f"{self.person}#{self.slot}"
