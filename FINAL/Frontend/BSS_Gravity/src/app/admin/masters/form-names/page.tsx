@@ -12,7 +12,10 @@ export default function AdminFormNamesPage() {
   const [rows, setRows] = useState<ExtraForm[]>([]);
   const [catalog, setCatalog] = useState<Checkpoint[]>([]);
   const [selectedCps, setSelectedCps] = useState<Record<string, { checked: boolean; required: boolean }>>({});
-  const [customKeyword, setCustomKeyword] = useState('');
+  const [customLabel, setCustomLabel] = useState('');
+  const [customValue, setCustomValue] = useState('');
+  const [customRequired, setCustomRequired] = useState(true);
+  const [customChecks, setCustomChecks] = useState<Array<{ label: string; value?: string; required: boolean }>>([]);
   const [name, setName] = useState('');
   const [frequency, setFrequency] = useState('');
   const [requiresDocument, setRequiresDocument] = useState(true);
@@ -55,7 +58,15 @@ export default function AdminFormNamesPage() {
   }
 
   function resetCheckpoints() {
-    setSelectedCps({}); setCustomKeyword('');
+    setSelectedCps({});
+    setCustomChecks([]); setCustomLabel(''); setCustomValue(''); setCustomRequired(true);
+  }
+
+  function addCustomCheck() {
+    const label = customLabel.trim();
+    if (!label) return;
+    setCustomChecks(list => [...list, { label, value: customValue.trim() || undefined, required: customRequired }]);
+    setCustomLabel(''); setCustomValue(''); setCustomRequired(true);
   }
 
   async function add() {
@@ -65,7 +76,7 @@ export default function AdminFormNamesPage() {
     const aiChecks: Checkpoint[] = catalog
       .filter(cp => selectedCps[cp.key ?? cp.type]?.checked)
       .map(cp => ({ key: cp.key, type: cp.type, label: cp.label, required: selectedCps[cp.key ?? cp.type]?.required ?? true }));
-    if (customKeyword.trim()) aiChecks.push({ type: 'keyword', label: customKeyword.trim(), value: customKeyword.trim(), required: true });
+    for (const c of customChecks) aiChecks.push({ type: 'custom', label: c.label, value: c.value, required: c.required });
     try {
       const response = await fetch('/api/admin/form-names', {
         method:'POST', headers:{ 'Content-Type':'application/json' },
@@ -169,8 +180,23 @@ export default function AdminFormNamesPage() {
               </div>;
             })}
           </div>
-          <div className="mt-2 flex items-center gap-2">
-            <input value={customKeyword} onChange={e => setCustomKeyword(e.target.value)} placeholder="Custom keyword to require (optional)" className="flex-1 h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
+          {customChecks.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {customChecks.map((c, i) => (
+                <li key={i} className="flex items-center justify-between gap-2 rounded-lg border border-blue-200 bg-white px-2 py-1 text-[11px]">
+                  <span className="text-gray-800 truncate">{c.label}{c.value ? ` — expects “${c.value}”` : ''}{c.required ? '' : ' (optional)'}</span>
+                  <button type="button" onClick={() => setCustomChecks(list => list.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-600" aria-label="Remove checkpoint"><X size={12}/></button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="mt-2 space-y-1.5">
+            <input value={customLabel} onChange={e => setCustomLabel(e.target.value)} placeholder="Add a custom checkpoint the AI must verify (e.g. “Licence number is printed”)" className="w-full h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
+            <div className="flex items-center gap-2">
+              <input value={customValue} onChange={e => setCustomValue(e.target.value)} placeholder="Expected text (optional)" className="flex-1 h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
+              <label className="flex items-center gap-1 text-[11px] text-gray-600 whitespace-nowrap"><input type="checkbox" checked={customRequired} onChange={e => setCustomRequired(e.target.checked)} className="accent-[#073B67]"/>required</label>
+              <button type="button" onClick={addCustomCheck} disabled={!customLabel.trim()} className="h-9 px-3 rounded-lg border border-[#073B67] text-[#073B67] text-xs font-bold disabled:opacity-50 inline-flex items-center gap-1"><Plus size={13}/>Add</button>
+            </div>
           </div>
         </div>
         <p className="text-[11px] text-gray-400">Catalog forms are non-mandatory — employers choose which to apply and whether they are mandatory for their contractors.</p>
