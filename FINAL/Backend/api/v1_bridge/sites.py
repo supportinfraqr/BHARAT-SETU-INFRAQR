@@ -183,23 +183,6 @@ def _handle_compliances(user, body, method):
         upload_ids = body.get("uploadIds") if isinstance(body.get("uploadIds"), list) else []
         submissions = SubmissionEvidence.objects.filter(user=user, id__in=upload_ids)
         batch_ids = body.get("batchIds") if isinstance(body.get("batchIds"), list) else []
-        # Level-1 gate: every generated register must have cleared its AI audit
-        # before the package can be submitted. Skipped when no AI provider is
-        # configured (otherwise nothing would ever be auditable).
-        if batch_ids:
-            from bss_core.models import AiProviderCredential
-            if AiProviderCredential.objects.filter(enabled=True).exists():
-                for batch in ComplianceBatch.objects.filter(contractor=user, id__in=batch_ids):
-                    audits = batch.register_audits or {}
-                    statuses = [str((a or {}).get("status") or "") for a in audits.values()]
-                    if not audits or any(s in ("", "pending") for s in statuses):
-                        raise PortalMutationError(
-                            "The AI audit is still running for this batch — submission opens once "
-                            "every register is audited.", 409)
-                    if any(s != "passed" for s in statuses):
-                        raise PortalMutationError(
-                            "The AI audit flagged issues in this batch. Resolve them and re-run the "
-                            "audit from View documents before submitting.", 409)
         generated = ComplianceBatch.objects.filter(
             contractor=user, id__in=batch_ids).count() if batch_ids else 0
         period = str(body.get("period") or "")

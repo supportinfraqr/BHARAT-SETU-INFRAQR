@@ -516,7 +516,6 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
     const label = s === 'passed' ? 'Passed' : s === 'failed' ? 'Issues' : s === 'unavailable' ? 'No provider' : s === 'review' ? 'Review' : 'Auditing…';
     return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${tone}`} title={s === 'pending' ? 'AI audit is running — submission opens once every register is audited.' : s === 'failed' ? 'AI audit flagged issues — fix them and re-run the audit.' : undefined}>{label}</span>;
   };
-  const submitReady = (b: ContractorPortalData['complianceBatches'][number]) => b.auditStatus === 'passed' || b.auditStatus === 'unavailable';
 
   const batchCols: DataColumn<ContractorPortalData['complianceBatches'][number]>[] = [
     { id:'period', header:'Period', value:b => `${b.month} ${b.year}`, render:b => <span>{b.month} {b.year}{periodOf(b.month, freq) === selectedPeriod && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">This period</span>}</span> },
@@ -571,10 +570,6 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
       .filter(d => uploads[d.name]?.id != null && !submittedNames.has(d.name))
       .map(d => uploads[d.name]?.id as number);
     const openBatches = generatedForCreate.filter(b => b.status !== 'Submitted' && b.status !== 'Verified');
-    if (openBatches.some(b => !submitReady(b))) {
-      setError('Every register must pass the level-1 AI audit before the package can be submitted.');
-      return;
-    }
     const batchIds = openBatches.map(b => b.id);
     if (!pendingUploads.length && !batchIds.length) {
       setNotice('Nothing ready to submit — upload documents or generate registers first.');
