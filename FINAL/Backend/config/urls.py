@@ -163,7 +163,6 @@ _v1_patterns = _v1(
     ("admin/ai/providers", v1_bridge.admin_ai_providers, "v1_admin_ai_providers"),
     ("admin/ai/providers/<int:credential_id>", v1_bridge.admin_ai_provider_detail, "v1_admin_ai_provider_detail"),
     ("admin/ai/providers/<int:credential_id>/default", v1_bridge.admin_ai_provider_default, "v1_admin_ai_provider_default"),
-    ("admin/ai/report-prompt", v1_bridge.admin_ai_report_prompt, "v1_admin_ai_report_prompt"),
     ("worker/face-enroll", v1_bridge.worker_face_enroll, "v1_worker_face_enroll"),
     ("worker/face-check", v1_bridge.worker_face_check, "v1_worker_face_check"),
     ("worker/face-status", v1_bridge.worker_face_status, "v1_worker_face_status"),

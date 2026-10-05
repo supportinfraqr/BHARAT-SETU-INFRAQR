@@ -73,31 +73,6 @@ export default function AiAuditSettingsPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
   useEffect(() => { void load(); }, [load]);
 
-  // Level-2 report prompt (dynamic).
-  const [rp, setRp] = useState<{ systemPrompt:string; userPrompt:string; defaultSystemPrompt:string; defaultUserPrompt:string; placeholders:string[] } | null>(null);
-  const [rpBusy, setRpBusy] = useState(false);
-  const [rpNotice, setRpNotice] = useState('');
-  const loadRp = useCallback(async () => {
-    try {
-      const r = await fetch('/api/admin/ai/report-prompt', { cache: 'no-store' });
-      const b = await r.json().catch(() => ({})) as { data?: typeof rp };
-      if (r.ok && b.data) setRp(b.data);
-    } catch { /* ignore */ }
-  }, []);
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
-  useEffect(() => { void loadRp(); }, [loadRp]);
-  async function saveRp() {
-    if (!rp) return;
-    setRpBusy(true); setRpNotice(''); setError('');
-    try {
-      const r = await fetch('/api/admin/ai/report-prompt', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ systemPrompt: rp.systemPrompt, userPrompt: rp.userPrompt }) });
-      const b = await r.json().catch(() => ({})) as { data?: typeof rp; error?: string };
-      if (!r.ok || !b.data) throw new Error(b.error || 'Prompt could not be saved.');
-      setRp(b.data); setRpNotice('Report prompt saved.');
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Prompt could not be saved.'); }
-    finally { setRpBusy(false); }
-  }
-
   const providerLabel = useCallback((id: string) => catalog.find(c => c.id === id)?.label ?? id, [catalog]);
 
   const openNew = () => {
@@ -300,32 +275,6 @@ export default function AiAuditSettingsPage() {
           </ul>
         )}
       </section>
-
-      {rp && (
-        <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <h2 className="text-sm font-bold text-gray-900">Level-2 report prompt (AI executive assessment)</h2>
-            <p className="text-[11px] text-gray-400 mt-0.5">Used when generating the submission “Detailed AI Audit Report”. Leave a field blank to use the built-in default. Placeholders: <span className="font-mono">{rp.placeholders.map(p => `{{${p}}}`).join(' ')}</span></p>
-          </div>
-          <div className="p-4 space-y-3">
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1 block">System prompt</label>
-              <textarea value={rp.systemPrompt} onChange={e => setRp({ ...rp, systemPrompt: e.target.value })} rows={4} placeholder={rp.defaultSystemPrompt} className="w-full rounded-lg border border-gray-200 p-2.5 text-xs font-mono" />
-            </div>
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1 block">User prompt template</label>
-              <textarea value={rp.userPrompt} onChange={e => setRp({ ...rp, userPrompt: e.target.value })} rows={16} placeholder={rp.defaultUserPrompt} className="w-full rounded-lg border border-gray-200 p-2.5 text-xs font-mono" />
-            </div>
-            {rpNotice && <p className="text-xs font-semibold text-green-700">{rpNotice}</p>}
-          </div>
-          <div className="px-4 py-3 border-t border-gray-100 flex justify-end gap-2">
-            <button type="button" onClick={() => setRp({ ...rp, systemPrompt: '', userPrompt: '' })} disabled={rpBusy} className="h-10 px-4 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600">Reset to default</button>
-            <button type="button" onClick={() => void saveRp()} disabled={rpBusy} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black disabled:opacity-50">
-              {rpBusy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Save prompt
-            </button>
-          </div>
-        </section>
-      )}
     </div>
   );
 }

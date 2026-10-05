@@ -127,41 +127,6 @@ def admin_ai_provider_detail(request, credential_id):
     return Response({"data": _credential_json(cred)})
 
 
-@api_view(["GET", "PUT", "POST"])
-@authentication_classes([BssSessionAuthentication])
-@permission_classes([IsAuthenticated])
-def admin_ai_report_prompt(request):
-    """Admin: read/update the Level-2 submission report AI prompt."""
-    from bss_core.models import (DEFAULT_REPORT_SYSTEM_PROMPT, DEFAULT_REPORT_USER_PROMPT,
-                                 AiReportPrompt)
-
-    if not _require_admin(request):
-        return Response({"error": "Admins only."}, status=status.HTTP_403_FORBIDDEN)
-
-    config = AiReportPrompt.load() or AiReportPrompt()
-    if request.method in ("PUT", "POST"):
-        body = request.data if isinstance(request.data, dict) else {}
-        if body.get("systemPrompt") is not None:
-            config.system_prompt = str(body.get("systemPrompt") or "").strip()[:8000]
-        if body.get("userPrompt") is not None:
-            config.user_prompt = str(body.get("userPrompt") or "").strip()[:12000]
-        config.save()
-
-    system, user = config.effective()
-    return Response({"data": {
-        "systemPrompt": config.system_prompt or "",
-        "userPrompt": config.user_prompt or "",
-        "effectiveSystemPrompt": system,
-        "effectiveUserPrompt": user,
-        "defaultSystemPrompt": DEFAULT_REPORT_SYSTEM_PROMPT,
-        "defaultUserPrompt": DEFAULT_REPORT_USER_PROMPT,
-        "placeholders": ["contractor", "employer", "site", "period", "fy", "refNo",
-                         "applicable", "verified", "coverage", "compliance", "exception",
-                         "critical", "pending", "counts", "params", "files"],
-    }}, status=status.HTTP_200_OK)
-
-
-
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
