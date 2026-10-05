@@ -231,7 +231,7 @@ def aadhaar_otp(request):
                   .filter(aadhaar_number=aadhaar,
                           created_at__gte=now - timedelta(minutes=window_minutes))
                   .exclude(reference_id__isnull=True).exclude(reference_id="")
-                  .exclude(status__in=["VERIFIED", "FAILED"])
+                  .exclude(status__in=["VERIFIED", "FAILED", "EXPIRED"])
                   .order_by("-expires_at", "-created_at").first())
         if recent is None:
             return None
@@ -339,7 +339,7 @@ def aadhaar_verify(request):
         latest = (AadhaarChallenge.objects
                   .filter(aadhaar_number=aadhaar)
                   .exclude(reference_id__isnull=True).exclude(reference_id="")
-                  .exclude(status__in=["VERIFIED", "FAILED"])
+                  .exclude(status__in=["VERIFIED", "FAILED", "EXPIRED"])
                   .order_by("-expires_at", "-created_at").first())
         reference_id = latest.reference_id if latest else ""
 
@@ -396,12 +396,22 @@ def aadhaar_verify(request):
 
     data = result.get("data") or {}
     if result.get("code") != 200 or data.get("message") != "Aadhaar Card Exists":
-        msg = str(data.get("message") or "").strip() or "Aadhaar verification failed. Check the OTP and try again."
+        raw_msg = str(data.get("message") or "").strip()
+        # UIDAI/Sandbox reports the OTP lapsed. Mark our challenge expired (and
+        # clear its local validity) so neither the reuse nor the reference
+        # fallback can ever hand this dead reference back again; ask the user to
+        # request a fresh code.
+        if "expire" in raw_msg.lower():
+            challenge.status = "EXPIRED"
+            challenge.expires_at = timezone.now()
+            challenge.save(update_fields=["status", "expires_at", "updated_at"])
+            return Response({"error": "Your Aadhaar OTP has expired. Tap 'Resend OTP' to get a new code.",
+                             "expired": True}, status=status.HTTP_400_BAD_REQUEST)
+        msg = raw_msg or "Aadhaar verification failed. Check the OTP and try again."
         # A wrong OTP must NOT permanently kill the challenge: the user may have
-        # mistyped, and marking it expired also blocks the reuse path, so the
-        # Sandbox rate-limit then leaves them stuck on "OTP expired". Only fail
-        # it once the attempt budget is exhausted — genuinely expired OTPs are
-        # already handled by the local expiry check above.
+        # mistyped, and marking it failed also blocks the reuse path, so the
+        # Sandbox rate-limit then leaves them stuck. Only fail it once the
+        # attempt budget is exhausted.
         if challenge.otp_attempts >= challenge.max_attempts:
             challenge.status = "FAILED"
             challenge.save(update_fields=["status", "updated_at"])
@@ -521,7 +531,7 @@ def worker_link_aadhaar(request):
         latest = (AadhaarChallenge.objects
                   .filter(aadhaar_number=aadhaar)
                   .exclude(reference_id__isnull=True).exclude(reference_id="")
-                  .exclude(status__in=["VERIFIED", "FAILED"])
+                  .exclude(status__in=["VERIFIED", "FAILED", "EXPIRED"])
                   .order_by("-expires_at", "-created_at").first())
         reference_id = latest.reference_id if latest else ""
 
@@ -556,7 +566,14 @@ def worker_link_aadhaar(request):
 
     data = result.get("data") or {}
     if result.get("code") != 200 or data.get("message") != "Aadhaar Card Exists":
-        msg = data.get("message") or "Aadhaar verification failed. Check the OTP and try again."
+        raw_msg = str(data.get("message") or "").strip()
+        if "expire" in raw_msg.lower():
+            challenge.status = "EXPIRED"
+            challenge.expires_at = timezone.now()
+            challenge.save(update_fields=["status", "expires_at", "updated_at"])
+            return Response({"error": "Your Aadhaar OTP has expired. Tap 'Resend OTP' to get a new code.",
+                             "expired": True}, status=status.HTTP_400_BAD_REQUEST)
+        msg = raw_msg or "Aadhaar verification failed. Check the OTP and try again."
         if challenge.otp_attempts >= challenge.max_attempts:
             challenge.status = "FAILED"
             challenge.save(update_fields=["status", "updated_at"])
