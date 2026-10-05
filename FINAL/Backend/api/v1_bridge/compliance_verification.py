@@ -252,34 +252,32 @@ def _ai_assessment(meta, report):
         + (("; " + "; ".join(f["findings"][:4])) if f.get("findings") else "")
         for f in report["files"]
     ) or "- none"
-    system = (
-        "You are a senior Indian labour-law compliance auditor for the Bharat Shram Setu (BSS) portal. "
-        "Assess a contractor's submitted CLRA compliance package and reply with ONLY a compact JSON "
-        "object — no prose, no markdown, no code fences. Ground every statement strictly in the numbers "
-        "provided and never invent data. Use the C1-C8 classification (C1 compliant … C5 critical … "
-        "C6 pending). Assign a realistic remediation owner from: Contractor, Compliance, HR, Payroll, "
-        "Operations, Site Admin, Safety; and a due date within 30 days (YYYY-MM-DD)."
-    )
-    prompt = (
-        f"Contractor: {meta.get('contractor') or 'n/a'} · Principal employer: {meta.get('employer') or 'n/a'}\n"
-        f"Site: {meta.get('site') or 'n/a'} · Period: {meta.get('period') or 'n/a'} · "
-        f"FY: {meta.get('fy') or 'n/a'} · Ref: {meta.get('refNo') or 'n/a'}\n\n"
-        f"Verification summary: applicable {t['applicable']}, verified {t['verified']}; "
-        f"coverage {t['coverage']}%, overall compliance {t['compliance']}%, exception rate "
-        f"{t['exception']}%, critical rate {t['critical']}%, pending {t['pending']}%. "
-        f"Classification counts: C1 {t['counts'][C1]}, C2 {t['counts'][C2]}, C3 {t['counts'][C3]}, "
-        f"C4 {t['counts'][C4]}, C5 {t['counts'][C5]}, C6 {t['counts'][C6]}.\n\n"
-        f"Per-parameter results:\n{params}\n\n"
-        f"File-level level-1 AI audits:\n{files}\n\n"
-        "Return JSON with EXACTLY these keys: "
-        '{"executive_summary": "board-ready 4-6 sentences", '
-        '"key_findings": ["..."], '
-        '"material_exceptions": [{"parameter": "", "classification": "C3|C4|C5", "issue": "", '
-        '"corrective_action": "", "owner": "", "due_date": "YYYY-MM-DD"}], '
-        '"recommendations": ["..."], '
-        '"verdict": "Passed|Passed with observations|Needs attention"}. '
-        "Only list a material exception where the parameter actually shows C3/C4/C5."
-    )
+    from bss_core.models import DEFAULT_REPORT_SYSTEM_PROMPT, DEFAULT_REPORT_USER_PROMPT, AiReportPrompt
+
+    counts = (f"C1 {t['counts'][C1]}, C2 {t['counts'][C2]}, C3 {t['counts'][C3]}, "
+              f"C4 {t['counts'][C4]}, C5 {t['counts'][C5]}, C6 {t['counts'][C6]}")
+    tokens = {
+        "contractor": meta.get("contractor") or "n/a",
+        "employer": meta.get("employer") or "n/a",
+        "site": meta.get("site") or "n/a",
+        "period": meta.get("period") or "n/a",
+        "fy": meta.get("fy") or "n/a",
+        "refNo": meta.get("refNo") or "n/a",
+        "applicable": t["applicable"], "verified": t["verified"],
+        "coverage": t["coverage"], "compliance": t["compliance"],
+        "exception": t["exception"], "critical": t["critical"], "pending": t["pending"],
+        "counts": counts, "params": params, "files": files,
+    }
+    config = None
+    try:
+        config = AiReportPrompt.load()
+    except Exception:  # noqa: BLE001 — table missing / misconfig → use defaults
+        config = None
+    system, user_template = (config.effective() if config is not None
+                             else (DEFAULT_REPORT_SYSTEM_PROMPT, DEFAULT_REPORT_USER_PROMPT))
+    prompt = user_template
+    for key, value in tokens.items():
+        prompt = prompt.replace("{{" + key + "}}", str(value))
     try:
         raw = ai_audit._call_provider(cred, system, prompt)
     except Exception:  # noqa: BLE001

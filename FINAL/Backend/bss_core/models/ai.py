@@ -59,3 +59,63 @@ class AiProviderCredential(models.Model):
     @property
     def masked_key(self) -> str:
         return mask_secret(self.get_api_key())
+
+
+# ── Level-2 report prompt (admin-editable) ───────────────────────────────────
+# Used by the submission "AI executive assessment". Placeholders are
+# ``{{token}}`` (filled by compliance_verification._ai_assessment). Level 1
+# (per-file) prompts are hardcoded in api/v1_bridge/ai_audit.py.
+DEFAULT_REPORT_SYSTEM_PROMPT = (
+    "You are a senior Indian labour-law compliance auditor for the Bharat Shram Setu (BSS) portal. "
+    "Assess a contractor's submitted CLRA compliance package and reply with ONLY a compact JSON "
+    "object — no prose, no markdown, no code fences. Ground every statement strictly in the numbers "
+    "provided and never invent data. Use the C1-C8 classification (C1 compliant … C5 critical … "
+    "C6 pending). Assign a realistic remediation owner from: Contractor, Compliance, HR, Payroll, "
+    "Operations, Site Admin, Safety; and a due date within 30 days (YYYY-MM-DD)."
+)
+
+DEFAULT_REPORT_USER_PROMPT = (
+    "Contractor: {{contractor}} · Principal employer: {{employer}}\n"
+    "Site: {{site}} · Period: {{period}} · FY: {{fy}} · Ref: {{refNo}}\n\n"
+    "Verification summary: applicable {{applicable}}, verified {{verified}}; "
+    "coverage {{coverage}}%, overall compliance {{compliance}}%, exception rate "
+    "{{exception}}%, critical rate {{critical}}%, pending {{pending}}%. "
+    "Classification counts: {{counts}}.\n\n"
+    "Per-parameter results:\n{{params}}\n\n"
+    "File-level level-1 AI audits:\n{{files}}\n\n"
+    "Return JSON with EXACTLY these keys: "
+    '{"executive_summary": "board-ready 4-6 sentences", '
+    '"key_findings": ["..."], '
+    '"material_exceptions": [{"parameter": "", "classification": "C3|C4|C5", "issue": "", '
+    '"corrective_action": "", "owner": "", "due_date": "YYYY-MM-DD"}], '
+    '"recommendations": ["..."], '
+    '"verdict": "Passed|Passed with observations|Needs attention"}. '
+    "Only list a material exception where the parameter actually shows C3/C4/C5."
+)
+
+
+class AiReportPrompt(models.Model):
+    """Admin-editable prompt for the Level-2 submission executive assessment.
+
+    Blank fields fall back to the defaults above."""
+
+    system_prompt = models.TextField(blank=True, default="")
+    user_prompt = models.TextField(blank=True, default="")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "ai_report_prompt"
+        ordering = ["id"]
+
+    @classmethod
+    def load(cls):
+        return cls.objects.order_by("id").first()
+
+    def effective(self):
+        system = (self.system_prompt or "").strip() or DEFAULT_REPORT_SYSTEM_PROMPT
+        user = (self.user_prompt or "").strip() or DEFAULT_REPORT_USER_PROMPT
+        return system, user
+
+    def __str__(self):
+        return "AI report prompt"
+
