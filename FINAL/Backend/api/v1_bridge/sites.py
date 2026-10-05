@@ -214,6 +214,11 @@ def _handle_compliances(user, body, method):
         # Stamp the submitted evidence rows with the package's Unique No. so the
         # listing can track them (Unique No. + Days Left) like the old app.
         submissions.update(unique_no=report.unique_no, status="PENDING")
+        # Remember the generated register batches behind this package so the
+        # detailed per-submission AI report can compile their register audits.
+        if batch_ids:
+            report.batch_ids = [int(b) for b in batch_ids if str(b).isdigit()]
+            report.save(update_fields=["batch_ids"])
         # A "hard submit" overrides failed OCR — keep that on record per document.
         force = str(body.get("force") or "").lower() in ("1", "true", "yes")
         if force:

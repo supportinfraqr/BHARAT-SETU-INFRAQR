@@ -330,6 +330,9 @@ class ComplianceReport(models.Model):
     site_name = models.CharField(max_length=200, blank=True)
     client_name = models.CharField(max_length=200, blank=True)
     unique_no = models.CharField(max_length=60, blank=True)
+    # The generated register batches this package submitted (for the detailed
+    # per-submission AI report). Empty for evidence-only submissions.
+    batch_ids = models.JSONField(default=list, blank=True)
     score = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     score_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     auditor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,

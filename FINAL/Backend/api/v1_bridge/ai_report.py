@@ -313,6 +313,7 @@ def _submission_report_html(meta, report):
             f"<p class='sub'>{d['fileName'] or 'no file'} · {d['period']}</p><ul>{hl}</ul></div>"
         )
     vcls = "ok" if report["verdict"] == "Passed" else ("warn" if report["verdict"].startswith("Passed") else "bad")
+    ref_row = f"<tr><td class='k'>Ref No.</td><td>{_fmt(meta.get('refNo'))}</td></tr>" if meta.get("refNo") else ""
     return f"""<!doctype html><html><head><meta charset="utf-8"><title>BSS Compliance Submission Report</title>
 <style>
   @page {{ size: A4; margin: 18mm 16mm; }}
@@ -333,6 +334,7 @@ def _submission_report_html(meta, report):
 </style></head><body>
   <div class="brand">{logo_img}<div><h1>Bharat Shram Setu</h1><p>Compliance Submission Report · One Nation, One ID, One Platform</p></div></div>
   <table class="meta">
+    {ref_row}
     <tr><td class="k">Site</td><td>{_fmt(meta.get('site'))}</td></tr>
     <tr><td class="k">Period</td><td>{_fmt(meta.get('period'))}</td></tr>
     <tr><td class="k">Financial Year</td><td>{_fmt(meta.get('fy'))}</td></tr>
@@ -348,19 +350,96 @@ def _submission_report_html(meta, report):
 </body></html>"""
 
 
+def _audit_highlights(audit):
+    """Level-1 highlights for one register from its stored AI audit."""
+    audit = audit or {}
+    out = []
+    if audit.get("summary"):
+        out.append(str(audit["summary"]))
+    out.extend(str(x) for x in (audit.get("findings") or []))
+    out.extend(f"Missing: {x}" for x in (audit.get("missing") or []))
+    out.extend(f"Issue: {x}" for x in (audit.get("issues") or []))
+    if not out and audit.get("message"):
+        out.append(str(audit["message"]))
+    return out or ["No issues reported by the level-1 AI audit."]
+
+
+def build_package_report(batches, meta=None):
+    """Detailed per-submission report: one entry per generated register, from the
+    level-1 AI audits stored on each batch."""
+    from bss_core.models import RegisterTemplate
+
+    meta = meta or {}
+    status_label = {"passed": "Passed", "failed": "Issues", "review": "Review",
+                    "unavailable": "No AI provider", "error": "Error", "pending": "Pending"}
+    docs = []
+    for batch in batches:
+        for tid, audit in (batch.register_audits or {}).items():
+            audit = audit or {}
+            tpl = (RegisterTemplate.objects.filter(pk=int(tid)).first()
+                   if str(tid).isdigit() else None)
+            raw = str(audit.get("status") or "pending")
+            docs.append({
+                "id": f"{batch.id}-{tid}",
+                "type": _html.escape(f"{tpl.form_code} · {tpl.title}" if tpl else f"Register {tid}"),
+                "status": _html.escape(status_label.get(raw, raw)),
+                "fileName": _html.escape(f"{batch.state or ''} · {batch.month} {batch.year}".strip(" ·")),
+                "period": _html.escape(f"{batch.employee_count} worker(s) · {batch.site.site_name if batch.site else ''}"),
+                "passed": raw == "passed",
+                "highlights": [_html.escape(h) for h in _audit_highlights(audit)],
+            })
+    total = len(docs)
+    passed_ct = sum(1 for d in docs if d["passed"])
+    criteria = [
+        {"label": "Registers generated", "passed": total > 0,
+         "detail": f"{total} register(s)"},
+        {"label": "Every register audited", "passed": total > 0 and all(d["status"] != "Pending" for d in docs),
+         "detail": f"{total - sum(1 for d in docs if d['status'] == 'Pending')}/{total}"},
+        {"label": "No register flagged issues", "passed": total > 0 and passed_ct == total,
+         "detail": f"{passed_ct}/{total} passed"},
+        {"label": "AI provider available", "passed": any(d["status"] != "No AI provider" for d in docs),
+         "detail": ""},
+    ]
+    passed = sum(1 for c in criteria if c["passed"])
+    verdict = ("Passed" if total and passed == len(criteria)
+               else "Passed with observations" if total and passed >= len(criteria) - 1
+               else "Needs attention")
+    return {"criteria": criteria, "documents": docs, "verdict": verdict,
+            "total": total, "clean": passed_ct, "passed": passed}
+
+
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def contractor_compliance_report(request):
-    """Whole-submission compliance report for a contractor's site + period."""
+    """Detailed report for one submitted package (``?reportId=``) — or, when no
+    id is given, the whole-submission report for a site + period."""
     if request.user.role != "contractor":
         return Response({"error": "Contractors only."}, status=status.HTTP_403_FORBIDDEN)
-    site = (request.query_params.get("site") or "").strip()
-    period = (request.query_params.get("period") or "").strip()
-    fy = (request.query_params.get("fy") or "").strip()
-    submissions = _scope_submissions(request.user, site=site, period=period, fy=fy)
-    meta = {"site": site, "period": period, "fy": fy}
-    report = build_submission_report(submissions, meta)
+    from bss_core.models import ComplianceBatch, ComplianceReport, SubmissionEvidence
+
+    report_id = (request.query_params.get("reportId") or "").strip()
+    if report_id.isdigit():
+        cr = ComplianceReport.objects.filter(pk=int(report_id), employer=request.user).first()
+        if cr is None:
+            return Response({"error": "Report not found."}, status=status.HTTP_404_NOT_FOUND)
+        batch_ids = [int(x) for x in (cr.batch_ids or []) if str(x).isdigit()]
+        batches = list(ComplianceBatch.objects.filter(id__in=batch_ids, contractor=request.user)
+                       .select_related("site"))
+        meta = {"site": cr.site_name, "period": cr.period, "fy": cr.financial_year,
+                "refNo": cr.unique_no}
+        report = build_package_report(batches, meta)
+        if not report["documents"]:
+            # Evidence-only package → fall back to its uploaded documents.
+            subs = list(SubmissionEvidence.objects.filter(user=request.user, unique_no=cr.unique_no))
+            report = build_submission_report(subs, meta)
+    else:
+        site = (request.query_params.get("site") or "").strip()
+        period = (request.query_params.get("period") or "").strip()
+        fy = (request.query_params.get("fy") or "").strip()
+        submissions = _scope_submissions(request.user, site=site, period=period, fy=fy)
+        meta = {"site": site, "period": period, "fy": fy}
+        report = build_submission_report(submissions, meta)
     html = _submission_report_html(meta, report)
     if (request.query_params.get("download") or "").lower() == "pdf":
         try:

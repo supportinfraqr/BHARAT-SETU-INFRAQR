@@ -214,11 +214,11 @@ export default function ContractorCompliancePage() {
     ) },
   ];
 
-  // Level-2: open the detailed AI audit report for a single submission.
-  async function viewDetailedReport(submissionId: string, label: string) {
+  // Level-2: open the detailed AI audit report for a single submitted package.
+  async function viewDetailedReport(reportId: string, label: string) {
     setRepBusy(true); setRepError('');
     try {
-      const response = await fetch(`/api/contractor/submissions/${submissionId}/ai-report`, { cache: 'no-store' });
+      const response = await fetch(`/api/contractor/compliance-report?reportId=${encodeURIComponent(reportId)}`, { cache: 'no-store' });
       const body = await response.json().catch(() => ({})) as { data?: { html?: string }; error?: string };
       if (!response.ok || !body.data?.html) throw new Error(body.error ?? 'The detailed report could not be generated.');
       openPrintHtml(body.data.html, `${label} — BSS Detailed AI Audit Report`);
@@ -447,7 +447,7 @@ export default function ContractorCompliancePage() {
                       <td className="py-2.5 px-3 font-bold text-[#073B67]">{r.scorePercent != null ? `${r.scorePercent}%` : (r.score || '—')}</td>
                       <td className="py-2.5 px-3"><div className="flex items-center gap-3">
                         <button type="button" disabled={repBusy} onClick={() => void viewDetailedReport(r.id, r.uniqueNo || r.site || 'Submission')} className="text-blue-700 font-semibold hover:underline disabled:opacity-50">View report</button>
-                        <a href={`/api/contractor/submissions/${r.id}/ai-report?format=pdf`} className="text-gray-600 font-semibold hover:underline inline-flex items-center gap-1"><Download size={12}/>PDF</a>
+                        <a href={`/api/contractor/compliance-report?reportId=${r.id}&download=pdf`} className="text-gray-600 font-semibold hover:underline inline-flex items-center gap-1"><Download size={12}/>PDF</a>
                       </div></td>
                     </tr>)}
                   </tbody>
