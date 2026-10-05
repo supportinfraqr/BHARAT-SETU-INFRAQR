@@ -134,6 +134,23 @@ def mpin_set(request):
     return Response({"ok": True}, status=status.HTTP_200_OK)
 
 
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def security_status(request):
+    """Onboarding flags: whether the caller has an MPIN and a verified Aadhaar."""
+    from bss_core.models import UserCredential, WorkerIdentity
+    user = request.user
+    mpin_set = (UserCredential.objects.filter(user=user)
+                .exclude(mpin_hash__isnull=True).exclude(mpin_hash="").exists())
+    identity = WorkerIdentity.objects.filter(user=user).first()
+    return Response({"data": {
+        "mpinSet": mpin_set,
+        "aadhaarVerified": bool(identity and identity.aadhaar),
+        "hasMobile": bool(_user_mobile(user)),
+    }}, status=status.HTTP_200_OK)
+
+
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -338,6 +355,7 @@ __all__ = [
     "login",
     "mpin_reset",
     "mpin_set",
+    "security_status",
     "password_set",
     "otp_challenge",
     "register_contractor",
