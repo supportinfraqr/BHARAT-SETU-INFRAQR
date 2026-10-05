@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { CheckCircle2, Clock3, FileCheck2 } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
+import { openPrintHtml } from '@/lib/documentEngine/render';
 import BatchDrilldown from '@/components/compliance/BatchDrilldown';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerSubmission } from '@/types/portal';
@@ -92,8 +93,26 @@ export default function EmployerComplianceSubmissionPage() {
     }
   }
 
-  const contractorCell = (row: EmployerSubmission) => <div><strong className="text-gray-900">{row.contractor || '—'}</strong>{row.contractorId && <p className="font-mono text-[10px] text-gray-400">{row.contractorId}</p>}</div>;
-  const statusCell = (row: EmployerSubmission) => <Status value={row.status}/>;
+  async function viewAiReport(row: EmployerSubmission) {
+    setError(''); setNotice('');
+    try {
+      const response = await fetch(`/api/employer/submissions/${row.id}/ai-report`, { cache: 'no-store' });
+      const body = await response.json().catch(() => ({})) as { data?: { html?: string }; error?: string };
+      if (!response.ok || !body.data?.html) throw new Error(body.error || 'The AI report could not be generated.');
+      openPrintHtml(body.data.html, `${row.type} — BSS AI Audit Report`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The AI report could not be generated.');
+    }
+  }
+
+  const aiReportCell = (row: EmployerSubmission) => (
+    <div className="flex flex-col gap-1">
+      <button type="button" onClick={() => void viewAiReport(row)} className="text-[11px] text-[#073B67] font-semibold hover:underline text-left">View report</button>
+      <a href={`/api/employer/submissions/${row.id}/ai-report?format=pdf`} className="text-[11px] text-blue-700 font-semibold hover:underline">Download PDF</a>
+    </div>
+  );
+
+  const contractorCell = (row: EmployerSubmission) => <div><strong className="text-gray-900">{row.contractor || '—'}</strong>{row.contractorId && <p className="font-mono text-[10px] text-gray-400">{row.contractorId}</p>}</div>;  const statusCell = (row: EmployerSubmission) => <Status value={row.status}/>;
   const actionCell = (row: EmployerSubmission) => row.status === 'Pending review'
     ? <div className="flex gap-3"><button disabled={busy} onClick={() => review(row, 'Verified')} className="text-green-700 font-semibold hover:underline whitespace-nowrap">Mark Accepted</button><button disabled={busy} onClick={() => review(row, 'Rejected')} className="text-red-700 font-semibold hover:underline">Reject</button></div>
     : <span className="text-gray-400">No action</span>;
@@ -105,6 +124,7 @@ export default function EmployerComplianceSubmissionPage() {
     { id:'type', header:'Registers', value:row => row.type, render:row => <div><strong className="text-gray-900">{row.type}</strong>{row.batchId && <div className="flex items-center gap-3 mt-0.5"><button type="button" onClick={() => setBatchView(row.batchId as string)} className="text-[11px] text-blue-600 font-semibold hover:underline">View documents</button><a href={`/api/employer/compliance-batches/${row.batchId}/file`} className="text-[11px] text-blue-600 hover:underline">Download registers</a></div>}</div> },
     { id:'submitted', header:'Submitted', value:row => row.submittedAt.slice(0, 10) },
     { id:'status', header:'Status', value:row => row.status, render:statusCell },
+    { id:'aiReport', header:'AI audit report', filterable:false, value:row => row.id, render:aiReportCell },
     { id:'actions', header:'Action', filterable:false, value:row => row.status, render:actionCell },
   ];
 
@@ -119,6 +139,7 @@ export default function EmployerComplianceSubmissionPage() {
     { id:'period', header:'Period', value:row => row.period },
     { id:'submitted', header:'Submitted', value:row => row.submittedAt.slice(0, 10) },
     { id:'status', header:'Status', value:row => row.status, render:statusCell },
+    { id:'aiReport', header:'AI audit report', filterable:false, value:row => row.id, render:aiReportCell },
     { id:'actions', header:'Action', filterable:false, value:row => row.status, render:actionCell },
   ];
 

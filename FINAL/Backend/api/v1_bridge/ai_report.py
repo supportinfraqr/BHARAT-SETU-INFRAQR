@@ -172,9 +172,33 @@ def build_report(ev):
 
 
 def _submission(request, submission_id):
-    from bss_core.models import SubmissionEvidence
+    """Resolve a submission the caller is allowed to see.
 
-    return SubmissionEvidence.objects.filter(pk=submission_id, user_id=request.user.id).first()
+    Contractors see their own; employers see submissions from contractors/workers
+    bound to their sites; BSS staff/admin/government see any."""
+    from django.db.models import Q
+
+    from bss_core.models import Site, SubmissionEvidence
+
+    user = request.user
+    qs = SubmissionEvidence.objects.filter(pk=submission_id)
+    role = user.role
+    if role == "contractor":
+        return qs.filter(user_id=user.id).first()
+    if role in ("bss_admin", "bss_staff", "government", "admin"):
+        return qs.first()
+    if role == "employer":
+        my_sites = set(Site.objects.filter(employer=user).values_list("site_name", flat=True))
+        ev = qs.filter(
+            Q(user__worker_bindings__site__employer=user)
+            | Q(user__contractor_bindings__site__employer=user)
+        ).first()
+        if ev is None:
+            return None
+        if ev.site and my_sites and ev.site not in my_sites:
+            return None
+        return ev
+    return None
 
 
 @api_view(["GET"])

@@ -204,6 +204,8 @@ _v1_patterns = _v1(
     ("contractor/submissions/<int:submission_id>/file", v1_bridge.submission_file_download, "v1_contractor_submission_file", {"role_path": "contractor"}),
     ("employer/submissions/<int:submission_id>/file", v1_bridge.submission_file_download, "v1_employer_submission_file", {"role_path": "employer"}),
     ("employer/submissions/<int:submission_id>/token", v1_bridge.submission_file_token, "v1_employer_submission_token", {"role_path": "employer"}),
+    ("employer/submissions/<int:submission_id>/ai-report", v1_bridge.contractor_ai_audit_report, "v1_employer_ai_audit_report"),
+    ("employer/submissions/<int:submission_id>/ai-report.pdf", v1_bridge.contractor_ai_audit_report_pdf, "v1_employer_ai_audit_report_pdf"),
     ("submissions/file/<str:token>", v1_bridge.submission_file_serve, "v1_submission_file_serve"),
     ("admin/submissions/<int:submission_id>/file", v1_bridge.submission_file_download, "v1_admin_submission_file", {"role_path": "admin"}),
     ("admin/notifications", v1_bridge.notifications, "v1_admin_notifications", {"role_path": "admin"}),
