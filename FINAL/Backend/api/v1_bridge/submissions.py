@@ -615,6 +615,8 @@ def contractor_compliance_batches_zip(request):
     import io
     import zipfile
 
+    from django.http import HttpResponse
+
     from bss_core.models import ComplianceBatch
 
     user = request.user
