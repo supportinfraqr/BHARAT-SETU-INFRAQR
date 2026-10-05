@@ -289,22 +289,10 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                <button type="button" onClick={() => window.open('https://wa.me/919650887008?text=Hello', '_blank')} className="cursor-pointer flex flex-col items-center justify-center py-2 px-2 rounded-[14px] border border-gray-200 bg-white text-gray-600 hover:border-green-500 hover:bg-green-50 hover:text-green-600 transition-all shadow-sm active:scale-95 group">
-                  <img src="/bss-brand/whatsapp.svg" alt="WhatsApp" className="h-6 w-6 mb-1.5 group-hover:scale-110 transition-transform" />
-                  <span className="text-[12px] font-bold">{t('whatsapp')}</span>
-                </button>
-                
-                <button type="button" onClick={startAadhaar} className="cursor-pointer flex flex-col items-center justify-center py-2 px-2 rounded-[14px] border border-gray-200 bg-white text-gray-600 hover:border-[#1E3A8A] hover:bg-blue-50 hover:text-[#1E3A8A] transition-all shadow-sm active:scale-95 group">
-                  <img src="/bss-brand/aadhaar.svg" alt="Aadhaar" className="h-6 w-6 mb-1.5 group-hover:scale-110 transition-transform" />
-                  <span className="text-[12px] font-bold">{t('aadhaar')}</span>
-                </button>
-                
-                <button type="button" onClick={() => window.location.href = 'tel:9650887008'} className="cursor-pointer flex flex-col items-center justify-center py-2 px-2 rounded-[14px] border border-gray-200 bg-white text-gray-600 hover:border-purple-500 hover:bg-purple-50 hover:text-purple-600 transition-all shadow-sm active:scale-95 group">
-                  <img src="/bss-brand/call.svg" alt="Call Us" className="h-6 w-6 mb-1.5 group-hover:scale-110 transition-transform" />
-                  <span className="text-[12px] font-bold">{t('callUs')}</span>
-                </button>
-              </div>
+              <button type="button" onClick={startAadhaar} className="w-full cursor-pointer flex items-center justify-center gap-2.5 py-2.5 px-3 rounded-[14px] border border-gray-200 bg-white text-gray-700 hover:border-[#1E3A8A] hover:bg-blue-50 hover:text-[#1E3A8A] transition-all shadow-sm active:scale-[0.99]">
+                <img src="/bss-brand/aadhaar.svg" alt="Aadhaar" className="h-6 w-6" />
+                <span className="text-[13px] font-bold">{t('aadhaar')}</span>
+              </button>
             </>
           )}
 
