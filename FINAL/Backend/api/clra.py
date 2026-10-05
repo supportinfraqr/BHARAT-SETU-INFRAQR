@@ -416,8 +416,9 @@ def build_master_template():
 
 _DOC_P_RE = re.compile(r"<p\b[^>]*>(.*?)</p>", re.S | re.I)
 # Any header line (title/secondary/paragraph) — h1/h2/p in document order.
-_DOC_LINE_RE = re.compile(r"<(h1|h2|p)\b[^>]*>(.*?)</\1>", re.S | re.I)
+_DOC_LINE_RE = re.compile(r"<(h1|h2|p)\b([^>]*)>(.*?)</\1>", re.S | re.I)
 _TAG_RE = re.compile(r"<[^>]+>")
+_CSS_RULE_RE = re.compile(r"\.([A-Za-z_][\w-]*)\s*\{([^}]*)\}", re.S)
 _META_TOKEN_SOURCES = {
     "CONTRACTOR_NAME": "contractor", "EMPLOYER_NAME": "employer",
     "SITE_NAME": "site", "SITE_CODE": "siteCode", "STATE": "state",
@@ -426,18 +427,52 @@ _META_TOKEN_SOURCES = {
 }
 
 
+def _centered_classes(style_text):
+    """Class names whose CSS rule declares ``text-align: center``."""
+    out = set()
+    for name, body in _CSS_RULE_RE.findall(style_text or ""):
+        if re.search(r"text-align\s*:\s*center", body, re.I):
+            out.add(name)
+    return out
+
+
+def _attr(attrs, name):
+    m = re.search(name + r'\s*=\s*"([^"]*)"', attrs or "", re.I)
+    if m:
+        return m.group(1)
+    m = re.search(name + r"\s*=\s*'([^']*)'", attrs or "", re.I)
+    return m.group(1) if m else ""
+
+
+def _is_centered(tag, attrs, centered_classes):
+    """Whether a header element is centred in the source form."""
+    style = _attr(attrs, "style")
+    if re.search(r"text-align\s*:\s*(left|right|justify)", style, re.I):
+        return False
+    if re.search(r"text-align\s*:\s*center", style, re.I):
+        return True
+    classes = [c for c in re.split(r"\s+", _attr(attrs, "class").strip()) if c]
+    if any(c in centered_classes for c in classes):
+        return True
+    # Headings default to centred when nothing says otherwise; body <p> default left.
+    return tag.lower() in ("h1", "h2")
+
+
 def _header_lines_from_html(html_text, template, rows, context):
-    """Header lines (``<h1>``/``<h2>``/``<p>`` before the first table) as plain
-    text, with data placeholders resolved — so the register's printed preamble
-    (title, ``[See rule …]``, Key:value header lines) appears in the generated
-    Excel register exactly as in the source, with nothing extra added."""
+    """Header lines (``<h1>``/``<h2>``/``<p>`` before the first table) as
+    ``{"text", "center"}`` items, with data placeholders resolved — so the
+    register's printed preamble (title, ``[See rule …]``, Key:value header lines)
+    appears in the generated Excel exactly as in the source, honouring the
+    source's centring, with nothing extra added."""
     lines = []
     if html_text:
         text = str(html_text)
+        centered_classes = _centered_classes(text)
         table_idx = text.lower().find("<table")
         head = text[:table_idx] if table_idx != -1 else text
         for match in _DOC_LINE_RE.finditer(head):
-            inner = render_doc_body(match.group(2), rows, context)
+            tag, attrs, body = match.group(1), match.group(2), match.group(3)
+            inner = render_doc_body(body, rows, context)
             for token, source in _META_TOKEN_SOURCES.items():
                 inner = inner.replace("{{" + token + "}}", str((context or {}).get(source, "")))
             inner = inner.replace("{{ACT}}", str(template.get("act", "")))
@@ -446,7 +481,7 @@ def _header_lines_from_html(html_text, template, rows, context):
             plain = _TAG_RE.sub("", inner)
             plain = re.sub(r"\s+", " ", unescape(plain).replace("\xa0", " ")).strip()
             if plain and re.search(r"[A-Za-z0-9]", plain):
-                lines.append(plain)
+                lines.append({"text": plain, "center": _is_centered(tag, attrs, centered_classes)})
 
     if not lines:
         form_code = template.get("formCode") or ""
@@ -454,15 +489,15 @@ def _header_lines_from_html(html_text, template, rows, context):
         act = template.get("act") or ""
         heading = f"Form No. {form_code}".strip() if form_code else title
         if heading:
-            lines.append(heading)
+            lines.append({"text": heading, "center": True})
         if act:
-            lines.append(f"[{act}]")
+            lines.append({"text": f"[{act}]", "center": True})
         if title and title != heading:
-            lines.append(title)
+            lines.append({"text": title, "center": True})
         if context:
             c_name = context.get("contractor") or ""
             p_name = context.get("employer") or ""
-            lines.append(f"Name and Address of Contractor : {c_name}    Name and Address of Principal Employer : {p_name}")
+            lines.append({"text": f"Name and Address of Contractor : {c_name}    Name and Address of Principal Employer : {p_name}", "center": False})
 
     return lines
 
@@ -525,13 +560,15 @@ def _write_template_sheet(wb, template, rows, context=None):
                 break
 
     row_cursor = 1
-    for idx, line in enumerate(header_lines):
+    for idx, item in enumerate(header_lines):
+        line = item["text"] if isinstance(item, dict) else item
+        centered = bool(item.get("center")) if isinstance(item, dict) else False
         cell = ws.cell(row=row_cursor, column=1, value=line)
         if idx == 0:
             cell.font = Font(name="Calibri", size=11, bold=True, color="000000")
         else:
             cell.font = Font(name="Calibri", size=10, bold=False, color="1E293B")
-        cell.alignment = Alignment(horizontal="left", vertical="center")
+        cell.alignment = Alignment(horizontal=("center" if centered else "left"), vertical="center")
         if len(columns) > 1:
             ws.merge_cells(start_row=row_cursor, start_column=1,
                            end_row=row_cursor, end_column=len(columns))
