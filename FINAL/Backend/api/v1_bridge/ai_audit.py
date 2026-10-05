@@ -126,32 +126,66 @@ def _parse_json_block(raw):
         return None
 
 
-def _run_ai_audit(form_name, text, required_format, site_name=""):
+def _run_ai_audit(form_name, text, required_format, site_name="", extra=None):
     from bss_core.models import AI_PROVIDERS
 
+    extra = extra or {}
     cred = _default_credential()
     if cred is None or not cred.has_key:
         return {"status": "unavailable",
                 "message": "No AI provider is configured. Add one in Admin → AI Audit Settings."}
     if not text.strip():
         return {"status": "unavailable", "message": "No readable text could be extracted from this document."}
-    system = (
-        "You are a strict Indian labour-law compliance auditor for the Bharat Shram Setu (BSS) portal. "
-        "You verify that an uploaded document genuinely is the required statutory form and that its "
-        "content looks correct and complete. Reply ONLY with a compact JSON object."
-    )
-    prompt = (
-        f"Required document: {form_name}\n"
-        f"Expected file format: {required_format or 'not specified'}\n"
-        f"Site: {site_name or 'n/a'}\n\n"
-        "Audit the extracted document text below. Decide whether it is the correct document and its "
-        "content is plausible/complete.\n"
-        "Return JSON with exactly these keys: "
-        '{"valid": true|false, "confidence": 0-100, "summary": "one line", '
-        '"findings": ["..."], "missing": ["..."], "issues": ["..."]}.\n\n'
-        "----- DOCUMENT TEXT (may be OCR, so ignore minor noise) -----\n"
-        f"{text}"
-    )
+
+    if str(extra.get("docKind") or "").lower() == "register":
+        system = (
+            "You are a strict Indian labour-law compliance auditor for the Bharat Shram Setu (BSS) portal. "
+            "You verify that an uploaded statutory REGISTER is the correct register, that its column headings "
+            "match the required template, and that its rows are consistent with the employer's master data. "
+            "Reply ONLY with a compact JSON object."
+        )
+        columns = extra.get("templateColumns") or []
+        if isinstance(columns, list):
+            columns = ", ".join(str(c) for c in columns)
+        mappings = extra.get("fieldMappings") or []
+        mapped = "; ".join(f"{m.get('column')} ← {m.get('fieldKey')}" for m in mappings if isinstance(m, dict))
+        prompt = (
+            f"Required register: {extra.get('templateTitle') or form_name}\n"
+            f"Table: Master file (site data) × {extra.get('period') or ''} ({extra.get('state') or ''})\n"
+            f"Template columns (the register MUST contain these headings): {columns or 'not specified'}\n"
+            f"Master-data field mapping: {mapped or 'not specified'}\n"
+            f"Site: {site_name or 'n/a'}\n"
+            f"Expected file format: {required_format or 'PDF / Excel'}\n\n"
+            "Compare the uploaded register to the template columns AND to the employer's master data. Verify:\n"
+            " - it is the correct register/form for this state & period,\n"
+            " - the required column headings are present (list any missing),\n"
+            " - the rows look like the site's master data (worker names / BSS IDs / wages / dates where the "
+            "template requires them),\n"
+            " - totals/period/state are consistent.\n"
+            "Return JSON with exactly these keys: "
+            '{"valid": true|false, "confidence": 0-100, "summary": "one line", '
+            '"matchedColumns": ["..."], "missing": ["..."], "issues": ["..."], "findings": ["..."]}.\n\n'
+            "----- UPLOADED REGISTER TEXT (may be OCR, ignore minor noise) -----\n"
+            f"{text}"
+        )
+    else:
+        system = (
+            "You are a strict Indian labour-law compliance auditor for the Bharat Shram Setu (BSS) portal. "
+            "You verify that an uploaded document genuinely is the required statutory form and that its "
+            "content looks correct and complete. Reply ONLY with a compact JSON object."
+        )
+        prompt = (
+            f"Required document: {form_name}\n"
+            f"Expected file format: {required_format or 'not specified'}\n"
+            f"Site: {site_name or 'n/a'}\n\n"
+            "Audit the extracted document text below. Decide whether it is the correct document and its "
+            "content is plausible/complete.\n"
+            "Return JSON with exactly these keys: "
+            '{"valid": true|false, "confidence": 0-100, "summary": "one line", '
+            '"findings": ["..."], "missing": ["..."], "issues": ["..."]}.\n\n'
+            "----- DOCUMENT TEXT (may be OCR, so ignore minor noise) -----\n"
+            f"{text}"
+        )
     try:
         raw = _call_provider(cred, system, prompt)
     except Exception as exc:  # noqa: BLE001
@@ -166,6 +200,7 @@ def _run_ai_audit(form_name, text, required_format, site_name=""):
         "confidence": parsed.get("confidence"),
         "summary": parsed.get("summary") or (raw[:400] if raw else ""),
         "findings": parsed.get("findings") or [],
+        "matchedColumns": parsed.get("matchedColumns") or [],
         "missing": parsed.get("missing") or [],
         "issues": parsed.get("issues") or [],
         "provider": cred.provider,
@@ -201,7 +236,22 @@ def contractor_audit_document(request):
         extract_error = text.replace("__EXTRACT_ERROR__", "")
         text = ""
 
-    audit = _run_ai_audit(form_name, text, required_format, site_name)
+    def _json_list(value):
+        try:
+            parsed = json.loads(value) if isinstance(value, str) else value
+            return parsed if isinstance(parsed, list) else []
+        except Exception:  # noqa: BLE001
+            return []
+
+    extra = {
+        "docKind": request.data.get("docKind"),
+        "templateTitle": request.data.get("templateTitle"),
+        "templateColumns": _json_list(request.data.get("templateColumns")),
+        "fieldMappings": _json_list(request.data.get("fieldMappings")),
+        "period": request.data.get("period"),
+        "state": request.data.get("state"),
+    }
+    audit = _run_ai_audit(form_name, text, required_format, site_name, extra)
     return Response({"data": {
         "file": name,
         "format": ext,

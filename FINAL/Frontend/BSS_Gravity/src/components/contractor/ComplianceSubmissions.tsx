@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, CheckCircle2, Download, FileCheck2, FileUp, Info, Lock, ShieldCheck, Upload, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Download, FileCheck2, FileUp, Info, Lock, Search, ShieldCheck, Upload, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import BatchDrilldown from '@/components/compliance/BatchDrilldown';
 import { useContractor } from '@/contexts/ContractorContext';
@@ -10,7 +10,7 @@ import type { ContractorPortalData } from '@/types/portal';
 type DocumentRow = ContractorPortalData['submissions']['documents'][number] & { fileName?: string; checksum?: string };
 type CheckpointResult = { key:string; label:string; type:string; required:boolean; passed:boolean; detail:string };
 type OcrCheckpoint = { key?: string; type: string; label: string; value?: string; required?: boolean };
-type DocRowUI = { name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; type: string; requiredFormat: string; note: string; ocrCheckpoints?: OcrCheckpoint[] };
+type DocRowUI = { name: string; frequency: string; mandatory: boolean; requiresDocument: boolean; type: string; requiredFormat: string; note: string; ocrCheckpoints?: OcrCheckpoint[]; docKind?: 'register' | 'form'; templateId?: number; columns?: string[]; outputFormat?: string; fieldMappings?: Array<{ column: string; fieldKey: string }> };
 type AiAudit = { status: 'passed' | 'failed' | 'review' | 'unavailable' | 'error'; valid?: boolean | null; confidence?: number | null; summary?: string; findings?: string[]; missing?: string[]; issues?: string[]; provider?: string; providerLabel?: string; model?: string; message?: string };
 type EvidenceUpload = { id?: number; accuracy: number; status: 'Validating' | 'Validated' | 'Errors found'; findings?: string[]; noOcr?: boolean; checkpoints?: CheckpointResult[]; format?: string; formatOk?: boolean; allowedFormats?: string[]; chars?: number; ai?: AiAudit };
 type Tab = 'submissions' | 'create';
@@ -214,6 +214,10 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
   const [clraMode, setClraMode] = useState<'generated' | 'manual'>('generated');
   const [registerForms, setRegisterForms] = useState<DocRowUI[]>([]);
   const [registersBusy, setRegistersBusy] = useState(false);
+  const [regQuery, setRegQuery] = useState('');
+  const [regFreqFilter, setRegFreqFilter] = useState('');
+  const [regOnlyMandatory, setRegOnlyMandatory] = useState(false);
+  const [templateView, setTemplateView] = useState<DocRowUI | null>(null);
   const [optimisticSubmitted, setOptimisticSubmitted] = useState<string[]>([]);
   const [submittingName, setSubmittingName] = useState<string | null>(null);
 
@@ -339,7 +343,7 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
         if (!active) return;
         const docs = (body?.data?.documents || [])
           .filter(doc => doc.custom || !doc.templateId)
-          .map(doc => ({ name: doc.form || doc.purpose, frequency: doc.custom ? (doc.frequency || '') : '', mandatory: !!doc.mandatory, requiresDocument: doc.custom ? doc.requiresDocument !== false : true, type: doc.type || '', requiredFormat: doc.requiredFormat || '', note: doc.note || '', ocrCheckpoints: doc.ocrCheckpoints || [] }));
+          .map(doc => ({ name: doc.form || doc.purpose, frequency: doc.custom ? (doc.frequency || '') : '', mandatory: !!doc.mandatory, requiresDocument: doc.custom ? doc.requiresDocument !== false : true, type: doc.type || '', requiredFormat: doc.requiredFormat || '', note: doc.note || '', ocrCheckpoints: doc.ocrCheckpoints || [], docKind: 'form' as const }));
         setAdditionalDocs(docs);
       })
       .catch(() => { if (active) setAdditionalDocs([]); })
@@ -354,18 +358,26 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
     setRegistersBusy(true);
     void fetch(`/api/contractor/clra/templates${docsSiteId ? `?siteId=${encodeURIComponent(docsSiteId)}` : ''}`, { cache:'no-store' })
       .then(response => (response.ok ? response.json() : null))
-      .then((body: { rows?: Array<{ formCode:string; title:string; frequency?:string; isMandatory?:boolean; ocrCheckpoints?: OcrCheckpoint[] }> } | null) => {
+      .then((body: { rows?: Array<{ id?:number; formCode:string; title:string; frequency?:string; isMandatory?:boolean; ocrCheckpoints?: OcrCheckpoint[]; columns?:string[]; outputFormat?:string; fieldMappings?:Array<{column:string;fieldKey:string}> }> } | null) => {
         if (!active) return;
-        setRegisterForms((body?.rows || []).map(r => ({
-          name: `${r.formCode || 'Register'}${r.title ? ` — ${r.title}` : ''}`,
-          frequency: r.frequency || 'Monthly',
-          mandatory: !!r.isMandatory,
-          requiresDocument: true,
-          type: 'CLRA Register',
-          requiredFormat: 'PDF / JPEG / PNG',
-          note: '',
-          ocrCheckpoints: r.ocrCheckpoints || [],
-        })));
+        setRegisterForms((body?.rows || []).map(r => {
+          const fmt = (r.outputFormat || '').toLowerCase();
+          return {
+            name: `${r.formCode || 'Register'}${r.title ? ` — ${r.title}` : ''}`,
+            frequency: r.frequency || 'Monthly',
+            mandatory: !!r.isMandatory,
+            requiresDocument: true,
+            type: 'CLRA Register',
+            requiredFormat: fmt === 'xlsx' ? 'Excel (XLSX)' : 'PDF',
+            note: r.columns?.length ? `${r.columns.length} template column(s)` : '',
+            ocrCheckpoints: r.ocrCheckpoints || [],
+            docKind: 'register' as const,
+            templateId: r.id,
+            columns: r.columns || [],
+            outputFormat: r.outputFormat,
+            fieldMappings: r.fieldMappings || [],
+          };
+        }));
       })
       .catch(() => { if (active) setRegisterForms([]); })
       .finally(() => { if (active) setRegistersBusy(false); });
@@ -426,7 +438,7 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
   const missingEvidence = additionalDocs.filter(doc => doc.mandatory && doc.requiresDocument && uploads[doc.name]?.status !== 'Validated');
   const isPartialSubmission = missingEvidence.length > 0;
 
-  async function uploadEvidence(doc: { name: string; frequency: string; mandatory: boolean; requiredFormat?: string; ocrCheckpoints?: OcrCheckpoint[] }, next?: File) {
+  async function uploadEvidence(doc: DocRowUI, next?: File) {
     if (!next) return;
     setRemovedKeys(prev => prev.filter(k => k !== doc.name));
     setError('');
@@ -457,6 +469,12 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
       auditForm.set('file', next); auditForm.set('formName', doc.name);
       auditForm.set('requiredFormat', doc.requiredFormat || '');
       auditForm.set('site', ctxSite);
+      auditForm.set('docKind', doc.docKind || 'form');
+      auditForm.set('templateTitle', doc.name);
+      auditForm.set('templateColumns', JSON.stringify(doc.columns || []));
+      auditForm.set('fieldMappings', JSON.stringify(doc.fieldMappings || []));
+      auditForm.set('period', `${createPeriod} ${fy.replace('FY ', '')}`);
+      auditForm.set('state', ctxState);
       const auditResponse = await fetch('/api/portal/audit-document', { method: 'POST', body: auditForm, signal: controller.signal });
       const auditResult = await auditResponse.json().catch(() => ({})) as { data?: { format:string; formatOk:boolean; allowedFormats:string[]; chars:number; extractError?:string; ai?: AiAudit }; error?:string };
       if (!auditResponse.ok || !auditResult.data) throw new Error(auditResult.error ?? 'AI audit failed.');
@@ -573,7 +591,16 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
 
   // Shared table for "additional forms" and, in manual mode, the CLRA register
   // forms the contractor uploads themselves.
-  const renderDocsTable = (docs: DocRowUI[]) => (
+  const registerFrequencies = useMemo(() => Array.from(new Set(registerForms.map(r => r.frequency).filter(Boolean))), [registerForms]);
+  const filteredRegisterForms = useMemo(() => {
+    const q = regQuery.trim().toLowerCase();
+    return registerForms.filter(r =>
+      (!q || r.name.toLowerCase().includes(q) || (r.columns || []).some(c => c.toLowerCase().includes(q))) &&
+      (!regFreqFilter || r.frequency === regFreqFilter) &&
+      (!regOnlyMandatory || r.mandatory));
+  }, [registerForms, regQuery, regFreqFilter, regOnlyMandatory]);
+
+  const renderDocsTable = (docs: DocRowUI[], opts: { showColumns?: boolean } = {}) => (
     <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
       <table className="w-full text-left border-collapse">
         <thead>
@@ -584,6 +611,7 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
             <th className="py-2.5 px-3">Mandatory</th>
             <th className="py-2.5 px-3">Required Format</th>
             <th className="py-2.5 px-3">Note</th>
+            {opts.showColumns && <th className="py-2.5 px-3">Template Columns</th>}
             <th className="py-2.5 px-3">AI Audit</th>
             <th className="py-2.5 px-3">Submit</th>
           </tr>
@@ -611,6 +639,15 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
                 </td>
                 <td className="py-3 px-3 text-gray-600 text-[11px]">{doc.requiredFormat || '—'}</td>
                 <td className="py-3 px-3 text-gray-500 text-[11px] max-w-[220px]" title={doc.note || ''}>{doc.note || '—'}</td>
+                {opts.showColumns && (
+                  <td className="py-3 px-3 text-[11px]">
+                    {(doc.columns?.length ?? 0) === 0 ? (
+                      <span className="text-gray-300">—</span>
+                    ) : (
+                      <button type="button" onClick={() => setTemplateView(doc)} className="text-blue-700 font-semibold hover:underline">{doc.columns!.length} column{doc.columns!.length === 1 ? '' : 's'} — view</button>
+                    )}
+                  </td>
+                )}
                 <td className="py-3 px-3">
                   {locked ? (
                     <span className="text-[10px] font-bold text-emerald-700">✓ Submitted</span>
@@ -1037,7 +1074,20 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
           ) : registerForms.length === 0 ? (
             <p className="text-xs text-gray-400 py-3 mb-6">No CLRA register forms configured for this site.</p>
           ) : (
-            <div className="mb-6">{renderDocsTable(registerForms)}</div>
+            <div className="mb-6 space-y-3">
+              <div className="rounded-xl border border-gray-200 bg-slate-50/60 p-3 flex flex-wrap items-center gap-2">
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input value={regQuery} onChange={e => setRegQuery(e.target.value)} placeholder="Search register or template column…" className="w-full h-9 rounded-lg border border-gray-200 pl-8 pr-3 text-xs bg-white" />
+                </div>
+                <select value={regFreqFilter} onChange={e => setRegFreqFilter(e.target.value)} className="h-9 rounded-lg border border-gray-200 px-2 text-xs bg-white"><option value="">All frequencies</option>{registerFrequencies.map(f => <option key={f} value={f}>{f}</option>)}</select>
+                <label className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-600 cursor-pointer"><input type="checkbox" checked={regOnlyMandatory} onChange={e => setRegOnlyMandatory(e.target.checked)} className="w-4 h-4" />Mandatory only</label>
+                <span className="text-[11px] text-gray-400 ml-auto">{filteredRegisterForms.length} of {registerForms.length} registers</span>
+              </div>
+              {filteredRegisterForms.length === 0
+                ? <p className="text-xs text-gray-400 py-3">No registers match these filters.</p>
+                : renderDocsTable(filteredRegisterForms, { showColumns: true })}
+            </div>
           )}
 
           <div className="mb-6">
@@ -1079,6 +1129,30 @@ export default function ComplianceSubmissions({ embedded = false }: { embedded?:
             </div>
           </footer>
         )}
+      </section>
+    </div>}
+
+    {templateView && <div className="fixed inset-0 z-[90] bg-black/50 grid place-items-center p-4" onMouseDown={e => { if (e.target === e.currentTarget) setTemplateView(null); }}>
+      <section role="dialog" aria-modal="true" className="w-full max-w-lg max-h-[85vh] bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col">
+        <header className="p-5 border-b border-gray-100 flex justify-between items-start gap-3">
+          <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Register template</p><h2 className="font-semibold text-gray-950 mt-0.5">{templateView.name}</h2><p className="text-xs text-gray-500 mt-0.5">{templateView.requiredFormat} · {templateView.frequency}</p></div>
+          <button onClick={() => setTemplateView(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button>
+        </header>
+        <div className="p-5 overflow-y-auto space-y-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Template columns ({templateView.columns?.length ?? 0})</p>
+            {templateView.columns?.length
+              ? <div className="flex flex-wrap gap-1.5">{templateView.columns.map(c => <span key={c} className="text-[11px] px-2 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-700">{c}</span>)}</div>
+              : <p className="text-xs text-gray-400">No column definitions.</p>}
+          </div>
+          {templateView.fieldMappings?.length ? (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Master-data mapping</p>
+              <ul className="text-[11px] space-y-1">{templateView.fieldMappings.map(m => <li key={m.column} className="flex justify-between gap-3"><span className="text-slate-700">{m.column}</span><span className="text-gray-400 font-mono">← {m.fieldKey}</span></li>)}</ul>
+            </div>
+          ) : null}
+          <p className="text-[11px] text-gray-500">Upload this register in <strong>{templateView.requiredFormat}</strong>. The AI audit compares your file against these columns and the master data before you save.</p>
+        </div>
       </section>
     </div>}
 
