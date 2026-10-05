@@ -442,6 +442,14 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
   // Vacuously true when nothing is mandatory, so the common Submit is enabled
   // as soon as no mandatory document is outstanding.
   const allMandatoryUploaded = mandatoryDocs.every(doc => uploads[doc.name]?.id != null);
+  // Hide the Submit control once there is nothing left to submit for this
+  // context (all registers already submitted and no pending uploads).
+  const openBatchCount = generatedForCreate.filter(b => b.status !== 'Submitted' && b.status !== 'Verified').length;
+  const pendingUploadCount = [...additionalDocs, ...registerForms]
+    .filter(d => uploads[d.name]?.id != null && !submittedNames.has(d.name)).length;
+  const hasSomethingToSubmit = openBatchCount > 0 || pendingUploadCount > 0;
+  const periodSubmitted = !hasSomethingToSubmit
+    && generatedForCreate.some(b => b.status === 'Submitted' || b.status === 'Verified');
 
   async function uploadEvidence(doc: DocRowUI, next?: File) {
     if (!next) return;
@@ -1156,7 +1164,12 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
                     Part Submissions Allowed ({missingEvidence.length} pending)
                   </span>
                 )}
-                <button type="button" onClick={() => void submitAll()} disabled={busy || !allMandatoryUploaded} title={allMandatoryUploaded ? 'Submit all generated registers and uploaded forms in one package' : 'Upload all mandatory documents to enable'} className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold flex items-center gap-1.5 hover:bg-[#062D4F] disabled:opacity-50"><FileUp size={13}/>{busy ? 'Submitting…' : 'Submit All (Registers + Forms)'}</button>
+                {hasSomethingToSubmit && <button type="button" onClick={() => void submitAll()} disabled={busy || !allMandatoryUploaded} title={allMandatoryUploaded ? 'Submit all generated registers and uploaded forms in one package' : 'Upload all mandatory documents to enable'} className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold flex items-center gap-1.5 hover:bg-[#062D4F] disabled:opacity-50"><FileUp size={13}/>{busy ? 'Submitting…' : 'Submit All (Registers + Forms)'}</button>}
+                {periodSubmitted && (
+                  <span className="text-[11px] font-bold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+                    ✓ Submitted for this period
+                  </span>
+                )}
               </div>
             </div>
 
