@@ -37,6 +37,7 @@ const MODELS: Record<string, string[]> = {
   anthropic: ['claude-3-5-sonnet-latest', 'claude-3-7-sonnet-latest', 'claude-3-5-haiku-latest', 'claude-opus-4-1'],
   google: ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.5-pro'],
   azure: ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1'],
+  deepseek: ['deepseek-chat', 'deepseek-reasoner'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
   mistral: ['mistral-large-latest', 'mistral-small-latest', 'open-mistral-nemo'],
   openrouter: ['openai/gpt-4o', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.3-70b-instruct'],

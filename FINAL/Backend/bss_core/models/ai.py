@@ -16,6 +16,7 @@ AI_PROVIDERS = {
     "anthropic": {"label": "Anthropic", "baseUrl": "https://api.anthropic.com"},
     "google": {"label": "Google Gemini", "baseUrl": "https://generativelanguage.googleapis.com"},
     "azure": {"label": "Azure OpenAI", "baseUrl": ""},
+    "deepseek": {"label": "DeepSeek", "baseUrl": "https://api.deepseek.com/v1"},
     "groq": {"label": "Groq", "baseUrl": "https://api.groq.com/openai/v1"},
     "mistral": {"label": "Mistral", "baseUrl": "https://api.mistral.ai/v1"},
     "openrouter": {"label": "OpenRouter", "baseUrl": "https://openrouter.ai/api/v1"},
