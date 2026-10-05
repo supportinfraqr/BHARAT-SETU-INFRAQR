@@ -46,9 +46,7 @@ export default function ClraRegistersPage() {
   const [cpCatalog, setCpCatalog] = useState<Checkpoint[]>([]);
   const [selectedCps, setSelectedCps] = useState<Record<string, { checked: boolean; required: boolean }>>({});
   const [customLabel, setCustomLabel] = useState('');
-  const [customValue, setCustomValue] = useState('');
-  const [customRequired, setCustomRequired] = useState(true);
-  const [customChecks, setCustomChecks] = useState<Array<{ label: string; value?: string; required: boolean }>>([]);
+  const [customChecks, setCustomChecks] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -305,7 +303,7 @@ export default function ClraRegistersPage() {
     const aiChecks: Checkpoint[] = cpCatalog
       .filter(cp => selectedCps[cp.key ?? cp.type]?.checked)
       .map(cp => ({ key: cp.key, type: cp.type, label: cp.label, required: selectedCps[cp.key ?? cp.type]?.required ?? true }));
-    for (const c of customChecks) aiChecks.push({ type: 'custom', label: c.label, value: c.value, required: c.required });
+    for (const label of customChecks) aiChecks.push({ type: 'custom', label, required: true });
     setDrafts(current => ({
       ...current,
       [board.siteId]: {
@@ -313,7 +311,7 @@ export default function ClraRegistersPage() {
         adds: [...draft.adds, { name, frequency: efFrequency.trim(), mandatory: efMandatory, requiresDocument: efRequiresDocument, description: efDescription.trim(), aiChecks }],
       },
     }));
-    setEfName(''); setEfMandatory(false); setEfFrequency(''); setEfRequiresDocument(true); setEfDescription(''); setSelectedCps({}); setCustomLabel(''); setCustomValue(''); setCustomRequired(true); setCustomChecks([]);
+    setEfName(''); setEfMandatory(false); setEfFrequency(''); setEfRequiresDocument(true); setEfDescription(''); setSelectedCps({}); setCustomLabel(''); setCustomChecks([]);
     setShowAddForm(false);
     setError('');
     setNotice(`“${name}” staged for ${board.siteName} — saved with the next Save adoption.`);
@@ -485,19 +483,15 @@ export default function ClraRegistersPage() {
             <ul className="mt-2 space-y-1">
               {customChecks.map((c, i) => (
                 <li key={i} className="flex items-center justify-between gap-2 rounded-lg border border-blue-200 bg-white px-2 py-1 text-[11px]">
-                  <span className="text-gray-800 truncate">{c.label}{c.value ? ` — expects “${c.value}”` : ''}{c.required ? '' : ' (optional)'}</span>
+                  <span className="text-gray-800 truncate">{c}</span>
                   <button type="button" onClick={() => setCustomChecks(list => list.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-600" aria-label="Remove checkpoint"><X size={12}/></button>
                 </li>
               ))}
             </ul>
           )}
-          <div className="mt-2 space-y-1.5">
-            <input value={customLabel} onChange={e => setCustomLabel(e.target.value)} placeholder="Add a custom checkpoint the AI must verify" className="w-full h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
-            <div className="flex items-center gap-2">
-              <input value={customValue} onChange={e => setCustomValue(e.target.value)} placeholder="Expected text (optional)" className="flex-1 h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
-              <label className="flex items-center gap-1 text-[11px] text-gray-600 whitespace-nowrap"><input type="checkbox" checked={customRequired} onChange={e => setCustomRequired(e.target.checked)} className="accent-[#073B67]"/>required</label>
-              <button type="button" onClick={() => { const label = customLabel.trim(); if (!label) return; setCustomChecks(list => [...list, { label, value: customValue.trim() || undefined, required: customRequired }]); setCustomLabel(''); setCustomValue(''); setCustomRequired(true); }} disabled={!customLabel.trim()} className="h-9 px-3 rounded-lg border border-[#073B67] text-[#073B67] text-xs font-bold disabled:opacity-50">Add</button>
-            </div>
+          <div className="mt-2 flex items-center gap-2">
+            <input value={customLabel} onChange={e => setCustomLabel(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); const label = customLabel.trim(); if (label) { setCustomChecks(list => [...list, label]); setCustomLabel(''); } } }} placeholder="Add a custom checkpoint the AI must verify (free text)" className="flex-1 h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
+            <button type="button" onClick={() => { const label = customLabel.trim(); if (!label) return; setCustomChecks(list => [...list, label]); setCustomLabel(''); }} disabled={!customLabel.trim()} className="h-9 px-3 rounded-lg border border-[#073B67] text-[#073B67] text-xs font-bold disabled:opacity-50">Add</button>
           </div>
         </div>}
         {error && <p className="text-xs text-red-700">{error}</p>}
