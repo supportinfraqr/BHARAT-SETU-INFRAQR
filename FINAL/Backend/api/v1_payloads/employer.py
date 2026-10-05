@@ -605,7 +605,7 @@ def _employer_submissions(user):
         name = _d(cp.contractor_name if cp else ((batches[0].contractor.username if batches else (evidence[0].user.username if evidence else ""))))
         sites = sorted({x.site.site_name for x in batches if x.site} | {x.site for x in evidence if x.site})
         stamps = [x.generated_on for x in batches if x.generated_on] + [x.created_at for x in evidence if x.created_at]
-        latest = max(stamps) if stamps else None
+        latest = max(stamps, key=str) if stamps else None
         notes = [x.review_note for x in batches if x.review_note] + [x.review_note for x in evidence if x.review_note]
         rows.append({
             "id": f"pkg-{cid}-{year}-{month}",
