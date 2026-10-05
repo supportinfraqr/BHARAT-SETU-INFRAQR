@@ -26,6 +26,8 @@ MODULE_SEEDERS: list[tuple[str, str]] = [
     ("default letter templates", "bss_core.seeders.letter_templates"),
     # State-wise CLRA register templates (defaults defined in code).
     ("CLRA register templates (state-wise defaults)", "bss_core.seeders.clra"),
+    # AI checkpoints for register templates + additional forms (after templates).
+    ("AI checkpoints (templates + forms)", "bss_core.seeders.ai_checks"),
 ]
 
 
