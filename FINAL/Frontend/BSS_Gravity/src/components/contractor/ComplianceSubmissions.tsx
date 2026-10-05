@@ -1164,12 +1164,6 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
                     Part Submissions Allowed ({missingEvidence.length} pending)
                   </span>
                 )}
-                {hasSomethingToSubmit && <button type="button" onClick={() => void submitAll()} disabled={busy || !allMandatoryUploaded} title={allMandatoryUploaded ? 'Submit all generated registers and uploaded forms in one package' : 'Upload all mandatory documents to enable'} className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold flex items-center gap-1.5 hover:bg-[#062D4F] disabled:opacity-50"><FileUp size={13}/>{busy ? 'Submitting…' : 'Submit All (Registers + Forms)'}</button>}
-                {periodSubmitted && (
-                  <span className="text-[11px] font-bold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
-                    ✓ Submitted for this period
-                  </span>
-                )}
               </div>
             </div>
 
@@ -1180,6 +1174,14 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
             ) : renderDocsTable(additionalDocs)}
           </div>
           {error && <p role="alert" className="bss-alert bss-alert-error mt-3">{error}</p>}
+          <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center justify-end gap-3">
+            {hasSomethingToSubmit && <button type="button" onClick={() => void submitAll()} disabled={busy || !allMandatoryUploaded} title={allMandatoryUploaded ? 'Submit all generated registers and uploaded forms in one package' : 'Upload all mandatory documents to enable'} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold flex items-center gap-1.5 hover:bg-[#062D4F] disabled:opacity-50"><FileUp size={14}/>{busy ? 'Submitting…' : 'Submit All (Registers + Forms)'}</button>}
+            {periodSubmitted && (
+              <span className="text-xs font-bold text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full">
+                ✓ Submitted for this period
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </section>}
