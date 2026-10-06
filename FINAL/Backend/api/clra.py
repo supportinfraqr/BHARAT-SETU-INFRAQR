@@ -15,7 +15,7 @@ import re
 from html import unescape
 
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.styles import Alignment, Border, Font, Side
 
 from .master_sheet import MASTER_COLUMNS, MASTER_FIELD_KEYS, MASTER_HEADER_KEYS
 
@@ -717,11 +717,10 @@ def _write_template_sheet(wb, template, rows, context=None, signature=None):
                            end_row=footer_cursor, end_column=len(columns))
         footer_cursor += 1
 
-    # Beautify: a light header fill + thin grid borders around the register table
-    # (column headings + the data area), so the sheet reads as a proper form.
+    # Beautify: thin grid borders around the register table (column headings +
+    # the data area) so the sheet reads as a proper form. No header fill/colour.
     thin = Side(style="thin", color="8A94A6")
     grid = Border(left=thin, right=thin, top=thin, bottom=thin)
-    header_fill = PatternFill("solid", fgColor="E8EDF4")
 
     def _grid_row(r):
         for c in range(1, len(columns) + 1):
@@ -731,8 +730,6 @@ def _write_template_sheet(wb, template, rows, context=None, signature=None):
                 pass
 
     _grid_row(table_row)
-    for c in range(1, len(columns) + 1):
-        ws.cell(row=table_row, column=c).fill = header_fill
     if sub_header:
         _grid_row(table_row + 1)
     first_data_row = table_row + (2 if sub_header else 1)
