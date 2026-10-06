@@ -1,11 +1,21 @@
-# Mobile-optimized frontend ONLY (no backend/db) for mlogin.bharatshramsetu.com.
-# The Next.js app talks to the live BSS backend over the network.
+# Mobile frontend ONLY (no backend/db) — runs on 43.204.194.237.
+#
+#   https://mlogin.bharatshramsetu.com          -> mobile PROD    (talks to prod backend  @13.235.161.192)
+#   https://mlogin-staging.bharatshramsetu.com  -> mobile STAGING (talks to staging backend @3.109.68.143)
+#
+# PROD starts by default (no profile). STAGING is behind the `staging` profile so a
+# normal `docker compose up -d` never breaks prod:
+#     docker compose up -d                    # prod only
+#     docker compose --profile staging up -d  # prod + staging
+#
+# NOTE: the staging server block in nginx/default.conf is commented out until a
+# TLS cert for the staging domain exists (certbot). See that file.
 name: bss-mobile
 
 services:
-  frontend:
+  frontend-prod:
     build:
-      context: ../Mobile
+      context: ../../Mobile
       dockerfile: Dockerfile
       args:
         - NEXT_TELEMETRY_DISABLED=1
@@ -20,11 +30,29 @@ services:
       BSS_SESSION_SECRET: ${BSS_SESSION_SECRET:?BSS_SESSION_SECRET is required in deploy/mobile/.env}
       BSS_API_TIMEOUT_MS: "15000"
 
+  frontend-staging:
+    profiles: ["staging"]
+    build:
+      context: ../../Mobile
+      dockerfile: Dockerfile
+      args:
+        - NEXT_TELEMETRY_DISABLED=1
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      BSS_DATA_MODE: remote
+      BSS_API_BASE_URL: https://bharat-shram-setu-staging.bharatshramsetu.com
+      BSS_AUTH_API_URL: https://bharat-shram-setu-staging.bharatshramsetu.com
+      BSS_APP_ORIGIN: https://mlogin-staging.bharatshramsetu.com
+      BSS_PAYMENT_HOSTS: checkout.razorpay.com,secure.payu.in
+      BSS_SESSION_SECRET: ${BSS_SESSION_SECRET_STAGING:-${BSS_SESSION_SECRET}}
+      BSS_API_TIMEOUT_MS: "15000"
+
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
     depends_on:
-      - frontend
+      - frontend-prod
     ports:
       - "80:80"
       - "443:443"

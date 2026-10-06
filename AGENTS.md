@@ -21,11 +21,13 @@
 - The BSS backend reaches it via `ATTENDANCE_CONTROL_URL` / `ATTENDANCE_CONTROL_TOKEN`.
 - **Never** deploy the BSS app stack (`deploy/`, backend, frontend) here — the BSS staging app lives on `3.109.68.143`.
 
-**Mobile frontend server (separate — frontend only):**
+**Mobile frontend server (separate — frontend only), hosts BOTH mobile sites:**
 - Host `43.204.194.237` (`ip-172-31-15-15`), Ubuntu 26.04, key `FINAL/Requirements/mlogin.bharatshramsetu.com.pem` (`chmod 400` first).
-- Serves a **mobile-optimized frontend only** (no backend/db) at **`https://mlogin.bharatshramsetu.com`**: `~/bss/FINAL/deploy/mobile` (compose project **`bss-mobile`** → `frontend` + `nginx`). Built from the `Mobile/` source (a copy of `Web/`).
-- The Next app talks to the live backend via `BSS_API_BASE_URL`/`BSS_AUTH_API_URL=https://login.bharatshramsetu.com`; `/media` & `/static` are proxied to the main app server. TLS via certbot (`/etc/letsencrypt/live/mlogin.bharatshramsetu.com`).
-- Deploy: rsync `Mobile/` + `deploy/mobile/`, then `sudo docker compose up -d --build frontend` (never touches prod backend/data).
+- Runs **mobile PROD + mobile STAGING**, frontend-only (no backend/db), from `~/bss/FINAL/deploy/mobile` (compose project **`bss-mobile`** → `frontend-prod` + `nginx`; `frontend-staging` is behind the **`staging` profile**). Built from the `Mobile/` source (a copy of `Web/`).
+  - **mobile PROD** → `https://mlogin.bharatshramsetu.com` — backend = prod `login.bharatshramsetu.com`.
+  - **mobile STAGING** → `https://mlogin-staging.bharatshramsetu.com` — backend = staging `bharat-shram-setu-staging.bharatshramsetu.com`. **NOT live yet**: enable the commented nginx server block only after the DNS A record → `.237` and a certbot cert exist (a missing cert otherwise crashes nginx and takes prod mobile down).
+- `/media` & `/static` are proxied to the matching main app server. TLS via certbot (`/etc/letsencrypt/live/<domain>`).
+- Deploy: rsync `Mobile/` + `deploy/mobile/`; prod → `sudo docker compose up -d --build frontend-prod`; staging → add `--profile staging` and enable the staging nginx block. Never touches prod backend/data.
 
 Staging and production are separate servers with separate databases. Data on one does not affect the other.
 
@@ -39,7 +41,7 @@ FINAL/
   deploy/           # STAGING deploy tree (compose + per-role folders + .env)
     backend/        #   backend image (Dockerfile)
     web/            #   web nginx conf
-    mobile/         #   mobile compose + nginx  (the mlogin server's stack)
+    mobile/         #   mobile prod + staging (compose + nginx)  — runs on the .237 host
     db/             #   DB seed
     docker-compose.yml
   deploy-prod/      # PROD deploy tree (same layout: backend/ web/ db/)
@@ -47,9 +49,18 @@ FINAL/
   scripts/          # ops scripts (watchdog, backups, cron installers)
 ```
 
+**Where each piece runs:**
+
+| Server | Role |
+|---|---|
+| `13.235.161.192` (`login.bharatshramsetu.com`) | **prod backend** + **prod web** (`deploy-prod/`) |
+| `3.109.68.143` (staging) | **staging backend** + **staging web** (`deploy/`) |
+| `43.204.194.237` (`mlogin…`) | **mobile prod** + **mobile staging** (`deploy/mobile/`) |
+| `15.206.193.173` | CCTV / face-attendance pipeline only |
+
 - **Each environment is a copy of the same layout.** Staging (`3.109.68.143`) uses `deploy/`; prod (`13.235.161.192`) uses `deploy-prod/`. Only `.env` and the URLs/domains differ.
-- Backend runs on **both** app servers (staging + prod). The **mobile** site (`mlogin`, `43.204.194.237`) is **frontend-only** and builds the `Mobile/` source; the **attendance** server (`15.206.193.173`) runs only the CCTV pipeline.
-- The frontend compose build context is `../Web` (staging/prod) and `../Mobile` (mobile).
+- Backend runs on **both** app servers (staging + prod). The **mobile** host (`43.204.194.237`) is **frontend-only** and builds the `Mobile/` source; the **attendance** server (`15.206.193.173`) runs only the CCTV pipeline.
+- Frontend compose build contexts: `../Web` (staging `deploy/`, prod `deploy-prod/`) and `../../Mobile` (mobile `deploy/mobile/`).
 
 ## Terminology (important)
 
