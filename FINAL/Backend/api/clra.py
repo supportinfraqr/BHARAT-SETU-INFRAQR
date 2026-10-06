@@ -706,10 +706,29 @@ def _write_template_sheet(wb, template, rows, context=None, signature=None):
             value = resolve_cell(key, row, context, index=i)
             if value is not None:
                 ws.cell(row=data_start + i - 1, column=col, value=value)
-    # Declaration / footer lines (e.g. "No fine imposed during the month of …")
-    # rendered below the table with the period tokens resolved.
+    # Thin grid borders used for the table + the empty-register declaration box.
+    thin = Side(style="thin", color="8A94A6")
+    grid = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    # Declaration / footer lines. An empty-register declaration (e.g. "There is
+    # no deduction …") is written into a bordered box a few rows tall with the
+    # sentence centred — mirroring the printed register form — instead of a single
+    # line. Period tokens are already resolved by _footer_lines_from_html.
     footer_cursor = data_start + len(render_rows)
+    declaration_rows = 4
+    has_declaration = False
     for line in footer_lines:
+        if _EMPTY_DECL_RE.match(line):
+            has_declaration = True
+            last_col = max(1, len(columns))
+            ws.merge_cells(start_row=footer_cursor, start_column=1,
+                           end_row=footer_cursor + declaration_rows - 1, end_column=last_col)
+            cell = ws.cell(row=footer_cursor, column=1, value=line)
+            cell.font = Font(name="Calibri", size=10, italic=True, color="1E293B")
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell.border = grid
+            footer_cursor += declaration_rows
+            continue
         cell = ws.cell(row=footer_cursor, column=1, value=line)
         cell.font = Font(size=10, italic=True)
         if len(columns) > 1:
@@ -719,9 +738,6 @@ def _write_template_sheet(wb, template, rows, context=None, signature=None):
 
     # Beautify: thin grid borders around the register table (column headings +
     # the data area) so the sheet reads as a proper form. No header fill/colour.
-    thin = Side(style="thin", color="8A94A6")
-    grid = Border(left=thin, right=thin, top=thin, bottom=thin)
-
     def _grid_row(r):
         for c in range(1, len(columns) + 1):
             try:
@@ -735,8 +751,8 @@ def _write_template_sheet(wb, template, rows, context=None, signature=None):
     first_data_row = table_row + (2 if sub_header else 1)
     for r in range(first_data_row, first_data_row + len(render_rows)):
         _grid_row(r)
-    if not render_rows:
-        # No data rows — still draw one bordered empty row so the grid is visible.
+    if not render_rows and not has_declaration:
+        # No data and no declaration — draw one bordered empty row so the grid shows.
         _grid_row(first_data_row)
 
     # Optional small authorised-signature image below the footer, kept tiny so it
