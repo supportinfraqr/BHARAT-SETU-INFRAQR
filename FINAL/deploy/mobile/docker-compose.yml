@@ -1,0 +1,34 @@
+# Mobile-optimized frontend ONLY (no backend/db) for mlogin.bharatshramsetu.com.
+# The Next.js app talks to the live BSS backend over the network.
+name: bss-mobile
+
+services:
+  frontend:
+    build:
+      context: ../Mobile
+      dockerfile: Dockerfile
+      args:
+        - NEXT_TELEMETRY_DISABLED=1
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      BSS_DATA_MODE: remote
+      BSS_API_BASE_URL: https://login.bharatshramsetu.com
+      BSS_AUTH_API_URL: https://login.bharatshramsetu.com
+      BSS_APP_ORIGIN: https://mlogin.bharatshramsetu.com
+      BSS_PAYMENT_HOSTS: checkout.razorpay.com,secure.payu.in
+      BSS_SESSION_SECRET: ${BSS_SESSION_SECRET:?BSS_SESSION_SECRET is required in deploy/mobile/.env}
+      BSS_API_TIMEOUT_MS: "15000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro

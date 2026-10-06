@@ -48,6 +48,10 @@ CLRA_REGISTER_TITLES = {
 # Forms excluded from all seeding (never created, and removed if already present).
 CLRA_EXCLUDE_FORMS = {"FORM XII"}
 
+# The matrix's Central columns — dropped from seeding: Central templates are
+# admin-managed (created/authored in the console), never auto-seeded or pruned.
+CENTRAL_MATRIX_STATES = {"Central", "Central (New Forms)"}
+
 # States whose matrix entry stays authoritative even where the archive holds a
 # file: Maharashtra's matrix notes "Form 2 as per MW act is enough", so every
 # register there is FORM II and the folder's files must not override it.
@@ -146,6 +150,7 @@ def _matrix_by_state(archive: str | None = None) -> dict[str, dict[str, str]]:
     for several states; the archive's own register files (their printed titles)
     therefore **override** it. States whose folders lack a file keep the matrix's
     form. Several purposes may map to the same form (Maharashtra → FORM II)."""
+    from bss_core.management.commands.import_clra_applicability import canonical_state
     from bss_core.management.commands.import_clra_templates import canon_form_code
     from bss_core.models import StateFormApplicability
 
@@ -154,7 +159,7 @@ def _matrix_by_state(archive: str | None = None) -> dict[str, dict[str, str]]:
             .filter(purpose__in=CLRA_REGISTER_PURPOSES)
             .values_list("state", "purpose", "form_label"))
     for state, purpose, label in rows:
-        state = _STATE_FIX.get(state, state)
+        state = canonical_state(_STATE_FIX.get(state, state))
         code = canon_form_code(label)
         if not code.startswith("FORM") or code in CLRA_EXCLUDE_FORMS:
             continue
@@ -167,18 +172,28 @@ def _matrix_by_state(archive: str | None = None) -> dict[str, dict[str, str]]:
             target = out.setdefault(state, {})
             for purpose, info in purposes.items():
                 target[purpose] = info["form"]
+
+    # Drop the matrix's Central columns — Central templates are admin-managed
+    # (created/authored in the console) and are never auto-seeded or pruned here.
+    for state in list(out):
+        if state in CENTRAL_MATRIX_STATES:
+            out.pop(state)
     return out
 
 
 def _prune(matrix: dict[str, dict[str, str]]) -> int:
     """Delete any template that is not one of the state's purpose-keyed registers,
     or that holds the wrong form for its purpose (a stale Daman & Diu FORM XVI
-    mapped to "Deductions for Damage or Loss", whose file is a Muster Roll)."""
+    mapped to "Deductions for Damage or Loss", whose file is a Muster Roll).
+
+    Central-jurisdiction templates are admin-managed and are never pruned."""
     from bss_core.management.commands.import_clra_templates import canon_form_code
     from bss_core.models import RegisterTemplate
 
     deleted = 0
     for template in RegisterTemplate.objects.all():
+        if getattr(template, "jurisdiction", "state") == "central":
+            continue
         want = matrix.get(template.state, {}).get(template.purpose)
         if want is None or canon_form_code(template.form_code or "") != want:
             template.delete()

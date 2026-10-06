@@ -309,9 +309,15 @@ class Command(BaseCommand):
              "rules_new": 0, "rules_updated": 0, "rules_deleted": 0,
              "mandatory": 0}
 
-        entries = [(e, (e["state"], e["purpose"], e["form_code"])) for e in DEFAULTS.TEMPLATES]
+        from bss_core.management.commands.import_clra_applicability import canonical_state
+        entries = [(e, (canonical_state(e["state"]), e["purpose"], e["form_code"]))
+                   for e in DEFAULTS.TEMPLATES]
         if not entries:
             raise CommandError("register_defaults.py snapshot is empty.")
+        # Drop the snapshot's Central register entries — Central templates are
+        # admin-managed and never (re)created from the defaults snapshot.
+        from bss_core.seeders.clra import CENTRAL_MATRIX_STATES
+        entries = [item for item in entries if item[1][0] not in CENTRAL_MATRIX_STATES]
         by_key = {key: e for e, key in entries}
         existing = {(t.state, t.purpose, t.form_code): t
                     for t in RegisterTemplate.objects.all()}
@@ -337,6 +343,8 @@ class Command(BaseCommand):
 
         for key, t in existing.items():
             if key not in by_key:
+                if getattr(t, "jurisdiction", "state") == "central":
+                    continue  # admin-managed Central templates are never pruned
                 t.delete()
                 c["pruned"] += 1
 

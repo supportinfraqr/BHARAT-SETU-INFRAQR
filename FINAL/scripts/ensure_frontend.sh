@@ -6,7 +6,7 @@
 # starts the frontend there. Override the port with BSS_FRONTEND_PORT.
 set -u
 
-APP_DIR="/home/oem/BSS_Project/FINAL/Frontend/BSS_Gravity"
+APP_DIR="/home/oem/BSS_Project/FINAL/Web"
 PORT="${BSS_FRONTEND_PORT:-3003}"
 LOG="/tmp/bss_frontend.log"
 WATCH_LOG="/tmp/bss_frontend_watchdog.log"

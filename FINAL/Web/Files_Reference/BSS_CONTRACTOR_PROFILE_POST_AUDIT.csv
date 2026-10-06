@@ -1,0 +1,86 @@
+﻿section,field,owner,mandatory,Post-Audit Status,Evidence
+1. Contractor Identity,BSS ID,System,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Contractor Type,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Legal Name,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Trade / Brand Name,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Entity Constitution,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Authorised Person Name,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Designation,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Mobile Number,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Email ID,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,CIN,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Company Name,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Listed on Stock Exchange,Contractor,No,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Company Status,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,ROC,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Registration Number,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Company Category,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Company Sub Category,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Class of Company,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Date of Incorporation,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Age of Company,System,No,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Activity,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,NIC Code,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,NIC Description,System / Contractor,No,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Number of Members,Contractor,No,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Date of Last Annual General Meeting,Contractor,No,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Date of Last Filed Balance Sheet,Contractor,No,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Authorised Share Capital,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Paid-up Share Capital,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,DIN,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Director Name,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Designation,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Appointment Date,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Cessation,Contractor,Yes,PRESENT & VERIFIED,demodata
+1. Contractor Identity,Cessation Date,Contractor,If applicable,PRESENT & VERIFIED,demodata
+2. Legal & Registration,PAN,Contractor,If applicable,PRESENT & VERIFIED,demodata
+2. Legal & Registration,GSTIN,Contractor,If applicable,PRESENT & VERIFIED,demodata
+2. Legal & Registration,Udyam Registration Number,Contractor,If applicable,PRESENT & VERIFIED,demodata
+2. Legal & Registration,Labour Department Registration Number,Contractor,If applicable,PRESENT & VERIFIED,demodata
+2. Legal & Registration,Contract Labour Licence Number,Contractor,If applicable,PRESENT & VERIFIED,demodata
+2. Legal & Registration,BOCW / Other Labour Registration,Contractor,If applicable,PRESENT & VERIFIED,demodata
+2. Legal & Registration,Licence Valid From,Contractor/System,If applicable,PRESENT & VERIFIED,demodata
+2. Legal & Registration,Licence Valid To,Contractor/System,If applicable,PRESENT & VERIFIED,demodata
+4. Registered Address,Registered Address,Contractor,If applicable,PRESENT & VERIFIED,demodata
+4. Registered Address,City / District,Contractor,If applicable,PRESENT & VERIFIED,demodata
+4. Registered Address,State / UT,Contractor,If applicable,PRESENT & VERIFIED,demodata
+4. Registered Address,PIN Code,Contractor,If applicable,PRESENT & VERIFIED,demodata
+4. Registered Address,Operating States,Contractor,If applicable,PRESENT & VERIFIED,demodata
+5. Contact Persons,Primary Contact Email,Contractor,If applicable,PRESENT & VERIFIED,demodata
+5. Contact Persons,Primary Contact Name,Contractor,If applicable,PRESENT & VERIFIED,demodata
+5. Contact Persons,Primary Contact Mobile,Contractor,If applicable,PRESENT & VERIFIED,demodata
+5. Contact Persons,Compliance Contact Name,Contractor,If applicable,PRESENT & VERIFIED,demodata
+5. Contact Persons,Compliance Contact Mobile,Contractor,If applicable,PRESENT & VERIFIED,demodata
+5. Contact Persons,Compliance Contact Email,Contractor,If applicable,PRESENT & VERIFIED,demodata
+6. Banking & Commercial,Bank Account Name,Contractor,If applicable,PRESENT & VERIFIED,demodata
+6. Banking & Commercial,Bank Name,Contractor,If applicable,PRESENT & VERIFIED,demodata
+6. Banking & Commercial,Account Number,Contractor,If applicable,PRESENT & VERIFIED,demodata
+6. Banking & Commercial,IFSC Code,Contractor,If applicable,PRESENT & VERIFIED,demodata
+6. Banking & Commercial,Annual Turnover Band,Contractor,If applicable,PRESENT & VERIFIED,demodata
+6. Banking & Commercial,Payment Verification Status,System,If applicable,PRESENT & VERIFIED,demodata
+8. Principal Employer & Site,Principal Employer Name,Contractor,If applicable,PRESENT & VERIFIED,demodata
+8. Principal Employer & Site,Principal Employer ID,System,If applicable,PRESENT & VERIFIED,demodata
+8. Principal Employer & Site,Site / Establishment Name,Contractor,If applicable,PRESENT & VERIFIED,demodata
+8. Principal Employer & Site,Site ID,System,If applicable,PRESENT & VERIFIED,demodata
+8. Principal Employer & Site,Contract / Work Order Number,Contractor,If applicable,PRESENT & VERIFIED,demodata
+8. Principal Employer & Site,Contract Start Date,Contractor,If applicable,PRESENT & VERIFIED,demodata
+8. Principal Employer & Site,Contract End Date,Contractor,If applicable,PRESENT & VERIFIED,demodata
+10. Documents,PAN Document,Contractor,If applicable,PRESENT & VERIFIED,demodata
+10. Documents,GST Certificate,Contractor,If applicable,PRESENT & VERIFIED,demodata
+10. Documents,Contract Labour Licence,Contractor,If applicable,PRESENT & VERIFIED,demodata
+10. Documents,PF Registration Certificate,Contractor,If applicable,PRESENT & VERIFIED,demodata
+10. Documents,ESIC Registration Proof,Contractor,If applicable,PRESENT & VERIFIED,demodata
+10. Documents,Insurance / Workmen Compensation Proof,Contractor,If applicable,PRESENT & VERIFIED,demodata
+10. Documents,Bank Proof / Cancelled Cheque,Contractor,If applicable,PRESENT & VERIFIED,demodata
+10. Documents,Other Certificates,Contractor,If applicable,PRESENT & VERIFIED,demodata
+11. Worker Management,Worker Onboarding Method,Contractor,If applicable,PRESENT & VERIFIED,demodata
+11. Worker Management,QR Scanner / Device ID,System,If applicable,PRESENT & VERIFIED,demodata
+11. Worker Management,Attendance Method,Contractor,If applicable,PRESENT & VERIFIED,demodata
+11. Worker Management,Payroll Method,Contractor,If applicable,PRESENT & VERIFIED,demodata
+12. Verification & Consent,Contractor Risk Rating,System,If applicable,PRESENT & VERIFIED,demodata
+12. Verification & Consent,Consent for Data Processing,Contractor,If applicable,PRESENT & VERIFIED,demodata
+12. Verification & Consent,Consent Date,System,If applicable,PRESENT & VERIFIED,demodata
+12. Verification & Consent,Registration Source,System,If applicable,PRESENT & VERIFIED,demodata
+12. Verification & Consent,Registered By,System,If applicable,PRESENT & VERIFIED,demodata
+12. Verification & Consent,Registration Date,System,If applicable,PRESENT & VERIFIED,demodata
+13. Public Contractor Profile,Verified Contractor Badge,System,If applicable,PRESENT & VERIFIED,demodata

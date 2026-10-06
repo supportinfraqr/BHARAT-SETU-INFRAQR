@@ -23,11 +23,33 @@
 
 **Mobile frontend server (separate — frontend only):**
 - Host `43.204.194.237` (`ip-172-31-15-15`), Ubuntu 26.04, key `FINAL/Requirements/mlogin.bharatshramsetu.com.pem` (`chmod 400` first).
-- Serves a **mobile-optimized frontend only** (no backend/db) at **`https://mlogin.bharatshramsetu.com`**: `~/bss/FINAL/deploy-mobile` (compose project **`bss-mobile`** → `frontend` + `nginx`).
+- Serves a **mobile-optimized frontend only** (no backend/db) at **`https://mlogin.bharatshramsetu.com`**: `~/bss/FINAL/deploy/mobile` (compose project **`bss-mobile`** → `frontend` + `nginx`). Built from the `Mobile/` source (a copy of `Web/`).
 - The Next app talks to the live backend via `BSS_API_BASE_URL`/`BSS_AUTH_API_URL=https://login.bharatshramsetu.com`; `/media` & `/static` are proxied to the main app server. TLS via certbot (`/etc/letsencrypt/live/mlogin.bharatshramsetu.com`).
-- Deploy: rsync `Frontend/BSS_Gravity/` + `deploy-mobile/`, then `sudo docker compose up -d --build frontend` (never touches prod backend/data).
+- Deploy: rsync `Mobile/` + `deploy/mobile/`, then `sudo docker compose up -d --build frontend` (never touches prod backend/data).
 
 Staging and production are separate servers with separate databases. Data on one does not affect the other.
+
+## Repository layout (FINAL/)
+
+```
+FINAL/
+  Backend/          # common backend (Django) — used by every environment
+  Web/              # web frontend (Next.js)
+  Mobile/           # mobile frontend (separate copy of Web/, mobile-optimised deploy)
+  deploy/           # STAGING deploy tree (compose + per-role folders + .env)
+    backend/        #   backend image (Dockerfile)
+    web/            #   web nginx conf
+    mobile/         #   mobile compose + nginx  (the mlogin server's stack)
+    db/             #   DB seed
+    docker-compose.yml
+  deploy-prod/      # PROD deploy tree (same layout: backend/ web/ db/)
+  video-attendance/ # CCTV pipeline (attendance server)
+  scripts/          # ops scripts (watchdog, backups, cron installers)
+```
+
+- **Each environment is a copy of the same layout.** Staging (`3.109.68.143`) uses `deploy/`; prod (`13.235.161.192`) uses `deploy-prod/`. Only `.env` and the URLs/domains differ.
+- Backend runs on **both** app servers (staging + prod). The **mobile** site (`mlogin`, `43.204.194.237`) is **frontend-only** and builds the `Mobile/` source; the **attendance** server (`15.206.193.173`) runs only the CCTV pipeline.
+- The frontend compose build context is `../Web` (staging/prod) and `../Mobile` (mobile).
 
 ## Terminology (important)
 
@@ -68,7 +90,7 @@ rsync -az -e "ssh -i $KEY" --exclude 'venv/' --exclude '.venv/' --exclude '__pyc
   /home/yasser/BSS_Project/FINAL/Backend/ $HOST:~/bss/FINAL/Backend/
 rsync -az -e "ssh -i $KEY" --exclude 'node_modules/' --exclude '.next/' --exclude '.env*' \
   --exclude 'out/' --exclude 'coverage/' --exclude '*.log' --exclude '.vercel/' \
-  /home/yasser/BSS_Project/FINAL/Frontend/BSS_Gravity/ $HOST:~/bss/FINAL/Frontend/BSS_Gravity/
+  /home/yasser/BSS_Project/FINAL/Web/ $HOST:~/bss/FINAL/Web/
 ssh -i "$KEY" $HOST 'cd ~/bss/FINAL/deploy && docker compose up -d --build backend frontend'
 ```
 

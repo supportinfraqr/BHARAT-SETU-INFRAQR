@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BSS vs D.O. Letter (Labour Codes) — Gap Analysis</title>
+<style>
+  :root{
+    --navy:#0b2b4b; --navy2:#123c63; --ink:#0f172a; --muted:#64748b;
+    --line:#e2e8f0; --bg:#f6f8fb; --card:#ffffff;
+    --green:#0f9d58; --greenbg:#e7f6ec; --greenbd:#b7e3c6;
+    --amber:#b45309; --amberbg:#fef3e2; --amberbd:#f6d9a8;
+    --red:#c0392b; --redbg:#fdecea; --redbd:#f5c2bb;
+    --blue:#1d4ed8; --bluebg:#e8effd; --bluebd:#c3d4f7;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.5}
+  header.top{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:30px 26px}
+  header.top .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.8}
+  header.top h1{margin:6px 0 6px;font-size:24px}
+  header.top p{margin:0;font-size:13px;opacity:.9;max-width:900px}
+  .wrap{max-width:1080px;margin:0 auto;padding:24px 18px 60px}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0 0 22px}
+  @media(max-width:720px){.cards{grid-template-columns:repeat(2,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .card .n{font-size:26px;font-weight:800;line-height:1}
+  .card .l{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:6px}
+  .card.g .n{color:var(--green)} .card.a .n{color:var(--amber)} .card.r .n{color:var(--red)} .card.b .n{color:var(--blue)}
+  h2{font-size:18px;margin:30px 0 10px}
+  .note{background:#fff;border:1px solid var(--line);border-left:4px solid var(--navy);border-radius:10px;padding:12px 14px;font-size:13px;color:#334155}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13px}
+  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f1f5f9;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#475569}
+  tr:last-child td{border-bottom:none}
+  .req{font-weight:700;color:var(--ink)}
+  .ref{display:block;font-size:11px;color:var(--muted);font-weight:500;margin-top:2px}
+  .badge{display:inline-block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:3px 9px;border-radius:999px;border:1px solid}
+  .b-yes{color:var(--green);background:var(--greenbg);border-color:var(--greenbd)}
+  .b-part{color:var(--amber);background:var(--amberbg);border-color:var(--amberbd)}
+  .b-no{color:var(--red);background:var(--redbg);border-color:var(--redbd)}
+  .b-na{color:var(--blue);background:var(--bluebg);border-color:var(--bluebd)}
+  ul.tight{margin:6px 0 0;padding-left:18px}
+  ul.tight li{margin:2px 0}
+  code{background:#eef2f7;border:1px solid #dbe3ec;border-radius:5px;padding:0 4px;font-size:12px}
+  .missing{background:#fff;border:1px solid var(--redbd);border-radius:12px;padding:4px 16px 12px;margin-top:10px}
+  .missing h3{font-size:14px;color:var(--red);margin:14px 0 6px}
+  .missing li{font-size:13px;margin:6px 0}
+  .foot{margin-top:26px;font-size:12px;color:var(--muted)}
+  .legend{font-size:12px;color:var(--muted);margin:8px 0 0}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="eyebrow">Compliance gap analysis</div>
+  <h1>BSS vs D.O. Letter — Implementation of the Labour Codes</h1>
+  <p>Source: Office of the Chief Labour Commissioner (Central), Ministry of Labour &amp; Employment — D.O. No. 14144/2016-Coord, dated 30 July 2026 (from Sonal Mishra, CLC(C)), addressed to CMDs/CEOs/MDs. Subject: full compliance with the four Labour Codes (in force 21.11.2025), with emphasis on contract labour.</p>
+</header>
+
+<div class="wrap">
+
+  <div class="cards">
+    <div class="card g"><div class="n">1</div><div class="l">Fully covered in BSS</div></div>
+    <div class="card a"><div class="n">5</div><div class="l">Partially covered</div></div>
+    <div class="card r"><div class="n">4</div><div class="l">Missing in BSS</div></div>
+    <div class="card b"><div class="n">1</div><div class="l">Not a software requirement</div></div>
+  </div>
+
+  <p class="note"><strong>How to read the “Requirement → BSS status” table:</strong> each D.O.‑letter ask is matched against the current BSS codebase. <span class="badge b-yes">Covered</span> = supported today; <span class="badge b-part">Partial</span> = partly supported / needs extension; <span class="badge b-no">Missing</span> = not implemented in BSS.</p>
+
+  <h2>Requirement‑by‑requirement comparison</h2>
+  <table>
+    <thead>
+      <tr><th style="width:34%">D.O. letter requirement</th><th style="width:12%">BSS status</th><th style="width:54%">What BSS does today · gap</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="req">1. Appointment letters to every employee, including contract labour</span><span class="ref">OSH Code · model format = Annexure‑II</span></td>
+        <td><span class="badge b-part">Partial</span></td>
+        <td>
+          BSS auto‑issues an <strong>Appointment Letter</strong> when a worker–contractor binding is accepted
+          (<code>api/letters.py</code>, <code>bindings.py:_issue_binding_letter</code>), with per‑site appointment‑letter templates and worker self‑service to view/download.
+          <ul class="tight">
+            <li><strong>Gap:</strong> issued only to workers on‑boarded through BSS — not to <em>all</em> employees of the establishment.</li>
+            <li><strong>Gap:</strong> the D.O.‑letter model format (Annexure‑II) is not verified/available as a standard template.</li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="req">2. Timely payment of wages (daily / weekly / fortnightly / monthly timelines)</span><span class="ref">Code on Wages, 2019</span></td>
+        <td><span class="badge b-part">Partial</span></td>
+        <td>
+          BSS has payroll (<code>PayrollConfig.salary_frequency</code>), cost sheets and the statutory <strong>Register of Wages (Form XVII)</strong> templates.
+          <ul class="tight">
+            <li><strong>Gap:</strong> no selectable <strong>wage period</strong> (daily / weekly / fortnightly) — everything defaults to monthly.</li>
+            <li><strong>Gap:</strong> no enforcement/alerts for the statutory <em>payment deadlines</em> (daily → end of shift; weekly → before weekly holiday; fortnightly → within 2 days; monthly → within 7 days).</li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="req">3. Wage slips issued on or before payment</span><span class="ref">Code on Wages · model = Annexure‑III</span></td>
+        <td><span class="badge b-part">Partial</span></td>
+        <td>
+          A <strong>Wage Slip (Form XIX)</strong> template and wage‑slip/−payslip audit specifications exist (<code>register_defaults.py</code>, <code>audit/spec_data.py</code>), plus payroll runs.
+          <ul class="tight">
+            <li><strong>Gap:</strong> no automatic per‑worker <strong>wage‑slip generation &amp; issue</strong> tied to the payment event; and it isn’t aligned to the Annexure‑III particulars.</li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="req">4. Welfare facilities for contract labour (drinking water, sanitation, first‑aid, creche, amenities)</span><span class="ref">OSH Code, 2020</span></td>
+        <td><span class="badge b-part">Partial</span></td>
+        <td>
+          Site/employer profiles carry welfare declarations &amp; worker welfare/safety records: <code>first_aid_enabled</code>, <code>canteen_facility</code>, <code>creche_facility</code>, <code>welfare_room</code>, <code>medical_exam_enabled</code>, <code>ppe_provision</code>, <code>safety_training_enabled</code>, etc.
+          <ul class="tight">
+            <li><strong>Gap:</strong> these are self‑declared flags — no evidence capture / verification workflow against the prescribed facility list.</li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="req">5(a). Grievance redressal for contract labour — resolve preferably within 30 days</span><span class="ref">OSH (Central) Rules, 2026</span></td>
+        <td><span class="badge b-part">Partial</span></td>
+        <td>
+          A full grievance module exists (<code>WorkerGrievance</code>, <code>GrievanceResponse</code>; worker/contractor/employer grievance pages) with reply → resolve → confirm → reopen flow, plus employer <code>grievance_mechanism</code> and <code>grievance_officer_name</code>.
+          <ul class="tight">
+            <li><strong>Gap:</strong> no <strong>30‑day SLA</strong> tracking, reminder or escalation.</li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="req">5(b). Grievance Redressal Committee (establishments with 20+ workers, equal employer/worker reps)</span><span class="ref">Industrial Relations Code, 2020</span></td>
+        <td><span class="badge b-no">Missing</span></td>
+        <td>
+          BSS records a single <code>grievance_officer_name</code> only.
+          <ul class="tight">
+            <li><strong>Missing:</strong> a formal committee (members, equal representation, disposal within 30 days) is not modelled.</li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="req">6. Free annual health check‑up for employees who have completed 40 years</span><span class="ref">OSH (Central) Rules, 2026</span></td>
+        <td><span class="badge b-no">Missing</span></td>
+        <td>
+          BSS stores a one‑time medical examination/fitness status (<code>WorkerWelfareSafety.medical_examination_status / medical_fitness_status</code>) and a site <code>medical_exam_enabled</code> flag.
+          <ul class="tight">
+            <li><strong>Missing:</strong> no age‑40+ eligibility rule, and no <strong>annual recurring</strong> check‑up scheduling / reminders.</li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="req">7. Mandatory electronic registration on the Shram Suvidha Portal</span><span class="ref">OSH Code &amp; Code on Social Security</span></td>
+        <td><span class="badge b-no">Missing</span></td>
+        <td>
+          Referenced only as a third‑party portal in the Terms page.
+          <ul class="tight">
+            <li><strong>Missing:</strong> no capture/tracking of establishment registration on Shram Suvidha, no prescribed‑details/document checklist, no validity/expiry reminders.</li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="req">8. Align existing IT systems with the Labour Codes</span><span class="ref">“technology‑driven compliance ecosystem”</span></td>
+        <td><span class="badge b-yes">Covered</span></td>
+        <td>BSS <em>is</em> the compliance IT system — CLRA/OSH registers, wage &amp; statutory masters, minimum‑wage linking, digital records and audit specs. (Effectiveness depends on closing the gaps above.)</td>
+      </tr>
+      <tr>
+        <td><span class="req">9. Nominate a Nodal Officer / SPOC with the Office of CLC(C)</span><span class="ref">Single Point of Contact</span></td>
+        <td><span class="badge b-no">Missing</span></td>
+        <td>
+          BSS holds site‑level <code>payroll_spoc</code> / <code>contractor_management_spoc</code> and an employer <code>grievance_officer_name</code>.
+          <ul class="tight">
+            <li><strong>Missing:</strong> an organisation‑level <strong>Nodal Officer / CLC‑SPOC</strong> (name, designation, contact) — to mirror the CLC’s nomination of Shri Sunil Raghunath Mali, Dy. CLC (011‑20893610).</li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="req">10. Quarterly coordination — video conferences &amp; regional review meetings</span><span class="ref">engagement mechanism</span></td>
+        <td><span class="badge b-na">Not software</span></td>
+        <td>An administrative/engagement activity; BSS does not (and need not) run it. Could optionally track meeting schedules/action points if desired.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>What is missing in BSS (highlighted)</h2>
+  <div class="missing">
+    <h3>Not implemented (must be built)</h3>
+    <ul class="tight">
+      <li><strong>Grievance Redressal Committee</strong> (IR Code) — members, equal employer/worker representation, 20+ threshold, 30‑day disposal.</li>
+      <li><strong>Annual health check‑up for 40+ employees</strong> — age rule + recurring annual scheduling/reminders.</li>
+      <li><strong>Shram Suvidha Portal registration</strong> — establishment registration capture, document checklist, validity/expiry tracking.</li>
+      <li><strong>Nodal Officer / CLC SPOC</strong> — organisation‑level single point of contact record.</li>
+      <li><strong>Statutory wage‑payment timelines</strong> — daily/weekly/fortnightly wage periods + payment‑deadline enforcement.</li>
+    </ul>
+    <h3>Partial (needs extension)</h3>
+    <ul class="tight">
+      <li><strong>Appointment letters</strong> — extend beyond BSS‑onboarded workers; offer the D.O.‑letter model format (Annexure‑II).</li>
+      <li><strong>Wage slips</strong> — auto‑generate &amp; issue per worker on/before payment, aligned to Annexure‑III.</li>
+      <li><strong>Welfare facilities</strong> — capture evidence/verification against the prescribed facility list, not just declarations.</li>
+      <li><strong>Grievance 30‑day SLA</strong> — timers, reminders, escalation.</li>
+    </ul>
+  </div>
+
+  <h2>Suggested roadmap</h2>
+  <table>
+    <thead><tr><th style="width:18%">Priority</th><th style="width:44%">Item</th><th style="width:38%">Where it would live in BSS</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge b-no">High</span></td><td>Grievance Redressal Committee + 30‑day SLA (5a/5b)</td><td>Grievance module (<code>Grievance*</code> models, employer/contractor grievance pages) + notifications.</td></tr>
+      <tr><td><span class="badge b-no">High</span></td><td>Shram Suvidha e‑registration tracking (7)</td><td>Employer profile / compliance master + reminders.</td></tr>
+      <tr><td><span class="badge b-no">High</span></td><td>Wage‑period &amp; payment‑timeline compliance (2, 3)</td><td>Payroll (<code>PayrollConfig</code>), wage‑slip generation, Register of Wages.</td></tr>
+      <tr><td><span class="badge b-part">Medium</span></td><td>Annual 40+ health check‑up (6)</td><td>Worker welfare/safety + document register + scheduling.</td></tr>
+      <tr><td><span class="badge b-part">Medium</span></td><td>Nodal Officer / CLC SPOC field (9)</td><td>Employer profile (alongside <code>grievance_officer_name</code>).</td></tr>
+      <tr><td><span class="badge b-part">Medium</span></td><td>Appointment‑letter coverage + Annexure‑II format (1)</td><td><code>api/letters.py</code> templates.</td></tr>
+      <tr><td><span class="badge b-part">Low</span></td><td>Welfare‑facility evidence/verification (4)</td><td>Site/employer welfare flags + document engine.</td></tr>
+    </tbody>
+  </table>
+
+  <p class="foot">
+    Evidence drawn from the BSS codebase (indicative): <code>api/letters.py</code>, <code>api/v1_bridge/bindings.py</code>,
+    <code>bss_core/models/{auth,payroll,relationship}</code>, <code>bss_core/seeds/register_defaults.py</code>,
+    <code>api/audit/spec_data.py</code>, grievance module (<code>WorkerGrievance</code>/<code>GrievanceResponse</code>),
+    and the employer/worker grievance UI pages. Generated for review; no production change implied.
+  </p>
+</div>
+</body>
+</html>

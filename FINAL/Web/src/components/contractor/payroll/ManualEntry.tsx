@@ -1,0 +1,188 @@
+"use client";
+
+import { useMemo, useState } from 'react';
+import { AlertTriangle, CheckCircle2, Eye, FilePen, Send, UserRound, XCircle } from 'lucide-react';
+import type { ContractorPortalData, PayrollWorkerRecord } from '@/types/portal';
+import { activeDeductions, activeEarnings, computePayroll, defaultStatutoryBonus, formatInr, type PayrollEntryInput } from './PayrollCalculator';
+
+type Stage = 'draft' | 'review' | 'submitted';
+const PERIODS = ['August 2026', 'July 2026', 'June 2026', 'May 2026'];
+
+export default function ManualEntry({ portal, onSave }: {
+  portal: ContractorPortalData;
+  onSave: (record: PayrollWorkerRecord) => void;
+}) {
+  const { payroll } = portal;
+  const earnings = activeEarnings(payroll.config);
+  const deductions = activeDeductions(payroll.config);
+
+  const [workerId, setWorkerId] = useState('');
+  const [period, setPeriod] = useState(PERIODS[0]);
+  const [attendanceDays, setAttendanceDays] = useState('26');
+  const [lopDays, setLopDays] = useState('0');
+  const [amounts, setAmounts] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    earnings.forEach(e => { initial[e.name] = e.flatAmount != null ? String(e.flatAmount) : ''; });
+    deductions.forEach(d => { initial[d.name] = ''; });
+    return initial;
+  });
+  const [stage, setStage] = useState<Stage>('draft');
+  const [notice, setNotice] = useState('');
+  const [validation, setValidation] = useState<Array<{ level:'error'|'warning'; text:string }>>([]);
+
+  const worker = useMemo(() => portal.workers.find(w => w.bssId === workerId), [portal.workers, workerId]);
+  const basic = Number(amounts['Basic']) || 0;
+
+  const entry: PayrollEntryInput = useMemo(() => {
+    const earningsMap: Record<string, number> = {};
+    earnings.forEach(e => { earningsMap[e.name] = Number(amounts[e.name]) || 0; });
+    if (basic > 0 && !(earningsMap['Statutory Bonus'] ?? 0)) earningsMap['Statutory Bonus'] = defaultStatutoryBonus(basic);
+    if (basic > 0 && !(earningsMap['Medical Allowance'] ?? 0)) earningsMap['Medical Allowance'] = 1250;
+    const deductionsMap: Record<string, number> = {};
+    deductions.forEach(d => { deductionsMap[d.name] = Number(amounts[d.name]) || 0; });
+    return {
+      workerId, workerName: worker?.name ?? '', employer: worker?.employer ?? '', site: worker?.site ?? '', period,
+      attendanceDays: Number(attendanceDays) || 0, lopDays: Number(lopDays) || 0, earnings: earningsMap, deductions: deductionsMap,
+    };
+  }, [workerId, worker, period, attendanceDays, lopDays, amounts, earnings, deductions, basic]);
+
+  const computed = useMemo(() => computePayroll(entry, payroll.config), [entry, payroll.config]);
+
+  const setAmount = (name: string, value: string) => setAmounts(current => ({ ...current, [name]: value }));
+
+  const runValidation = () => {
+    const issues: Array<{ level:'error'|'warning'; text:string }> = [];
+    if (!workerId) issues.push({ level:'error', text:'Select a bound worker before saving the record.' });
+    if (computed.gross <= 0) issues.push({ level:'error', text:'Gross pay is ₹0 — add at least one earning amount.' });
+    if (!(Number(attendanceDays) > 0)) issues.push({ level:'error', text:'Attendance days must be greater than 0.' });
+    if (worker && worker.status !== 'Accepted') issues.push({ level:'warning', text:`${worker.name}'s binding is ${worker.status} — flag the record for review before submission.` });
+    setValidation(issues);
+    return issues.filter(i => i.level === 'error').length === 0;
+  };
+
+  const saveDraft = () => {
+    if (!runValidation()) return;
+    setStage('draft');
+    setNotice(`Draft saved for ${worker?.name ?? workerId} · ${period}. You can review and submit it later.`);
+  };
+
+  const review = () => {
+    if (!runValidation()) return;
+    setStage('review');
+    setNotice('');
+  };
+
+  const submit = () => {
+    const record: PayrollWorkerRecord = {
+      id: `PR-${Date.now()}`,
+      workerId: entry.workerId, workerName: entry.workerName, employer: entry.employer, site: entry.site, period: entry.period,
+      status: 'Submitted',
+      attendanceDays: entry.attendanceDays, lopDays: entry.lopDays, pfWage: computed.pfWage,
+      earnings: earnings.map(e => ({ component: e.name, amount: entry.earnings[e.name] ?? 0 })),
+      deductions: deductions.map(d => ({ component: d.name, amount: entry.deductions[d.name] ?? 0 })),
+      contributions: computed.contributions,
+      gross: computed.gross, totalDeductions: computed.totalDeductions, netPay: computed.netPay, employerCost: computed.employerCost,
+      updatedAt: new Date().toISOString(), updatedBy: 'Rajesh Kumar',
+    };
+    onSave(record);
+    setStage('submitted');
+    setNotice('');
+  };
+
+  const inputClass = 'mt-1 w-full h-10 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/20';
+
+  return <div className="space-y-5">
+    {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
+
+    <div className="grid lg:grid-cols-[1.5fr_1fr] gap-5 items-start">
+      {/* Entry panel */}
+      <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Manual worker payroll entry</h2><p className="text-xs text-gray-400 mt-0.5">Earnings and deductions follow the Payroll salary structure configured for your employer.</p></header>
+        <div className="p-5 space-y-5">
+          {/* Step 1 — worker & period */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400 mb-3">1 · Worker & period</p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <label className="text-xs font-semibold text-gray-700">Worker selection / search
+                <select value={workerId} onChange={e => setWorkerId(e.target.value)} className={inputClass}>
+                  <option value="">Select a bound worker</option>
+                  {portal.workers.map(w => <option key={w.id} value={w.bssId}>{w.name} · {w.bssId} · {w.site}</option>)}
+                </select>
+              </label>
+              <label className="text-xs font-semibold text-gray-700">Pay period
+                <select value={period} onChange={e => setPeriod(e.target.value)} className={inputClass}>
+                  {PERIODS.map(p => <option key={p}>{p}</option>)}
+                </select>
+              </label>
+              <label className="text-xs font-semibold text-gray-700">Attendance days (working days present)
+                <input value={attendanceDays} onChange={e => setAttendanceDays(e.target.value.replace(/\D/g, ''))} inputMode="numeric" className={inputClass}/>
+              </label>
+              <label className="text-xs font-semibold text-gray-700">LOP days (loss of pay)
+                <input value={lopDays} onChange={e => setLopDays(e.target.value.replace(/\D/g, ''))} inputMode="numeric" className={inputClass}/>
+              </label>
+            </div>
+            {worker && <p className="mt-3 text-xs text-blue-800 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 inline-flex items-center gap-1.5"><UserRound size={13}/> {worker.name} · {worker.designation} · {worker.employer} · {worker.site}</p>}
+          </div>
+
+          {/* Step 2 — earnings */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400 mb-3">2 · Earnings (active salary components)</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {earnings.map(e => (
+                <label key={e.name} className="text-xs font-semibold text-gray-700 flex items-center gap-2 border border-gray-100 rounded-xl px-3 py-2">
+                  <span className="flex-1 min-w-0">
+                    <span className="block truncate">{e.name}</span>
+                    <span className="block text-[10px] font-normal text-gray-400 mt-0.5">{e.type} · {e.calculation}{e.flatAmount != null ? ` · ₹${e.flatAmount.toLocaleString('en-IN')}` : ''}</span>
+                  </span>
+                  <span className="relative"><span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">₹</span><input value={amounts[e.name] ?? ''} onChange={ev => setAmount(e.name, ev.target.value)} inputMode="decimal" placeholder="0" className="w-28 h-9 rounded-lg border border-gray-200 pl-6 pr-2 text-sm text-right"/></span>
+                </label>
+              ))}
+            </div>
+            {basic > 0 && <p className="mt-2 text-[11px] text-gray-400">Statutory Bonus auto-filled at 8.33% of Basic (₹{formatInr(defaultStatutoryBonus(basic))}) and Medical Allowance at ₹1,250 when Basic is entered.</p>}
+          </div>
+
+          {/* Step 3 — deductions */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400 mb-3">3 · One-time deductions</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {deductions.map(d => (
+                <label key={d.name} className="text-xs font-semibold text-gray-700 flex items-center gap-2 border border-gray-100 rounded-xl px-3 py-2">
+                  <span className="flex-1 min-w-0"><span className="block truncate">{d.name}</span><span className="block text-[10px] font-normal text-gray-400 mt-0.5">{d.type} · {d.frequency}</span></span>
+                  <span className="relative"><span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">₹</span><input value={amounts[d.name] ?? ''} onChange={ev => setAmount(d.name, ev.target.value)} inputMode="decimal" placeholder="0" className="w-28 h-9 rounded-lg border border-gray-200 pl-6 pr-2 text-sm text-right"/></span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Computation panel */}
+      <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden sticky top-20">
+        <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between"><div><h2 className="text-sm font-semibold text-gray-950">Payroll computation</h2><p className="text-xs text-gray-400 mt-0.5">{period} · live calculation</p></div><span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">PF Wage ₹{formatInr(computed.pfWage)}</span></header>
+        <div className="p-5 space-y-4">
+          <dl className="space-y-2">
+            {computed.lines.map(line => <div key={line.label} className="flex items-center justify-between text-xs"><dt className="text-gray-500 flex items-center gap-1.5">{line.label}{line.note && <span title={line.note} className="text-gray-300">ⓘ</span>}</dt><dd className="font-semibold text-gray-800">{formatInr(line.amount)}</dd></div>)}
+          </dl>
+          <div className="pt-3 border-t border-gray-100 space-y-1.5">
+            <div className="flex justify-between text-sm"><span className="text-gray-500">Gross pay</span><strong className="text-gray-900">{formatInr(computed.gross)}</strong></div>
+            <div className="flex justify-between text-sm"><span className="text-gray-500">Total deductions</span><strong className="text-red-700">− {formatInr(computed.totalDeductions)}</strong></div>
+            <div className="flex justify-between text-base pt-1.5 border-t border-gray-100"><span className="font-semibold text-gray-900">Net pay</span><strong className="text-bss-green text-lg">{formatInr(computed.netPay)}</strong></div>
+            <div className="flex justify-between text-xs text-gray-400"><span>Employer cost (incl. employer contributions)</span><span>{formatInr(computed.employerCost)}</span></div>
+          </div>
+
+          {validation.length > 0 && <div className="space-y-1.5">{validation.map((issue, i) => <p key={i} role="alert" className={`text-xs flex gap-1.5 items-start rounded-lg px-3 py-2 ${issue.level === 'error' ? 'bg-red-50 text-red-700' : 'bg-orange-50 text-orange-700'}`}>{issue.level === 'error' ? <XCircle size={13} className="mt-0.5 flex-shrink-0"/> : <AlertTriangle size={13} className="mt-0.5 flex-shrink-0"/>}{issue.text}</p>)}</div>}
+
+          {stage === 'review' && <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-xs text-blue-900">Review the computed values above. Submission sends the record for authorised reviewer verification — evidence quarantine applies until then.</div>}
+          {stage === 'submitted' && <div className="p-3 rounded-xl bg-green-50 border border-green-100 text-xs text-green-800 flex gap-1.5"><CheckCircle2 size={14} className="flex-shrink-0 mt-0.5"/>Record submitted for verification. Track its status in Worker Payroll Records.</div>}
+
+          <div className="flex gap-2 pt-1">
+            <button onClick={saveDraft} className="flex-1 h-10 rounded-lg border border-gray-200 text-xs font-bold text-gray-700 flex items-center justify-center gap-1.5 hover:bg-gray-50"><FilePen size={14}/>Save Draft</button>
+            {stage === 'review'
+              ? <button onClick={submit} className="flex-1 h-10 rounded-lg bg-bss-green text-white text-xs font-bold flex items-center justify-center gap-1.5 hover:brightness-95"><Send size={14}/>Submit / Confirm</button>
+              : <button onClick={review} className="flex-1 h-10 rounded-lg bg-[#073B67] text-white text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-[#062D4F]"><Eye size={14}/>Review</button>}
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>;
+}

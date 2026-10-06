@@ -1,0 +1,760 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@theme {
+  --color-bss-navy: #073B67;
+  --color-bss-deep-navy: #062D4F;
+  --color-bss-interactive-blue: #155E95;
+  --color-bss-orange: #F47A32;
+  --color-bss-soft-orange: #FFF4EC;
+  --color-bss-green: #2F9E67;
+  --color-bss-soft-green: #EDF8F2;
+  
+  --color-bss-bg: #F6F8FB;
+  --color-bss-card: #FFFFFF;
+  --color-bss-surface: #F1F5F8;
+  --color-bss-blue-tint: #EEF5FA;
+  
+  --color-bss-text-primary: #15212B;
+  --color-bss-text-secondary: #5D6975;
+  --color-bss-text-muted: #87929C;
+  
+  --color-bss-border: #E2E8EE;
+  
+  --color-bss-success: #2F9E67;
+  --color-bss-warning: #F47A32;
+  --color-bss-error: #D64545;
+  --color-bss-info: #155E95;
+  
+  --font-sans: "Noto Sans", "Noto Sans Devanagari", "Segoe UI", Arial, sans-serif;
+}
+
+:root {
+  --background: #F6F8FB;
+  --foreground: #15212B;
+  --bss-header-height: 3.5rem;
+}
+
+html {
+  min-width: 320px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: calc(var(--bss-header-height) + 1rem);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+button,
+a,
+select,
+label,
+summary,
+[role="button"],
+[role="tab"],
+[role="menuitem"],
+[role="option"],
+[role="checkbox"],
+[role="switch"],
+[onclick],
+.cursor-pointer {
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"],
+.cursor-not-allowed {
+  cursor: not-allowed !important;
+}
+
+/* Non-editable form fields (read-only or disabled) must never show the text
+   I-beam — show the default arrow so it's obvious they cannot be edited. */
+input:disabled,
+select:disabled,
+textarea:disabled,
+input[readonly],
+textarea[readonly],
+input[aria-readonly="true"],
+textarea[aria-readonly="true"] {
+  cursor: default !important;
+}
+
+/* Opt-in: a disabled field that should show the "blocked" cursor instead of
+   the default arrow (e.g. Disability Type / % when Disability Status = No). */
+.bss-cursor-blocked:disabled,
+.bss-cursor-blocked[readonly] {
+  cursor: not-allowed !important;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(21, 94, 149, 0.28);
+  outline-offset: 2px;
+}
+
+/* Accessibility preferences (worker Settings → Accessibility). The classes are
+   applied to <html> app-wide by AccessibilityEffects; rem-based sizes only
+   scale when the root font-size changes. */
+html.bss-large-text { font-size: 18px; }
+
+html.bss-high-contrast {
+  --foreground: #000;
+  --color-bss-text-primary: #000;
+  --color-bss-text-secondary: #1f2937;
+  --color-bss-text-muted: #334155;
+  --color-bss-border: #94a3b8;
+}
+html.bss-high-contrast body { color: #000; }
+/* Deepen the muted greys Tailwind emits for secondary text so copy stops
+   washing out, and strengthen the hairline borders/dividers. */
+html.bss-high-contrast .text-gray-300 { color: #475569; }
+html.bss-high-contrast .text-gray-400 { color: #334155; }
+html.bss-high-contrast .text-gray-500 { color: #1f2937; }
+html.bss-high-contrast .text-gray-600 { color: #111827; }
+html.bss-high-contrast .border-gray-100,
+html.bss-high-contrast .border-gray-200,
+html.bss-high-contrast .border-gray-300 { border-color: #94a3b8; }
+html.bss-high-contrast .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+html.bss-high-contrast .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #94a3b8; }
+
+html.bss-reduce-motion *, html.bss-reduce-motion *::before, html.bss-reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* 3D Flip Utilities */
+.perspective-1000 {
+  -webkit-perspective: 1000px;
+  perspective: 1000px;
+}
+.preserve-3d {
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+/* Keep 3D content GPU-composited so WebKit doesn't flatten/blur the flip. */
+.bss-flip-card {
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+.bss-flip-card > [data-bss-face] {
+  will-change: transform, opacity;
+  transition: opacity 0.4s ease;
+}
+.rotate-y-180 {
+  -webkit-transform: rotateY(180deg);
+  transform: rotateY(180deg);
+}
+
+/* iOS safe-area helpers for full-bleed (viewport-fit=cover) layouts. */
+.pb-safe {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+}
+.pb-safe-lg {
+  padding-bottom: max(6rem, calc(env(safe-area-inset-bottom) + 5rem));
+}
+
+/* Shared portal shell. Desktop navigation deliberately starts above iPad widths. */
+.bss-shell {
+  min-height: 100dvh;
+  /* Cool, airy blue-white wash instead of flat gray — reads premium on any portal. */
+  background: linear-gradient(180deg, #FBFDFF 0%, #F3F7FB 100%);
+  background-attachment: fixed;
+}
+
+.bss-shell-header {
+  padding-top: env(safe-area-inset-top);
+}
+
+.bss-shell-bar {
+  min-height: var(--bss-header-height);
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+.bss-mobile-trigger {
+  display: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+}
+
+.bss-mobile-trigger:hover {
+  background: #f1f5f9;
+}
+
+.bss-mobile-menu {
+  top: calc(var(--bss-header-height) + env(safe-area-inset-top));
+  max-height: calc(100dvh - var(--bss-header-height) - env(safe-area-inset-top));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  /* Clear the floating "Listen & Learn" action so the last items (Language,
+     Sign Out) can always be scrolled to and tapped. */
+  padding-bottom: max(6rem, calc(env(safe-area-inset-bottom) + 5rem));
+  -webkit-overflow-scrolling: touch;
+}
+
+/* While the burger menu is open, hide the floating Listen & Learn action so it
+   can never overlap the menu's Language / Sign Out items. */
+body:has(.bss-mobile-menu) .bss-voice-guide {
+  display: none !important;
+}
+
+.bss-mobile-menu a,
+.bss-mobile-menu button {
+  min-height: 2.75rem;
+}
+
+.bss-app-main {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 1279px) {
+  .bss-desktop-nav {
+    display: none !important;
+  }
+
+  .bss-mobile-trigger {
+    display: inline-flex !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  .bss-desktop-nav {
+    display: flex !important;
+  }
+
+  .bss-mobile-trigger {
+    display: none !important;
+  }
+
+  .bss-mobile-menu {
+    display: none !important;
+  }
+}
+
+/* Dashboard primitives keep tiles aligned across every role. */
+.bss-kpi-grid,
+.bss-equal-grid {
+  grid-auto-rows: 1fr;
+  align-items: stretch;
+}
+
+.bss-kpi-grid > *,
+.bss-equal-grid > * {
+  height: 100%;
+  min-width: 0;
+}
+
+.bss-kpi-card {
+  min-height: 7.5rem;
+  padding: 1rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.875rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.bss-kpi-card strong {
+  display: block;
+  margin-top: auto;
+  padding-top: 0.625rem;
+  color: #0f172a;
+  font-size: clamp(1.25rem, 2vw, 1.6rem);
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.bss-kpi-card p {
+  margin-top: 0.25rem;
+  color: #64748b;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.bss-kpi-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.625rem;
+  display: grid;
+  place-items: center;
+}
+
+.bss-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.bss-eyebrow {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.bss-page-title {
+  color: #020617;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.bss-page-description {
+  color: #64748b;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin-top: 0.35rem;
+}
+
+.bss-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  color: #15803d;
+  background: #f0fdf4;
+  font-size: 0.625rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.bss-panel {
+  min-width: 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+}
+
+.bss-panel-header {
+  min-height: 4.25rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.bss-panel-header h2 {
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.bss-panel-header p {
+  color: #94a3b8;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  margin-top: 0.15rem;
+}
+
+.bss-primary-action,
+.bss-secondary-action,
+.bss-compact-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.625rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bss-primary-action,
+.bss-secondary-action {
+  min-height: 2.75rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.8125rem;
+}
+
+.bss-primary-action {
+  background: #0f172a;
+  color: #fff;
+}
+
+.bss-secondary-action,
+.bss-compact-action {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+}
+
+.bss-compact-action {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+}
+
+.bss-primary-action:disabled,
+.bss-secondary-action:disabled,
+.bss-compact-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.bss-input,
+.bss-select {
+  width: 100%;
+  height: 2.75rem;
+  border: 1px solid #dbe2ea;
+  border-radius: 0.625rem;
+  background: #fff;
+  color: #1e293b;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.bss-alert {
+  border: 1px solid;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+}
+
+.bss-alert-error {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.bss-alert-success {
+  color: #15803d;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.bss-scroll-region {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
+
+[role="dialog"] {
+  max-height: calc(100dvh - max(2rem, env(safe-area-inset-top)) - max(2rem, env(safe-area-inset-bottom)));
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 639px) {
+  .bss-page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .bss-page-header > .bss-primary-action,
+  .bss-page-header > .bss-secondary-action {
+    width: 100%;
+  }
+
+  .bss-panel-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 0.9rem 1rem;
+  }
+
+  .bss-kpi-card {
+    min-height: 6.75rem;
+  }
+
+  [role="dialog"] {
+    max-height: calc(100dvh - env(safe-area-inset-top));
+    border-radius: 1rem 1rem 0 0 !important;
+    margin-top: auto;
+  }
+}
+
+@media (max-width: 374px) {
+  .bss-kpi-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .bss-app-main {
+    padding-top: 1rem !important;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+  }
+
+  .bss-mobile-menu {
+    padding-top: 0.5rem;
+  }
+
+  [role="dialog"] {
+    max-height: calc(100dvh - 1rem);
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 767px) {
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   UX polish — route content fade (subtle, 180ms) + motion
+   accessibility. The app shell/header stays stable; only the
+   changing content region fades in on navigation.
+───────────────────────────────────────────────────────────── */
+/* Fade only — deliberately no transform. A lingering transform (from
+   animation-fill-mode) turns the content region into a containing block, which
+   mis-positions every `position: fixed` dialog rendered inside a page: they
+   centre on the content box instead of the viewport and get clipped by the
+   header. Keep this opacity-only. */
+.bss-content-fade {
+  animation: bssContentIn 0.18s ease-out;
+}
+@keyframes bssContentIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Restrained micro-interactions for enterprise controls */
+.bss-interactive {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.bss-interactive:active {
+  transform: scale(0.985);
+}
+
+/* Respect reduced-motion preferences — remove transitions/animations */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .bss-content-fade { animation: none !important; }
+}
+/* Every interactive control on the worker portal gets the hand cursor — the
+   page is 65% toggles/selects/revoke-buttons and browsers stopped defaulting
+   them to `cursor:pointer` years ago, so they all felt dead. */
+button:not([disabled]),
+a,
+label,
+select,
+input[type="range"],
+[role="button"] {
+  cursor: pointer;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Print stylesheet — renders standalone official BSS certificate
+   when browser print/PDF action is invoked.
+───────────────────────────────────────────────────────────── */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  #bss-certificate-print-area,
+  #bss-certificate-print-area * {
+    visibility: visible !important;
+  }
+  #bss-certificate-print-area {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 2.5rem !important;
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 99999 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* QR scanner viewfinder scan line */
+@keyframes bss-scanline {
+  0% { top: 6%; opacity: 0.3; }
+  50% { top: 94%; opacity: 1; }
+  100% { top: 6%; opacity: 0.3; }
+}
+.bss-scanline {
+  animation: bss-scanline 2.4s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Mobile fluid layout — phones, foldable cover screens and very
+   small displays. Scoped to phone widths only, so the desktop /
+   large-screen layout is untouched.
+   ───────────────────────────────────────────────────────────── */
+
+/* Foldable cover screens and very small phones can be narrower than
+   the 320px design floor — let them go fluid instead of overflowing. */
+@media (max-width: 360px) {
+  html { min-width: 0; }
+}
+
+@media (max-width: 767px) {
+  /* Long unbreakable tokens (BSS IDs, emails, site/company names) must
+     wrap rather than force the page wider than the screen. */
+  .bss-app-main { overflow-wrap: anywhere; }
+
+  /* Grid children default to min-width:auto (= content width), which lets a
+     long value blow out the column. Let them shrink so text wraps inside the
+     card instead of overflowing. (Flex rows are handled more surgically so
+     horizontal scroll strips keep their full-size items.) */
+  .bss-app-main .grid > * { min-width: 0; }
+
+  /* Horizontal scroll strips (e.g. the Profile section tabs) must keep their
+     items at full width and scroll, never squish them into overlapping text. */
+  .bss-app-main [class~="overflow-x-auto"] > *,
+  .bss-app-main [class~="overflow-x-scroll"] > * { flex: 0 0 auto; }
+
+  /* No card/panel/row may ever be wider than the viewport. */
+  .bss-app-main > *,
+  .bss-app-main section,
+  .bss-app-main .bss-panel { max-width: 100%; }
+
+  /* Most worker pages carry their own `p-6`/`p-4` on the root element; on
+     phones that doubles up with the shell gutter and cramps the content.
+     Drop the horizontal part and let the shell own the gutters. */
+  .bss-app-main > :where(div, section, main) {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* Consistent, comfortable page headings on phones. */
+  .bss-app-main h1 {
+    font-size: clamp(1.25rem, 6vw, 1.5rem);
+    line-height: 1.25;
+  }
+
+  .bss-app-main {
+    padding-left: max(0.875rem, env(safe-area-inset-left));
+    padding-right: max(0.875rem, env(safe-area-inset-right));
+  }
+
+  /* Slightly smaller headings / panel chrome so more fits per screen. */
+  .bss-page-title { font-size: clamp(1.25rem, 5.5vw, 1.5rem); }
+  .bss-panel-header { min-height: 0; padding: 0.85rem 1rem; }
+}
+
+@media (max-width: 400px) {
+  .bss-kpi-grid { gap: 0.5rem !important; }
+  .bss-kpi-card { min-height: 6.5rem; padding: 0.85rem; }
+  .bss-kpi-card strong { font-size: 1.15rem; }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ID / credential cards are a fixed pixel design (400×252 standard,
+   374×560 employment). Below the design width they used to squeeze and
+   collapse the worker's name into a vertical strip. Pin the card to its
+   design width and scale the whole scene down to fit the phone instead.
+   `zoom` scales layout too, so no leftover gap/overflow.
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .bss-app-main .bss-flip-card {
+    width: 400px !important;
+    max-width: 400px !important;
+  }
+
+  .bss-app-main .perspective-1000 { width: 100%; }
+}
+
+@media (max-width: 430px) { .bss-app-main .perspective-1000 { zoom: 0.93; } }
+@media (max-width: 410px) { .bss-app-main .perspective-1000 { zoom: 0.90; } }
+@media (max-width: 390px) { .bss-app-main .perspective-1000 { zoom: 0.87; } }
+@media (max-width: 370px) { .bss-app-main .perspective-1000 { zoom: 0.82; } }
+@media (max-width: 350px) { .bss-app-main .perspective-1000 { zoom: 0.77; } }
+@media (max-width: 330px) { .bss-app-main .perspective-1000 { zoom: 0.72; } }
+@media (max-width: 310px) { .bss-app-main .perspective-1000 { zoom: 0.67; } }
+
+/* ─────────────────────────────────────────────────────────────
+   Worker Profile — phone densification. The page is form-heavy, so
+   shrink type and card padding on phones only (desktop untouched) so
+   each section reads comfortably on small / very small screens.
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .bss-profile .text-3xl { font-size: 1.45rem; line-height: 1.2; }
+  .bss-profile .text-2xl { font-size: 1.3rem; }
+  .bss-profile .text-xl { font-size: 1.15rem; }
+  .bss-profile .text-lg { font-size: 1.05rem; }
+  .bss-profile .text-base { font-size: 0.9rem; }
+  .bss-profile .text-\[15px\] { font-size: 13px; }
+  .bss-profile .text-\[14px\] { font-size: 12.5px; }
+  .bss-profile .text-\[13px\] { font-size: 12px; }
+  .bss-profile .text-\[12px\] { font-size: 11px; }
+  .bss-profile .text-sm { font-size: 12.5px; }
+  .bss-profile .text-xs { font-size: 10.5px; }
+
+  /* Tighter cards, gaps and section spacing. */
+  .bss-profile .p-6 { padding: 1rem; }
+  .bss-profile .p-5 { padding: 0.9rem; }
+  .bss-profile .gap-x-6 { column-gap: 1rem; }
+  .bss-profile .gap-y-6 { row-gap: 1rem; }
+  .bss-profile .gap-y-5 { row-gap: 0.9rem; }
+  .bss-profile .space-y-8 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.25rem; }
+
+  /* Section tab strip: smaller text + padding so it's easy to swipe. */
+  .bss-profile .hide-scrollbar button { font-size: 12.5px; padding: 0.6rem 0.85rem; }
+
+  /* Keep native fields full-width and no wider than their card. */
+  .bss-profile input,
+  .bss-profile select,
+  .bss-profile textarea { max-width: 100%; }
+}
+
+@media (max-width: 360px) {
+  .bss-profile .text-3xl { font-size: 1.3rem; }
+  .bss-profile .text-\[15px\] { font-size: 12.5px; }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Data tables on phones — compact type with single-line headers so the
+   header row stops wrapping into a mess. Tables scroll sideways inside
+   their own card (never the page). The Documents register additionally
+   uses single-line cells (--nowrap) so long document names don't break.
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .bss-data-table thead { font-size: 9px; letter-spacing: 0.03em; }
+  .bss-data-table th { padding: 0.5rem; white-space: nowrap; }
+  .bss-data-table th button { white-space: nowrap; }
+  .bss-data-table tbody { font-size: 11px; }
+  .bss-data-table td { padding: 0.5rem; }
+}
+
+
+

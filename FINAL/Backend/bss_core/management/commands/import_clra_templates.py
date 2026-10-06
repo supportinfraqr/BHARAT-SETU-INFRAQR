@@ -605,9 +605,19 @@ def _safe_storage_name(state, filename, form_code):
 
 
 def _folder_name(state):
-    """Matrix/canonical state spelling as used by the archive folder names."""
-    return {"Uttrakhand": "Uttarakhand", "Chattisgarh": "Chhattisgarh",
-            "Dadra & Nagar Haveli": "Dadra and Nagar Haveli"}.get(state, state)
+    """Canonical (or legacy) state name → the archive folder name.
+
+    The archive uses legacy spellings (Orissa, Telengana, Uttrakhand, …), so a
+    canonical state must be mapped back to its folder."""
+    key = str(state or "").strip().lower()
+    return {
+        "odisha": "Orissa",
+        "telangana": "Telengana",
+        "uttarakhand": "Uttrakhand",
+        "chhattisgarh": "Chattisgarh",
+        "puducherry": "Pondicherry",
+        "jammu and kashmir": "Jammu & Kashmir",
+    }.get(key, state)
 
 
 # Preamble boilerplate that is never the register's name.
@@ -744,15 +754,20 @@ def create_for_purpose(zip_path, state, purpose, form_code, title="", only_missi
                                        form, classified)
     if title:
         defaults["title"] = title[:200]
+    # A Central-state template is Central jurisdiction (applies to every state);
+    # everything else is state-scoped.
+    jurisdiction = "central" if str(state).strip().lower().startswith("central") else "state"
     existing = RegisterTemplate.objects.filter(
         state=state, purpose=purpose, form_code=form).first()
     if only_missing and existing is not None:
         return 0
     if existing is None:
         obj = RegisterTemplate(state=state, purpose=purpose, form_code=form,
-                               template_type=classified["type"], html=html, **defaults)
+                               template_type=classified["type"], html=html,
+                               jurisdiction=jurisdiction, **defaults)
     else:
         obj = existing
+        obj.jurisdiction = jurisdiction
         defaults["version"] = obj.version + 1
         for key, value in defaults.items():
             setattr(obj, key, value)

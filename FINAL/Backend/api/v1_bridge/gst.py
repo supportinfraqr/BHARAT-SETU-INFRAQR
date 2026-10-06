@@ -36,6 +36,35 @@ def _legal_name_attr(profile):
     return getattr(profile, "contractor_name", "") or getattr(profile, "trade_name", "")
 
 
+def approved_gstin_owner(gstin, exclude_user_id=None):
+    """An **approved** contractor/employer profile already holding this GSTIN.
+
+    A GSTIN can be valid on only one approved account (whether approved by admin
+    or by EntityLocker). Unapproved accounts may still share a GSTIN; uniqueness
+    is enforced only once an account is approved. Returns the clashing profile or
+    None."""
+    from bss_core.models import ContractorProfile, EmployerProfile
+    value = str(gstin or "").strip().upper()
+    if not value:
+        return None
+    for model in (ContractorProfile, EmployerProfile):
+        qs = model.objects.filter(gstin__iexact=value, approval_status="APPROVED")
+        if exclude_user_id:
+            qs = qs.exclude(user_id=exclude_user_id)
+        obj = qs.first()
+        if obj is not None:
+            return obj
+    return None
+
+
+def gstin_conflict_message(owner):
+    from bss_core.models import ContractorProfile
+    label = (owner.contractor_name if isinstance(owner, ContractorProfile) else owner.employer_name) \
+        or getattr(owner, "employer_code", "") or getattr(owner, "contractor_code", "")
+    return ("This GSTIN is already approved on another account"
+            + (f" ({label})" if label else "") + ". Resolve the duplicate before approving.")
+
+
 def _apply_gst_details(profile, result):
     """Fill blank canonical profile fields from GSTN details (never overwrite)."""
     from bss_core.models import EmployerProfile
@@ -130,6 +159,11 @@ def gst_verification_initiate(request):
     email = str(body.get("email") or profile.email or "").strip()
     if not _GSTIN_RE.match(gstin):
         return Response({"error": "Enter a valid 15-character GSTIN."}, status=status.HTTP_400_BAD_REQUEST)
+    # An already-approved account may not take a GSTIN approved elsewhere.
+    if (getattr(profile, "approval_status", "") or "").upper() == "APPROVED":
+        owner = approved_gstin_owner(gstin, exclude_user_id=profile.user_id)
+        if owner is not None:
+            return Response({"error": gstin_conflict_message(owner)}, status=status.HTTP_409_CONFLICT)
     if not legal_name:
         return Response({"error": "Legal name (as per GST records) is required."}, status=status.HTTP_400_BAD_REQUEST)
     if not email:
@@ -164,6 +198,10 @@ def gst_verification_validate(request):
     txn_id = str(body.get("txnId") or "").strip()
     if not gstin or not otp or not txn_id:
         return Response({"error": "gstin, otp and txnId are required."}, status=status.HTTP_400_BAD_REQUEST)
+    if (getattr(profile, "approval_status", "") or "").upper() == "APPROVED":
+        owner = approved_gstin_owner(gstin, exclude_user_id=profile.user_id)
+        if owner is not None:
+            return Response({"error": gstin_conflict_message(owner)}, status=status.HTTP_409_CONFLICT)
     try:
         result = apisetu_client.gst_validate(gstin, otp, txn_id)
     except apisetu_client.ApiSetuError as exc:
@@ -204,6 +242,10 @@ def gst_verification_verify(request):
     gstin = str(body.get("gstin") or profile.gstin or "").strip().upper()
     if not _GSTIN_RE.match(gstin):
         return Response({"error": "Enter a valid 15-character GSTIN."}, status=status.HTTP_400_BAD_REQUEST)
+    if (getattr(profile, "approval_status", "") or "").upper() == "APPROVED":
+        owner = approved_gstin_owner(gstin, exclude_user_id=profile.user_id)
+        if owner is not None:
+            return Response({"error": gstin_conflict_message(owner)}, status=status.HTTP_409_CONFLICT)
     try:
         result = apisetu_client.gstn_taxpayer(gstin)
     except apisetu_client.ApiSetuError as exc:

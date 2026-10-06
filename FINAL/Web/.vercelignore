@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+.next
+.next(Restored)__1
+.git
+.git*
+node_modules
+prisma/dev.db*

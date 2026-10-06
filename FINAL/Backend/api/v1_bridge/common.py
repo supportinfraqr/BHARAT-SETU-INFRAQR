@@ -339,6 +339,47 @@ def _normalize_mobile(value):
     return ""
 
 
+# Apr–Mar order so a month's position (and calendar year) can be derived.
+_FY_MONTH_ORDER = ["April", "May", "June", "July", "August", "September",
+                   "October", "November", "December", "January", "February", "March"]
+
+
+def _month_name(value):
+    """Resolve a month (name, abbreviation or 'Month YYYY') to its full name."""
+    text = str(value or "").strip().lower()
+    if not text:
+        return ""
+    for name in _FY_MONTH_ORDER:
+        if text.startswith(name[:3].lower()):
+            return name
+    return ""
+
+
+def period_in_future(month, year="", financial_year=""):
+    """True when the given compliance period has not arrived yet.
+
+    Accepts a month name/abbreviation, with either a calendar ``year`` (the
+    generation endpoint sends the month's calendar year) or a ``financial_year``
+    such as ``FY 2026-27``. Future periods must not be generated or submitted.
+    """
+    name = _month_name(month)
+    if not name:
+        return False
+    idx = _FY_MONTH_ORDER.index(name)          # 0=Apr … 8=Dec, 9=Jan … 11=Mar
+    digits = "".join(ch for ch in str(financial_year or "") if ch.isdigit())
+    if len(digits) >= 4:
+        start_year = int(digits[:4])
+    elif str(year).strip().isdigit():
+        cal = int(str(year).strip()[:4])
+        start_year = cal - 1 if idx >= 9 else cal
+    else:
+        return False
+    cal_year = start_year + 1 if idx >= 9 else start_year
+    cal_month = ((idx + 3) % 12) + 1
+    today = timezone.localdate()
+    return cal_year * 12 + cal_month > today.year * 12 + today.month
+
+
 def _requested_roles(role):
     """The user roles a requested portal role maps to ([] when none given)."""
     if not role:
@@ -626,6 +667,7 @@ __all__ = [
     "Notification",
     "PORTAL_ROLE",
     "PortalMutationError",
+    "period_in_future",
     "Q",
     "RefreshToken",
     "Response",

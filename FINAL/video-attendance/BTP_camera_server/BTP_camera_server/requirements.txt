@@ -1,0 +1,11 @@
+ultralytics>=8.3
+deepface>=0.0.93
+tf-keras
+opencv-python>=4.9,<5
+numpy
+pyyaml
+onnxruntime  # passive anti-spoofing (MiniFASNetV2 ONNX, CPU)
+psycopg[binary]  # Postgres driver (replaces sqlite3)
+faiss-cpu  # indexed vector search for the face gallery (exact at this scale)
+pyzbar  # barcode/QR decoding (needs the zbar system DLL on Windows; without it, QR-only OpenCV fallback)
+ruamel.yaml  # comment-preserving config.yaml edits for the /settings page

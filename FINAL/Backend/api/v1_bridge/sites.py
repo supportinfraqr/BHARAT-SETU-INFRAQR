@@ -157,10 +157,15 @@ def _handle_compliances(user, body, method):
             site = Site.objects.filter(id__in=_contractor_site_ids(user)).order_by("id").first()
         month = str(body.get("month") or "")[:20]
         year = str(body.get("year") or "")[:4]
-        # One current register per site + period: supersede the previous ones.
+        if period_in_future(month, year, body.get("financialYear")):
+            raise PortalMutationError(
+                f"{month or 'That period'} {year} is a future period — CLRA registers can only "
+                f"be generated for months that have already started.", 400)
+        # Version history: every regeneration creates a new version; older ones
+        # are kept and marked non-current.
         existing = list(ComplianceBatch.objects
-                        .filter(contractor=user, site=site, month=month, year=year)
-                        .exclude(status__in=["SUPERSEDED", "SUBMITTED", "VERIFIED"]))
+                        .filter(contractor=user, site=site, month=month, year=year))
+        next_version = (max((b.version or 1) for b in existing) + 1) if existing else 1
         batch = ComplianceBatch.objects.create(
             contractor=user, site=site,
             financial_year=str(body.get("financialYear") or "")[:12],
@@ -172,11 +177,16 @@ def _handle_compliances(user, body, method):
             generated_on=timezone.localdate(),
             generated_by=payloads._party_name(user),
             status="GENERATED",
+            version=next_version,
+            is_current=True,
         )
         for old in existing:
-            old.status = "SUPERSEDED"
-            old.superseded_by = batch
-            old.save(update_fields=["status", "superseded_by", "updated_at"])
+            old.is_current = False
+            fields = ["is_current", "updated_at"]
+            if old.superseded_by_id is None:
+                old.superseded_by = batch
+                fields.append("superseded_by")
+            old.save(update_fields=fields)
         return payloads._contractor_compliance_batch_row(batch)
 
     if kind in ("submit", "finalsubmit", "final-submit"):
@@ -186,6 +196,22 @@ def _handle_compliances(user, body, method):
         generated = ComplianceBatch.objects.filter(
             contractor=user, id__in=batch_ids).count() if batch_ids else 0
         period = str(body.get("period") or "")
+        if period_in_future(str(body.get("month") or "") or period, "", body.get("financialYear")):
+            raise PortalMutationError(
+                "This is a future period — compliance can only be submitted for months that "
+                "have already started.", 400)
+        # Version history: each submission of the same period creates a new report
+        # version; the previous current version is kept as history.
+        from django.db.models import Max
+
+        from bss_core.models import ComplianceReport
+        _site_name = str(body.get("site") or "")
+        _fy = str(body.get("financialYear") or "")
+        prior_reports = ComplianceReport.objects.filter(
+            employer=user, site_name=_site_name[:200], period=period[:40],
+            financial_year=_fy[:12])
+        next_version = (prior_reports.aggregate(m=Max("version"))["m"] or 0) + 1
+        prior_reports.update(is_current=False)
         report = compliance.build_audit_report(
             user,
             employer=str(body.get("employer") or ""), site=str(body.get("site") or ""),
@@ -193,6 +219,7 @@ def _handle_compliances(user, body, method):
             financial_year=str(body.get("financialYear") or ""),
             state=str(body.get("state") or ""), submissions=list(submissions),
             generated_registers=generated,
+            version=next_version, is_current=True,
         )
         # Stamp the submitted evidence rows with the package's Unique No. so the
         # listing can track them (Unique No. + Days Left) like the old app.

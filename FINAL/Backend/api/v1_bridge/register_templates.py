@@ -33,6 +33,8 @@ def _template_row(t):
         "formatAvailable": t.format_available,
         "criticality": t.criticality,
         "isMandatory": t.is_mandatory,
+        "jurisdiction": getattr(t, "jurisdiction", "state"),
+        "formatVariant": getattr(t, "format_variant", "new"),
         "version": t.version,
         "fileName": os.path.basename(t.source_file.name) if t.source_file else "",
         "hasFile": bool(t.source_file),
@@ -195,8 +197,16 @@ def _create_template(request, body):
 
     state = str(body.get("state") or "").strip()
     form_code = str(body.get("formCode") or "").strip().upper()
-    if not state or not form_code:
-        return Response({"error": "State and form code are required."},
+    jurisdiction = str(body.get("jurisdiction") or "state").strip().lower()
+    if jurisdiction not in ("state", "central"):
+        jurisdiction = "state"
+    if jurisdiction == "central":
+        state = "Central"
+    format_variant = str(body.get("formatVariant") or "new").strip().lower()
+    if format_variant not in ("new", "old"):
+        format_variant = "new"
+    if not form_code or (jurisdiction == "state" and not state):
+        return Response({"error": "Form code (and State, for a state-level template) are required."},
                         status=status.HTTP_400_BAD_REQUEST)
     if RegisterTemplate.objects.filter(state__iexact=state, form_code=form_code).exists():
         return Response({"error": f"A template already exists for {state} · {form_code}. "
@@ -235,6 +245,7 @@ def _create_template(request, body):
         state=state, form_code=form_code, title=title,
         template_type=template_type, status=status_value,
         act=act, frequency=frequency, criticality=criticality, is_mandatory=is_mandatory,
+        jurisdiction=jurisdiction, format_variant=format_variant,
         source_format=source_format, output_format=output_format,
         columns=columns, fields=fields, html=html, per_row=per_row,
         ai_checks=_clean_checkpoints(body.get("aiChecks")),
@@ -277,17 +288,34 @@ def applicable_form_codes(state):
             if (a.form_label or "").strip().upper().startswith("FORM")}
 
 
-def applicable_templates(state):
-    """Every active register/form template for a state — the full state library.
+def _template_key(t):
+    return ((t.purpose or "").strip().lower(), (t.form_code or "").strip().upper())
 
-    The applicability matrix is no longer used to narrow the list, so all forms
-    for the state are available and adoptable. ``forms`` (the matrix set) is
-    still returned for callers that display applicability."""
+
+def applicable_templates(state):
+    """Every active register/form template for a state — the full state library
+    **plus every Central template** (which applies to all states).
+
+    A state-specific template overrides a Central template with the same
+    purpose + form code, so a state never sees both a state and a Central copy of
+    the same register. States with no such template still get the Central one.
+    The applicability matrix is no longer used to narrow the list."""
+    from django.db.models import Q
+
     from bss_core.models import RegisterTemplate
     qs = (RegisterTemplate.objects
-          .filter(state__iexact=state, is_active=True)
-          .order_by("form_code"))
-    return list(qs), applicable_form_codes(state)
+          .filter(Q(state__iexact=state) | Q(jurisdiction="central"), is_active=True)
+          .order_by("jurisdiction", "form_code"))
+    state_keys = {_template_key(t) for t in qs if getattr(t, "jurisdiction", "state") == "state"}
+    seen, out = set(), []
+    for t in qs:
+        if getattr(t, "jurisdiction", "state") == "central" and _template_key(t) in state_keys:
+            continue
+        if t.id in seen:
+            continue
+        seen.add(t.id)
+        out.append(t)
+    return out, applicable_form_codes(state)
 
 
 def state_strength(state):
@@ -324,12 +352,15 @@ def employer_adopted_ids(employer, state=None, *, site=None):
 
 
 def mandatory_template_ids(state):
-    """Template ids marked Mandatory for a state — these must always be adopted."""
+    """Template ids marked Mandatory for a state (plus central) — always adopted."""
+    from django.db.models import Q
+
     from bss_core.models import RegisterTemplate
     if not state:
         return set()
     return set(RegisterTemplate.objects
-               .filter(state__iexact=state, is_active=True, is_mandatory=True)
+               .filter(Q(state__iexact=state) | Q(jurisdiction="central"),
+                       is_active=True, is_mandatory=True)
                .values_list("id", flat=True))
 
 
@@ -371,6 +402,9 @@ def register_templates(request):
     state_filter = (request.query_params.get("state") or "").strip()
     if state_filter:
         qs = qs.filter(state__iexact=state_filter)
+    jurisdiction_filter = (request.query_params.get("jurisdiction") or "").strip().lower()
+    if jurisdiction_filter in ("state", "central"):
+        qs = qs.filter(jurisdiction=jurisdiction_filter)
     active_filter = (request.query_params.get("active") or "").strip().lower()
     if active_filter in ("true", "false"):
         qs = qs.filter(is_active=active_filter == "true")
@@ -417,6 +451,20 @@ def register_template_detail(request, template_id):
         template.template_type = str(body.get("templateType") or "register")[:20]
     if body.get("status") is not None:
         template.status = str(body.get("status") or "draft")[:20]
+    if body.get("jurisdiction") is not None:
+        value = str(body.get("jurisdiction") or "").strip().lower()
+        if value in ("state", "central"):
+            template.jurisdiction = value
+            if value == "central":
+                template.state = "Central"
+    if body.get("formatVariant") is not None:
+        value = str(body.get("formatVariant") or "").strip().lower()
+        if value in ("new", "old"):
+            template.format_variant = value
+    if body.get("state") is not None and template.jurisdiction == "state":
+        new_state = str(body.get("state") or "").strip()
+        if new_state:
+            template.state = new_state[:60]
     if body.get("act") is not None:
         template.act = str(body.get("act") or "")[:160]
     if body.get("frequency") is not None:

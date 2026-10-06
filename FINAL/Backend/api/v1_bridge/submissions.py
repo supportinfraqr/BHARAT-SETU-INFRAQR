@@ -395,8 +395,8 @@ def _handle_submission_review(user, body):
         _, cid, year, month = parts
         note = str(body.get("note") or "").strip()[:500]
         batches = (ComplianceBatch.objects
-                   .filter(contractor_id=cid, year=year, month=month, site__employer=user)
-                   .exclude(status="SUPERSEDED"))
+                   .filter(contractor_id=cid, year=year, month=month, site__employer=user,
+                           is_current=True))
         evidence = (SubmissionEvidence.objects
                     .filter(user_id=cid, month=month)
                     .filter(Q(financial_year__icontains=year) | Q(period__icontains=year)))
@@ -420,8 +420,8 @@ def _handle_submission_review(user, body):
             raise PortalMutationError("Submission not found.", 404)
         _, cid, year, month = parts
         batches = (ComplianceBatch.objects
-                   .filter(contractor_id=cid, year=year, month=month, site__employer=user)
-                   .exclude(status="SUPERSEDED"))
+                   .filter(contractor_id=cid, year=year, month=month, site__employer=user,
+                           is_current=True))
         if not batches.exists():
             raise PortalMutationError("Submission not found.", 404)
         if decision == "VERIFIED":
@@ -508,6 +508,15 @@ def contractor_compliance_batches(request):
     if not fy and year.isdigit():
         fy = f"{year}-{str((int(year) + 1) % 100).zfill(2)}"
 
+    # Future months cannot be generated — a register can only be produced for a
+    # period that has already begun.
+    if period_in_future(month, year, fy):
+        return Response(
+            {"error": f"{month or 'That period'} {year} is a future period — CLRA registers "
+                      f"can only be generated for months that have already started."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     registers = [
         {"name": m.document_name, "formNo": m.form_number, "frequency": m.frequency}
         for m in RegisterDocumentMaster.objects.filter(kind="register", is_active=True)
@@ -571,18 +580,15 @@ def contractor_compliance_batches(request):
             failures.append(f"No register template is due for {state} (site \u201c{site.site_name}\u201d) "
                             f"in {month} {year}.")
             continue
-        # One current register per site + period. A submitted/verified register
-        # cannot be regenerated (that would erase the employer's review); anything
-        # else for this site+period is superseded by the new one.
+        # Version history: every regeneration of the same site + period creates a
+        # new version. Older versions — even submitted/verified ones — are kept
+        # for audit and marked non-current; the newest is the active version.
         existing = list(ComplianceBatch.objects
-                        .filter(contractor=user, site=site, month=month[:20], year=year[:4])
-                        .exclude(status="SUPERSEDED"))
-        if any(str(b.status).upper() in ("SUBMITTED", "VERIFIED") for b in existing):
-            failures.append(f"A register for \u201c{site.site_name}\u201d {month} {year} is already "
-                            f"submitted or verified \u2014 it cannot be regenerated.")
-            continue
+                        .filter(contractor=user, site=site, month=month[:20], year=year[:4]))
+        next_version = (max((b.version or 1) for b in existing) + 1) if existing else 1
         plans.append({"site": site, "state": state, "rows": group_rows,
-                      "templates": selected, "skipped": skipped, "supersede": existing})
+                      "templates": selected, "skipped": skipped, "supersede": existing,
+                      "version": next_version})
 
     if failures:
         return Response({"error": " ".join(failures), "failures": failures},
@@ -590,6 +596,17 @@ def contractor_compliance_batches(request):
 
     generated_on = timezone.localdate()
     signature = request.FILES.get("signature")
+    # Embed a small signature image on every generated sheet, when one is given.
+    signature_img = None
+    if signature is not None:
+        _ext = os.path.splitext(signature.name or "")[1].lstrip(".").lower()
+        if _ext in ("png", "jpg", "jpeg", "webp", "gif"):
+            try:
+                signature.seek(0)
+                _data = signature.read()
+                signature_img = {"ext": _ext, "data": _data} if _data else None
+            except Exception:  # noqa: BLE001
+                signature_img = None
     created = []
     for plan in plans:
         site, state, group_rows = plan["site"], plan["state"], plan["rows"]
@@ -613,6 +630,7 @@ def contractor_compliance_batches(request):
             site=site.site_name, site_code=site.site_code, state=state,
             financial_year=fy, month=month, year=year, registers=registers,
             generated_on=str(generated_on), templates=templates,
+            signature=signature_img,
         )
         skipped = plan["skipped"]
         batch = ComplianceBatch(
@@ -626,6 +644,8 @@ def contractor_compliance_batches(request):
                    + (f"; {len(skipped)} not due this period: "
                       + ", ".join(f"{s['formCode']} ({s['frequency']})" for s in skipped[:6]) if skipped else "")),
             status="GENERATED",
+            version=plan.get("version", 1),
+            is_current=True,
         )
         stamp = f"{year or generated_on.year}-{month or generated_on.strftime('%b')}".replace(" ", "")
         batch.generated_file.save(
@@ -636,11 +656,15 @@ def contractor_compliance_batches(request):
             signature.seek(0)
             batch.signature_file.save(os.path.basename(signature.name or "signature"), signature, save=False)
         batch.save()
-        # Supersede the previous current register(s) for this site+period.
+        # Keep the previous versions as history: mark them non-current and chain
+        # them forward. Their original status is preserved for the audit trail.
         for old in plan.get("supersede", []):
-            old.status = "SUPERSEDED"
-            old.superseded_by = batch
-            old.save(update_fields=["status", "superseded_by", "updated_at"])
+            old.is_current = False
+            fields = ["is_current", "updated_at"]
+            if old.superseded_by_id is None:
+                old.superseded_by = batch
+                fields.append("superseded_by")
+            old.save(update_fields=fields)
         created.append(payloads._contractor_compliance_batch_row(batch))
         _schedule_register_audits(
             batch.id, templates, group_rows, site.site_name, site.site_code, state,
@@ -1000,8 +1024,8 @@ def compliance_batch_site_documents(request, batch_id):
     # Admin catalog forms are non-mandatory and appear only when the employer
     # selected them; the employer's own forms always appear.
     from bss_core.models import CustomFormName, EmployerFormSelection
-    catalog = list(CustomFormName.objects.filter(is_active=True, state__iexact=state,
-                                                 employer__isnull=True).order_by("sort_order", "name"))
+    from .form_names import catalog_for_state
+    catalog = catalog_for_state(state)
     if employer is not None:
         # Adopted for THIS site (the site-specific selection wins over the
         # legacy site-less one; its is_active decides whether it applies).
@@ -1091,8 +1115,8 @@ def contractor_site_documents(request):
     state, employer = site.state, site.employer
     documents = []
     if employer is not None:
-        catalog = list(CustomFormName.objects.filter(is_active=True, state__iexact=state,
-                                                     employer__isnull=True).order_by("sort_order", "name"))
+        from .form_names import catalog_for_state
+        catalog = catalog_for_state(state)
         # Adopted for THIS site (the site-specific selection wins over the
         # legacy site-less one; its is_active decides whether it applies).
         selections = {}
@@ -1167,6 +1191,38 @@ def compliance_batch_run_audits(request, batch_id):
     return Response({"data": {"status": "scheduled"}}, status=status.HTTP_202_ACCEPTED)
 
 
+def _batch_signature(batch):
+    """The batch's signature upload as an embeddable image, or None.
+
+    Only raster images (png/jpg/webp/gif) can be stamped onto the registers — a
+    PDF signature is left in the bundle untouched."""
+    f = getattr(batch, "signature_file", None)
+    name = getattr(f, "name", "") if f else ""
+    if not name:
+        return None
+    ext = os.path.splitext(name)[1].lstrip(".").lower()
+    if ext not in ("png", "jpg", "jpeg", "webp", "gif"):
+        return None
+    try:
+        f.open("rb")
+        try:
+            data = f.read()
+        finally:
+            f.close()
+    except Exception:  # noqa: BLE001
+        return None
+    return {"ext": ext, "data": data} if data else None
+
+
+def _signature_data_uri(signature):
+    """A ``data:`` URI for a signature image dict (or "")."""
+    import base64
+    if not signature or not signature.get("data"):
+        return ""
+    mime = "image/jpeg" if signature["ext"] in ("jpg", "jpeg") else f"image/{signature['ext']}"
+    return f"data:{mime};base64,{base64.b64encode(signature['data']).decode('ascii')}"
+
+
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -1196,6 +1252,7 @@ def compliance_batch_register(request, batch_id, template_id):
         site_code=(batch.site.site_code if batch.site else ""),
         state=batch.state, month=batch.month, year=batch.year,
         financial_year=batch.financial_year, generated_on=payloads._dts(timezone.now())[:10],
+        signature_data_uri=_signature_data_uri(_batch_signature(batch)),
     )
     return Response({"data": {"html": html, "title": f"{template.state} · {template.form_code}"}},
                     status=status.HTTP_200_OK)
@@ -1236,7 +1293,7 @@ def compliance_batch_register_export(request, batch_id, template_id):
          "fieldMappings": {m.column: m.field_key for m in template.field_mappings.all()},
          "calculationRules": [{"targetField": r.target_field, "formula": r.formula}
                               for r in template.calculation_rules.all()]},
-        rows, context=context)
+        rows, context=context, signature=_batch_signature(batch))
     filename = f"{template.state}-{template.form_code}.xlsx".replace(" ", "_")
     return FileResponse(io.BytesIO(data), as_attachment=True, filename=filename)
 
@@ -1274,6 +1331,7 @@ def compliance_batch_register_pdf(request, batch_id, template_id):
         site_code=(batch.site.site_code if batch.site else ""),
         state=batch.state, month=batch.month, year=batch.year,
         financial_year=batch.financial_year, generated_on=payloads._dts(timezone.now())[:10],
+        signature_data_uri=_signature_data_uri(_batch_signature(batch)),
     )
     try:
         from weasyprint import HTML

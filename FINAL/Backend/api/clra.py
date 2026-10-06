@@ -644,7 +644,7 @@ def _footer_lines_from_html(html_text, template, rows, context):
 _DAY_RANGE_RE = re.compile(r"\d+\s*[\u2026.\u2014\u2013\-]{2,}\s*\d+")
 
 
-def _write_template_sheet(wb, template, rows, context=None):
+def _write_template_sheet(wb, template, rows, context=None, signature=None):
     columns = [str(c) for c in (template.get("columns") or [])]
     if not columns:
         columns = [label for label, _ in REGISTER_COLUMNS]
@@ -716,15 +716,44 @@ def _write_template_sheet(wb, template, rows, context=None):
             ws.merge_cells(start_row=footer_cursor, start_column=1,
                            end_row=footer_cursor, end_column=len(columns))
         footer_cursor += 1
+
+    # Optional small authorised-signature image below the footer, kept tiny so it
+    # reads as a signature rather than a banner.
+    if signature and signature.get("data"):
+        try:
+            from openpyxl.drawing.image import Image as _XLImage
+            from PIL import Image as _PILImage
+
+            height = 38
+            width = 130
+            with _PILImage.open(io.BytesIO(signature["data"])) as _pil:
+                pw, ph = _pil.size or (1, 1)
+            if pw and ph:
+                width = max(1, int(pw * height / ph))
+                if width > 190:
+                    width = 190
+                    height = max(1, int(ph * width / pw))
+            img = _XLImage(io.BytesIO(signature["data"]))
+            img.height, img.width = height, width
+            # Anchor the signature at the right-hand side of the sheet (last column).
+            from openpyxl.utils import get_column_letter
+            sig_col = max(1, len(columns))
+            sig_letter = get_column_letter(sig_col)
+            ws.add_image(img, f"{sig_letter}{footer_cursor + 1}")
+            label = ws.cell(row=footer_cursor + 1 + 3, column=sig_col, value="Authorised Signatory")
+            label.font = Font(size=9, italic=True)
+            label.alignment = Alignment(horizontal="right")
+        except Exception:  # noqa: BLE001 — a bad signature must not break generation
+            pass
     return ws
 
 
-def build_register_workbook(template, rows, context=None):
+def build_register_workbook(template, rows, context=None, signature=None):
     """Return the bytes of a single-register XLSX (honours admin field mapping
     and calculation rules)."""
     wb = Workbook()
     wb.remove(wb.active)
-    _write_template_sheet(wb, template, rows, context)
+    _write_template_sheet(wb, template, rows, context, signature=signature)
     out = io.BytesIO()
     wb.save(out)
     return out.getvalue()
@@ -732,7 +761,7 @@ def build_register_workbook(template, rows, context=None):
 
 def build_workbook(rows, *, contractor="", employer="", site="", site_code="", state="",
                    financial_year="", month="", year="", registers=None,
-                   generated_on="", templates=None):
+                   generated_on="", templates=None, signature=None):
     """Return the bytes of an XLSX workbook: cover sheet + one sheet per register.
 
     When ``templates`` (the State+Form register templates) are supplied, each
@@ -756,7 +785,7 @@ def build_workbook(rows, *, contractor="", employer="", site="", site_code="", s
             # form-style templates (no columns) render to PDF, not Excel.
             if not template.get("columns"):
                 continue
-            _write_template_sheet(wb, template, rows, context)
+            _write_template_sheet(wb, template, rows, context, signature=signature)
         out = io.BytesIO()
         wb.save(out)
         return out.getvalue()
@@ -850,7 +879,8 @@ def render_doc_body(body, rows, context):
 
 
 def render_register_html(template, rows, *, contractor="", employer="", site="", site_code="",
-                         state="", month="", year="", financial_year="", generated_on=""):
+                         state="", month="", year="", financial_year="", generated_on="",
+                         signature_data_uri=""):
     """Render one State+Form register.
 
     If the admin authored an HTML layout (`template['html']`) it is used, with
@@ -866,6 +896,12 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
     rows = apply_calculation_rules(rows, template.get("calculationRules"))
     title = template.get("title") or template.get("formCode") or "Register"
     head = "".join(f"<th>{_esc(col)}</th>" for col in columns)
+    signature_img = ""
+    if signature_data_uri:
+        signature_img = (
+            f'<img src="{signature_data_uri}" alt="signature" '
+            f'style="height:38px;max-width:190px;object-fit:contain;display:block;margin-left:auto" />'
+            f'<div style="font-size:9px;color:#555;text-align:right">Authorised Signatory</div>')
     context = backend_context(
         contractor=contractor, employer=employer, site=site, site_code=site_code,
         state=state, month=month, year=year, financial_year=financial_year,
@@ -892,6 +928,7 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
             "GENERATED_ON": _esc(generated_on), "RECORD_COUNT": str(len(render_rows)),
             "ACT": _esc(template.get("act", "")),
             "HEAD": head, "ROWS": "".join(body),
+            "SIGNATURE": signature_img,
         }
         if template.get("perRow") and not _DOC_BLOCK_RE.search(admin_html):
             inner = _DOC_BLOCK_RE.sub("", admin_html)
@@ -900,6 +937,10 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
         out = render_doc_body(admin_html, render_rows, context)
         for key, value in tokens.items():
             out = out.replace("{{" + key + "}}", value).replace("{{ " + key + " }}", value)
+        # If the admin layout has no signature placeholder, add a small signature
+        # at the end so every generated copy is signed.
+        if signature_img and "{{SIGNATURE}}" not in admin_html and "{{ SIGNATURE }}" not in admin_html:
+            out += f'<div style="margin-top:18px">{signature_img}</div>'
         return out
 
     meta = [
@@ -928,5 +969,6 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
   <div class="sub">{_esc(template.get('formCode',''))} · {_esc(template.get('state',''))} · {len(rows)} record(s)</div>
   <div class="meta">{meta_html}</div>
   <table><thead><tr>{head}</tr></thead><tbody>{''.join(body)}</tbody></table>
-  <div class="foot"><span>Generated on {_esc(generated_on)}</span><span>Signature: ____________________</span></div>
+  <div class="foot"><span>Generated on {_esc(generated_on)}</span>
+    {signature_img or '<span>Signature: ____________________</span>'}</div>
 </body></html>"""

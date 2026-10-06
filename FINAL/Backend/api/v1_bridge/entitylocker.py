@@ -110,15 +110,22 @@ def entitylocker_callback(request):
     auth.save(update_fields=["status", "entity_name", "entity_locker_id", "verified_by",
                              "doi", "email", "mobile", "user", "updated_at"])
     # EntityLocker verification completes the entity's identity step — there is
-    # no separate admin approval, so mark the profile APPROVED too.
+    # no separate admin approval, so mark the profile APPROVED too. But approving
+    # makes the GSTIN valid, and a GSTIN may be approved on only one account.
+    gst_conflict = False
     if auth.user_id:
         from bss_core.models import ContractorProfile, EmployerProfile
+
+        from .gst import approved_gstin_owner
         profile_model = ContractorProfile if auth.role == "contractor" else EmployerProfile
         profile = profile_model.objects.filter(user_id=auth.user_id).first()
         if profile and profile.approval_status != "APPROVED":
-            profile.approval_status = "APPROVED"
-            profile.save(update_fields=["approval_status"])
-    return Response({"verified": True, "data": {
+            if approved_gstin_owner(profile.gstin, exclude_user_id=profile.user_id) is None:
+                profile.approval_status = "APPROVED"
+                profile.save(update_fields=["approval_status"])
+            else:
+                gst_conflict = True
+    return Response({"verified": True, "gstConflict": gst_conflict, "data": {
         "entityName": auth.entity_name, "verifiedBy": auth.verified_by,
         "entityLockerId": auth.entity_locker_id, "role": auth.role,
         "idType": auth.id_type, "idValue": auth.id_value,

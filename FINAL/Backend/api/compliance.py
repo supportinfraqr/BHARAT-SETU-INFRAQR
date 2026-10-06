@@ -105,7 +105,7 @@ def validate_evidence(file_obj, doc_type="", ocr_text=None):
 
 def build_audit_report(contractor, *, employer="", site="", period="",
                        financial_year="", state="", submissions=None,
-                       generated_registers=0):
+                       generated_registers=0, version=1, is_current=True):
     """Create a persisted :class:`ComplianceReport` scored against the compliance
     matrix. A matrix line scores its full weight when the contractor has at least
     one fully-validated (100% accuracy) evidence upload for the package, or a
@@ -128,6 +128,8 @@ def build_audit_report(contractor, *, employer="", site="", period="",
         client_name=(employer or "")[:200],
         auditor=contractor,
         report_date=timezone.localdate(),
+        version=version,
+        is_current=is_current,
     )
     report.unique_no = f"UN{report.id:06d}"
 

@@ -218,6 +218,13 @@ def admin_verification_review(request):
     profile.manual_verification_note = str(body.get("note") or "")[:255]
     fields = ["manual_verification_status", "manual_verification_note"]
     if decision == "VERIFIED":
+        # Approving the account makes its GSTIN valid — a GSTIN may be approved
+        # on only one account (contractor or employer).
+        from .gst import approved_gstin_owner, gstin_conflict_message
+        clash = approved_gstin_owner(profile.gstin, exclude_user_id=profile.user_id)
+        if clash is not None:
+            return Response({"error": gstin_conflict_message(clash)},
+                            status=status.HTTP_409_CONFLICT)
         # Completing identity verification IS the account approval — no separate
         # admin approval step exists, so reflect it on the profile.
         profile.approval_status = "APPROVED"

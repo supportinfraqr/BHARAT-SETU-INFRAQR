@@ -24,11 +24,23 @@ DEFAULT_ZIP = os.path.join(
     Path(__file__).resolve().parents[4], "Requirements", "CLRA Registers PAN India (3).zip")
 MATRIX_FILE = "State wise form of  CLRA.xls"
 
-# Matrix spelling → the name used by RegisterTemplate / Site.state.
+# Matrix/archive spelling → the canonical name used by RegisterTemplate / Site.state.
+# The archive folders use legacy spellings (Orissa, Telengana, Uttrakhand, …) while
+# sites and the catalog use the canonical Indian state names.
 STATE_ALIASES = {
-    "uttarakhand": "Uttrakhand",
-    "chhattisgarh": "Chattisgarh",
-    "dadra and nagar haveli": "Dadra & Nagar Haveli",
+    "uttarakhand": "Uttarakhand",
+    "uttaranchal": "Uttarakhand",
+    "uttrakhand": "Uttarakhand",
+    "chhattisgarh": "Chhattisgarh",
+    "chattisgarh": "Chhattisgarh",
+    "orissa": "Odisha",
+    "odisha": "Odisha",
+    "telengana": "Telangana",
+    "telangana": "Telangana",
+    "pondicherry": "Puducherry",
+    "puducherry": "Puducherry",
+    "jammu & kashmir": "Jammu and Kashmir",
+    "jammu and kashmir": "Jammu and Kashmir",
 }
 # Forms-sheet header cells that are not 2-letter codes.
 HEADER_STATES = {

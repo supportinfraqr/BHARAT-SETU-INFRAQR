@@ -1,0 +1,3 @@
+import {NextResponse} from 'next/server';import {apiError} from '@/server/api';import {getWorkerPortal} from '@/server/portal';import {requireApiSession} from '@/server/session';import {sanitizeWorkerProfile} from '@/lib/permissions';
+export const dynamic='force-dynamic';
+export async function GET(){try{const session=await requireApiSession('Worker');const {worker}=await getWorkerPortal(session);return NextResponse.json({success:true,data:sanitizeWorkerProfile(worker,'Worker-Own Profile')},{headers:{'Cache-Control':'private, no-store'}})}catch(error){return apiError(error,'Worker profile could not be loaded.')}}

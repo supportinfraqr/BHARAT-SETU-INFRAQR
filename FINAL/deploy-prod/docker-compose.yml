@@ -102,7 +102,7 @@ services:
 
   frontend:
     build:
-      context: ../Frontend/BSS_Gravity
+      context: ../Web
       dockerfile: Dockerfile
       args:
         - NEXT_TELEMETRY_DISABLED=1
@@ -127,7 +127,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/nginx.conf:ro
+      - ./web/nginx/default.conf:/etc/nginx/nginx.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
       - media_data:/data/media:ro

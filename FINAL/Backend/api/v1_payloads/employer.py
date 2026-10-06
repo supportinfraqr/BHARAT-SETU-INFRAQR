@@ -586,7 +586,7 @@ def _employer_submissions(user):
         })
 
     for b in (ComplianceBatch.objects
-              .filter(site__employer=user,
+              .filter(site__employer=user, is_current=True,
                       status__in=["SUBMITTED", "VERIFIED", "RETURNED", "REJECTED"])
               .select_related("contractor", "site").order_by("-generated_on", "-id")):
         packages.setdefault((b.contractor_id, b.year, b.month), {"batches": [], "evidence": []})["batches"].append(b)

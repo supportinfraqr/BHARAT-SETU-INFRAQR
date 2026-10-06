@@ -57,6 +57,14 @@ class RegisterTemplate(models.Model):
 
     state = models.CharField(max_length=60, db_index=True)
     form_code = models.CharField(max_length=60)
+    # Jurisdiction: a State template applies only to that state; a Central
+    # template applies to every state (kept with state="Central"). Central rows
+    # are unioned into every state's applicable library for adoption/generation.
+    JURISDICTION = [("state", "State"), ("central", "Central")]
+    FORMAT_VARIANTS = [("new", "New format"), ("old", "Old format")]
+    jurisdiction = models.CharField(max_length=10, choices=JURISDICTION, default="state", db_index=True)
+    # Statutory revision label only (e.g. latest amended form vs older form).
+    format_variant = models.CharField(max_length=10, choices=FORMAT_VARIANTS, default="new")
     # The CLRA purpose/register this template serves (e.g. "Register of Overtime").
     # Several purposes can share a form_code (Maharashtra maps every register to
     # FORM II) — each purpose still gets its own register-wise template.
@@ -333,6 +341,11 @@ class ComplianceReport(models.Model):
     # The generated register batches this package submitted (for the detailed
     # per-submission AI report). Empty for evidence-only submissions.
     batch_ids = models.JSONField(default=list, blank=True)
+    # Version history: every submission of the same (contractor, site, period)
+    # creates a new version. Only the latest is ``is_current`` and reviewed by the
+    # employer; older versions are kept as history.
+    version = models.PositiveIntegerField(default=1)
+    is_current = models.BooleanField(default=True)
     score = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     score_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     auditor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
@@ -620,6 +633,11 @@ class ComplianceBatch(models.Model):
     # Employer's reason when a submission is returned to the contractor.
     review_note = models.CharField(max_length=500, blank=True)
     status = models.CharField(max_length=20, choices=STATUS, default="GENERATED")
+    # Version history: each regeneration of the same (contractor, site, period)
+    # creates a new version. Only the latest is ``is_current``; older versions are
+    # kept for audit and viewable as history.
+    version = models.PositiveIntegerField(default=1)
+    is_current = models.BooleanField(default=True)
     # When a site+period is regenerated, the previous batch is kept for audit but
     # marked SUPERSEDED and points at the batch that replaced it.
     superseded_by = models.ForeignKey("self", null=True, blank=True,
@@ -729,6 +747,13 @@ class CustomFormName(models.Model):
                              related_name="custom_form_names_at_site")
     state = models.CharField(max_length=60, db_index=True)
     name = models.CharField(max_length=160)
+    # Jurisdiction: a State form is catalogued only for that state; a Central form
+    # applies to every state (state="Central") and is unioned into each state's
+    # catalog. Employers still opt in per site.
+    JURISDICTION = [("state", "State"), ("central", "Central")]
+    FORMAT_VARIANTS = [("new", "New format"), ("old", "Old format")]
+    jurisdiction = models.CharField(max_length=10, choices=JURISDICTION, default="state", db_index=True)
+    format_variant = models.CharField(max_length=10, choices=FORMAT_VARIANTS, default="new")
     is_mandatory = models.BooleanField(default=False)
     # True = a document/PDF upload is required; False = "submission only"
     # (the contractor just marks it submitted — no document/PDF needed).

@@ -1,0 +1,97 @@
+Module,Sub-Module,Field,Yes/No (Applicable / Enabled),Contractor Input / Value,Field Type,Data Owner,Mandatory
+Pay Schedule,Pay Schedule,Pay Frequency,Yes,Monthly,Dropdown,Employer / HR Admin,Yes
+Pay Schedule,Pay Schedule,Working Days,Yes,"Monday, Tuesday, Wednesday, Thursday, Friday, Saturday",Multi-select,Employer / HR Admin,Yes
+Pay Schedule,Pay Schedule,Pay Day,Yes,7th of each month,Text / Editable Link,Employer / HR Admin,Yes
+Pay Schedule,Pay Schedule,First Pay Period,Yes,Apr-25,Date / Text,Employer / HR Admin,Yes
+Pay Schedule,Pay Schedule,Upcoming Payroll - Period,Yes,October 2025 (Pay Date: 07/11/2025); September 2025 (Pay Date: 07/10/2025),Display / Read-only,System (Auto-generated),No
+Statutory Compliance,EPF,EPF Number,Yes,MR/NOI/0017140/000,Text,Employer / HR Admin,Yes
+Statutory Compliance,EPF,Deduction Cycle,Yes,Monthly,Dropdown,Employer / HR Admin,Yes
+Statutory Compliance,EPF,Employee Contribution Rate,Yes,"Restrict Contribution to ?15,000 of PF Wage",Dropdown / Radio,Employer / HR Admin,Yes
+Statutory Compliance,EPF,Employer Contribution Rate,Yes,"Restrict Contribution to ?15,000 of PF Wage (View Splitup)",Dropdown / Radio,Employer / HR Admin,Yes
+Statutory Compliance,EPF,Contribution Preference - Employer's PF Contribution (Included in Salary Structure),Yes,Included,Checkbox,Employer / HR Admin,No
+Statutory Compliance,EPF,Contribution Preference - EDLI Contribution (Included in Salary Structure),No,Not Included,Checkbox,Employer / HR Admin,No
+Statutory Compliance,EPF,Contribution Preference - Admin Charges (Included in Salary Structure),No,Not Included,Checkbox,Employer / HR Admin,No
+Statutory Compliance,EPF,Allow Employee Level Override,Yes,Yes,Dropdown,Employer / HR Admin,No
+Statutory Compliance,EPF,Pro-rate Restricted PF Wage,Yes,Yes,Dropdown,Employer / HR Admin,No
+Statutory Compliance,EPF,Consider Applicable Salary Components Based on LOP,Yes,"Yes (when PF Wage is less than ?15,000)",Dropdown,Employer / HR Admin,No
+Statutory Compliance,EPF,Eligible for ABRY Scheme,Yes,Yes,Dropdown,Employer / HR Admin,No
+Statutory Compliance,EPF,"Sample EPF Calculation (PF Wage ?20,000)",Yes,"EPF (Employee, 12% of 15000): ?1800 | EPS (8.33% of 5000, max 15000): ?1250 | EPF (12% of 15000-EPS): ?550 | Total Employer: ?1800",Display / Read-only (Auto-calculated),System (Auto-calculated),No
+Statutory Compliance,ESI,ESI Number,Yes,67-00-01423-000-0304,Text,Employer / HR Admin,Yes
+Statutory Compliance,ESI,Deduction Cycle,Yes,Monthly,Dropdown,Employer / HR Admin,Yes
+Statutory Compliance,ESI,Employee Contribution Rate,Yes,0.75% of Gross Pay,Percentage (System-defined),System (Statutory Default),Yes
+Statutory Compliance,ESI,Employer Contribution Rate,Yes,3.25% of Gross Pay,Percentage (System-defined),System (Statutory Default),Yes
+Statutory Compliance,ESI,Other Detail,Yes,Employer's contribution is included in employee's salary structure,Display / Text,Employer / HR Admin,No
+Statutory Compliance,Professional Tax,Work Location,Yes,TCI Mundra,Display / Location Card,Employer / HR Admin,Yes
+Statutory Compliance,Professional Tax,PT Number (TCI Mundra),No,Not yet updated (Update PT Number),Text / Editable Link,Employer / HR Admin,Yes
+Statutory Compliance,Professional Tax,State (TCI Mundra),Yes,Gujarat,Dropdown / Display,Employer / HR Admin,Yes
+Statutory Compliance,Professional Tax,Deduction Cycle (TCI Mundra),Yes,Monthly,Dropdown,Employer / HR Admin,Yes
+Statutory Compliance,Professional Tax,PT Slabs (TCI Mundra),Yes,View Tax Slabs (Revise),Link / Table,System (Statutory Default) / Employer,Yes
+Statutory Compliance,Professional Tax,Work Location,Yes,TCI Noida,Display / Location Card,Employer / HR Admin,Yes
+Statutory Compliance,Professional Tax,Applicability (TCI Noida),No,Professional Tax is not applicable for work location in Uttar Pradesh,Display / Read-only,System (Statutory Default),No
+Statutory Compliance,Labour Welfare Fund,State,Yes,Gujarat,Display / Location Card,Employer / HR Admin,Yes
+Statutory Compliance,Labour Welfare Fund,Minimum Amount (Gujarat),Yes,?0,Currency,System (Statutory Default),Yes
+Statutory Compliance,Labour Welfare Fund,Maximum Amount (Gujarat),Yes,Unlimited,Currency / Text,System (Statutory Default),Yes
+Statutory Compliance,Labour Welfare Fund,Employee's Share (Gujarat),Yes,?6.00,Currency,System (Statutory Default),Yes
+Statutory Compliance,Labour Welfare Fund,Employer's Share (Gujarat),Yes,?12.00,Currency,System (Statutory Default),Yes
+Statutory Compliance,Labour Welfare Fund,Deduction Cycle (Gujarat),Yes,Half Yearly,Dropdown,Employer / HR Admin,Yes
+Statutory Compliance,Labour Welfare Fund,Status (Gujarat),Yes,Enabled (Toggle On),Toggle,Employer / HR Admin,Yes
+Statutory Compliance,Labour Welfare Fund,State,Yes,Uttar Pradesh,Display / Location Card,Employer / HR Admin,Yes
+Statutory Compliance,Labour Welfare Fund,Applicability (Uttar Pradesh),No,Labour Welfare Fund is not applicable for Uttar Pradesh,Display / Read-only,System (Statutory Default),No
+Statutory Compliance,Statutory Bonus,Minimum Wage in Each State - Gujarat,Yes,"Configured (value in dropdown, not expanded)",Dropdown,Employer / HR Admin,Yes
+Statutory Compliance,Statutory Bonus,Minimum Wage in Each State - Uttar Pradesh,Yes,"Configured (value in dropdown, not expanded)",Dropdown,Employer / HR Admin,Yes
+Statutory Compliance,Statutory Bonus,Minimum Wage in Each State - Uttarakhand,Yes,"Configured (value in dropdown, not expanded)",Dropdown,Employer / HR Admin,Yes
+Statutory Compliance,Statutory Bonus,Minimum Wage in Each State - West Bengal,Yes,"Configured (value in dropdown, not expanded)",Dropdown,Employer / HR Admin,Yes
+Statutory Compliance,Statutory Bonus,Minimum Wage in Each State - Bihar,Yes,"Configured (value in dropdown, not expanded)",Dropdown,Employer / HR Admin,Yes
+Statutory Compliance,Statutory Bonus,Bonus Payment Cycle,Yes,Yearly (October),Dropdown,Employer / HR Admin,Yes
+Statutory Compliance,Statutory Bonus,Percentage of Bonus,Yes,8.33%,Percentage,Employer / HR Admin,Yes
+Salary Compensation,Earnings,Earning Component: Basic,Yes (Active),"Type: Basic | Calculation: Fixed, Flat Amount | Consider for EPF: Yes | Consider for ESI: Yes",Table Row / Configuration,Employer / HR Admin,Yes
+Salary Compensation,Earnings,Earning Component: House Rent Allowance,Yes (Active),"Type: House Rent Allowance | Calculation: Fixed, Flat Amount | Consider for EPF: No | Consider for ESI: Yes",Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Earnings,Earning Component: Conveyance Allowance,Yes (Active),"Type: Conveyance Allowance | Calculation: Fixed, Flat Amount | Consider for EPF: Yes | Consider for ESI: Yes",Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Earnings,Earning Component: Other Fixed Allowance,Yes (Active),"Type: Fixed Allowance | Calculation: Fixed, Flat Amount | Consider for EPF: Yes | Consider for ESI: Yes",Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Earnings,Earning Component: Bonus,No (Inactive),"Type: Bonus | Calculation: Variable, Flat Amount | Consider for EPF: No | Consider for ESI: No",Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Earnings,Earning Component: Commission,No (Inactive),"Type: Commission | Calculation: Variable, Flat Amount | Consider for EPF: No | Consider for ESI: Yes",Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Earnings,Earning Component: Children Education Allowance,No (Inactive),"Type: Children Education Allowance | Calculation: Fixed, Flat Amount | Consider for EPF: Yes | Consider for ESI: Yes",Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Earnings,Earning Component: Transport Allowance,No (Inactive),"Type: Transport Allowance | Calculation: Fixed, Flat Amount of 2000 | Consider for EPF: No | Consider for ESI: Yes",Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Earnings,Earning Component: Travelling Allowance,No (Inactive),"Type: Travelling Allowance | Calculation: Fixed, Flat Amount | Consider for EPF: Yes (If PF Wage < 15k) | Consider for ESI: No",Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Earnings,Earning Component: Leave Encashment,Yes (Active),"Type: Leave Encashment | Calculation: Variable, Flat Amount | Consider for EPF: No | Consider for ESI: No",Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Earnings,Earning Component: Gratuity,Yes (Active),"Type: Gratuity | Calculation: Variable, Flat Amount | Consider for EPF: No | Consider for ESI: No",Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Earnings,Earning Component: Overtime Allowance,No (Inactive),"Type: Overtime Allowance | Calculation: Variable, Flat Amount | Consider for EPF: No | Consider for ESI: Yes",Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Earnings,Earning Component: Notice Pay,Yes (Active),"Type: Notice Pay | Calculation: Variable, Flat Amount | Consider for EPF: No | Consider for ESI: No",Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Earnings,Earning Component: Hold Salary,Yes (Active),"Type: Hold Salary (Non Taxable) | Calculation: Variable, Flat Amount | Consider for EPF: No | Consider for ESI: No",Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Earnings,Earning Component: Statutory Bonus,Yes (Active),"Type: Statutory Bonus | Calculation: Fixed, 8.33% of Basic | Consider for EPF: No | Consider for ESI: Yes",Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Earnings,Earning Component: Medical Allowance,Yes (Active),"Type: Fixed Medical Allowance | Calculation: Fixed, Flat amount of 1250 | Consider for EPF: Yes (If PF Wage < 15k) | Consider for ESI: Yes",Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Deductions,Deduction Component: Notice Pay Deduction,Yes (Active),Type: Notice Pay Deduction | Frequency: One Time,Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Deductions,Deduction Component: Withheld Salary,Yes (Active),Type: Withheld Salary | Frequency: One Time,Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Deductions,Deduction Component: Advance Deduction,Yes (Active),Type: Other Deductions | Frequency: One Time,Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Deductions,Deduction Component: PF Arrear,Yes (Active),Type: Other Deductions | Frequency: One Time,Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Deductions,Deduction Component: Voluntary Provident Fund,No (Inactive),Type: Other Deductions | Frequency: Recurring,Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Deductions,Deduction Component: TDS Deduction,No (Inactive),Type: Other Deductions | Frequency: One Time,Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Benefits,Benefit Component: Voluntary Provident Fund,Yes (Active),Type: Voluntary Provident Fund | Frequency: Recurring,Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Benefits,Benefit Component: National Pension Scheme,Yes (Active),Type: National Pension Scheme | Frequency: Recurring,Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Reimbursements,Reimbursement Component: Fuel Reimbursement,No (Inactive),Type: Fuel Reimbursement | Max Amount: ?0 per month,Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Reimbursements,Reimbursement Component: Driver Reimbursement,No (Inactive),Type: Driver Reimbursement | Max Amount: ?0 per month,Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Reimbursements,Reimbursement Component: Telephone Reimbursement,No (Inactive),Type: Telephone Reimbursement | Max Amount: ?200 per month,Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Reimbursements,Reimbursement Component: Leave Reimbursement,No (Inactive),Type: Leave Reimbursement Allowance | Max Amount: ?0 per month,Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Reimbursements,Reimbursement Component: Vehicle Maintenance Reimbursement,No (Inactive),Type: Vehicle Maintenance Reimbursement | Max Amount: ?0 per month,Table Row / Configuration,Employer / HR Admin,No
+Salary Compensation,Full & Final Settlement,Leave Encashment - Section Enabled,Yes,Enabled (Checked),Checkbox,Employer / HR Admin,No
+Salary Compensation,Full & Final Settlement,Leave Encashment - Leave Type,Yes,Not Selected (Select),Dropdown,Employer / HR Admin,Yes
+Salary Compensation,Full & Final Settlement,Leave Encashment - Leave Encashment On,Yes,Not Selected (Select),Dropdown,Employer / HR Admin,Yes
+Salary Compensation,Full & Final Settlement,Leave Encashment - Encashment Days,Yes,100,Number,Employer / HR Admin,Yes
+Salary Compensation,Full & Final Settlement,Leave Encashment - Encashment Calculation Days,Yes,Not Selected (Select),Dropdown,Employer / HR Admin,Yes
+Salary Compensation,Full & Final Settlement,Leave Encashment - Custom,No,Not Entered,Text,Employer / HR Admin,No
+Salary Compensation,Full & Final Settlement,Gratuity Encashment - Section Enabled,Yes,Enabled (Checked),Checkbox,Employer / HR Admin,No
+Salary Compensation,Full & Final Settlement,Gratuity Encashment - Gratuity Maturity Years,Yes,Not Selected (Select),Dropdown,Employer / HR Admin,Yes
+Salary Compensation,Full & Final Settlement,Gratuity Encashment - Gratuity Maturity Months,Yes,Not Selected (Select),Dropdown,Employer / HR Admin,Yes
+Salary Compensation,Full & Final Settlement,Gratuity Encashment - Rounding off Months,Yes,Not Selected (Select),Dropdown,Employer / HR Admin,No
+Salary Compensation,Full & Final Settlement,Notice Period Penalty - Section Enabled,Yes,Enabled (Checked),Checkbox,Employer / HR Admin,No
+Salary Compensation,Full & Final Settlement,Notice Period Penalty - Penalty On,Yes,Not Selected (Select),Dropdown,Employer / HR Admin,Yes
+Salary Compensation,Full & Final Settlement,Excess Leave Recovery - Section Enabled,Yes,Enabled (Checked),Checkbox,Employer / HR Admin,No
+Salary Compensation,Full & Final Settlement,Excess Leave Recovery - Penalty On,Yes,Not Selected (Select),Dropdown,Employer / HR Admin,Yes
+Salary Compensation,Full & Final Settlement,Assume Days Recovery - Section Enabled,Yes,Enabled (Checked),Checkbox,Employer / HR Admin,No
+Salary Compensation,Full & Final Settlement,Assume Days Recovery - Penalty On,Yes,Not Selected (Select),Dropdown,Employer / HR Admin,Yes
+Staff Portal,Preferences,Enable Portal Access,Yes,Enabled (Toggle On),Toggle,Employer / HR Admin,Yes
+Staff Portal,Preferences,Banner Message - Enter Banner Message,No,Not Entered (Blank),Text,Employer / HR Admin,No
+Staff Portal,Preferences,Banner Message - Display Till Date,No,Not Entered (Blank),Date,Employer / HR Admin,No
+Staff Portal,Preferences,Portal Contact Information,Yes,HR Support - hr.support@tci-group.com,Text / Contact Card,Employer / HR Admin,Yes
+Staff Portal,Preferences,Document Management - Show documents in employee portal,No,Unchecked (Disabled),Checkbox,Employer / HR Admin,No
+Staff Portal,Preferences,Document Management - Show Salary Revision Letter in portal,No,Unchecked (Disabled),Checkbox,Employer / HR Admin,No

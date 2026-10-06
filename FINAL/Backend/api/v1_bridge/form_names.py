@@ -34,6 +34,8 @@ def _row(obj):
     return {
         "id": obj.id,
         "state": obj.state,
+        "jurisdiction": getattr(obj, "jurisdiction", "state"),
+        "formatVariant": getattr(obj, "format_variant", "new"),
         "name": obj.name,
         "mandatory": obj.is_mandatory,
         "requiresDocument": obj.requires_document,
@@ -50,6 +52,8 @@ def _global_row(obj, selection):
     return {
         "id": obj.id,
         "state": obj.state,
+        "jurisdiction": getattr(obj, "jurisdiction", "state"),
+        "formatVariant": getattr(obj, "format_variant", "new"),
         "name": obj.name,
         "scope": "admin",
         "selected": bool(selection and selection.is_active),
@@ -60,19 +64,45 @@ def _global_row(obj, selection):
     }
 
 
+def catalog_for_state(state):
+    """Active admin (employer-null) catalog forms for a state: the state's own
+    forms plus every Central one. A state form overrides a Central form with the
+    same name, so the same form is never listed twice."""
+    from django.db.models import Q
+
+    from bss_core.models import CustomFormName
+    qs = list(CustomFormName.objects.filter(
+        Q(state__iexact=state) | Q(jurisdiction="central"),
+        is_active=True, employer__isnull=True).order_by("sort_order", "name"))
+    state_names = {(o.name or "").strip().lower()
+                   for o in qs if getattr(o, "jurisdiction", "state") == "state"}
+    return [o for o in qs if not (getattr(o, "jurisdiction", "state") == "central"
+                                  and (o.name or "").strip().lower() in state_names)]
+
+
 def _create(request, *, employer, site=None):
     from bss_core.models import CustomFormName
     body = request.data if isinstance(request.data, dict) else {}
+    jurisdiction = str(body.get("jurisdiction") or "state").strip().lower()
+    if jurisdiction not in ("state", "central"):
+        jurisdiction = "state"
     state = str(body.get("state") or "").strip()
+    if jurisdiction == "central":
+        state = "Central"
+    format_variant = str(body.get("formatVariant") or "new").strip().lower()
+    if format_variant not in ("new", "old"):
+        format_variant = "new"
     name = str(body.get("name") or "").strip()
-    if not state or not name:
-        return Response({"error": "State and form name are required."},
+    if not name or (jurisdiction == "state" and not state):
+        return Response({"error": "Form name (and State, for a state-level form) are required."},
                         status=status.HTTP_400_BAD_REQUEST)
     # Admin (global) forms are always non-mandatory — the employer decides
     # mandatory for its own contractors.
     mandatory = bool(body.get("mandatory", False)) if employer is not None else False
     defaults = {
         "is_mandatory": mandatory,
+        "jurisdiction": jurisdiction,
+        "format_variant": format_variant,
         "requires_document": bool(body.get("requiresDocument", True)),
         "frequency": str(body.get("frequency") or "")[:40],
         "description": str(body.get("description") or "")[:255],
@@ -84,6 +114,8 @@ def _create(request, *, employer, site=None):
         employer=employer, site=site, state=state, name=name, defaults=defaults)
     if not created:
         obj.is_mandatory = mandatory
+        obj.jurisdiction = jurisdiction
+        obj.format_variant = format_variant
         if body.get("requiresDocument") is not None:
             obj.requires_document = bool(body.get("requiresDocument"))
         if body.get("aiChecks") is not None:
@@ -108,10 +140,12 @@ def admin_form_names(request):
     if request.method == "POST":
         return _create(request, employer=None)
     state = (request.query_params.get("state") or "").strip()
-    qs = CustomFormName.objects.filter(is_active=True, employer__isnull=True)
     if state:
-        qs = qs.filter(state__iexact=state)
-    return Response({"data": [_row(o) for o in qs.order_by("sort_order", "name")],
+        rows = catalog_for_state(state)
+    else:
+        rows = list(CustomFormName.objects.filter(is_active=True, employer__isnull=True)
+                    .order_by("sort_order", "name"))
+    return Response({"data": [_row(o) for o in rows],
                      "checkpoints": ocr_client.catalog()},
                     status=status.HTTP_200_OK)
 
@@ -143,7 +177,9 @@ def admin_copy_all_states(request):
     if not source_state:
         return Response({"error": "sourceState is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-    source_forms = list(CustomFormName.objects.filter(employer__isnull=True, is_active=True, state__iexact=source_state))
+    source_forms = list(CustomFormName.objects.filter(
+        employer__isnull=True, is_active=True, state__iexact=source_state,
+        jurisdiction="state"))
     if not source_forms:
         return Response({"error": f"No active catalog forms found for {source_state}."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -155,6 +191,8 @@ def admin_copy_all_states(request):
                 employer=None, site=None, state=target, name=sf.name,
                 defaults={
                     "is_mandatory": sf.is_mandatory,
+                    "jurisdiction": "state",
+                    "format_variant": getattr(sf, "format_variant", "new"),
                     "requires_document": sf.requires_document,
                     "frequency": sf.frequency,
                     "description": sf.description,
@@ -217,10 +255,12 @@ def employer_form_names(request):
     # A site sees the forms adopted for it plus the legacy site-less ones.
     site_q = (Q(site=site) | Q(site__isnull=True)) if site is not None else Q(site__isnull=True)
     own = CustomFormName.objects.filter(employer=user, is_active=True).filter(site_q)
-    catalog = CustomFormName.objects.filter(employer__isnull=True, is_active=True)
     if state:
         own = own.filter(state__iexact=state)
-        catalog = catalog.filter(state__iexact=state)
+        catalog = catalog_for_state(state)
+    else:
+        catalog = list(CustomFormName.objects.filter(employer__isnull=True, is_active=True)
+                       .order_by("sort_order", "name"))
     # Site-specific selection wins over the legacy site-less one (its own
     # is_active decides whether the form is adopted at that site).
     selections = {}
@@ -231,7 +271,7 @@ def employer_form_names(request):
         for s in EmployerFormSelection.objects.filter(employer=user, form_name__in=catalog, site=site):
             selections[s.form_name_id] = s
     data = [_row(o) for o in own.order_by("sort_order", "name")]
-    data += [_global_row(o, selections.get(o.id)) for o in catalog.order_by("sort_order", "name")]
+    data += [_global_row(o, selections.get(o.id)) for o in catalog]
     return Response({"data": data, "checkpoints": ocr_client.catalog()}, status=status.HTTP_200_OK)
 
 
