@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Camera, CameraOff, Radio, Settings2, Video } from 'lucide-react';
+import { Camera, CameraOff, Radio, Settings2, Video, X } from 'lucide-react';
+import CameraPreview from '@/components/employer/CameraPreview';
 
 type SiteOption = { id: string; name: string; code?: string };
 type Sighting = { id: number; name: string | null; tsStart: number; camera?: string | null };
-type CameraRow = { label: string; area: string; enabled: boolean; configured: boolean; running?: boolean };
+type CameraRow = { id?: number; siteId?: number; label: string; area: string; enabled: boolean; configured: boolean; running?: boolean };
 
 /**
  * CCTV attendance control — shared by the Contractor and Employer portals.
@@ -32,6 +33,7 @@ export default function VideoAttendancePanel({
   const [sightings, setSightings] = useState<Sighting[]>([]);
   const [cameras, setCameras] = useState<CameraRow[]>([]);
   const [marked, setMarked] = useState(0);
+  const [previewFor, setPreviewFor] = useState<CameraRow | null>(null);
   const stoppedManually = useRef(false);
 
   const effectiveSite = siteId || String(sites[0]?.id ?? '');
@@ -187,16 +189,26 @@ export default function VideoAttendancePanel({
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-4 items-start">
-            <ul className="space-y-1.5">
+            <div className="space-y-2">
               {cameras.map(c => (
-                <li key={c.label} className="flex items-center justify-between gap-2 text-[11px]">
-                  <span className="text-slate-200 font-semibold truncate">{c.label}{c.area && c.area !== c.label ? <span className="text-slate-400 font-normal"> · {c.area}</span> : null}</span>
-                  <span className={`text-[10px] font-bold ${!c.enabled ? 'text-slate-500' : c.configured ? (c.running ? 'text-emerald-300' : 'text-sky-300') : 'text-amber-300'}`}>
-                    {!c.enabled ? 'Disabled' : c.configured ? (c.running ? 'Live' : 'Ready') : 'Incomplete'}
-                  </span>
-                </li>
+                <div key={c.id ?? c.label} className="flex items-center gap-3">
+                  {c.enabled && c.configured && c.id != null ? (
+                    <button type="button" onClick={() => setPreviewFor(c)} className="shrink-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-400/40" title="Click to enlarge">
+                      <CameraPreview cameraId={c.id} role={role} label={c.label} className="w-28 h-16" />
+                    </button>
+                  ) : (
+                    <div className="grid h-16 w-28 shrink-0 place-items-center rounded-lg border border-slate-800 bg-slate-900 text-[9px] text-slate-500">No feed</div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[11px] font-semibold text-slate-200">{c.label}{c.area && c.area !== c.label ? <span className="font-normal text-slate-400"> · {c.area}</span> : null}</p>
+                    <span className={`text-[10px] font-bold ${!c.enabled ? 'text-slate-500' : c.configured ? (c.running ? 'text-emerald-300' : 'text-sky-300') : 'text-amber-300'}`}>
+                      {!c.enabled ? 'Disabled' : c.configured ? (c.running ? 'Live' : 'Ready') : 'Incomplete'}
+                    </span>
+                    {c.enabled && c.configured && c.id != null && <button type="button" onClick={() => setPreviewFor(c)} className="ml-2 text-[10px] font-semibold text-sky-300 hover:text-sky-200">Enlarge</button>}
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
             <div className="space-y-2">
               <p className="text-[11px] text-slate-300">Latest CCTV recognition events:</p>
               {sightings.length === 0
@@ -212,6 +224,23 @@ export default function VideoAttendancePanel({
           </div>
         )}
       </div>
+
+      {previewFor && previewFor.id != null && (
+        <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/80 p-4 backdrop-blur-sm" onClick={() => setPreviewFor(null)}>
+          <div role="dialog" aria-modal="true" aria-label="Camera preview" className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-700 bg-slate-900" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-3 border-b border-slate-700 px-4 py-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-white">{previewFor.label}{previewFor.area && previewFor.area !== previewFor.label ? ` · ${previewFor.area}` : ''}</p>
+                <p className="text-[11px] text-slate-400">{running ? 'Live CCTV preview — updates every ~1.5s' : 'Preview (attendance engine idle)'}</p>
+              </div>
+              <button type="button" onClick={() => setPreviewFor(null)} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-lg text-slate-300 hover:bg-slate-800"><X size={18}/></button>
+            </div>
+            <div className="p-4">
+              <CameraPreview cameraId={previewFor.id} role={role} label={previewFor.label} className="w-full aspect-video" />
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

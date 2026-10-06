@@ -612,8 +612,8 @@ def attendance_camera_session(request):
 
     key = _site_key(site)
     configured = list(SiteCctvCamera.objects.filter(site=site).order_by("sort_order", "id"))
-    display = [{"label": c.label, "area": c.area or c.label, "enabled": c.enabled,
-                "configured": bool(c.build_source())} for c in configured]
+    display = [{"id": c.id, "siteId": c.site_id, "label": c.label, "area": c.area or c.label,
+                "enabled": c.enabled, "configured": bool(c.build_source())} for c in configured]
     try:
         if action == "start":
             cams = cameras_for_site(site)
