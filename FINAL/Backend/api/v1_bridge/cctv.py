@@ -227,6 +227,37 @@ def employer_cctv_test(request):
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
+def cctv_camera_snapshot(request, camera_id):
+    """Latest JPEG frame for one camera — powers the employer's live preview tile."""
+    from django.http import HttpResponse
+
+    from bss_core.models import SiteCctvCamera
+
+    user = request.user
+    camera = SiteCctvCamera.objects.select_related("site").filter(pk=camera_id).first()
+    if camera is None:
+        return Response({"error": "Camera not found."}, status=status.HTTP_404_NOT_FOUND)
+    allowed = (
+        (user.role == "employer" and camera.site is not None and camera.site.employer_id == user.id)
+        or (user.role == "contractor" and camera.site_id in _contractor_site_ids(user))
+    )
+    if not allowed:
+        return Response({"error": "You do not have access to this camera."}, status=status.HTTP_403_FORBIDDEN)
+    source = camera.build_source()
+    if not source:
+        return Response({"error": "This camera has no feed details yet."}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        content, ctype = control.get_frame(source)
+    except control.AttendanceControlError as exc:
+        return Response({"error": str(exc)}, status=exc.status_code)
+    response = HttpResponse(content, content_type=ctype or "image/jpeg")
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def cctv_status(request):
     """Site CCTV status: configured cameras + which have a live session.
 

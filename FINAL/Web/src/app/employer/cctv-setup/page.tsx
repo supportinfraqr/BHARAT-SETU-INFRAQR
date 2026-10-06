@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Camera, CheckCircle2, Loader2, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
+import CameraPreview from '@/components/employer/CameraPreview';
 
 type CameraRow = {
   id: number;
@@ -247,7 +248,9 @@ export default function CctvSetupPage() {
           <ul className="divide-y divide-gray-100">
             {cameras.map(c => (
               <li key={c.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="min-w-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <CameraPreview cameraId={c.id} label={c.label} />
+                  <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-semibold text-gray-900">{c.label || '(unnamed)'}</span>
                     {c.area && c.area !== c.label && <span className="text-[11px] text-gray-500">· {c.area}</span>}
@@ -257,6 +260,7 @@ export default function CctvSetupPage() {
                       : <span className="text-[10px] font-bold text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">Disabled</span>}
                   </div>
                   <p className="text-[11px] text-gray-400 mt-1 font-mono truncate">{c.feed || c.sourceType}</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button type="button" onClick={() => { setForm(toForm(c)); setTestResult(null); }} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50">Edit</button>

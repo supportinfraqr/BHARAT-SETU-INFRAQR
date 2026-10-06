@@ -24,10 +24,12 @@ import threading
 import time
 
 # Cap ffmpeg connect/read waits so a wrong camera address fails fast (8s) on the
-# "Test connection" probe instead of the ffmpeg default (~30s).
-os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS", "rw_timeout;8000000|stimeout;8000000")
+# "Test connection" probe instead of the ffmpeg default (~30s). Prefer RTSP over
+# TCP — far more reliable through NAT/routers than the UDP default.
+os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS",
+                      "rtsp_transport;tcp|rw_timeout;8000000|stimeout;8000000")
 
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, Response, jsonify, request, send_file
 
 from src.database import Database
 
@@ -42,6 +44,88 @@ LOG_DIR = os.environ.get("SESSION_LOG_DIR", os.path.join(APP_DIR, "session-logs"
 app = Flask(__name__)
 _lock = threading.Lock()
 _sessions: dict[str, dict] = {}
+
+# --- Live preview readers -------------------------------------------------
+# Small cached frame grabbers that power the employer's on-screen camera
+# previews. One reader per feed URL; auto-released after a short idle period.
+_preview_lock = threading.Lock()
+_previews: dict[str, "_PreviewReader"] = {}
+_PREVIEW_IDLE_S = 15.0
+_PREVIEW_WIDTH = 480
+
+
+class _PreviewReader:
+    def __init__(self, source: str):
+        self.source = source
+        self._lock = threading.Lock()
+        self._jpeg = None
+        self._last_access = time.time()
+        self._stop = False
+        self._cap = None
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread.start()
+
+    def touch(self) -> None:
+        self._last_access = time.time()
+
+    def _open(self):
+        import cv2
+        target = int(self.source) if str(self.source).isdigit() else self.source
+        cap = cv2.VideoCapture(target)
+        try:
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        except Exception:
+            pass
+        return cap if cap.isOpened() else None
+
+    def _loop(self) -> None:
+        import cv2
+        while not self._stop:
+            if time.time() - self._last_access > _PREVIEW_IDLE_S:
+                break
+            if self._cap is None:
+                self._cap = self._open()
+                if self._cap is None:
+                    time.sleep(2.0)
+                    continue
+            ok, frame = self._cap.read()
+            if not ok or frame is None:
+                try:
+                    self._cap.release()
+                except Exception:
+                    pass
+                self._cap = None
+                time.sleep(0.8)
+                continue
+            h, w = frame.shape[:2]
+            if w > _PREVIEW_WIDTH:
+                frame = cv2.resize(frame, (_PREVIEW_WIDTH, int(h * _PREVIEW_WIDTH / w)))
+            enc_ok, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
+            if enc_ok:
+                with self._lock:
+                    self._jpeg = buf.tobytes()
+            time.sleep(0.15)
+        try:
+            if self._cap is not None:
+                self._cap.release()
+        except Exception:
+            pass
+
+    def jpeg(self, timeout: float = 4.0):
+        end = time.time() + timeout
+        while time.time() < end:
+            with self._lock:
+                if self._jpeg:
+                    return self._jpeg
+            time.sleep(0.1)
+        return None
+
+    @property
+    def stopped(self) -> bool:
+        return self._stop
+
+    def stop(self) -> None:
+        self._stop = True
 
 
 def _load_config() -> dict:
@@ -228,6 +312,29 @@ def probe():
         return jsonify(ok=False, error="Connected, but no video frame was received."), 200
     height, width = frame.shape[:2]
     return jsonify(ok=True, width=int(width), height=int(height)), 200
+
+
+@app.route("/frame.jpg", methods=["GET", "POST"])
+def frame_jpg():
+    """Latest JPEG frame for a feed — powers the employer's live camera preview."""
+    if not _authorized():
+        return jsonify(error="unauthorized"), 401
+    body = request.get_json(silent=True) or {}
+    source = str(request.args.get("source") or body.get("source") or "").strip()
+    if not source:
+        return jsonify(error="source is required"), 400
+    with _preview_lock:
+        reader = _previews.get(source)
+        if reader is None or reader.stopped:
+            reader = _PreviewReader(source)
+            _previews[source] = reader
+        reader.touch()
+        for key in [k for k, r in _previews.items() if r.stopped]:
+            _previews.pop(key, None)
+    jpeg = reader.jpeg()
+    if jpeg is None:
+        return jsonify(error="No frame from the feed — check the camera IP/port/path/login and that the engine can reach it."), 502
+    return Response(jpeg, mimetype="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/detections")

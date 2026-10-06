@@ -74,6 +74,28 @@ def probe(source):
     return _request("POST", "/probe", {"source": str(source)}, timeout=30)
 
 
+def get_frame(source, timeout=10):
+    """Latest JPEG frame for a feed — for the on-screen camera preview.
+
+    Returns ``(bytes, content_type)``. Raises :class:`AttendanceControlError`
+    when the engine cannot produce a frame."""
+    url, token = _config()
+    try:
+        response = requests.get(
+            f"{url}/frame.jpg", params={"source": str(source)},
+            headers={"X-Attendance-Token": token}, timeout=timeout,
+        )
+    except requests.RequestException as exc:
+        raise AttendanceControlError(f"Attendance controller unreachable: {exc}", 502)
+    if response.status_code >= 400:
+        try:
+            detail = (response.json() or {}).get("error")
+        except ValueError:
+            detail = None
+        raise AttendanceControlError(detail or f"Attendance controller error ({response.status_code}).", 502)
+    return response.content, response.headers.get("Content-Type", "image/jpeg")
+
+
 def list_sessions():
     return _request("GET", "/sessions").get("sessions", [])
 
