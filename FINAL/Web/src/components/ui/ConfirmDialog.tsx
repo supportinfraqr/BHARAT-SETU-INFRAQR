@@ -67,13 +67,32 @@ export default function ConfirmDialog({
 
         {details.length > 0 && (
           <div className="px-6 pb-2">
-            <div className="rounded-2xl border border-gray-200/80 bg-slate-50/70 p-1 divide-y divide-gray-200/60 max-h-48 overflow-y-auto">
-              {details.map((detail, idx) => (
-                <div key={`${detail.label}-${idx}`} className="flex items-start justify-between gap-4 px-4 py-2.5">
-                  <dt className="text-[10px] font-bold uppercase tracking-wider text-gray-400 shrink-0 pt-0.5">{detail.label}</dt>
-                  <dd className="text-xs sm:text-sm font-semibold text-gray-900 font-mono text-right break-words max-w-[70%]">{detail.value}</dd>
-                </div>
-              ))}
+            <div className="rounded-2xl border border-gray-200/80 bg-slate-50/70 p-1 divide-y divide-gray-200/60 max-h-56 overflow-y-auto">
+              {details.map((detail, idx) => {
+                // A comma-separated list (e.g. many sites) reads far better as
+                // wrapped chips than as one long right-aligned line.
+                const items = detail.value.includes(", ") && detail.value.length > 30
+                  ? detail.value.split(", ").filter(Boolean)
+                  : null;
+                if (items) {
+                  return (
+                    <div key={`${detail.label}-${idx}`} className="px-4 py-2.5">
+                      <dt className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{detail.label} <span className="text-gray-300">· {items.length}</span></dt>
+                      <dd className="mt-1.5 flex flex-wrap gap-1">
+                        {items.map((item, i) => (
+                          <span key={i} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white border border-gray-200 text-gray-700 break-words">{item}</span>
+                        ))}
+                      </dd>
+                    </div>
+                  );
+                }
+                return (
+                  <div key={`${detail.label}-${idx}`} className="flex items-start justify-between gap-4 px-4 py-2.5">
+                    <dt className="text-[10px] font-bold uppercase tracking-wider text-gray-400 shrink-0 pt-0.5">{detail.label}</dt>
+                    <dd className="text-xs sm:text-sm font-semibold text-gray-900 font-mono text-right break-words max-w-[70%]">{detail.value}</dd>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

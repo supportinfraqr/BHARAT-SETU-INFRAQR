@@ -235,25 +235,27 @@ export default function SitePermissionsDialog({
             ) : (
               <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-100">
                 {visibleRows.map(row => (
-                  <li key={row.siteId} className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-9 h-9 rounded-xl bg-gray-50 border border-gray-100 text-gray-400 grid place-items-center flex-shrink-0">
-                      <MapPin size={16} />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-gray-900 truncate flex items-center gap-1.5">
-                        {row.name}
-                        {row.isDefault && <span className="text-[10px] font-bold text-[#F47A32]">Default</span>}
-                      </p>
-                      <p className="text-[11px] text-gray-400 font-mono truncate">
-                        {row.code}{sourceLabel(row.source) ? ` · ${sourceLabel(row.source)}` : ""}
-                      </p>
+                  <li key={row.siteId} className="px-3.5 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-9 h-9 rounded-xl bg-gray-50 border border-gray-100 text-gray-400 grid place-items-center flex-shrink-0">
+                        <MapPin size={16} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-gray-900 truncate flex items-center gap-1.5">
+                          {row.name}
+                          {row.isDefault && <span className="text-[10px] font-bold text-[#F47A32]">Default</span>}
+                        </p>
+                        <p className="text-[11px] text-gray-400 font-mono truncate">
+                          {row.code}{sourceLabel(row.source) ? ` · ${sourceLabel(row.source)}` : ""}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ring-1 ${STATUS_STYLE[row.status]}`}>
+                    <span className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-lg ring-1 ${STATUS_STYLE[row.status]}`}>
                       {row.status === "None" ? "Not proposed" : row.status}
                     </span>
+                  </div>
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     {row.canApprove && (
                       <button
                         type="button"

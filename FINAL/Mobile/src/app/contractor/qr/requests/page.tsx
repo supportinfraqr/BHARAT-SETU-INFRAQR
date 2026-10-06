@@ -236,7 +236,16 @@ export default function ContractorBindingRequestsPage() {
   const columns: DataColumn<ContractorBindingRequest>[] = [
     { id:'entity', header:'Entity', value:r => r.entityName, render:r => <div><strong className="text-gray-900">{r.entityName}</strong><p className="font-mono text-[10px] text-gray-400">{r.bssId}</p></div> },
     { id:'type', header:'Request type', value:r => r.type, render:r => <span className={`px-2 py-1 rounded text-[10px] font-semibold ${r.type === 'Employer' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>{r.type === 'Employer' ? 'Contractor ↔ Employer' : 'Contractor ↔ Worker'}</span> },
-    { id:'site', header:'Site', value:r => r.site, export:{split:','} },
+    { id:'site', header:'Site', value:r => r.site, export:{split:','}, render:r => {
+      const names = r.site.split(',').map(s => s.trim()).filter(Boolean);
+      if (!names.length) return <span className="text-gray-400">—</span>;
+      const statusOf = (name: string) => (r.allotments ?? []).find(a => a.site === name)?.status;
+      const tone = (s?: string) => s === 'Approved' ? 'bg-green-50 text-green-700 border-green-200'
+        : s === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200'
+        : s === 'Released' ? 'bg-slate-100 text-slate-500 border-slate-200'
+        : 'bg-amber-50 text-amber-700 border-amber-200';
+      return <div className="flex max-w-[300px] flex-wrap gap-1">{names.map(n => { const s = statusOf(n); return <span key={n} title={s || 'Pending'} className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${tone(s)}`}>{n}</span>; })}</div>;
+    } },
     { id:'employer', header:'Employer', value:r => r.employer },
     { id:'detail', header:'Designation / Wage', value:r => r.designation, render:r => <div><p className="text-gray-800">{r.designation}</p><p className="text-[10px] text-gray-400">{r.wage}</p></div> },
     { id:'requested', header:'Requested', value:r => r.requestedOn },
