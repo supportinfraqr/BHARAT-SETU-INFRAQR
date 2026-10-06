@@ -9,7 +9,7 @@
 | SSH user | `ubuntu` | `ubuntu` |
 | Key | `/home/yasser/BSS_Project/bharat-shram-setu-staging-key.pem` | `/home/yasser/BSS_Project/login-bharatshramsetu-root_key.pem` |
 | App path | `~/bss/FINAL` | `~/bss/FINAL` |
-| Compose dir | `~/bss/FINAL/deploy` | `~/bss/FINAL/deploy-prod` |
+| Compose dir | `~/bss/FINAL/deploy-staging` | `~/bss/FINAL/deploy-prod` |
 | Docker | `docker compose …` (no sudo) | `sudo docker compose …` |
 | Database | `bss_final` | `bss_prod` |
 | URL | **`bharat-shram-setu-staging.bharatshramsetu.com`** | **`login.bharatshramsetu.com`** |
@@ -19,15 +19,15 @@
 - Host `15.206.193.173` (`ec2-15-206-193-173.ap-south-1.compute.amazonaws.com`), same staging key.
 - Runs the CCTV / face-attendance pipeline only: `~/bss/FINAL/video-attendance/deploy` (compose project **`attendance`** → `attendance-attendance-1` + `attendance-db-1`).
 - The BSS backend reaches it via `ATTENDANCE_CONTROL_URL` / `ATTENDANCE_CONTROL_TOKEN`.
-- **Never** deploy the BSS app stack (`deploy/`, backend, frontend) here — the BSS staging app lives on `3.109.68.143`.
+- **Never** deploy the BSS app stack (`deploy-staging/`, backend, frontend) here — the BSS staging app lives on `3.109.68.143`.
 
 **Mobile frontend server (separate — frontend only), hosts BOTH mobile sites:**
 - Host `43.204.194.237` (`ip-172-31-15-15`), Ubuntu 26.04, key `FINAL/Requirements/mlogin.bharatshramsetu.com.pem` (`chmod 400` first).
-- Runs **mobile PROD + mobile STAGING**, frontend-only (no backend/db), from `~/bss/FINAL/deploy/mobile` (compose project **`bss-mobile`** → `frontend-prod` + `nginx`; `frontend-staging` is behind the **`staging` profile**). Built from the `Mobile/` source (a copy of `Web/`).
+- Runs **mobile PROD + mobile STAGING**, frontend-only (no backend/db), from `~/bss/FINAL/deploy-mobile` (compose project **`bss-mobile`** → `frontend-prod` + `nginx`; `frontend-staging` is behind the **`staging` profile**). Built from the `Mobile/` source (a copy of `Web/`).
   - **mobile PROD** → `https://mlogin.bharatshramsetu.com` — backend = prod `login.bharatshramsetu.com`.
   - **mobile STAGING** → `https://mlogin-staging.bharatshramsetu.com` — backend = staging `bharat-shram-setu-staging.bharatshramsetu.com`. **NOT live yet**: enable the commented nginx server block only after the DNS A record → `.237` and a certbot cert exist (a missing cert otherwise crashes nginx and takes prod mobile down).
 - `/media` & `/static` are proxied to the matching main app server. TLS via certbot (`/etc/letsencrypt/live/<domain>`).
-- Deploy: rsync `Mobile/` + `deploy/mobile/`; prod → `sudo docker compose up -d --build frontend-prod`; staging → add `--profile staging` and enable the staging nginx block. Never touches prod backend/data.
+- Deploy: rsync `Mobile/` + `deploy-mobile/`; prod → `sudo docker compose up -d --build frontend-prod`; staging → add `--profile staging` and enable the staging nginx block. Never touches prod backend/data.
 
 Staging and production are separate servers with separate databases. Data on one does not affect the other.
 
@@ -38,7 +38,7 @@ FINAL/
   Backend/          # common backend (Django) — used by every environment
   Web/              # web frontend (Next.js)
   Mobile/           # mobile frontend (separate copy of Web/, mobile-optimised deploy)
-  deploy/           # STAGING deploy tree (compose + per-role folders + .env)
+  deploy-staging/           # STAGING deploy tree (compose + per-role folders + .env)
     backend/        #   backend image (Dockerfile)
     web/            #   web nginx conf
     mobile/         #   mobile prod + staging (compose + nginx)  — runs on the .237 host
@@ -54,13 +54,13 @@ FINAL/
 | Server | Role |
 |---|---|
 | `13.235.161.192` (`login.bharatshramsetu.com`) | **prod backend** + **prod web** (`deploy-prod/`) |
-| `3.109.68.143` (staging) | **staging backend** + **staging web** (`deploy/`) |
-| `43.204.194.237` (`mlogin…`) | **mobile prod** + **mobile staging** (`deploy/mobile/`) |
+| `3.109.68.143` (staging) | **staging backend** + **staging web** (`deploy-staging/`) |
+| `43.204.194.237` (`mlogin…`) | **mobile prod** + **mobile staging** (`deploy-mobile/`) |
 | `15.206.193.173` | CCTV / face-attendance pipeline only |
 
-- **Each environment is a copy of the same layout.** Staging (`3.109.68.143`) uses `deploy/`; prod (`13.235.161.192`) uses `deploy-prod/`. Only `.env` and the URLs/domains differ.
+- **Each environment is a copy of the same layout.** Staging (`3.109.68.143`) uses `deploy-staging/`; prod (`13.235.161.192`) uses `deploy-prod/`. Only `.env` and the URLs/domains differ.
 - Backend runs on **both** app servers (staging + prod). The **mobile** host (`43.204.194.237`) is **frontend-only** and builds the `Mobile/` source; the **attendance** server (`15.206.193.173`) runs only the CCTV pipeline.
-- Frontend compose build contexts: `../Web` (staging `deploy/`, prod `deploy-prod/`) and `../../Mobile` (mobile `deploy/mobile/`).
+- Frontend compose build contexts: `../Web` (staging `deploy-staging/`, prod `deploy-prod/`) and `../Mobile` (mobile `deploy-mobile/`).
 
 ## Terminology (important)
 
@@ -102,7 +102,7 @@ rsync -az -e "ssh -i $KEY" --exclude 'venv/' --exclude '.venv/' --exclude '__pyc
 rsync -az -e "ssh -i $KEY" --exclude 'node_modules/' --exclude '.next/' --exclude '.env*' \
   --exclude 'out/' --exclude 'coverage/' --exclude '*.log' --exclude '.vercel/' \
   /home/yasser/BSS_Project/FINAL/Web/ $HOST:~/bss/FINAL/Web/
-ssh -i "$KEY" $HOST 'cd ~/bss/FINAL/deploy && docker compose up -d --build backend frontend'
+ssh -i "$KEY" $HOST 'cd ~/bss/FINAL/deploy-staging && docker compose up -d --build backend frontend'
 ```
 
 Production (only after staging is verified):
@@ -147,7 +147,7 @@ ssh -i "$KEY" $HOST 'cd ~/bss/FINAL/deploy-prod && sudo docker compose exec -T b
 
 ## Seed demo accounts
 
-Staging: `ssh -i "$STAGING_KEY" ubuntu@$STAGING_HOST 'cd ~/bss/FINAL/deploy && docker compose exec -T backend python manage.py seed_demo_accounts'`
+Staging: `ssh -i "$STAGING_KEY" ubuntu@$STAGING_HOST 'cd ~/bss/FINAL/deploy-staging && docker compose exec -T backend python manage.py seed_demo_accounts'`
 
 Prod (explicit approval): `ssh -i "$KEY" $HOST 'cd ~/bss/FINAL/deploy-prod && sudo docker compose exec -T backend python manage.py seed_demo_accounts'`
 
@@ -163,6 +163,6 @@ The runner picks its mode from `BSS_MODE` (`local` = venv `manage.py`; `staging`
 
 ## DB shell (read/inspect or staging mutations)
 
-Staging: `ssh -i "$STAGING_KEY" ubuntu@$STAGING_HOST 'cd ~/bss/FINAL/deploy && docker compose exec -T backend python manage.py shell -c "…"'`
+Staging: `ssh -i "$STAGING_KEY" ubuntu@$STAGING_HOST 'cd ~/bss/FINAL/deploy-staging && docker compose exec -T backend python manage.py shell -c "…"'`
 
 Prod (read-only unless explicitly approved): use `sudo docker compose exec -T backend python manage.py shell -c "…"` from `~/bss/FINAL/deploy-prod`.

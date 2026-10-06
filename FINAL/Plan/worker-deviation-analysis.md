@@ -2,7 +2,7 @@
 
 Source sheet: `BSS_Feature_Comparison.xlsx` → "Worker" sheet (Data Owner column).
 Current code: `Backend/api/v1_payloads.py` (payload), `api/v1_bridge.py` (persist),
-`Frontend/BSS_Gravity/src/app/worker/*` (UI).
+`Web/src/app/worker/*` (UI).
 
 ## Legend
 - ✅ MATCHES sheet

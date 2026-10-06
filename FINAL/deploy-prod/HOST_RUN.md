@@ -17,11 +17,11 @@ SSH: `ubuntu@13.235.161.192`, key `/home/yasser/BSS_Project/login-bharatshramset
 | Redis | systemd `redis-server` | `127.0.0.1:6379` |
 | nginx | systemd `nginx` | config `/etc/nginx/sites-available/bss` |
 | Backend (Django) | gunicorn via nohup | `~/bss-host/backend`, `:8000` |
-| Frontend (Next.js standalone) | `node server.js` via nohup | `~/bss/FINAL/Frontend/BSS_Gravity`, `:3000` |
+| Frontend (Next.js standalone) | `node server.js` via nohup | `~/bss/FINAL/Web`, `:3000` |
 
 - DB password: `~/bss/FINAL/deploy-prod/.env` → `BSS_PG_PASSWORD` (the DB data was restored from the old Docker `bss_pgdata` volume).
 - Backend env: `~/bss-host/backend/.env.host`; run script `~/bss-host/backend/run.sh`; log `~/bss-host/backend/gunicorn.log`.
-- Frontend env: `~/bss/FINAL/Frontend/BSS_Gravity/run-host.sh`; log `host-frontend.log`.
+- Frontend env: `~/bss/FINAL/Web/run-host.sh`; log `host-frontend.log`.
 - nginx routing: `/` + `/api/` → `127.0.0.1:3000`; `/v1/` + `/admin/` → `127.0.0.1:8000`; `/media/` → `~/bss-host/backend/media`; `/static/` → `~/bss-host/backend/staticfiles`. TLS reuses `/etc/letsencrypt/live/login.bharatshramsetu.com/`.
 
 ## Deploy changes (no Docker)
@@ -43,8 +43,8 @@ ssh -i "$KEY" $HOST '~/bss-host/backend/restart.sh'
 
 ```bash
 rsync -az --delete --exclude node_modules --exclude .next \
-  /home/yasser/BSS_Project/FINAL/Frontend/BSS_Gravity/ $HOST:~/bss/FINAL/Frontend/BSS_Gravity/
-ssh -i "$KEY" $HOST '~/bss/FINAL/Frontend/BSS_Gravity/deploy-host.sh'   # npm ci && next build && restart
+  /home/yasser/BSS_Project/FINAL/Web/ $HOST:~/bss/FINAL/Web/
+ssh -i "$KEY" $HOST '~/bss/FINAL/Web/deploy-host.sh'   # npm ci && next build && restart
 ```
 
 ## Rules

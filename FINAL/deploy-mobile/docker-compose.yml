@@ -15,7 +15,7 @@ name: bss-mobile
 services:
   frontend-prod:
     build:
-      context: ../../Mobile
+      context: ../Mobile
       dockerfile: Dockerfile
       args:
         - NEXT_TELEMETRY_DISABLED=1
@@ -27,13 +27,13 @@ services:
       BSS_AUTH_API_URL: https://login.bharatshramsetu.com
       BSS_APP_ORIGIN: https://mlogin.bharatshramsetu.com
       BSS_PAYMENT_HOSTS: checkout.razorpay.com,secure.payu.in
-      BSS_SESSION_SECRET: ${BSS_SESSION_SECRET:?BSS_SESSION_SECRET is required in deploy/mobile/.env}
+      BSS_SESSION_SECRET: ${BSS_SESSION_SECRET:?BSS_SESSION_SECRET is required in deploy-mobile/.env}
       BSS_API_TIMEOUT_MS: "15000"
 
   frontend-staging:
     profiles: ["staging"]
     build:
-      context: ../../Mobile
+      context: ../Mobile
       dockerfile: Dockerfile
       args:
         - NEXT_TELEMETRY_DISABLED=1

@@ -15,7 +15,7 @@ The user reviews changes on a **local instance** on the workstation
 | Backend | `manage.py runserver 0.0.0.0:8000 --noreload` | `http://localhost:8000` (admin `/admin`) |
 | Database | local Postgres `bss_local` via Docker `bss-postgres` | `127.0.0.1:5433`, user `bss` |
 
-- Frontend env `Frontend/BSS_Gravity/.env.local` already points at `http://127.0.0.1:8000`.
+- Frontend env `Web/.env.local` already points at `http://127.0.0.1:8000`.
 - To run a Django management command locally with the right env, reuse the running
   backend process env: `tr '\0' '\n' < /proc/<runserver-pid>/environ > /tmp/bss_local_env`
   then `set -a; . /tmp/bss_local_env; set +a`.
@@ -41,13 +41,13 @@ touch deployment.
 ## Core architecture (at a glance)
 
 Monorepo: `FINAL/Backend` (Django + Django REST Framework, one base URL
-`/api/v1`) and `FINAL/Frontend/BSS_Gravity` (Next.js 14 App Router, TypeScript;
+`/api/v1`) and `FINAL/Web` (Next.js 14 App Router, TypeScript;
 reaches backend at `/api/v1`, proxied same-origin in prod by `nginx`).
 
 - Backend start chain: `migrate` → `collectstatic` → runserver. Same entrypoint
   under Docker and host runs.
 - Every route is under `/api/v1/…`; the app itself is served as a **static
-  SPA** from `Frontend/BSS_Gravity/out/` in prod/staging (Next `output: export`),
+  SPA** from `Web/out/` in prod/staging (Next `output: export`),
   plus an **SSR** set served by the Next server for the worker app.
 - DB: PostgreSQL (`bss_final` local/staging, `bss_prod` prod). Media/uploads
   (Aadhaar, DigiLocker, gate-pass photos) stored on a persistent
@@ -118,7 +118,7 @@ Verified byte-for-byte on both ends (sha256 sentinels: `ocr_engine.py`,
 
 1. **Removed worker-page OCR** — reverted `worker_verify_document` from
    `Backend/api/v1_bridge/submissions.py` and the Verify/Autofill button from
-   `Frontend/BSS_Gravity/src/app/worker/Documents/page.tsx` (commit `c9fbf70`,
+   `Web/src/app/worker/Documents/page.tsx` (commit `c9fbf70`,
    pushed `origin/main`, deployed to prod same day over public EC2+PEM, prod
    containers rebuilt + verified healthy: nginx/frontend/backend/db/redis).
    Compliance/CLRA evidence OCR stays live.
