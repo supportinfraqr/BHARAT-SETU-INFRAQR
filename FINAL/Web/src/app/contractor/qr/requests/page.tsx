@@ -244,7 +244,23 @@ export default function ContractorBindingRequestsPage() {
         : s === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200'
         : s === 'Released' ? 'bg-slate-100 text-slate-500 border-slate-200'
         : 'bg-amber-50 text-amber-700 border-amber-200';
-      return <div className="flex max-w-[300px] flex-wrap gap-1">{names.map(n => { const s = statusOf(n); return <span key={n} title={s || 'Pending'} className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${tone(s)}`}>{n}</span>; })}</div>;
+      
+      if (names.length <= 3) {
+        return <div className="flex max-w-[220px] flex-wrap gap-1">{names.map(n => { const s = statusOf(n); return <span key={n} title={`${n} (${s || 'Pending'})`} className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${tone(s)}`}>{n}</span>; })}</div>;
+      }
+      
+      const visible = names.slice(0, 2);
+      const remaining = names.length - 2;
+      return (
+        <div className="flex flex-col gap-1 max-w-[200px]">
+          <div className="flex flex-wrap gap-1">
+            {visible.map(n => { const s = statusOf(n); return <span key={n} title={`${n} (${s || 'Pending'})`} className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${tone(s)}`}>{n}</span>; })}
+          </div>
+          <button type="button" onClick={() => setSitesFor(r)} className="text-left text-[11px] font-bold text-[#073B67] hover:underline cursor-pointer">
+            + {remaining} more sites
+          </button>
+        </div>
+      );
     } },
     { id:'employer', header:'Employer', value:r => r.employer },
     { id:'detail', header:'Designation / Wage', value:r => r.designation, render:r => <div><p className="text-gray-800">{r.designation}</p><p className="text-[10px] text-gray-400">{r.wage}</p></div> },

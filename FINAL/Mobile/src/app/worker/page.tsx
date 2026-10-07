@@ -14,6 +14,24 @@ export default function WorkerOverview() {
   const { actionCount } = useNotifications();
   // "Available for work" — sourced from the backend portal payload (WorkerOther.available_for_work).
   const availableForWork = portal.availability === true;
+  // AI CCTV face attendance: how many face photos are on record (uploaded/enrolled).
+  const [faceUploaded, setFaceUploaded] = useState(0);
+  const [faceEnrolled, setFaceEnrolled] = useState(0);
+  useEffect(() => {
+    let active = true;
+    void Promise.all([
+      fetch('/api/worker/face-photos', { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).catch(() => null),
+      fetch('/api/worker/face-status', { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).catch(() => null),
+    ]).then(([photos, status]) => {
+      if (!active) return;
+      const list = (photos as { data?: Array<{ slot?: number }> } | null)?.data ?? [];
+      const slots = new Set(list.map(p => p.slot).filter((s): s is number => s != null));
+      setFaceUploaded(slots.size || list.length);
+      setFaceEnrolled(Number((status as { data?: { enrolled?: number } } | null)?.data?.enrolled) || 0);
+    });
+    return () => { active = false; };
+  }, []);
+  const faceReady = Math.max(faceUploaded, faceEnrolled) >= 5;
   const attendancePresent = portal.attendance.records.filter(record=>record.presence==='Present').length;
   const lastWage = portal.wages.records[0];
   const pfTotal = portal.providentFund.records.reduce((total,record)=>total+record.employeeContribution+record.employerContribution,0);
@@ -86,27 +104,50 @@ export default function WorkerOverview() {
     {availableForWork && <section className="bg-[#073B67] border border-[#073B67] text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3"><span className="w-10 h-10 rounded-xl bg-[#F47A32] grid place-items-center flex-shrink-0"><BadgeCheck size={20}/></span><div className="flex-1"><p className="text-sm font-bold">Available for work — ON</p><p className="text-xs text-white/80 mt-0.5">Employers can see that you are available and shortlist you for matching jobs. Turn it off anytime in Rozgar Setu.</p></div><Link href="/worker/rozgar" className="h-9 px-3 rounded-lg bg-white/10 text-xs font-bold inline-flex items-center gap-1.5 hover:bg-white/20 flex-shrink-0">Manage availability<ArrowRight size={13}/></Link></section>}
     {!worker.identity.aadhaarVerified && <section className="bg-[#FFF8F0] border border-[#F47A32]/20 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3"><span className="w-10 h-10 rounded-xl bg-[#F47A32] grid place-items-center flex-shrink-0 text-white"><Fingerprint size={20}/></span><div className="flex-1"><p className="text-sm font-bold text-[#9A3412]">Link your Aadhaar</p><p className="text-xs text-[#9A3412]/80 mt-0.5">Enter your Aadhaar to verify via OTP and auto-fill your name, date of birth, address and photo.</p></div><Link href="/worker/Profile?tab=integrations" className="h-9 px-3 rounded-lg bg-[#F47A32] text-white text-xs font-bold inline-flex items-center gap-1.5 hover:bg-[#e06a24] flex-shrink-0">Link Aadhaar<ArrowRight size={13}/></Link></section>}
 
-    {/* Mandatory AI CCTV Face Attendance Photo Enrolment Prompt Banner */}
-    <section className="bg-gradient-to-r from-blue-900 via-slate-900 to-indigo-950 border border-blue-700/60 text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
-      <div className="flex items-start sm:items-center gap-3.5">
-        <span className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/40 grid place-items-center flex-shrink-0 text-blue-300">
-          <Fingerprint size={22} />
-        </span>
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-blue-300 uppercase tracking-wider">Required for Daily Attendance</span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">CCTV Ready</span>
+    {/* AI CCTV Face Attendance Photo Enrolment */}
+    {faceReady ? (
+      <section className="bg-gradient-to-r from-emerald-900 via-slate-900 to-emerald-950 border border-emerald-700/60 text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <span className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 grid place-items-center flex-shrink-0 text-emerald-300">
+            <CheckCircle2 size={22} />
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Required for Daily Attendance</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">CCTV Ready</span>
+            </div>
+            <p className="text-sm font-bold text-white mt-0.5">Face photos uploaded</p>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Your {Math.max(faceUploaded, faceEnrolled)} face photo(s) are on record — AI camera attendance auto-marking is active.
+            </p>
           </div>
-          <p className="text-sm font-bold text-white mt-0.5">Upload 5 Face Photos for AI Camera Attendance</p>
-          <p className="text-xs text-slate-300 mt-0.5">
-            Your contractor/employer uses AI video cameras on site to auto-track your attendance daily. Upload 5 front-facing photos to enable auto-marking.
-          </p>
         </div>
-      </div>
-      <Link href="/worker/Profile?tab=personal" className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5 transition-colors flex-shrink-0 whitespace-nowrap shadow-sm">
-        Upload 5 Photos &rarr;
-      </Link>
-    </section>
+        <Link href="/worker/Profile?tab=personal" className="h-10 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5 transition-colors flex-shrink-0 whitespace-nowrap">
+          Manage photos
+        </Link>
+      </section>
+    ) : (
+      <section className="bg-gradient-to-r from-blue-900 via-slate-900 to-indigo-950 border border-blue-700/60 text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <span className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/40 grid place-items-center flex-shrink-0 text-blue-300">
+            <Fingerprint size={22} />
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-blue-300 uppercase tracking-wider">Required for Daily Attendance</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">CCTV Ready</span>
+            </div>
+            <p className="text-sm font-bold text-white mt-0.5">Upload 5 Face Photos for AI Camera Attendance</p>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Your contractor/employer uses AI video cameras on site to auto-track your attendance daily. Upload 5 front-facing photos to enable auto-marking.
+            </p>
+          </div>
+        </div>
+        <Link href="/worker/Profile?tab=personal" className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5 transition-colors flex-shrink-0 whitespace-nowrap shadow-sm">
+          Upload 5 Photos &rarr;
+        </Link>
+      </section>
+    )}
 
     <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">{t('nav.overview')}</p><div className="mt-1 flex flex-wrap items-center gap-2"><h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950">{t('dash.welcome')}, {worker.identity.name.split(' ')[0]}</h1><span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">{t('portal.worker')}</span></div><p className="text-sm text-gray-500 mt-1">A quick view of your identity, work and benefits.</p></div>

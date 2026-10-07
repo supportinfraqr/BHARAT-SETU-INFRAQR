@@ -27,6 +27,7 @@ const sitesGroup = { key:'nav.sites', icon:LayoutDashboard, items:[
 ] };
 const complianceGroup = { key:'nav.compliance', icon:ClipboardCheck, items:[
   ['nav.complianceSubmission','/employer/compliance-submission'],
+  ['Onboarding','/employer/onboarding'],
 ] };
 const qrGroup = { key:'nav.qrSystem', icon:Network, items:[
   ['nav.myWorkers','/employer/workers'],
@@ -79,7 +80,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
 
   return <div className="bss-shell min-h-screen text-[#1D1D1F] flex flex-col">
     <header ref={headerRef} className="bss-shell-header sticky top-0 z-50 bg-white border-b border-gray-200 shadow-[0_1px_3px_0_rgba(100,116,139,0.18)]">
-      <div className="bss-shell-bar w-full max-w-[1280px] mx-auto px-6 md:px-12 h-16 flex items-center justify-between min-[1181px]:justify-center gap-5">
+      <div className="bss-shell-bar w-full max-w-[1200px] mx-auto px-6 md:px-12 h-16 flex items-center justify-between min-[1181px]:justify-center gap-5">
         <Link href="/employer/dashboard" className="flex items-center gap-2 shrink-0">
           <Image src="/bss-original-logo.png" width={154} height={40} className="h-9 sm:h-8 w-auto" alt="Bharat Shram Setu"/>
           <BrandText className="hidden lg:block text-base"/>

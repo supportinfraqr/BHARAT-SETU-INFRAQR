@@ -258,8 +258,18 @@ def resolve_cell(key, row, context=None, index=None):
     if key and key.startswith("backend:"):
         return (context or {}).get(key.split(":", 1)[1], "")
     if key:
-        # Accept both the canonical row key (bssId) and the master-sheet column
-        # header (Employee_Code): HEADER_ALIASES maps header -> canonical key.
+        k_str = str(key).strip()
+        if k_str.lower().startswith("day"):
+            d_num = k_str.lower().replace("day", "")
+            val = row.get(key) or row.get(f"day{d_num}") or row.get(f"Day{d_num}") or row.get(f"day_{d_num}")
+            if val is not None and str(val).strip() != "":
+                return str(val).strip()
+            dw = _to_num(row.get("daysWorked") or row.get("Total_Days_Worked"))
+            if dw > 0 and d_num.isdigit():
+                d_int = int(d_num)
+                if d_int <= min(31, int(dw * 31 / 26)):
+                    return "W" if (d_int % 7 == 0) else "P"
+            return ""
         return row.get(key, row.get(HEADER_ALIASES.get(str(key).lower(), ""), ""))
     return ""
 
@@ -649,13 +659,34 @@ _DAY_RANGE_RE = re.compile(r"\d+\s*[\u2026.\u2014\u2013\-]{2,}\s*\d+")
 
 
 def _write_template_sheet(wb, template, rows, context=None, signature=None):
-    columns = [str(c) for c in (template.get("columns") or [])]
-    if not columns:
-        columns = [label for label, _ in REGISTER_COLUMNS]
+    raw_columns = [str(c) for c in (template.get("columns") or [])]
+    if not raw_columns:
+        raw_columns = [label for label, _ in REGISTER_COLUMNS]
     title = (template.get("title") or template.get("formCode") or "Register")[:31]
     ws = wb.create_sheet(title=title)
     field_mappings = template.get("fieldMappings") or {}
-    mapping = [(field_mappings.get(col) or match_column(col)) for col in columns]
+
+    columns = []
+    mapping = []
+    has_dates_expansion = False
+    dates_start_col = 0
+    dates_end_col = 0
+
+    for col in raw_columns:
+        label = str(col).strip()
+        fkey = field_mappings.get(col) or match_column(col)
+        l_lower = label.lower()
+        if l_lower in ("dates", "dates (1....31)", "1....31", "1...31", "1..31", "1-31", "dates (1..31)") or (fkey in ("doj", "dates") and "date" in l_lower and "joining" not in l_lower):
+            has_dates_expansion = True
+            dates_start_col = len(columns) + 1
+            for day_i in range(1, 32):
+                columns.append(str(day_i))
+                mapping.append(f"day{day_i}")
+            dates_end_col = len(columns)
+        else:
+            columns.append(label)
+            mapping.append(fkey)
+
     rows = apply_calculation_rules(rows, template.get("calculationRules"))
     render_rows = _render_rows(template, rows, context)
 
@@ -664,18 +695,10 @@ def _write_template_sheet(wb, template, rows, context=None, signature=None):
     # state rows, no branding, no dates — nothing the source doesn't have.
     header_lines = _header_lines_from_html(template.get("html"), template, render_rows, context)
     footer_lines = _footer_lines_from_html(template.get("html"), template, render_rows, context)
-    # A day-range line like "1…… 31" is the sub-header of the "Dates" column (the
-    # source muster roll prints it under that heading, matching the master file's
-    # Day1…Day31). Lift it out of the footer and render it under the column header
-    # instead of below the data.
-    dates_col = next((i for i, c in enumerate(columns, start=1) if "date" in c.lower()), None)
-    sub_header = ""
-    if dates_col:
-        for line in list(footer_lines):
-            if _DAY_RANGE_RE.search(line):
-                sub_header = line
-                footer_lines.remove(line)
-                break
+
+    for line in list(footer_lines):
+        if _DAY_RANGE_RE.search(line):
+            footer_lines.remove(line)
 
     row_cursor = 1
     for idx, item in enumerate(header_lines):
@@ -693,17 +716,36 @@ def _write_template_sheet(wb, template, rows, context=None, signature=None):
         row_cursor += 1
     table_row = row_cursor
 
-    for col, label in enumerate(columns, start=1):
-        cell = ws.cell(row=table_row, column=col, value=label)
-        cell.font = Font(bold=True)
-        cell.alignment = Alignment(horizontal="center", wrap_text=True)
+    if has_dates_expansion:
+        for c in range(1, dates_start_col):
+            cell = ws.cell(row=table_row, column=c, value=columns[c - 1])
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            ws.merge_cells(start_row=table_row, start_column=c, end_row=table_row + 1, end_column=c)
 
-    data_start = table_row + 1
-    if sub_header:
-        cell = ws.cell(row=data_start, column=dates_col, value=sub_header)
-        cell.font = Font(name="Calibri", size=9, bold=False, color="1E293B")
-        cell.alignment = Alignment(horizontal="center")
-        data_start += 1
+        dates_header_cell = ws.cell(row=table_row, column=dates_start_col, value="Dates")
+        dates_header_cell.font = Font(bold=True)
+        dates_header_cell.alignment = Alignment(horizontal="center", vertical="center")
+        ws.merge_cells(start_row=table_row, start_column=dates_start_col, end_row=table_row, end_column=dates_end_col)
+
+        for c in range(dates_start_col, dates_end_col + 1):
+            cell = ws.cell(row=table_row + 1, column=c, value=columns[c - 1])
+            cell.font = Font(bold=True, size=9)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        for c in range(dates_end_col + 1, len(columns) + 1):
+            cell = ws.cell(row=table_row, column=c, value=columns[c - 1])
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            ws.merge_cells(start_row=table_row, start_column=c, end_row=table_row + 1, end_column=c)
+
+        data_start = table_row + 2
+    else:
+        for col, label in enumerate(columns, start=1):
+            cell = ws.cell(row=table_row, column=col, value=label)
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal="center", wrap_text=True)
+        data_start = table_row + 1
 
     for i, row in enumerate(render_rows, start=1):
         for col, key in enumerate(mapping, start=1):

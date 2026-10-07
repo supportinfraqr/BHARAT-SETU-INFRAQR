@@ -558,16 +558,28 @@ def _employer_submissions(user):
     # the contractor's additional forms for that month are reviewed together.
     packages: dict = {}
 
+    connected_contractor_ids = set(ContractorEmployerBinding.objects.filter(
+        employer=user, binding_status="ACCEPTED"
+    ).values_list("contractor_id", flat=True))
+
     uploaded = (SubmissionEvidence.objects
-                .filter(Q(user__worker_bindings__site__employer=user)
-                        | Q(user__contractor_bindings__site__employer=user))
-                .order_by("user_id", "site", "doc_type", "period", "-created_at")
-                .distinct("user_id", "site", "doc_type", "period")[:100])
+                .filter(Q(user_id__in=connected_contractor_ids) | Q(site__in=my_sites))
+                .select_related("user")
+                .order_by("-created_at")[:200])
+
+    seen_evidence = set()
     for ev in uploaded:
-        if ev.site and my_sites and ev.site not in my_sites:
+        if ev.site and my_sites and ev.site not in my_sites and ev.user_id not in connected_contractor_ids:
             continue
-        if ev.user.role == "contractor":
-            packages.setdefault((ev.user_id, ev_year(ev), ev_month(ev)), {"batches": [], "evidence": []})["evidence"].append(ev)
+        dedup_key = (ev.user_id, ev.site, ev.doc_type, ev.period)
+        if dedup_key in seen_evidence:
+            continue
+        seen_evidence.add(dedup_key)
+
+        ev_m = ev_month(ev).strip().capitalize()
+        ev_y = ev_year(ev)
+        if ev.user.role == "contractor" or ev.user_id in connected_contractor_ids:
+            packages.setdefault((ev.user_id, ev_y, ev_m), {"batches": [], "evidence": []})["evidence"].append(ev)
             continue
         meta = form_meta.get(_d(ev.doc_type).strip().lower())
         rows.append({
@@ -589,7 +601,10 @@ def _employer_submissions(user):
               .filter(site__employer=user, is_current=True,
                       status__in=["SUBMITTED", "VERIFIED", "RETURNED", "REJECTED"])
               .select_related("contractor", "site").order_by("-generated_on", "-id")):
-        packages.setdefault((b.contractor_id, b.year, b.month), {"batches": [], "evidence": []})["batches"].append(b)
+        b_year = re.search(r"(20\d{2})", b.year or "")
+        b_y = b_year.group(1) if b_year else (b.year or "")
+        b_m = (b.month or "").strip().capitalize()
+        packages.setdefault((b.contractor_id, b_y, b_m), {"batches": [], "evidence": []})["batches"].append(b)
 
     # The latest submission round per (contractor, year, month): evidence from an
     # earlier (rejected) round must not keep a re-submitted package as "Rejected".

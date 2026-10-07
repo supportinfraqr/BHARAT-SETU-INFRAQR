@@ -438,22 +438,17 @@ def contractor_compliance_report(request):
         if cr is None:
             return Response({"error": "Report not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        from api import clra
-
         from .compliance_verification import build_verification_report, verification_report_html
+        from .submissions import _batch_rows
         batch_ids = [int(x) for x in (cr.batch_ids or []) if str(x).isdigit()]
         batches = list(ComplianceBatch.objects.filter(id__in=batch_ids, contractor=request.user)
                        .select_related("site"))
-        # Master rows drive the C1-C8 parameter computation.
+        # Master rows drive the C1-C8 parameter computation. Scope each batch to
+        # its OWN site's rows — the stored master carries every site, so parsing
+        # it whole would fold other sites' data into this report.
         rows = []
         for batch in batches:
-            if not batch.master_file:
-                continue
-            try:
-                batch.master_file.open("rb")
-                rows.extend(clra.parse_master(batch.master_file))
-            except Exception:  # noqa: BLE001
-                continue
+            rows.extend(_batch_rows(batch))
         # Manual register uploads + additional forms (their level-1 AI audit).
         files = []
         for ev in SubmissionEvidence.objects.filter(user=request.user, unique_no=cr.unique_no):
@@ -498,20 +493,13 @@ def contractor_compliance_report(request):
 @permission_classes([IsAuthenticated])
 def employer_batch_verification_report(request, batch_id):
     """Detailed verification report for one CLRA register batch — employer view."""
-    from api import clra
-
     from .compliance_verification import build_verification_report, verification_report_html
-    from .submissions import _visible_batch
+    from .submissions import _batch_rows, _visible_batch
     batch = _visible_batch(request.user, batch_id)
     if batch is None:
         return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
-    rows = []
-    if batch.master_file:
-        try:
-            batch.master_file.open("rb")
-            rows.extend(clra.parse_master(batch.master_file))
-        except Exception:  # noqa: BLE001
-            pass
+    # Only this batch's site rows (the stored master carries every site).
+    rows = _batch_rows(batch)
     meta = {
         "site": batch.site.site_name if batch.site else "",
         "period": f"{batch.month} {batch.year}".strip(),

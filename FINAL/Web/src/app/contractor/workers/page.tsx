@@ -281,13 +281,12 @@ function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onEmploymentCar
       const right = Math.max(8, window.innerWidth - rect.right);
       const spaceBelow = window.innerHeight - rect.bottom - 8;
       const spaceAbove = rect.top - 8;
-      const ESTIMATED = 300;
-      // Flip the menu above the trigger when it would otherwise run off the
-      // bottom of the viewport, and cap its height so every item stays reachable.
+      const ESTIMATED = 180;
       if (spaceBelow < ESTIMATED && spaceAbove > spaceBelow) {
-        setAnchor({ bottom: window.innerHeight - rect.top + 4, right, maxHeight: Math.max(140, spaceAbove) });
+        const height = Math.min(ESTIMATED, spaceAbove);
+        setAnchor({ top: rect.top - height - 4, right, maxHeight: Math.max(120, spaceAbove) });
       } else {
-        setAnchor({ top: rect.bottom + 4, right, maxHeight: Math.max(140, spaceBelow) });
+        setAnchor({ top: rect.bottom + 4, right, maxHeight: Math.max(120, spaceBelow) });
       }
     };
     update();

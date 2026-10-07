@@ -213,7 +213,7 @@ export default function BindingRequestsPage() {
 
     <div className="grid gap-4 xl:grid-cols-2">
       {filtered.map(req => (
-        <article key={req.id} className="flex h-full flex-col bg-white border border-gray-200 rounded-2xl p-5">
+        <article key={req.id} className="flex h-full min-w-0 flex-col bg-white border border-gray-200 rounded-2xl p-5">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
             <div className="flex gap-3 min-w-0">
               <span className="w-11 h-11 rounded-xl bg-gray-50 border border-gray-100 text-[#073B67] flex items-center justify-center flex-shrink-0"><Building2 size={20}/></span>
@@ -226,21 +226,21 @@ export default function BindingRequestsPage() {
           </div>
 
           <dl className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-            <div><dt className="text-gray-400">Principal employer</dt><dd className="font-semibold text-gray-800 mt-0.5">{req.employer}</dd></div>
-            <div><dt className="text-gray-400">Site</dt><dd className="font-semibold text-gray-800 mt-0.5 flex items-center gap-1"><MapPin size={11} className="text-gray-400"/>{req.site}</dd></div>
-            <div><dt className="text-gray-400">Designation</dt><dd className="font-semibold text-gray-800 mt-0.5">{req.designation}</dd></div>
-            <div><dt className="text-gray-400">Cost sheet</dt><dd className="font-semibold text-green-700 mt-0.5">{req.costSheetName || req.wage || '—'}</dd></div>
+            <div className="min-w-0"><dt className="text-gray-400">Principal employer</dt><dd className="mt-0.5 break-words font-semibold text-gray-800">{req.employer}</dd></div>
+            <div className="min-w-0"><dt className="text-gray-400">Site</dt><dd className="mt-0.5 flex items-center gap-1 font-semibold text-gray-800"><MapPin size={11} className="shrink-0 text-gray-400"/><span className="break-words min-w-0">{req.site}</span></dd></div>
+            <div className="min-w-0"><dt className="text-gray-400">Designation</dt><dd className="mt-0.5 break-words font-semibold text-gray-800">{req.designation}</dd></div>
+            <div className="min-w-0"><dt className="text-gray-400">Cost sheet</dt><dd className="mt-0.5 break-all font-semibold text-green-700">{req.costSheetName || req.wage || '—'}</dd></div>
           </dl>
 
           {req.status === 'Accepted' && req.contractorDetails && (
             <div className="mt-4 rounded-xl border border-green-100 bg-green-50/40 p-3">
               <p className="text-[11px] font-bold uppercase tracking-wider text-green-700 mb-2">Contractor details — unlocked by your binding</p>
               <dl className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-                <div><dt className="text-gray-400">Trade name</dt><dd className="font-semibold text-gray-800 mt-0.5">{req.contractorDetails.tradeName || '—'}</dd></div>
-                <div><dt className="text-gray-400">Contact person</dt><dd className="font-semibold text-gray-800 mt-0.5">{req.contractorDetails.contactPerson || '—'}</dd></div>
-                <div><dt className="text-gray-400">Email</dt><dd className="font-semibold text-gray-800 mt-0.5 break-all">{req.contractorDetails.email || '—'}</dd></div>
-                <div><dt className="text-gray-400">State</dt><dd className="font-semibold text-gray-800 mt-0.5">{req.contractorDetails.state || '—'}</dd></div>
-                <div className="col-span-2"><dt className="text-gray-400">Registered address</dt><dd className="font-semibold text-gray-800 mt-0.5">{req.contractorDetails.address || '—'}</dd></div>
+                <div className="min-w-0"><dt className="text-gray-400">Trade name</dt><dd className="mt-0.5 break-words font-semibold text-gray-800">{req.contractorDetails.tradeName || '—'}</dd></div>
+                <div className="min-w-0"><dt className="text-gray-400">Contact person</dt><dd className="mt-0.5 break-words font-semibold text-gray-800">{req.contractorDetails.contactPerson || '—'}</dd></div>
+                <div className="min-w-0"><dt className="text-gray-400">Email</dt><dd className="mt-0.5 break-all font-semibold text-gray-800">{req.contractorDetails.email || '—'}</dd></div>
+                <div className="min-w-0"><dt className="text-gray-400">State</dt><dd className="mt-0.5 break-words font-semibold text-gray-800">{req.contractorDetails.state || '—'}</dd></div>
+                <div className="col-span-2 min-w-0"><dt className="text-gray-400">Registered address</dt><dd className="mt-0.5 break-words font-semibold text-gray-800">{req.contractorDetails.address || '—'}</dd></div>
               </dl>
             </div>
           )}

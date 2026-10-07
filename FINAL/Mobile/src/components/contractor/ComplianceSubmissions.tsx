@@ -171,6 +171,7 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
   const [regOnlyMandatory, setRegOnlyMandatory] = useState(false);
   const [templateView, setTemplateView] = useState<DocRowUI | null>(null);
   const [optimisticSubmitted, setOptimisticSubmitted] = useState<string[]>([]);
+  const [confirmReupload, setConfirmReupload] = useState<{ doc: DocRowUI; file: File } | null>(null);
 
   const rawDocuments = contractor.submissions.documents as DocumentRow[];
   const documents = useMemo(() => scoped(rawDocuments, row => row.employer), [scoped, rawDocuments]);
@@ -271,16 +272,20 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
   // Names of evidence forms that already carry a submitted package ref for the current create context.
   const submittedNames = useMemo(() => {
     const periodStr = `${createPeriod} ${fy.replace('FY ', '')}`;
+    const targetSite = activeSiteObj?.name || ctxSite;
     const names = new Set<string>();
     documents.forEach(doc => {
       if (doc.source !== 'evidence' || !doc.uniqueNo) return;
       if (doc.period !== periodStr && doc.month !== month) return;
+      // Scope to the site being created — a form submitted at another site must
+      // not appear as submitted here.
+      if (targetSite && (doc.site || '') !== targetSite) return;
       names.add(doc.type);
       if (doc.documentType) names.add(doc.documentType);
     });
     optimisticSubmitted.forEach(name => names.add(name));
     return names;
-  }, [documents, createPeriod, fy, month, optimisticSubmitted]);
+  }, [documents, createPeriod, fy, month, optimisticSubmitted, activeSiteObj, ctxSite]);
 
   const submittedEvidenceCount = additionalDocs.filter(d => submittedNames.has(d.name)).length;
 
@@ -402,8 +407,13 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
   const periodSubmitted = !hasSomethingToSubmit
     && generatedForCreate.some(b => b.status === 'Submitted' || b.status === 'Verified');
 
-  async function uploadEvidence(doc: DocRowUI, next?: File) {
+  async function uploadEvidence(doc: DocRowUI, next?: File, forceOverwrite: boolean = false) {
     if (!next) return;
+    // Validation: if a file is already uploaded for this doc/filter context, ask user before replacing.
+    if (!forceOverwrite && uploads[doc.name]?.id != null) {
+      setConfirmReupload({ doc, file: next });
+      return;
+    }
     setRemovedKeys(prev => prev.filter(k => k !== doc.name));
     setError('');
     if (next.size > 10 * 1024 * 1024) {
@@ -1068,8 +1078,6 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
           <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
             <p className="text-xs font-extrabold uppercase tracking-wider text-gray-500">1 · CLRA Registers</p>
             <div className="flex items-center gap-2 flex-wrap">
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- file download (API route), not page navigation */}
-              <a href="/api/portal/compliance-batches/zip" className="h-7 px-3 rounded-lg border border-gray-200 bg-white text-[11px] font-bold text-gray-700 flex items-center gap-1 hover:bg-gray-50" title="Download every generated CLRA register as a ZIP"><Download size={12}/>Download all CLRA</a>
               <div className="flex rounded-lg border border-gray-200 overflow-hidden">
                 <button type="button" onClick={() => setClraMode('generated')} className={`h-7 px-3 text-[11px] font-bold ${clraMode === 'generated' ? 'bg-[#073B67] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Fetch generated</button>
                 <button type="button" onClick={() => setClraMode('manual')} className={`h-7 px-3 text-[11px] font-bold border-l border-gray-200 ${clraMode === 'manual' ? 'bg-[#073B67] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Upload manually</button>
@@ -1108,7 +1116,15 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
                 2 · Additional Forms ({submittedEvidenceCount}/{additionalDocs.length} Submitted
                 {totalMandatoryDocsCount > 0 ? ` · ${uploadedMandatoryCount}/${totalMandatoryDocsCount} Mandatory` : ''})
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- API file download */}
+                <a
+                  href={`/api/portal/submissions/zip?site=${encodeURIComponent(ctxSite)}&year=${encodeURIComponent(fy)}&period=${encodeURIComponent(createPeriod)}`}
+                  className="h-7 px-3 rounded-lg border border-gray-200 bg-white text-[11px] font-bold text-gray-700 flex items-center gap-1 hover:bg-gray-50 shadow-xs"
+                  title="Download all uploaded evidence documents for this site and period as a ZIP"
+                >
+                  <Download size={12}/>Download Additional Forms (ZIP)
+                </a>
                 {!allMandatoryUploaded && (
                   <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
                     {mandatoryDocs.filter(doc => uploads[doc.name]?.id == null).length} mandatory pending
@@ -1141,14 +1157,16 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
       </div>
     </section>}
 
-    {viewErrors && <div className="fixed inset-0 z-[85] bg-black/50 grid place-items-center p-4" onMouseDown={e => { if (e.target === e.currentTarget) setViewErrors(null); }}>
-      <section role="dialog" aria-modal="true" className="w-full max-w-lg bg-white rounded-2xl shadow-xl">
-        <header className="p-5 border-b border-gray-100 flex justify-between items-start gap-3"><div><h2 className="font-semibold text-gray-950">Why this upload failed</h2><p className="text-xs text-gray-500 mt-1">{viewErrors.name}</p></div><button type="button" onClick={() => setViewErrors(null)} className="w-11 h-11 -mr-2 -mt-2 grid place-items-center rounded-lg hover:bg-gray-50" aria-label="Close"><X/></button></header>
-        {viewErrors.findings.length
-          ? <ul className="p-5 space-y-2 text-sm text-gray-700">{viewErrors.findings.map((f, i) => <li key={i} className="flex gap-2"><span className="text-red-500">•</span>{f}</li>)}</ul>
-          : <p className="p-5 text-sm text-gray-500">No specific reason recorded.</p>}
+    {viewErrors && <div className="fixed inset-0 z-[115] bg-black/60 backdrop-blur-sm grid place-items-center p-4" onMouseDown={e => { if (e.target === e.currentTarget) setViewErrors(null); }}>
+      <section role="dialog" aria-modal="true" className="w-full max-w-lg max-h-[85vh] bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden">
+        <header className="p-5 border-b border-gray-100 flex justify-between items-start gap-3 flex-shrink-0"><div><h2 className="font-semibold text-gray-950">Why this upload failed</h2><p className="text-xs text-gray-500 mt-1">{viewErrors.name}</p></div><button type="button" onClick={() => setViewErrors(null)} className="w-11 h-11 -mr-2 -mt-2 grid place-items-center rounded-lg hover:bg-gray-50" aria-label="Close"><X/></button></header>
+        <div className="overflow-y-auto flex-1 p-5">
+          {viewErrors.findings.length
+            ? <ul className="space-y-2 text-sm text-gray-700">{viewErrors.findings.map((f, i) => <li key={i} className="flex gap-2"><span className="text-red-500">•</span>{f}</li>)}</ul>
+            : <p className="text-sm text-gray-500">No specific reason recorded.</p>}
+        </div>
         {viewErrors.uploadId != null && (
-          <footer className="px-5 py-4 border-t border-gray-100 flex items-center justify-between gap-2">
+          <footer className="px-5 py-4 border-t border-gray-100 flex items-center justify-between gap-2 flex-shrink-0 bg-white">
             <p className="text-[11px] text-gray-400">Overriding records the failed checks against this document.</p>
             <div className="flex gap-2">
               <button type="button" onClick={() => setViewErrors(null)} className="h-9 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Close</button>
@@ -1184,6 +1202,40 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
     </div>}
 
     {batchView && <BatchDrilldown batchId={batchView} role="contractor" onClose={() => setBatchView(null)} />}
+
+    {confirmReupload && (
+      <div className="fixed inset-0 z-[110] bg-slate-950/60 backdrop-blur-sm grid place-items-center p-4" role="dialog" aria-modal="true" aria-label="Confirm File Re-upload" onClick={() => setConfirmReupload(null)}>
+        <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-gray-100 animate-in zoom-in-95 fade-in duration-200" onClick={e => e.stopPropagation()}>
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center mx-auto mb-4">
+            <Upload size={24} />
+          </div>
+          <h3 className="text-base font-bold text-gray-900 text-center">Replace Existing File?</h3>
+          <p className="mt-2 text-xs text-gray-600 text-center leading-relaxed">
+            File is already uploaded for <strong>{confirmReupload.doc.name}</strong> under this filter ({activeSiteObj?.name} · {createPeriod} {fy}). Do you want to upload again?
+          </p>
+          <div className="mt-6 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setConfirmReupload(null)}
+              className="flex-1 h-10 rounded-xl border border-gray-200 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              No, Keep Current
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const { doc, file } = confirmReupload;
+                setConfirmReupload(null);
+                void uploadEvidence(doc, file, true);
+              }}
+              className="flex-1 h-10 rounded-xl bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] transition-colors shadow-sm"
+            >
+              Yes, Replace File
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   </div>;
 }
 

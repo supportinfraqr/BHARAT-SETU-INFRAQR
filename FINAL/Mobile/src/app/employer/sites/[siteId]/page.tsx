@@ -71,7 +71,7 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
   const siteWorkers = employer.workers.filter(w => String(w.siteId) === String(current.id));
 
   function startEdit() {
-    setDraft({ ...data, appointmentLetterTemplateId: current.appointmentLetterTemplateId ?? '', experienceLetterTemplateId: current.experienceLetterTemplateId ?? '' });
+    setDraft({ ...data, experienceLetterTemplateId: current.experienceLetterTemplateId ?? '' });
     setEditing(true);
     setError('');
   }
@@ -83,9 +83,6 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
       // Edit spans every tab: save any changed field across the whole site master.
       for (const name of Object.values(TAB_FIELDS).flat()) {
         if (draft[name] !== data[name]) payload[name] = draft[name];
-      }
-      if (String(draft.appointmentLetterTemplateId ?? '') !== String(current.appointmentLetterTemplateId ?? '')) {
-        payload.appointmentLetterTemplateId = draft.appointmentLetterTemplateId ?? '';
       }
       if (String(draft.experienceLetterTemplateId ?? '') !== String(current.experienceLetterTemplateId ?? '')) {
         payload.experienceLetterTemplateId = draft.experienceLetterTemplateId ?? '';
@@ -205,17 +202,8 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
 
       <div className="border-t border-gray-100 mt-6 pt-5">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Worker letters</h3>
-        <p className="text-xs text-gray-500 mb-4">Appointment and Experience (releasing) letters for every worker at this site are rendered from these state-wise templates. Leave blank to use the state / all-India default.</p>
+        <p className="text-xs text-gray-500 mb-4">Experience (releasing) letters for every worker at this site are rendered from these state-wise templates. Leave blank to use the state / all-India default. Appointment letters are issued automatically by BSS.</p>
         <div className="grid sm:grid-cols-2 gap-4">
-          <div>
-            <p className="text-[11px] uppercase font-semibold text-gray-400">Appointment letter template</p>
-            {editing ? (
-              <select value={String(draft.appointmentLetterTemplateId ?? '')} onChange={e => setDraft(d => ({ ...d, appointmentLetterTemplateId: e.target.value }))} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 bg-white text-sm">
-                <option value="">Default (state / all-India)</option>
-                {letterTemplates.filter(t => t.letterType === 'APPOINTMENT').map(t => <option key={t.id} value={t.id}>{t.name}{t.state ? ` — ${t.state}` : ' — All India'}</option>)}
-              </select>
-            ) : <p className="text-sm font-medium mt-1 text-gray-800">{current.appointmentLetterTemplateName || 'Default (state / all-India)'}</p>}
-          </div>
           <div>
             <p className="text-[11px] uppercase font-semibold text-gray-400">Experience / releasing letter template</p>
             {editing ? (

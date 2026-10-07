@@ -29,6 +29,7 @@ from .ai_audit import *  # noqa: F401,F403
 from .ai_report import *  # noqa: F401,F403
 from .audit_reports import *  # noqa: F401,F403
 from .admin_bulk import *  # noqa: F401,F403
+from .onboarding import *  # noqa: F401,F403
 from .form_names import *  # noqa: F401,F403
 from .entitylocker import *  # noqa: F401,F403
 from .sap import *  # noqa: F401,F403

@@ -46,7 +46,7 @@ class SmsOtp(models.Model):
     """SMS-delivered one-time passwords (general purpose)."""
 
     PURPOSE = [("BINDING", "Binding Consent"), ("LOGIN", "Login"),
-               ("VERIFY", "Verify"), ("IVR", "IVR")]
+               ("VERIFY", "Verify"), ("IVR", "IVR"), ("INTRO", "Introductory SMS")]
 
     mobile = models.CharField(max_length=20)
     purpose = models.CharField(max_length=20, choices=PURPOSE, default="LOGIN")

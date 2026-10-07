@@ -270,11 +270,10 @@ def submission_file_token(request, role_path, submission_id):
     elif submission.user_id == user.id:
         allowed = True
     elif user.role == "employer":
-        allowed = SubmissionEvidence.objects.filter(
-            Q(user__worker_bindings__site__employer=user)
-            | Q(user__contractor_bindings__site__employer=user),
-            pk=submission.id,
-        ).exists()
+        from bss_core.models import Site, ContractorEmployerBinding
+        my_sites = set(Site.objects.filter(employer=user).values_list("site_name", flat=True))
+        cids = set(ContractorEmployerBinding.objects.filter(employer=user, binding_status="ACCEPTED").values_list("contractor_id", flat=True))
+        allowed = (submission.user_id in cids) or (bool(submission.site) and submission.site in my_sites)
     if not allowed:
         return Response({"error": "not authorized"}, status=status.HTTP_403_FORBIDDEN)
     if not submission.file:
@@ -343,11 +342,10 @@ def submission_file_download(request, role_path, submission_id):
     elif submission.user_id == user.id:
         allowed = True
     elif user.role == "employer":
-        allowed = SubmissionEvidence.objects.filter(
-            Q(user__worker_bindings__site__employer=user)
-            | Q(user__contractor_bindings__site__employer=user),
-            pk=submission.id,
-        ).exists()
+        from bss_core.models import Site, ContractorEmployerBinding
+        my_sites = set(Site.objects.filter(employer=user).values_list("site_name", flat=True))
+        cids = set(ContractorEmployerBinding.objects.filter(employer=user, binding_status="ACCEPTED").values_list("contractor_id", flat=True))
+        allowed = (submission.user_id in cids) or (bool(submission.site) and submission.site in my_sites)
     if not allowed:
         return Response({"error": "not authorized"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -436,15 +434,10 @@ def _handle_submission_review(user, body):
     submission = SubmissionEvidence.objects.filter(pk=raw_id).first()
     if submission is None:
         raise PortalMutationError("Submission not found.", 404)
-    connected = (
-        SubmissionEvidence.objects
-        .filter(
-            Q(user__worker_bindings__site__employer=user)
-            | Q(user__contractor_bindings__site__employer=user),
-            pk=submission.id,
-        )
-        .exists()
-    )
+    from bss_core.models import Site, ContractorEmployerBinding
+    my_sites = set(Site.objects.filter(employer=user).values_list("site_name", flat=True))
+    cids = set(ContractorEmployerBinding.objects.filter(employer=user, binding_status="ACCEPTED").values_list("contractor_id", flat=True))
+    connected = (submission.user_id in cids) or (bool(submission.site) and submission.site in my_sites)
     if not connected:
         raise PortalMutationError("not authorized", 403)
     decision = str(body.get("status") or "").strip().upper()
@@ -713,9 +706,23 @@ def contractor_compliance_batches_zip(request):
 
     user = request.user
     batch_id = request.query_params.get("batchId")
+    site = request.query_params.get("site")
+    year = request.query_params.get("year")
+    period = request.query_params.get("period")
+
     qs = ComplianceBatch.objects.filter(contractor=user)
     if batch_id:
         qs = qs.filter(pk=batch_id)
+    if site and site != "all":
+        qs = qs.filter(site=site)
+    if year:
+        fy_key = year.replace("FY ", "")
+        qs = qs.filter(financial_year=fy_key)
+    if period:
+        # Filter by month matching period
+        period_clean = period.split()[0] if " " in period else period
+        qs = qs.filter(month__iexact=period_clean)
+
     qs = qs.exclude(generated_file="").order_by("-year", "-id")
     if not qs.exists():
         return Response({"error": "No generated register files to download yet."},
@@ -746,6 +753,72 @@ def contractor_compliance_batches_zip(request):
     filename = "clra-documents.zip" if not batch_id else f"clra-documents-{batch_id}.zip"
     response = HttpResponse(buf.read(), content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def contractor_submissions_zip(request):
+    """Bundle uploaded evidence documents for all sites (or a specific site) into
+    folders named after their respective site into a single downloadable ZIP."""
+    import io
+    import zipfile
+    from django.http import HttpResponse
+    from bss_core.models import SubmissionEvidence, Site, ContractorEmployerBinding
+
+    user = request.user
+    site_name = request.query_params.get("site")
+    year = request.query_params.get("year")
+    period = request.query_params.get("period")
+
+    qs = SubmissionEvidence.objects.exclude(file="")
+    if user.role == "contractor":
+        qs = qs.filter(user=user)
+    elif user.role == "employer":
+        my_sites = set(Site.objects.filter(employer=user).values_list("site_name", flat=True))
+        cids = set(ContractorEmployerBinding.objects.filter(employer=user, binding_status="ACCEPTED").values_list("contractor_id", flat=True))
+        qs = qs.filter(Q(site__in=my_sites) | Q(user_id__in=cids))
+
+    if site_name and site_name != "all" and site_name != "All Sites":
+        qs = qs.filter(site__icontains=site_name)
+    if year:
+        fy_key = year.replace("FY ", "")
+        qs = qs.filter(Q(financial_year__icontains=fy_key) | Q(period__icontains=fy_key))
+    if period:
+        qs = qs.filter(period__icontains=period)
+
+    if not qs.exists():
+        return Response({"error": "No submitted evidence documents found for this selection."},
+                        status=status.HTTP_404_NOT_FOUND)
+
+    buf = io.BytesIO()
+    count = 0
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as archive:
+        for sub in qs:
+            if not sub.file:
+                continue
+            try:
+                with sub.file.open("rb") as handle:
+                    data = handle.read()
+            except Exception:  # noqa: BLE001
+                continue
+            site_folder = (sub.site or "General_Site").replace(" ", "_")
+            period_folder = (sub.period or "period").replace(" ", "_")
+            folder = f"{site_folder}/{period_folder}"
+            doc_name = (sub.document_type or sub.doc_type or "Document").replace(" ", "_")
+            ext = os.path.splitext(sub.file.name)[1] or ".pdf"
+            base_filename = f"{doc_name}_{sub.id}{ext}"
+            archive.writestr(f"{folder}/{base_filename}", data)
+            count += 1
+
+    if not count:
+        return Response({"error": "No valid files found to package."}, status=status.HTTP_404_NOT_FOUND)
+
+    buf.seek(0)
+    zip_name = f"additional-forms-{year or 'all'}-{period or 'all'}.zip".replace(" ", "_")
+    response = HttpResponse(buf.read(), content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="{zip_name}"'
     return response
 
 
@@ -792,6 +865,28 @@ def contractor_clra_validate(request):
     if site is None:
         site = Site.objects.filter(id__in=site_ids).order_by("id").first()
     employer = site.employer if site else None
+
+    # Site-code validation: every Site value in the master file must reference a
+    # site allotted to the contractor. Generation reads the sites from the sheet
+    # (no site is selected at generation time), so this is what catches a master
+    # built for a wrong / foreign site code.
+    labels = [str(r.get("site") or r.get("location") or "").strip() for r in rows]
+    distinct_labels = sorted({label for label in labels if label})
+    if not distinct_labels:
+        report["errors"].append({"row": 0, "field": "site",
+                                 "message": "The master file has no Site values — it cannot be matched to a site."})
+    else:
+        allotted = set()
+        for s in Site.objects.filter(id__in=site_ids):
+            for key in (str(s.site_name or "").strip(), str(s.site_code or "").strip()):
+                if key:
+                    allotted.add(key.casefold())
+        foreign = [lbl for lbl in distinct_labels if lbl.casefold() not in allotted]
+        if foreign:
+            shown = ", ".join(foreign[:8]) + ("…" if len(foreign) > 8 else "")
+            report["errors"].append({"row": 0, "field": "site",
+                                     "message": f"{len(foreign)} Site value(s) in the master file are not among your allotted sites: {shown}."})
+
     adopted = employer_adopted_ids(employer, state, site=site) if (employer is not None and state) else set()
     if state and not adopted:
         report["errors"].append({"row": 0, "field": "adoption",
@@ -1511,6 +1606,7 @@ __all__ = [
     "contractor_compliance_batches_zip",
     "contractor_site_documents",
     "contractor_submissions",
+    "contractor_submissions_zip",
     "submission_file_download",
     "submission_file_serve",
     "submission_file_token",

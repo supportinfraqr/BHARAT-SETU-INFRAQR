@@ -219,6 +219,7 @@ _v1_patterns = _v1(
     ("employer/compliance-batches/<int:batch_id>/register/<int:template_id>/issues.xlsx", v1_bridge.compliance_batch_register_issues, "v1_employer_compliance_batch_register_issues"),
     ("worker/submissions/<int:submission_id>/file", v1_bridge.submission_file_download, "v1_worker_submission_file", {"role_path": "worker"}),
     ("contractor/submissions/<int:submission_id>/file", v1_bridge.submission_file_download, "v1_contractor_submission_file", {"role_path": "contractor"}),
+    ("contractor/submissions/zip", v1_bridge.contractor_submissions_zip, "v1_contractor_submissions_zip"),
     ("employer/submissions/<int:submission_id>/file", v1_bridge.submission_file_download, "v1_employer_submission_file", {"role_path": "employer"}),
     ("contractor/submissions/<int:submission_id>/issues.xlsx", v1_bridge.submission_audit_issues, "v1_contractor_submission_issues"),
     ("employer/submissions/<int:submission_id>/issues.xlsx", v1_bridge.submission_audit_issues, "v1_employer_submission_issues"),
@@ -235,6 +236,20 @@ _v1_patterns = _v1(
     ("contractor/notifications", v1_bridge.notifications, "v1_contractor_notifications", {"role_path": "contractor"}),
     ("employer/notifications", v1_bridge.notifications, "v1_employer_notifications", {"role_path": "employer"}),
     ("government/notifications", v1_bridge.notifications, "v1_government_notifications", {"role_path": "government"}),
+    # Onboarding (Plan A secure channel) — quarantine pipeline
+    ("employer/onboarding/submit", v1_bridge.employer_onboarding_submit, "v1_employer_onboarding_submit"),
+    ("employer/onboarding/template", v1_bridge.employer_onboarding_template, "v1_employer_onboarding_template"),
+    ("employer/onboarding/batches", v1_bridge.employer_onboarding_batches, "v1_employer_onboarding_batches"),
+    ("employer/onboarding/batches/<int:batch_id>", v1_bridge.onboarding_batch_detail, "v1_employer_onboarding_batch_detail"),
+    ("employer/onboarding/batches/<int:batch_id>/review", v1_bridge.employer_onboarding_review, "v1_employer_onboarding_review"),
+    ("admin/onboarding/batches", v1_bridge.admin_onboarding_batches, "v1_admin_onboarding_batches"),
+    ("admin/onboarding/batches/<int:batch_id>", v1_bridge.onboarding_batch_detail, "v1_onboarding_batch_detail"),
+    ("admin/onboarding/batches/<int:batch_id>/review", v1_bridge.admin_onboarding_review, "v1_admin_onboarding_review"),
+    ("admin/onboarding/batches/<int:batch_id>/clean", v1_bridge.admin_onboarding_clean, "v1_admin_onboarding_clean"),
+    ("admin/onboarding/batches/<int:batch_id>/structure", v1_bridge.admin_onboarding_structure, "v1_admin_onboarding_structure"),
+    ("admin/onboarding/batches/<int:batch_id>/migrate", v1_bridge.admin_onboarding_migrate, "v1_admin_onboarding_migrate"),
+    ("worker/onboarding/status", v1_bridge.worker_onboarding_status, "v1_worker_onboarding_status"),
+    ("worker/onboarding/consent", v1_bridge.worker_onboarding_consent, "v1_worker_onboarding_consent"),
 )
 _v1_mutations = _v1(
     ("worker/<str:resource>", v1_bridge.mutate_portal, "v1_worker_mutate", {"role_path": "worker"}),
