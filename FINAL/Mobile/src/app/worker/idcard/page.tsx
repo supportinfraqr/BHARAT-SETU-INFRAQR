@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useMemo } from 'react';
-import { Download, Share2, ChevronLeft, Home, RadioTower, ShieldCheck, Briefcase, CheckCircle2, PackageCheck, UserRound, IdCard } from 'lucide-react';
+import { Download, Share2, ChevronLeft, Home, RadioTower, ShieldCheck, Briefcase, CheckCircle2, UserRound, IdCard } from 'lucide-react';
 import Link from 'next/link';
 import WorkerQr from '@/components/qr/WorkerQr';
 import CredentialQrPanel from '@/components/idcard/CredentialQrPanel';
@@ -662,7 +662,6 @@ export default function IdentityCardPage() {
         </button>
       </div>
 
-      <Link href="/worker/OrderCard" className="w-full h-11 rounded-[12px] border border-[#073B67]/20 bg-blue-50/60 text-[#073B67] font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-50"><PackageCheck size={18}/>Order Physical Card</Link>
       <p className="text-center text-xs text-gray-500">ISO/IEC 7810 ID-1 · 85.60 × 53.98 mm · front and back · 4× raster capture</p>
       {exportError && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{exportError}</p>}
       {exportNotice && <p role="status" className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg p-3">{exportNotice}</p>}

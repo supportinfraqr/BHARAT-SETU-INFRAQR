@@ -70,6 +70,8 @@ export default function ClraRegistersPage() {
   const board = boards.find(item => item.siteId === active) ?? null;
   const activeState = board?.state ?? '';
   const selected = new Set(board ? (selection[board.siteId] ?? []) : []);
+  const adminCatalogForms = extraForms.filter(f => f.scope === 'admin');
+  const selectedCatalogCount = adminCatalogForms.filter(f => catalogIsSelected(f)).length;
 
   function toggle(formId: number) {
     if (!board) return;
@@ -91,6 +93,21 @@ export default function ClraRegistersPage() {
   function clearOptional() {
     if (!board) return;
     setSelection(current => ({ ...current, [board.siteId]: board.forms.filter(form => form.isMandatory).map(form => form.id) }));
+    setNotice('');
+  }
+
+  // Bulk select/clear for the admin additional-forms catalog (adoption).
+  function selectAllCatalog(selected: boolean) {
+    if (!board) return;
+    const forms = extraForms.filter(f => f.scope === 'admin');
+    setDrafts(current => {
+      const draft = current[board.siteId] ?? emptyDraft();
+      const catalog = { ...draft.catalog };
+      for (const f of forms) {
+        catalog[f.id] = { selected, mandatory: selected ? catalogIsMandatory(f) : false };
+      }
+      return { ...current, [board.siteId]: { ...draft, catalog } };
+    });
     setNotice('');
   }
 
@@ -395,7 +412,7 @@ export default function ClraRegistersPage() {
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => void copyToStateSites()} disabled={busy || boards.filter(b => b.state.toLowerCase() === board.state.toLowerCase()).length <= 1} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40 inline-flex items-center gap-1.5" title={`Copy active site forms and register adoptions to all sites in ${board.state}`}><Copy size={13}/>Copy to all sites of this state</button>
               <button type="button" onClick={() => selectAll(board.forms)} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600">Select all</button>
-              <button type="button" onClick={clearOptional} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600">Clear optional</button>
+              <button type="button" onClick={clearOptional} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600">Clear all</button>
               <button type="button" onClick={() => void revokeSite()} disabled={busy || !board.gated} className="h-9 px-3 rounded-lg border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-40">Remove adoption</button>
             </div>
           </header>
@@ -437,7 +454,15 @@ export default function ClraRegistersPage() {
                 })()}
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Admin catalog for {activeState}</p>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Admin catalog for {activeState}{adminCatalogForms.length > 0 && <span className="ml-2 font-semibold normal-case tracking-normal text-gray-300">{selectedCatalogCount} of {adminCatalogForms.length}</span>}</p>
+                  {adminCatalogForms.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => selectAllCatalog(true)} className="text-[11px] font-bold text-[#073B67] hover:underline">Select all</button>
+                      <button type="button" onClick={() => selectAllCatalog(false)} className="text-[11px] font-bold text-gray-500 hover:underline">Clear all</button>
+                    </div>
+                  )}
+                </div>
                 {extraForms.filter(f => f.scope === 'admin').length
                   ? <ul className="divide-y divide-gray-100 rounded-xl border border-gray-100 overflow-hidden">{extraForms.filter(f => f.scope === 'admin').map(f => <li key={`c-${f.id}`} className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 text-xs">
                     <label className="flex items-center gap-2 text-gray-800 cursor-pointer"><input type="checkbox" checked={catalogIsSelected(f)} onChange={e => stageCatalog(f.id, e.target.checked, catalogIsMandatory(f))} className="accent-[#073B67] w-4 h-4"/>{f.name}{f.jurisdiction === 'central' && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200" title="Central — applies to every state">Central</span>}{f.formatVariant === 'old' && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">Old format</span>}{!f.requiresDocument && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">Submission only</span>}{f.frequency && <span className="text-gray-400">{f.frequency}</span>}</label>

@@ -149,8 +149,15 @@ export default function BindingRequestsPage() {
   };
 
   const badge = (status: string) => {
-    const map: Record<string, string> = { Pending:'bg-orange-100 text-orange-700', Accepted:'bg-green-100 text-green-700', Rejected:'bg-red-100 text-red-700', Expired:'bg-gray-100 text-gray-500' };
-    return <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${map[status]}`}>{status}</span>;
+    const map: Record<string, string> = {
+      Pending: 'bg-orange-100 text-orange-700',
+      Accepted: 'bg-green-100 text-green-700',
+      Rejected: 'bg-red-100 text-red-700',
+      Expired: 'bg-gray-100 text-gray-500',
+      Cancelled: 'bg-slate-100 text-slate-600',
+      'Site Changed': 'bg-sky-100 text-sky-700',
+    };
+    return <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${map[status] ?? 'bg-gray-100 text-gray-600'}`}>{status}</span>;
   };
 
   const q = query.trim().toLowerCase();
@@ -206,7 +213,7 @@ export default function BindingRequestsPage() {
 
     <div className="grid gap-4 xl:grid-cols-2">
       {filtered.map(req => (
-        <article key={req.id} className="bg-white border border-gray-200 rounded-2xl p-5">
+        <article key={req.id} className="flex h-full flex-col bg-white border border-gray-200 rounded-2xl p-5">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
             <div className="flex gap-3 min-w-0">
               <span className="w-11 h-11 rounded-xl bg-gray-50 border border-gray-100 text-[#073B67] flex items-center justify-center flex-shrink-0"><Building2 size={20}/></span>
@@ -242,29 +249,29 @@ export default function BindingRequestsPage() {
             // This worker raised the request (scanned the contractor QR), so their
             // consent is already recorded — it is waiting on the contractor, not on
             // the worker. Never show "Accept" on the worker's own request.
-            <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="mt-auto pt-4 border-t border-gray-100">
               <p className="text-xs font-semibold text-amber-700 flex items-center gap-1.5"><Clock3 size={14}/>Awaiting contractor approval — you raised this request.</p>
             </div>
           ) : (
-            <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
+            <div className="mt-auto pt-4 border-t border-gray-100 flex flex-wrap gap-2">
               <button onClick={() => setConfirm({ req, kind: 'accept' })} disabled={busyId===req.id} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-bold flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-60"><Link2 size={15}/>{busyId===req.id?'Approving…':'Accept & Bind'}</button>
               <button onClick={() => setConfirm({ req, kind: 'decline' })} disabled={busyId===req.id} className="h-10 px-4 rounded-lg border border-red-200 text-red-600 text-sm font-bold flex items-center gap-2 hover:bg-red-50 disabled:opacity-60"><XCircle size={15}/>Decline</button>
             </div>
           ))}
           {req.status === 'Accepted' && (req.unbindRequested ? (
-            <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
+            <div className="mt-auto pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
               <p className="text-xs text-orange-700 font-semibold flex items-center gap-1.5"><XCircle size={14}/>{req.unbindConsentWorker ? 'Unbinding requested — awaiting the contractor’s consent.' : 'The contractor requested unbinding — awaiting your consent.'}</p>
               {!req.unbindConsentWorker && <button onClick={() => setConfirm({ req, kind: 'unbind' })} disabled={busyId===req.id} className="h-9 px-3 rounded-lg bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 disabled:opacity-60"><XCircle size={14}/>{busyId===req.id?'Confirming…':'Confirm unbind'}</button>}
               {!req.unbindConsentWorker && <button onClick={() => void rejectUnbind(req)} disabled={busyId===req.id} className="h-9 px-3 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-bold flex items-center gap-1.5 hover:bg-gray-50 disabled:opacity-60">Reject request</button>}
             </div>
           ) : (
-            <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
+            <div className="mt-auto pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
               <p className="text-xs text-green-700 font-semibold flex items-center gap-1.5"><CheckCircle2 size={14}/>Binding active · employment started with {req.contractor} on approval of both parties.</p>
               <button onClick={() => setConfirm({ req, kind: 'unbind' })} disabled={busyId===req.id} className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold flex items-center gap-1.5 hover:bg-red-50 disabled:opacity-60"><XCircle size={14}/>Request Unbind</button>
             </div>
           ))}
-          {req.status === 'Cancelled' && <p className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-500 font-semibold">Binding unbound — both parties consented.</p>}
-          {req.status === 'Site Changed' && <p className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-500 font-semibold">Binding closed — your contractor moved you to another site; your engagement continues there.</p>}
+          {req.status === 'Cancelled' && <p className="mt-auto pt-4 border-t border-gray-100 text-xs text-gray-500 font-semibold">Binding unbound — both parties consented.</p>}
+          {req.status === 'Site Changed' && <p className="mt-auto pt-4 border-t border-gray-100 text-xs text-gray-500 font-semibold">Binding closed — your contractor moved you to another site; your engagement continues there.</p>}
         </article>
       ))}
     </div>

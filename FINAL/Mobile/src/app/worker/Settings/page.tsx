@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Bell, CheckCircle2, ChevronRight, Download, Eye, Globe2, LockKeyhole, MessageCircle, MonitorCog, PackageCheck, QrCode, ShieldCheck, Smartphone } from 'lucide-react';
+import { Bell, CheckCircle2, ChevronRight, Download, Eye, Globe2, LockKeyhole, MessageCircle, MonitorCog, QrCode, ShieldCheck, Smartphone } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import { applyAccessibilityPrefs } from '@/components/accessibility/AccessibilityEffects';
 import ConsentPanel from '@/components/ConsentPanel';
@@ -41,7 +40,6 @@ const initialFromPortal = (w: WorkerRecord): SettingsState => ({
 export default function SettingsPage() {
   const { language, t } = useLanguage();
   const { worker, portal, saveWorker, updateWorker, refresh } = useWorker();
-  const router = useRouter();
   const locale = getLocale(language);
   const portalPrefs = useMemo(() => initialFromPortal(worker), [worker]);
   const [prefsOverride, setPrefsOverride] = useState<SettingsState | null>(null);
@@ -111,8 +109,6 @@ export default function SettingsPage() {
   const mobileNum = worker.contact?.mobile?.trim() || '';
   const maskedMobile = mobileNum.length >= 4 ? `••••••${mobileNum.slice(-4)}` : (mobileNum || 'Not registered');
 
-  const deliveryAddress = worker.address?.current || worker.address?.permanent || 'Address on profile';
-  const cardFeeDisplay = portal?.cardProduct?.cardFee === 0 ? 'Free (Government Subsidy)' : portal?.cardProduct?.cardFee ? `₹${portal.cardProduct.cardFee}` : 'Standard Processing';
 
   return (
     <div className="space-y-5 pb-12 max-w-4xl mx-auto">
@@ -215,22 +211,6 @@ export default function SettingsPage() {
       </SettingSection>
 
       <ConsentPanel role="worker" />
-
-      <SettingSection
-        icon={PackageCheck}
-        title="Order Physical BSS Card"
-        subtitle="Request printing and secure delivery from the BSS office"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold text-gray-800">Delivery Address: <span className="text-gray-600 font-normal">{deliveryAddress}</span></p>
-            <p className="text-[11px] text-gray-500 mt-1">Issuance fee: <strong className="text-gray-800">{cardFeeDisplay}</strong> · Delivered via BSS postal dispatch</p>
-          </div>
-          <button onClick={() => router.push('/worker/OrderCard')} className="h-10 px-4 rounded-lg bg-[#073B67] hover:bg-[#062D4F] text-white text-xs font-semibold flex items-center justify-center gap-2 transition flex-shrink-0">
-            <PackageCheck size={15} />Order Card
-          </button>
-        </div>
-      </SettingSection>
 
       <SettingSection
         icon={ShieldCheck}

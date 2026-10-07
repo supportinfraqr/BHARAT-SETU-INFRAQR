@@ -23,7 +23,7 @@ const navGroups = [
     ['Profile','/Dashboard/WorkerDashboard/Profile'],['Compliance','/Dashboard/WorkerDashboard/Compliance'],['Documents','/Dashboard/WorkerDashboard/Documents'],['Retirement Benefits','/Dashboard/WorkerDashboard/Benefits'],['Grievances','/grievances/WorkerGrievances']
   ]},
   { label: 'QR / Identity', icon: ScanLine, items: [
-    ['Identity Card','/qr/idcard'],['Order Physical Card','/Dashboard/WorkerDashboard/OrderCard'],['My Contractor(s)','/Dashboard/WorkerDashboard/Profile'],['My Employer(s)','/Dashboard/WorkerDashboard/Profile'],['Binding Requests','/Rozgar/WorkerRozgar'],['Scan QR','/qr/scan']
+    ['Identity Card','/qr/idcard'],['My Contractor(s)','/Dashboard/WorkerDashboard/Profile'],['My Employer(s)','/Dashboard/WorkerDashboard/Profile'],['Binding Requests','/Rozgar/WorkerRozgar'],['Scan QR','/qr/scan']
   ]},
 ];
 

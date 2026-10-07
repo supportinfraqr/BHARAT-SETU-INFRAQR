@@ -21,7 +21,7 @@ const groups = [
   { key:'nav.bindingRequests', href:'/worker/binding', icon:Handshake },
   { key:'nav.work', icon:CheckSquare, items:[['nav.attendance','/worker/Attendance'],['nav.leave','/worker/Leave'],['nav.skills','/worker/Skills'],['nav.holidays','/worker/Holidays']] },
   { key:'nav.records', icon:FileText, items:[['nav.profile','/worker/Profile'],['nav.documents','/worker/Documents'],['nav.issuedLetters','/worker/IssuedLetters'],['nav.complianceWelfare','/worker/Compliance'],['nav.earnings','/worker/Earnings'],['nav.benefits','/worker/Benefits']] },
-  { key:'nav.qrIdentity', icon:ScanLine, items:[['nav.idCard','/worker/idcard'],['nav.orderCard','/worker/OrderCard']] },
+  { key:'nav.qrIdentity', icon:ScanLine, items:[['nav.idCard','/worker/idcard']] },
   { key:'nav.grievances', href:'/worker/grievances', icon:MessageSquareText },
 ] as const;
 
