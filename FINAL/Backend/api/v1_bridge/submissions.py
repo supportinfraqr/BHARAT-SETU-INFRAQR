@@ -848,6 +848,30 @@ def _batch_master_rows(batch):
         return []
 
 
+def _batch_rows(batch):
+    """The master-file rows that belong to THIS batch's site.
+
+    A batch is generated per site (see ``contractor_compliance_batches``), so the
+    stored master file may carry many sites. Everything that renders a batch —
+    the drill-down summary and the per-register HTML/Excel/PDF/audit — must use
+    only this site's rows, matching the grouping done at generation time
+    (``label = row.site or row.location``, resolved to the batch's site by name
+    or code)."""
+    rows = _batch_master_rows(batch)
+    site = batch.site
+    if site is None:
+        return rows
+    labels = {str(site.site_name or "").strip().casefold(),
+              str(site.site_code or "").strip().casefold()} - {""}
+    if not labels:
+        return rows
+
+    def key(row):
+        return str(row.get("site") or row.get("location") or "").strip().casefold()
+
+    return [row for row in rows if key(row) in labels]
+
+
 def _letterhead_ctx(contractor, site, rows):
     """Header values for register letterhead blocks (contractor/employer
     name+address, nature of work, location). The contractor address and nature
@@ -970,7 +994,7 @@ def compliance_batch_summary(request, batch_id):
     batch = _visible_batch(request.user, batch_id)
     if batch is None:
         return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
-    rows = _batch_master_rows(batch)
+    rows = _batch_rows(batch)
     grouped = {}
     for row in rows:
         key = ((row.get("site") or "").strip(), (row.get("location") or "").strip())
@@ -1215,7 +1239,7 @@ def compliance_batch_run_audits(request, batch_id):
                              for r in t.calculation_rules.all()],
         "fieldMappings": {m.column: m.field_key for m in t.field_mappings.all()},
     } for t in templates_list]
-    rows = _batch_master_rows(batch)
+    rows = _batch_rows(batch)
     employer_name = payloads._org_name(batch.site.employer) if (batch.site and batch.site.employer) else ""
     _schedule_register_audits(
         batch.id, templates, rows, batch.site.site_name if batch.site else "",
@@ -1270,7 +1294,7 @@ def compliance_batch_register(request, batch_id, template_id):
     template = RegisterTemplate.objects.filter(pk=template_id).first()
     if template is None:
         return Response({"error": "template not found"}, status=status.HTTP_404_NOT_FOUND)
-    rows = _batch_master_rows(batch)
+    rows = _batch_rows(batch)
     employer_name = payloads._org_name(batch.site.employer) if (batch.site and batch.site.employer) else ""
     html = clra.render_register_html(
         {"formCode": template.form_code, "title": template.title, "state": template.state,
@@ -1313,7 +1337,7 @@ def compliance_batch_register_export(request, batch_id, template_id):
     if template.resolved_output_format() != "xlsx":
         return Response({"error": "This template outputs PDF — open the register view to print/save it as PDF."},
                         status=status.HTTP_400_BAD_REQUEST)
-    rows = _batch_master_rows(batch)
+    rows = _batch_rows(batch)
     employer_name = payloads._org_name(batch.site.employer) if (batch.site and batch.site.employer) else ""
     context = clra.backend_context(
         contractor=payloads._party_name(batch.contractor), employer=employer_name,
@@ -1351,7 +1375,7 @@ def compliance_batch_register_pdf(request, batch_id, template_id):
     template = RegisterTemplate.objects.filter(pk=template_id).first()
     if template is None:
         return Response({"error": "template not found"}, status=status.HTTP_404_NOT_FOUND)
-    rows = _batch_master_rows(batch)
+    rows = _batch_rows(batch)
     employer_name = payloads._org_name(batch.site.employer) if (batch.site and batch.site.employer) else ""
     html = clra.render_register_html(
         {"formCode": template.form_code, "title": template.title, "state": template.state,
