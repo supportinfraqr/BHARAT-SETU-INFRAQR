@@ -333,19 +333,20 @@ def state_strength(state):
 
 
 def employer_adopted_ids(employer, state=None, *, site=None):
-    """Template ids the employer has adopted (CLRA register adoption).
+    """Template ids the employer has adopted for a **state** (CLRA register adoption).
 
-    Scoped to a **site** when given (site-specific adoption); otherwise to a
-    state (legacy/aggregate). Empty set means no adoption rows, so callers keep
-    the full applicable library (backward compatible)."""
+    Adoption is **state-wide** (stored with ``site=None``): every site in the
+    state inherits it. ``site`` is accepted for backward compatibility but
+    ignored. Empty set means no adoption rows, so callers keep the full
+    applicable library (backward compatible)."""
     from bss_core.models import EmployerRegisterTemplateAdoption
     if employer is None:
         return set()
     qs = EmployerRegisterTemplateAdoption.objects.filter(employer=employer, is_active=True)
-    if site is not None:
-        qs = qs.filter(site=site)
-    elif state:
+    if state:
         qs = qs.filter(state__iexact=state)
+    elif site is not None:
+        qs = qs.filter(site=site)
     else:
         return set()
     return set(qs.values_list("template_id", flat=True))
@@ -612,22 +613,20 @@ def contractor_register_templates(request):
                     status=status.HTTP_200_OK)
 
 
-def _employer_site_boards(user):
-    """Per-site CLRA adoption boards for the employer's sites."""
+def _employer_state_boards(user):
+    """Per-state CLRA adoption boards for the states the employer has sites in."""
     from bss_core.models import EmployerRegisterTemplateAdoption, RegisterTemplate
-    sites = (Site.objects.filter(employer=user).exclude(state="")
-             .order_by("site_name"))
+    states = sorted({(s.state or "").strip()
+                     for s in Site.objects.filter(employer=user).exclude(state="")})
     boards = []
-    for site in sites:
-        templates_list = applicable_templates(site.state)[0]
-        adopted = employer_adopted_ids(user, site.state, site=site)
+    for state in states:
+        templates_list = applicable_templates(state)[0]
+        adopted = employer_adopted_ids(user, state)
         mandatory = {t.id for t in templates_list if t.is_mandatory}
         effective = adopted | mandatory
         boards.append({
-            "siteId": site.id,
-            "siteName": site.site_name,
-            "siteCode": site.site_code,
-            "state": site.state,
+            "state": state,
+            "siteCount": Site.objects.filter(employer=user, state__iexact=state).count(),
             "adoptedCount": len([t for t in templates_list if t.id in effective]),
             "total": len(templates_list),
             "gated": bool(adopted),
@@ -641,13 +640,13 @@ def _employer_site_boards(user):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def employer_register_templates(request):
-    """Employer CLRA register adoption, **per site**.
+    """Employer CLRA register adoption, **state-wide**.
 
-    GET  → one board per site: the site's applicable State+Form templates with an
-           ``adopted`` flag.
-    POST → ``{"siteId","templateIds":[…] }`` replaces the adopted set for that
-           site; ``{"siteId","templateId","adopted":bool}`` toggles one form;
-           ``{"siteId","revoke":true}`` clears the site. Employers only."""
+    GET  → one board per state the employer has sites in: that state's applicable
+           State+Form templates with an ``adopted`` flag.
+    POST → ``{"state","templateIds":[…]}`` replaces the adopted set for that
+           state; ``{"state","templateId","adopted":bool}`` toggles one form;
+           ``{"state","revoke":true}`` clears the state. Employers only."""
     from bss_core.models import EmployerRegisterTemplateAdoption, RegisterTemplate
     from .admin_console import log_audit
     user = request.user
@@ -656,49 +655,46 @@ def employer_register_templates(request):
 
     if request.method == "POST":
         body = request.data if isinstance(request.data, dict) else {}
-        site_id = body.get("siteId")
-        site = (Site.objects.filter(id=site_id, employer=user).first()
-                if str(site_id or "").strip().isdigit() else None)
-        if site is None:
-            return Response({"error": "A valid site of yours is required."},
-                            status=status.HTTP_400_BAD_REQUEST)
-        state = site.state
+        state = str(body.get("state") or "").strip()
         if not state:
-            return Response({"error": "That site has no state set."},
+            return Response({"error": "A state is required."},
                             status=status.HTTP_400_BAD_REQUEST)
-        adopted_qs = EmployerRegisterTemplateAdoption.objects.filter(employer=user, site=site)
+        adopted_qs = EmployerRegisterTemplateAdoption.objects.filter(
+            employer=user, state__iexact=state, site__isnull=True)
+        in_state = Q(state__iexact=state) | Q(jurisdiction="central")
         if body.get("revoke") or body.get("clear"):
-            # Remove this site's adoption (including mandatory) so its contractors
+            # Remove this state's adoption (including mandatory) so its contractors
             # can no longer upload.
             adopted_qs.update(is_active=False)
         elif "templateIds" in body:
             wanted = {int(i) for i in (body.get("templateIds") or []) if str(i).strip().isdigit()}
-            valid = set(RegisterTemplate.objects.filter(id__in=wanted, state__iexact=state)
+            valid = set(RegisterTemplate.objects.filter(id__in=wanted).filter(in_state)
                         .values_list("id", flat=True))
             valid |= mandatory_template_ids(state)
             existing = set(adopted_qs.values_list("template_id", flat=True))
             for template_id in valid - existing:
                 EmployerRegisterTemplateAdoption.objects.create(
-                    employer=user, template_id=template_id, site=site, state=state)
+                    employer=user, template_id=template_id, site=None, state=state)
             adopted_qs.exclude(template_id__in=valid).update(is_active=False)
             adopted_qs.filter(template_id__in=valid).update(is_active=True)
         elif body.get("templateId") is not None:
-            template = RegisterTemplate.objects.filter(
-                id=int(body["templateId"]), state__iexact=state).first()
+            raw_id = str(body.get("templateId") or "").strip()
+            template = (RegisterTemplate.objects.filter(id=int(raw_id)).filter(in_state).first()
+                        if raw_id.isdigit() else None)
             if template is None:
                 return Response({"error": "Template not found for that state."},
                                 status=status.HTTP_404_NOT_FOUND)
             adopted_flag = True if template.is_mandatory else bool(body.get("adopted", True))
             EmployerRegisterTemplateAdoption.objects.update_or_create(
-                employer=user, site=site, template=template,
+                employer=user, site=None, template=template,
                 defaults={"state": state, "is_active": adopted_flag})
         else:
             return Response({"error": "Provide templateIds or templateId."},
                             status=status.HTTP_400_BAD_REQUEST)
         log_audit(user, "UPDATE", "employer_register_adoption", user.id,
-                  after={"summary": f"CLRA register adoption updated for site {site.site_name}"})
+                  after={"summary": f"CLRA register adoption updated for state {state}"})
 
-    return Response({"sites": _employer_site_boards(user)}, status=status.HTTP_200_OK)
+    return Response({"states": _employer_state_boards(user)}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])

@@ -217,25 +217,14 @@ def admin_copy_all_states(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def employer_form_names(request):
-    """Employer: the admin catalog for a state (with the employer's **per-site**
-    selection) + the employer's own forms for that site. POST either selects a
-    catalog form (``formNameId``) for the site or creates the employer's own form
-    for the site. ``siteId`` scopes both to one of the employer's sites; without
-    it, only legacy (site-less, "all sites") rows are returned/edited."""
-    from bss_core.models import CustomFormName, EmployerFormSelection, Site
+    """Employer: the admin catalog for a **state** (with the employer's selection)
+    + the employer's own forms for that state. Both are **state-wide** (stored
+    with ``site=None``) — every site in the state inherits them. POST either
+    selects a catalog form (``formNameId``) or creates the employer's own form."""
+    from bss_core.models import CustomFormName, EmployerFormSelection
     user = request.user
     if user.role != "employer":
         return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
-
-    def _resolve_site():
-        raw = (request.data.get("siteId") if request.method == "POST"
-               else request.query_params.get("siteId")) or ""
-        raw = str(raw).strip()
-        if not raw.isdigit():
-            return None
-        return Site.objects.filter(id=int(raw), employer=user).first()
-
-    site = _resolve_site()
 
     if request.method == "POST":
         body = request.data if isinstance(request.data, dict) else {}
@@ -245,31 +234,24 @@ def employer_form_names(request):
             if catalog is None:
                 return Response({"error": "Catalog form not found."}, status=status.HTTP_404_NOT_FOUND)
             selection, _ = EmployerFormSelection.objects.update_or_create(
-                employer=user, form_name=catalog, site=site,
+                employer=user, form_name=catalog, site=None,
                 defaults={"is_mandatory": bool(body.get("mandatory", False)),
                           "is_active": bool(body.get("selected", True))})
             return Response({"data": _global_row(catalog, selection)}, status=status.HTTP_200_OK)
-        return _create(request, employer=user, site=site)
+        return _create(request, employer=user, site=None)
 
     state = (request.query_params.get("state") or "").strip()
-    # A site sees the forms adopted for it plus the legacy site-less ones.
-    site_q = (Q(site=site) | Q(site__isnull=True)) if site is not None else Q(site__isnull=True)
-    own = CustomFormName.objects.filter(employer=user, is_active=True).filter(site_q)
+    own = CustomFormName.objects.filter(employer=user, is_active=True, site__isnull=True)
     if state:
         own = own.filter(state__iexact=state)
         catalog = catalog_for_state(state)
     else:
         catalog = list(CustomFormName.objects.filter(employer__isnull=True, is_active=True)
                        .order_by("sort_order", "name"))
-    # Site-specific selection wins over the legacy site-less one (its own
-    # is_active decides whether the form is adopted at that site).
     selections = {}
     for s in EmployerFormSelection.objects.filter(
             employer=user, form_name__in=catalog, is_active=True, site__isnull=True):
         selections.setdefault(s.form_name_id, s)
-    if site is not None:
-        for s in EmployerFormSelection.objects.filter(employer=user, form_name__in=catalog, site=site):
-            selections[s.form_name_id] = s
     data = [_row(o) for o in own.order_by("sort_order", "name")]
     data += [_global_row(o, selections.get(o.id)) for o in catalog]
     return Response({"data": data, "checkpoints": ocr_client.catalog()}, status=status.HTTP_200_OK)
