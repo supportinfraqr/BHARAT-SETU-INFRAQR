@@ -995,16 +995,24 @@ def compliance_batch_summary(request, batch_id):
     if batch is None:
         return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
     rows = _batch_rows(batch)
+    # A batch is one site; the master file's rows are that site's locations. Group
+    # by site so the drill-down shows the single site once (not one entry per
+    # location), with its total headcount and location count.
     grouped = {}
+    locations = set()
     for row in rows:
-        key = ((row.get("site") or "").strip(), (row.get("location") or "").strip())
-        grouped[key] = grouped.get(key, 0) + 1
-    sites = [{"site": site, "location": location, "employees": count}
-             for (site, location), count in sorted(grouped.items())]
+        label = (row.get("site") or row.get("location") or "").strip()
+        grouped[label] = grouped.get(label, 0) + 1
+        loc = (row.get("location") or "").strip()
+        if loc:
+            locations.add(loc)
+    sites = [{"site": label, "location": "", "employees": count}
+             for label, count in sorted(grouped.items())]
     return Response({"data": {
         "id": str(batch.id), "state": batch.state, "month": batch.month,
         "year": batch.year, "site": batch.site.site_name if batch.site else "",
-        "employees": len(rows), "sites": sites,
+        "siteCode": batch.site.site_code if batch.site else "",
+        "employees": len(rows), "locations": len(locations), "sites": sites,
     }}, status=status.HTTP_200_OK)
 
 
@@ -1035,7 +1043,12 @@ def compliance_batch_site_documents(request, batch_id):
     if batch is None:
         return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
     site_name = (request.query_params.get("site") or "").strip()
-    site = (Site.objects.filter(site_name__iexact=site_name).first() if site_name else batch.site)
+    site = None
+    if site_name:
+        site = (Site.objects.filter(site_name__iexact=site_name).first()
+                or Site.objects.filter(site_code__iexact=site_name).first())
+    if site is None:
+        site = batch.site
     state = (site.state if site and site.state else batch.state)
     employer = site.employer if site else None
 
