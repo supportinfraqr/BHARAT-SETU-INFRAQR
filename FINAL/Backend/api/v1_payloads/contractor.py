@@ -1091,7 +1091,10 @@ def _contractor_compliance_batches(user):
     ``versions`` for history."""
     if not hasattr(user, "compliance_batches"):
         return []
-    qs = list(user.compliance_batches.select_related("site").order_by("-created_at")[:200])
+    # Every (site, period) the contractor has generated must reach the portal:
+    # the contractor screens filter this list by site + financial year + period
+    # client-side, so truncating it makes older periods look "not generated".
+    qs = list(user.compliance_batches.select_related("site").order_by("-created_at")[:5000])
     by_key: dict = {}
     for b in qs:
         by_key.setdefault((b.site_id, b.month, b.year), []).append(b)
@@ -1106,8 +1109,6 @@ def _contractor_compliance_batches(user):
         row = _contractor_compliance_batch_row(current)
         row["versions"] = [_batch_version_row(v) for v in group]
         rows.append(row)
-        if len(rows) >= 20:
-            break
     return rows
 
 
