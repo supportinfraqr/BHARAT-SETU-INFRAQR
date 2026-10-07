@@ -631,6 +631,7 @@ def contractor_compliance_batches(request):
             financial_year=fy, month=month, year=year, registers=registers,
             generated_on=str(generated_on), templates=templates,
             signature=signature_img,
+            **_letterhead_ctx(user, site, group_rows),
         )
         skipped = plan["skipped"]
         batch = ComplianceBatch(
@@ -847,6 +848,38 @@ def _batch_master_rows(batch):
         return []
 
 
+def _letterhead_ctx(contractor, site, rows):
+    """Header values for register letterhead blocks (contractor/employer
+    name+address, nature of work, location). The contractor address and nature
+    are read from the master file (falling back to the contractor profile); the
+    establishment / principal-employer address comes from the employer profile."""
+    first = rows[0] if rows else {}
+
+    def row(*keys):
+        for key in keys:
+            value = str(first.get(key) or "").strip()
+            if value:
+                return value
+        return ""
+
+    cp = getattr(contractor, "contractor_profile", None) if contractor else None
+    employer_user = site.employer if (site and getattr(site, "employer_id", None)) else None
+    ep = getattr(employer_user, "employer_profile", None) if employer_user else None
+
+    contractor_address = row("Address_of_contractor") or getattr(cp, "address", "") or ""
+    if not contractor_address and cp:
+        contractor_address = ", ".join(p for p in [getattr(cp, "district", ""), getattr(cp, "state", "")] if p)
+    employer_address = getattr(ep, "address", "") or ""
+    if not employer_address and ep:
+        employer_address = ", ".join(p for p in [getattr(ep, "district", ""), getattr(ep, "state", "")] if p)
+    return {
+        "contractor_address": contractor_address,
+        "employer_address": employer_address,
+        "nature_of_work": row("Nature_ofWork_contractor") or getattr(cp, "activity", "") or "",
+        "location": row("Location") or (site.site_name if site else ""),
+    }
+
+
 def _html_to_text(html):
     import re as _re
     from html import unescape
@@ -881,7 +914,8 @@ def _run_register_audits(batch_id, templates, rows, site_name, site_code, state,
                 html = clra.render_register_html(
                     template, rows, contractor=contractor, employer=employer,
                     site=site_name, site_code=site_code, state=state, month=month,
-                    year=year, financial_year=financial_year, generated_on=generated_on)
+                    year=year, financial_year=financial_year, generated_on=generated_on,
+                    **_letterhead_ctx(batch.contractor, batch.site, rows))
                 audit = ai_audit._run_ai_audit(
                     form_name=template.get("title") or template.get("formCode") or "Register",
                     text=_html_to_text(html), required_format="Excel", site_name=site_name,
@@ -1253,6 +1287,7 @@ def compliance_batch_register(request, batch_id, template_id):
         state=batch.state, month=batch.month, year=batch.year,
         financial_year=batch.financial_year, generated_on=payloads._dts(timezone.now())[:10],
         signature_data_uri=_signature_data_uri(_batch_signature(batch)),
+        **_letterhead_ctx(batch.contractor, batch.site, rows),
     )
     return Response({"data": {"html": html, "title": f"{template.state} · {template.form_code}"}},
                     status=status.HTTP_200_OK)
@@ -1285,7 +1320,8 @@ def compliance_batch_register_export(request, batch_id, template_id):
         site=(batch.site.site_name if batch.site else ""),
         site_code=(batch.site.site_code if batch.site else ""), state=batch.state,
         month=batch.month, year=batch.year, financial_year=batch.financial_year,
-        record_count=len(rows), generated_on=payloads._dts(timezone.now())[:10])
+        record_count=len(rows), generated_on=payloads._dts(timezone.now())[:10],
+        **_letterhead_ctx(batch.contractor, batch.site, rows))
     data = clra.build_register_workbook(
         {"formCode": template.form_code, "title": template.title, "state": template.state,
          "columns": list(template.columns or []), "html": template.html or "",
@@ -1332,6 +1368,7 @@ def compliance_batch_register_pdf(request, batch_id, template_id):
         state=batch.state, month=batch.month, year=batch.year,
         financial_year=batch.financial_year, generated_on=payloads._dts(timezone.now())[:10],
         signature_data_uri=_signature_data_uri(_batch_signature(batch)),
+        **_letterhead_ctx(batch.contractor, batch.site, rows),
     )
     try:
         from weasyprint import HTML

@@ -238,6 +238,8 @@ _BACKEND_CONTEXT_KEYS = {
     "site": "site", "siteCode": "site_code", "state": "state",
     "month": "month", "year": "year", "financialYear": "financial_year",
     "recordCount": "record_count", "generatedOn": "generated_on",
+    "contractorAddress": "contractor_address", "employerAddress": "employer_address",
+    "natureOfWork": "nature_of_work", "location": "location",
 }
 
 
@@ -442,6 +444,8 @@ _META_TOKEN_SOURCES = {
     "SITE_NAME": "site", "SITE_CODE": "siteCode", "STATE": "state",
     "MONTH": "month", "YEAR": "year", "FINANCIAL_YEAR": "financialYear",
     "GENERATED_ON": "generatedOn", "RECORD_COUNT": "recordCount",
+    "CONTRACTOR_ADDRESS": "contractorAddress", "EMPLOYER_ADDRESS": "employerAddress",
+    "NATURE_OF_WORK": "natureOfWork", "LOCATION": "location",
 }
 
 
@@ -799,7 +803,8 @@ def build_register_workbook(template, rows, context=None, signature=None):
 
 def build_workbook(rows, *, contractor="", employer="", site="", site_code="", state="",
                    financial_year="", month="", year="", registers=None,
-                   generated_on="", templates=None, signature=None):
+                   generated_on="", templates=None, signature=None,
+                   contractor_address="", employer_address="", nature_of_work="", location=""):
     """Return the bytes of an XLSX workbook: cover sheet + one sheet per register.
 
     When ``templates`` (the State+Form register templates) are supplied, each
@@ -817,7 +822,9 @@ def build_workbook(rows, *, contractor="", employer="", site="", site_code="", s
         context = backend_context(
             contractor=contractor, employer=employer, site=site, site_code=site_code, state=state,
             month=month, year=year, financial_year=financial_year,
-            record_count=len(rows), generated_on=generated_on)
+            record_count=len(rows), generated_on=generated_on,
+            contractor_address=contractor_address, employer_address=employer_address,
+            nature_of_work=nature_of_work, location=location)
         for template in templates:
             # Register-style templates (with parsed columns) become sheets;
             # form-style templates (no columns) render to PDF, not Excel.
@@ -918,7 +925,8 @@ def render_doc_body(body, rows, context):
 
 def render_register_html(template, rows, *, contractor="", employer="", site="", site_code="",
                          state="", month="", year="", financial_year="", generated_on="",
-                         signature_data_uri=""):
+                         signature_data_uri="", contractor_address="", employer_address="",
+                         nature_of_work="", location=""):
     """Render one State+Form register.
 
     If the admin authored an HTML layout (`template['html']`) it is used, with
@@ -943,7 +951,9 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
     context = backend_context(
         contractor=contractor, employer=employer, site=site, site_code=site_code,
         state=state, month=month, year=year, financial_year=financial_year,
-        record_count=len(rows), generated_on=generated_on)
+        record_count=len(rows), generated_on=generated_on,
+        contractor_address=contractor_address, employer_address=employer_address,
+        nature_of_work=nature_of_work, location=location)
     render_rows = _render_rows(template, rows, context)
     context = dict(context, record_count=len(render_rows))
     body = []
@@ -965,6 +975,8 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
             "MONTH": _esc(month), "YEAR": _esc(year), "FINANCIAL_YEAR": _esc(financial_year),
             "GENERATED_ON": _esc(generated_on), "RECORD_COUNT": str(len(render_rows)),
             "ACT": _esc(template.get("act", "")),
+            "CONTRACTOR_ADDRESS": _esc(contractor_address), "EMPLOYER_ADDRESS": _esc(employer_address),
+            "NATURE_OF_WORK": _esc(nature_of_work), "LOCATION": _esc(location),
             "HEAD": head, "ROWS": "".join(body),
             "SIGNATURE": signature_img,
         }
