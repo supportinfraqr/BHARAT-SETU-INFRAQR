@@ -170,6 +170,7 @@ def _handle_compliances(user, body, method):
             contractor=user, site=site,
             financial_year=str(body.get("financialYear") or "")[:12],
             month=month, year=year,
+            frequency=str(body.get("frequency") or "Monthly")[:20],
             state=str(body.get("state") or "")[:60],
             employee_count=WorkerContractorBinding.objects.filter(
                 contractor=user, binding_status="ACCEPTED").count(),

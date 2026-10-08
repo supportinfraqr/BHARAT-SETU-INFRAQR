@@ -114,6 +114,23 @@ export default function ContractorCompliancePage() {
   const activeSiteBoard = siteBoards.find(b => String(b.siteId) === String(activeSite?.id));
   const activeAdopted = activeSiteBoard ? activeSiteBoard.gated : !!activeAdoption?.adopted;
 
+  // Sites already generated for the SELECTED frequency + period (so a repeat
+  // generation is obvious). Matches batches by fiscal year + month + frequency.
+  const fyKey = `${year}-${String((Number(year) + 1) % 100).padStart(2, '0')}`;
+  const alreadyGenerated = useMemo(() => {
+    const map = new Map<string, { site: string; version: number; status: string }>();
+    (contractor.complianceBatches || [])
+      .filter(b => (b.financialYear || '') === fyKey && b.month === month && (b.frequency || 'Monthly') === freq)
+      .forEach(b => {
+        const key = b.site || b.siteCode || '';
+        if (!key) return;
+        const version = b.version ?? 1;
+        const prev = map.get(key);
+        if (!prev || version > prev.version) map.set(key, { site: b.site || b.siteCode || '—', version, status: b.status });
+      });
+    return Array.from(map.values()).sort((a, b) => a.site.localeCompare(b.site));
+  }, [contractor.complianceBatches, fyKey, month, freq]);
+
   useEffect(() => {
     let active = true;
     void fetch(`/api/contractor/clra/templates?state=${encodeURIComponent(activeState)}`, { cache:'no-store' })
@@ -334,6 +351,11 @@ export default function ContractorCompliancePage() {
             <button onClick={generateRegisters} disabled={busy} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"><Landmark size={14}/>{busy ? 'Generating registers…' : 'Generate CLRA Registers'}</button>
             <label className="flex items-center gap-2 text-[11px] font-semibold text-gray-600 ml-1"><input type="checkbox" checked={includeNonDue} onChange={e => setIncludeNonDue(e.target.checked)} className="accent-[#073B67] w-4 h-4"/>Include forms not due this period</label>
           </div>
+          {alreadyGenerated.length > 0 && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[11px] text-emerald-800">
+              <strong>Already generated</strong> for {period} · {freq}: {alreadyGenerated.length} site{alreadyGenerated.length === 1 ? '' : 's'} — {alreadyGenerated.map(s => `${s.site} (V${s.version}${s.status && s.status !== 'Generated' ? ` · ${s.status}` : ''})`).join(', ')}
+            </div>
+          )}
           <p className="text-[11px] text-gray-400">Pick a <strong>Frequency</strong> and <strong>Period</strong>. Monthly generates every month; choosing Quarterly / Half-Yearly / Yearly generates only those forms for the selected period (a not-yet-due period is forced). Tick below to also include other forms not due this period.</p>
           {report && <div className="rounded-xl border border-gray-100 overflow-hidden">
             <div className={`px-4 py-2.5 text-xs font-bold flex items-center gap-2 ${report.errors.length ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>

@@ -616,6 +616,9 @@ class ComplianceBatch(models.Model):
                              related_name="compliance_batches")
     financial_year = models.CharField(max_length=12, blank=True)
     month = models.CharField(max_length=20, blank=True)
+    # Generation frequency the batch was produced for (Monthly / Quarterly /
+    # Half Yearly / Yearly) so the UI can flag a site+period as already generated.
+    frequency = models.CharField(max_length=20, blank=True)
     year = models.CharField(max_length=4, blank=True)
     state = models.CharField(max_length=60, blank=True)
     employee_count = models.IntegerField(default=0)

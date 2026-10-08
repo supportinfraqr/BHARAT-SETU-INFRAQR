@@ -630,6 +630,7 @@ def contractor_compliance_batches(request):
         batch = ComplianceBatch(
             contractor=user, site=site,
             financial_year=fy[:12], month=month[:20], year=year[:4], state=state[:60],
+            frequency=str(request.data.get("frequency") or "Monthly").strip()[:20] or "Monthly",
             employee_count=len(group_rows),
             location_count=len({r.get("location", "") for r in group_rows if r.get("location")}) or 1,
             generated_on=generated_on, generated_by=payloads._party_name(user),

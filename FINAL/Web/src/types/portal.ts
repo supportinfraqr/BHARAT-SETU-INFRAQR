@@ -250,7 +250,7 @@ export type BatchVersionEntry = { id: string; version: number; status: string; g
 export type ReportVersionEntry = { id: string; version: number; uniqueNo: string; reportDate: string; scorePercent: number; isCurrent: boolean };
 
 export type ContractorComplianceBatch = {
-  id: string; financialYear: string; month: string; year: string; state: string; site: string; siteCode: string; employeeCount: number; locationCount: number; generatedOn: string; generatedBy: string; status: 'Generated' | 'Pending' | 'Submitted' | 'Verified' | 'Returned' | 'Rejected' | 'Failed';
+  id: string; financialYear: string; month: string; year: string; state: string; site: string; siteCode: string; frequency?: string; employeeCount: number; locationCount: number; generatedOn: string; generatedBy: string; status: 'Generated' | 'Pending' | 'Submitted' | 'Verified' | 'Returned' | 'Rejected' | 'Failed';
   rowsCount?: number; hasFile?: boolean; notes?: string; registerCount?: number; auditStatus?: 'pending' | 'passed' | 'failed' | 'review' | 'unavailable'; reviewNote?: string;
   version?: number; isCurrent?: boolean; versions?: BatchVersionEntry[];
 };

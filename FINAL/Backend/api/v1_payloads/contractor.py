@@ -1033,6 +1033,7 @@ def _contractor_compliance_batch_row(b):
     return {
         "id": str(b.id), "financialYear": _d(b.financial_year),
         "month": _d(b.month), "year": _d(b.year), "state": _d(b.state),
+        "frequency": _d(b.frequency),
         "site": b.site.site_name if b.site else "",
         "siteCode": b.site.site_code if b.site else "",
         "employeeCount": b.employee_count, "locationCount": b.location_count,
