@@ -357,7 +357,7 @@ export default function WorkerProfilePage() {
   const bankVerified = worker.banking.verificationStatus === 'Verified';
 
   // ── Aadhaar oKYC linking (for workers whose Aadhaar isn't linked yet) ────
-  const [aadhaarLink, setAadhaarLink] = useState({ aadhaar: '', referenceId: '', otp: '', sent: false, busy: false, error: '', notice: '' });
+  const [aadhaarLink, setAadhaarLink] = useState({ aadhaar: '', referenceId: '', otp: '', sent: false, busy: false, error: '', notice: '', otpCooldown: 0 });
 
   const sendAadhaarOtp = async () => {
     const aadhaar = aadhaarLink.aadhaar.replace(/\D/g, '');
@@ -365,9 +365,18 @@ export default function WorkerProfilePage() {
     setAadhaarLink(s => ({ ...s, busy: true, error: '', notice: '' }));
     try {
       const response = await fetch('/api/auth/aadhaar/otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aadhaar }) });
-      const json = await response.json() as { referenceId?: string; error?: string };
-      if (!response.ok || !json.referenceId) throw new Error(json.error || 'OTP could not be sent.');
-      setAadhaarLink(s => ({ ...s, referenceId: json.referenceId as string, sent: true, busy: false, notice: 'OTP sent to the mobile linked with your Aadhaar.' }));
+      const json = await response.json() as { referenceId?: string; error?: string; message?: string; retryAfterSeconds?: number; otpPending?: boolean };
+      if (json.referenceId) {
+        setAadhaarLink(s => ({ ...s, referenceId: json.referenceId as string, sent: true, busy: false, error: '', otpCooldown: 0, notice: json.message || 'OTP sent to the mobile linked with your Aadhaar.' }));
+        return;
+      }
+      // An OTP was already sent / is being debounced: still advance to the OTP step
+      // so the code the user received can be entered, and start the resend cooldown.
+      if (json.otpPending || json.retryAfterSeconds) {
+        setAadhaarLink(s => ({ ...s, sent: true, busy: false, error: '', otpCooldown: json.retryAfterSeconds || 45, notice: json.message || json.error || 'An OTP was already sent to your Aadhaar mobile — enter it below.' }));
+        return;
+      }
+      throw new Error(json.error || 'OTP could not be sent.');
     } catch (error) {
       setAadhaarLink(s => ({ ...s, busy: false, error: error instanceof Error ? error.message : 'OTP could not be sent.' }));
     }
@@ -384,7 +393,7 @@ export default function WorkerProfilePage() {
       const profileResponse = await fetch('/api/worker/profile', { cache: 'no-store' });
       const profileJson = await profileResponse.json() as { data?: typeof worker };
       if (profileJson.data) updateWorker(profileJson.data);
-      setAadhaarLink({ aadhaar: '', referenceId: '', otp: '', sent: false, busy: false, error: '', notice: '' });
+      setAadhaarLink({ aadhaar: '', referenceId: '', otp: '', sent: false, busy: false, error: '', notice: '', otpCooldown: 0 });
     } catch (error) {
       setAadhaarLink(s => ({ ...s, busy: false, error: error instanceof Error ? error.message : 'Aadhaar verification failed.' }));
     }
@@ -2046,7 +2055,7 @@ export default function WorkerProfilePage() {
                         <div className="space-y-2 max-w-sm">
                           <input type="text" inputMode="numeric" value={aadhaarLink.aadhaar} onChange={e => setAadhaarLink(s => ({ ...s, aadhaar: e.target.value.replace(/\D/g, '').slice(0, 12), error: '' }))} disabled={aadhaarLink.sent} placeholder="12-digit Aadhaar number" className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2 text-[14px] font-medium tracking-wider focus:outline-none disabled:bg-gray-100" />
                           {aadhaarLink.sent && <input type="text" inputMode="numeric" value={aadhaarLink.otp} onChange={e => setAadhaarLink(s => ({ ...s, otp: e.target.value.replace(/\D/g, '').slice(0, 6), error: '' }))} placeholder="6-digit OTP" className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2 text-[14px] font-medium tracking-[0.3em] focus:outline-none" />}
-                          {aadhaarLink.sent && <ResendOtp onSend={sendAadhaarOtp} />}
+                          {aadhaarLink.sent && <ResendOtp onSend={sendAadhaarOtp} initialCooldown={aadhaarLink.otpCooldown} />}
                           {aadhaarLink.error && <p className="text-[12px] text-red-600">{aadhaarLink.error}</p>}
                           {aadhaarLink.notice && <p className="text-[12px] text-green-700">{aadhaarLink.notice}</p>}
                           <div className="flex gap-2">

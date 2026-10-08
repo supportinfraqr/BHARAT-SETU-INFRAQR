@@ -19,10 +19,10 @@ export type OtpResendState = {
  */
 export function useOtpResend(
   onSend: () => Promise<void>,
-  { maxResends = 3, cooldownSeconds = 30 }: { maxResends?: number; cooldownSeconds?: number } = {},
+  { maxResends = 3, cooldownSeconds = 30, initialCooldown = 0 }: { maxResends?: number; cooldownSeconds?: number; initialCooldown?: number } = {},
 ): OtpResendState {
   const [resends, setResends] = useState(0);
-  const [cooldown, setCooldown] = useState(0);
+  const [cooldown, setCooldown] = useState(Math.max(0, initialCooldown));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -54,8 +54,8 @@ export function useOtpResend(
 }
 
 /** Compact "Resend OTP" control with the remaining count + cooldown countdown. */
-export function ResendOtp({ onSend, className = "" }: { onSend: () => Promise<void>; className?: string }) {
-  const { resend, canResend, remaining, exhausted, cooldown, busy, error } = useOtpResend(onSend);
+export function ResendOtp({ onSend, className = "", initialCooldown = 0 }: { onSend: () => Promise<void>; className?: string; initialCooldown?: number }) {
+  const { resend, canResend, remaining, exhausted, cooldown, busy, error } = useOtpResend(onSend, { initialCooldown });
   return (
     <div className={className}>
       <button

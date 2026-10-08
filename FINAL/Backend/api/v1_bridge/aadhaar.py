@@ -269,10 +269,14 @@ def aadhaar_otp(request):
                          created_at__gte=now - timedelta(seconds=45))
                  .order_by("-created_at").first())
     if last_call is not None:
+        fallback = _reuse_recent(24 * 60)
+        if fallback is not None:
+            return fallback
         wait = max(1, 45 - int((now - last_call.created_at).total_seconds()))
         return Response({
-            "error": "An OTP was requested for this Aadhaar a moment ago. Please check your messages and wait a few seconds before resending.",
+            "error": "An OTP was requested for this Aadhaar a moment ago. Enter the OTP you received below, or wait a few seconds and resend.",
             "retryAfterSeconds": wait,
+            "otpPending": True,
         }, status=status.HTTP_200_OK)
 
     AadhaarChallenge.objects.create(aadhaar_number=aadhaar, status="CALL")
@@ -303,7 +307,7 @@ def aadhaar_otp(request):
             return fallback
         return Response(
             {"error": "An OTP was sent to this Aadhaar recently. Enter it below — if it doesn't work, tap 'Resend OTP' to get a new code.",
-             "retryAfterSeconds": 45},
+             "retryAfterSeconds": 45, "otpPending": True},
             status=status.HTTP_200_OK)
 
     challenge = AadhaarChallenge.objects.create(
