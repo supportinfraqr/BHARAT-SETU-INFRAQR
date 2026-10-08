@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { BadgeCheck, Building2, FileUp, Loader2, Send, ShieldCheck, Upload } from "lucide-react";
+import { BadgeCheck, Building2, Clock3, Loader2, Send, ShieldCheck, Upload } from "lucide-react";
 import GstVerifyCard from "@/components/gst/GstVerifyCard";
 
 type VerificationStatus = {
@@ -185,10 +185,16 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
       </div>
     );
   } else {
-    title = "Verification submitted";
+    title = "Pending approval from BSS admin";
     body = (
-      <div className="space-y-3 text-sm text-gray-600">
-        <p className="flex items-center gap-2"><FileUp size={15} className="text-[#073B67]"/>Your documents are with BSS for review. You&apos;ll be notified once verified.</p>
+      <div className="space-y-3">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
+          <Clock3 size={18} className="text-amber-600 mt-0.5 flex-shrink-0"/>
+          <div>
+            <p className="text-sm font-bold text-amber-800">Pending approval from BSS admin</p>
+            <p className="text-xs text-amber-700 mt-0.5">Your documents are with BSS for review. You&apos;ll be notified once verified.</p>
+          </div>
+        </div>
         {manual.status === "REJECTED" && <p className="text-red-700 font-semibold">Rejected{manual.note ? `: ${manual.note}` : ""} — please re-submit.</p>}
       </div>
     );
