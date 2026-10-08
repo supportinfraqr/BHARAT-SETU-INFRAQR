@@ -110,7 +110,13 @@ export default function WorkerOnboardingWizard() {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-md grid place-items-center p-4 overflow-hidden overscroll-none" role="dialog" aria-modal="true" aria-label="Onboarding">
+    <div
+      className="z-[120] bg-black/70 backdrop-blur-md grid place-items-center p-4 overflow-hidden overscroll-none"
+      style={{ position: 'fixed', inset: 0, width: '100vw', height: '100dvh', minHeight: '100vh' }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Onboarding"
+    >
       <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[calc(100dvh-2rem)] flex flex-col">
         <header className="px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">

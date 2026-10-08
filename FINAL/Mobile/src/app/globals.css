@@ -47,7 +47,10 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  overflow-x: clip;
+  /* NOTE: do NOT set overflow on the root body — a non-visible overflow here
+     makes `position: fixed` overlays lay out like `absolute` on iOS Safari, so
+     modals stop covering the full viewport. Horizontal overflow is contained on
+     the content region (.bss-app-main) instead. */
 }
 
 button,
@@ -239,6 +242,9 @@ body.bss-modal-open .bss-scan-fab {
   padding-left: max(1rem, env(safe-area-inset-left));
   padding-right: max(1rem, env(safe-area-inset-right));
   padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+  /* Contain horizontal overflow here (not on <body>) so fixed overlays keep
+     pinning to the viewport on every screen size. */
+  overflow-x: clip;
 }
 
 @media (max-width: 1279px) {
