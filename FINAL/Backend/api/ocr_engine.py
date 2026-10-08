@@ -23,9 +23,9 @@ class OcrError(Exception):
 
 
 MAX_PDF_PAGES = 6          # never OCR a bottomless PDF
-MAX_PIXELS = 3_500_000     # downscale pages so OCR stays fast (~180dpi A4)
-PDF_RENDER_SCALE = 1.6     # base render scale (pypdfium2: 1.0 == 72dpi)
-OCR_TIME_BUDGET_S = 50     # stop between pages once past this — return partial text
+MAX_PIXELS = 2_500_000     # downscale pages so OCR stays fast (~150dpi A4)
+PDF_RENDER_SCALE = 1.4     # base render scale (pypdfium2: 1.0 == 72dpi)
+OCR_TIME_BUDGET_S = 60     # stop between pages once past this — return partial text
 
 _ENGINE_LOCK = threading.Lock()
 _ENGINE = None
