@@ -65,40 +65,16 @@ def worker_documents(request):
         return Response({"error": "You must complete Aadhaar verification before uploading documents."},
                         status=status.HTTP_403_FORBIDDEN)
 
-    # OCR is advisory only: verify the uploaded document belongs to the worker
-    # and matches its type, and record the outcome as a "needs review" marker.
-    # It never blocks the upload — every document goes to manual verification.
-    worker_name = (identity.name or f"{user.first_name} {user.last_name}").strip()
-    ocr_ok = True
-    ocr_findings = ""
-    try:
-        file_bytes = file_obj.read()
-        file_obj.seek(0)
-        ocr_text = ocr_client.extract_text(file_bytes, file_obj.name)
-        blob = f"{master.code or ''} {master.document_name or ''}".upper()
-        if "AADHAAR" in blob or "ADHAR" in blob:
-            doc_type_key = "aadhaar"
-        elif "UAN" in blob or "EPFO" in blob:
-            doc_type_key = "uan"
-        elif "ESIC" in blob:
-            doc_type_key = "esic"
-        else:
-            doc_type_key = "pan"
-        ok, msg = ocr_client.verify_document_text(
-            doc_type=doc_type_key, ocr_text=ocr_text or "", expected_name=worker_name)
-        if not ok:
-            ocr_ok = False
-            ocr_findings = msg or "OCR verification failed."
-    except Exception as exc:
-        logging.getLogger(__name__).warning("OCR verification skipped/failed during document upload: %s", exc)
-
+    # Documents go straight to manual verification in BSS. OCR keyword matching
+    # was removed: it produced false "OCR failed" flags (e.g. on bank documents)
+    # and never blocked the upload anyway.
     WorkerDocument.objects.filter(user=user, document=master).delete()
     doc = WorkerDocument(
         user=user, document=master,
         file_name=os.path.basename(file_obj.name or "document"),
         file_size=file_obj.size, mime_type=file_obj.content_type or "",
         status="UNDER_VERIFICATION", is_mandatory=master.is_mandatory,
-        owner_role="worker", ocr_failed=(not ocr_ok), ocr_findings=ocr_findings,
+        owner_role="worker", ocr_failed=False, ocr_findings="",
     )
     if expiry:
         try:
