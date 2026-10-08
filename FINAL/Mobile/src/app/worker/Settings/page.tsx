@@ -8,6 +8,7 @@ import LanguageSelect from '@/components/i18n/LanguageSelect';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
 import SecuritySettings from '@/components/settings/SecuritySettings';
+import RegisteredDevices from '@/components/settings/RegisteredDevices';
 import { getLocale } from '@/i18n';
 import type { WorkerRecord } from '@/types/portal';
 
@@ -210,7 +211,15 @@ export default function SettingsPage() {
         </div>
       </SettingSection>
 
-      <ConsentPanel role="worker" />
+      <SettingSection
+        icon={Smartphone}
+        title="Registered devices"
+        subtitle="Devices registered to your worker account"
+      >
+        <RegisteredDevices />
+      </SettingSection>
+
+      <ConsentPanel role="worker" registeredAt={worker.other?.consentDate || worker.other?.registrationDate} />
 
       <SettingSection
         icon={ShieldCheck}

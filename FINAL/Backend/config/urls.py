@@ -250,6 +250,7 @@ _v1_patterns = _v1(
     ("admin/onboarding/batches/<int:batch_id>/migrate", v1_bridge.admin_onboarding_migrate, "v1_admin_onboarding_migrate"),
     ("worker/onboarding/status", v1_bridge.worker_onboarding_status, "v1_worker_onboarding_status"),
     ("worker/onboarding/consent", v1_bridge.worker_onboarding_consent, "v1_worker_onboarding_consent"),
+    ("worker/devices", v1_bridge.user_devices, "v1_worker_devices"),
 )
 _v1_mutations = _v1(
     ("worker/<str:resource>", v1_bridge.mutate_portal, "v1_worker_mutate", {"role_path": "worker"}),

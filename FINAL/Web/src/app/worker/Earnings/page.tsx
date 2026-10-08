@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { IndianRupee, Landmark, Send, CheckCircle2, Clock3, Wallet, HandCoins, FileCheck2, XCircle } from 'lucide-react';
 import { fieldClass, ModuleShell } from '@/components/worker/ModuleShell';
+import UnderDevelopmentBanner from '@/components/worker/UnderDevelopmentBanner';
 import type { WageRecord, WorkerAdvance, AdvanceStatus } from '@/types/portal';
 import { useWorker } from '@/contexts/WorkerContext';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -71,6 +72,7 @@ export default function EarningsPage() {
   };
 
   return <ModuleShell title="Wage History & Earnings" description="Payment records reported by your employer or contractor." icon={IndianRupee}>
+    <UnderDevelopmentBanner note="Wage history and salary advances are being finalised. The figures shown here are provisional." />
     <DataBadge demo={portal.dataMode === 'demo'} source={wageData.source} syncedAt={wageData.syncedAt} />
     {notice && <p role="status" className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16} />{notice}</p>}
     {error && <p role="alert" className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm font-semibold">{error}</p>}

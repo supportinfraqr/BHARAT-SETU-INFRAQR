@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Landmark, ShieldCheck, BadgePercent, CreditCard, Send, X, CheckCircle2, FileText } from 'lucide-react';
 import { ModuleShell } from '@/components/worker/ModuleShell';
+import UnderDevelopmentBanner from '@/components/worker/UnderDevelopmentBanner';
 import type { BenefitRecord, BonusRecord, LeaveEncashmentRecord } from '@/types/portal';
 import { useWorker } from '@/contexts/WorkerContext';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -54,6 +55,7 @@ export default function BenefitsPage() {
 
 
   return <ModuleShell title="Retirement Fund & Benefits" description="Recorded long-term benefit information." icon={Landmark}>
+    <UnderDevelopmentBanner note="Retirement fund and benefits are being finalised. The figures shown here are provisional." />
     <div className="text-xs bg-blue-50 border border-blue-100 text-blue-800 rounded-xl px-4 py-3">
       <strong>How your records are sourced:</strong> Provident Fund (UAN) and Gratuity are <strong>autofetched from government / business sources</strong> ({pfData.source}). Bonus and Leave Encashment are <strong>filled and uploaded by your contractor</strong> ({bonus.source}).
     </div>

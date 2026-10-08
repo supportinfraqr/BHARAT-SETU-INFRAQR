@@ -4,28 +4,35 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, RotateCcw, ShieldCheck, XCircle } from 'lucide-react';
 import { consentService, consentDate, type ConsentRecord, type ConsentScopeRole } from '@/lib/consents';
 
-/** Shows the consents a portal user has given with revoke (and re-grant) controls. */
-export default function ConsentPanel({ role }: { role: ConsentScopeRole }) {
+/** Shows the consents a portal user has given with revoke (and re-grant) controls.
+ *  ``registeredAt`` (the user's real registration/consent date from the server)
+ *  is used for currently-given consents so the panel never shows a stale or
+ *  invented date from a previous browser session. */
+export default function ConsentPanel({ role, registeredAt }: { role: ConsentScopeRole; registeredAt?: string }) {
   // Consents live in localStorage, which is unavailable during SSR — start empty
   // and hydrate after mount so the server and first client render match.
   const [records, setRecords] = useState<ConsentRecord[]>([]);
   const [notice, setNotice] = useState('');
 
+  // Stamp 'given' consents with the account's real registration/consent date.
+  const stamp = (list: ConsentRecord[]): ConsentRecord[] =>
+    registeredAt ? list.map(r => (r.status === 'given' ? { ...r, grantedAt: registeredAt } : r)) : list;
+
   // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate localStorage-backed consents after mount
-  useEffect(() => { setRecords(consentService.list(role)); }, [role]);
+  useEffect(() => { setRecords(stamp(consentService.list(role))); }, [role, registeredAt]);
 
   const given = records.filter(record => record.status === 'given').length;
 
   function revoke(id: string, title: string) {
-    setRecords(consentService.revoke(role, id));
+    setRecords(stamp(consentService.revoke(role, id)));
     setNotice(`Revoked: ${title}. Where the law or an existing workflow already used this consent, historical use remains governed by its original grant.`);
   }
   function grant(id: string, title: string) {
-    setRecords(consentService.grant(role, id));
+    setRecords(stamp(consentService.grant(role, id)));
     setNotice(`Consent granted again: ${title}.`);
   }
   function reset() {
-    setRecords(consentService.reset(role));
+    setRecords(stamp(consentService.reset(role)));
     setNotice('Consents reset to their original granted state.');
   }
 

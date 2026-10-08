@@ -25,6 +25,7 @@ from .relationship import (
 )
 from .consent import ConsentChallenge, SmsOtp
 from .onboarding import OnboardingBatch, OnboardingRecord
+from .devices import UserDevice
 from .system import BssIdSequence
 from .worker import (
     WorkerIdentity,
@@ -176,7 +177,7 @@ __all__ = [
     "AiProviderCredential", "AI_PROVIDERS",
     "WorkerContractorBinding", "ContractorEmployerBinding", "ContractorSiteAllotment", "ContractorJob", "RozgarRequest",
     "ConsentChallenge", "SmsOtp",
-    "OnboardingBatch", "OnboardingRecord",
+    "OnboardingBatch", "OnboardingRecord", "UserDevice",
     "WorkerIdentity", "WorkerAddressMobility", "WorkerFamilyDependant",
     "WorkerSocialSecurity", "WorkerWelfareSafety", "WorkerBanking",
     "WorkerClassification", "WorkerEmployment", "SkillMaster",
