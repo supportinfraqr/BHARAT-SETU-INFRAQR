@@ -28,9 +28,9 @@ export async function GET(request: Request) {
       null,
       { method: 'GET' },
     );
-    return NextResponse.redirect(`${target}linked`);
+    return NextResponse.redirect(`${target}linked&tab=integrations`);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'DigiLocker linking failed.';
-    return NextResponse.redirect(`${target}error&message=${encodeURIComponent(message)}`);
+    return NextResponse.redirect(`${target}error&tab=integrations&message=${encodeURIComponent(message)}`);
   }
 }
