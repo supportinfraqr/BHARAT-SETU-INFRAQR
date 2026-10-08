@@ -2164,12 +2164,15 @@ export default function WorkerProfilePage() {
                           </div>
                         </div>
                       </div>
-                      {!bankVerified && (
-                        <div className="space-y-2">
-                          <button type="button" onClick={verifyBank} disabled={bankVerify.busy || !worker.banking.accountNumber || !worker.banking.ifsc} className="h-10 px-4 rounded-xl bg-[#073B67] text-white text-[13px] font-bold inline-flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-50">{bankVerify.busy ? 'Verifying…' : 'Verify via Penny Drop (₹1)'}</button>
-                          <p className="text-[11px] text-gray-400">A ₹1 test credit is sent to your account to confirm the account number and holder name (NPCI, via Sandbox.co.in).</p>
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button type="submit" disabled={isSaving} className="h-10 px-4 rounded-xl border border-[#073B67]/25 bg-white text-[#073B67] text-[13px] font-bold inline-flex items-center gap-2 hover:bg-[#073B67]/5 disabled:opacity-50">{isSaving ? 'Saving…' : 'Save details'}</button>
+                          {!bankVerified && (
+                            <button type="button" onClick={verifyBank} disabled={bankVerify.busy || !worker.banking.accountNumber || !worker.banking.ifsc} className="h-10 px-4 rounded-xl bg-[#073B67] text-white text-[13px] font-bold inline-flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-50">{bankVerify.busy ? 'Verifying…' : 'Verify via Penny Drop (₹1)'}</button>
+                          )}
                         </div>
-                      )}
+                        <p className="text-[11px] text-gray-400">Save your bank details here (or on the Banking tab), then verify. A ₹1 test credit is sent to your account to confirm the account number and holder name (NPCI, via Sandbox.co.in).</p>
+                      </div>
                       {bankVerify.message && <p role="status" className="text-[12px] text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">{bankVerify.message}</p>}
                       {bankVerify.error && <p role="alert" className="text-[12px] text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{bankVerify.error}</p>}
                     </div>
