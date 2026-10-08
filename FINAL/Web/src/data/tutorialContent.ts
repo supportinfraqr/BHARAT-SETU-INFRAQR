@@ -1,8 +1,6 @@
 import type { Language } from '@/i18n';
 export type Tutorial = { title: string; steps: string[]; lang?: string };
 const en: Record<string,Tutorial> = {
- '/':{title:'Sign in',steps:['Choose Worker and enter your registered sign-in details.','Use the language menu before signing in if you prefer another portal language.']},
- '/register':{title:'Worker registration',steps:['Complete each required identity and contact field carefully.','Review your consent choices, then submit the form to create your worker record.']},
  '/worker':{title:'Worker Dashboard',steps:['This dashboard shows your work, records, benefits and pending actions.','Open a summary card for details, or use the grouped menu to reach any service.']},
  '/worker/Profile':{title:'Profile and mobility',steps:['Use the section list to review your personal, contact, banking and employment information.','Address fields work together. Your migration type is calculated from your home and work location.','Correct any invalid email before saving.']},
  '/worker/Compliance':{title:'Compliance',steps:['Review medical, safety, police verification and site access records here.','Open an item to see its current status and any action due.']},
@@ -41,7 +39,6 @@ const en: Record<string,Tutorial> = {
  '/admin':{title:'BSS admin',steps:['Manage masters, users, permissions and audit.','Review the full system activity report.']},
 };
 const hi: Partial<Record<string,Tutorial>> = {
- '/':{title:'साइन इन',steps:['श्रमिक चुनें और अपनी पंजीकृत जानकारी दर्ज करें।','भाषा बदलने के लिए साइन इन से पहले भाषा मेनू चुनें।']},
  '/worker':{title:'वर्कर डैशबोर्ड',steps:['यहाँ आप काम, दस्तावेज़, लाभ और बाकी कार्य देख सकते हैं।','जानकारी खोलने के लिए कार्ड या ऊपर का मेनू चुनें।']},
  '/worker/Profile':{title:'प्रोफ़ाइल और पता',steps:['अपनी व्यक्तिगत, संपर्क, बैंक और रोजगार जानकारी जाँचें।','घर और काम के पते से प्रवासन प्रकार अपने आप तय होता है।','जानकारी जाँचकर सेव करें।']},
  '/worker/Compliance':{title:'अनुपालन',steps:['चिकित्सा, सुरक्षा, पुलिस सत्यापन और साइट पहुँच यहाँ देखें।','आइटम खोलकर स्थिति और बाकी कार्रवाई देखें।']},

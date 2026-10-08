@@ -774,6 +774,10 @@ def _worker_courses(user=None):
     A module is complete when every lesson is watched and every assignment is
     passed; the course is complete (certificate issued) when all modules are.
     """
+    from bss_core.models import LearningConfig
+    cfg = LearningConfig.objects.first()
+    if cfg is not None and not cfg.courses_enabled:
+        return []
     enrollments = {}
     if user is not None:
         enrollments = {e.course_id: e for e in CourseEnrollment.objects.filter(worker=user)}

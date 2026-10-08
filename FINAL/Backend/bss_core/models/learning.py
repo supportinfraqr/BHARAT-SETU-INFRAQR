@@ -11,6 +11,20 @@ from django.db import models
 from .auth import User
 
 
+class LearningConfig(models.Model):
+    """Global learning/skilling settings — BSS Admin controls whether the
+    courses & skills module is available to workers."""
+
+    courses_enabled = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "learning_config"
+
+    def __str__(self):
+        return f"courses_enabled={self.courses_enabled}"
+
+
 class Course(models.Model):
     code = models.CharField(max_length=40, unique=True)
     title = models.CharField(max_length=160)

@@ -79,6 +79,7 @@ from .operations import (
     LetterTemplate,
 )
 from .learning import (
+    LearningConfig,
     Course,
     CourseModule,
     CourseLesson,

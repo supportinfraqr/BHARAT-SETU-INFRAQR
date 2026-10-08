@@ -2992,43 +2992,34 @@ html:has(.newLoginPage) {
    drop the decorative rules on phones. (Appended last so it wins.)
    ============================================================ */
 @media (max-width: 767px) {
-    /* The stats banner + bottom line were laid out as a ROW (both flex), so the
-       bottom line was pushed to the right edge and clipped. Stack them. */
+    /* On mobile phones, hide the heavy decorative feature boxes & stats banner
+       so the login form is immediately visible above the fold without endless scrolling */
+    .newLoginFeatureRow,
+    .newLoginStatsBanner,
     .newLoginHeroBottom {
-        flex-direction: column;
-        align-items: center;
-        gap: 16px;
-        width: 100%;
+        display: none !important;
     }
 
-    /* The blue stats box sat flush against the feature grid — give it breathing
-       room on phones. */
-    .newLoginStatsBanner {
-        margin-top: 32px;
+    .newLoginHeroTop {
+        margin-bottom: 0;
     }
 
-    .newLoginBottomMessage {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        gap: 8px 14px;
-        width: 100%;
-        max-width: 100%;
-    }
-
-    .newLoginBottomMessage .newLoginTriLine {
-        display: none;
-    }
-
-    .newLoginBottomMessage p {
-        margin: 0;
+    .newLoginHeroHeading h2 {
         font-size: 13px;
         line-height: 1.4;
+        margin-top: 6px;
+        color: #4b5563;
     }
 
-    /* Guard: nothing in the hero may exceed the screen. */
+    .newLoginContent {
+        gap: 16px !important;
+        padding-top: 0 !important;
+    }
+
+    .newLoginMain {
+        padding: 12px 12px 20px !important;
+    }
+
     .newLoginHero * {
         max-width: 100%;
     }

@@ -41,6 +41,9 @@ const accessGroup = { key: 'Users & Access', icon: Users, items: [
   ['Onboarding', '/admin/onboarding'],
   ['Identity Verifications', '/admin/verifications'],
 ] as const };
+const learningGroup = { key: 'Skilling', icon: BookOpenCheck, items: [
+  ['Courses & Skills', '/admin/courses'],
+] as const };
 const auditOpsGroup = { key: 'Audit & Reports', icon: BookOpenCheck, items: [
   ['Activity Report', '/admin/activity'],
   ['AI Audit Settings', '/admin/audit-settings'],
@@ -52,7 +55,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const [profile, setProfile] = useState(false);
   const pathname = usePathname();
   const { t } = useLanguage();
-  const groups = [wageCostGroup, clraGroup, partyGroup, mappingsGroup, accessGroup, auditOpsGroup];
+  const groups = [wageCostGroup, clraGroup, partyGroup, mappingsGroup, accessGroup, learningGroup, auditOpsGroup];
   const flat = groups.reduce<Array<readonly [string, string]>>((acc, g) => acc.concat(g.items as unknown as readonly [string, string][]), []);
 
   const itemActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
