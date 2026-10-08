@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from 'next/navigation';
 import { ArrowRight, CheckCircle2, Fingerprint, ShieldCheck, UserCheck } from "lucide-react";
 
 type Status = {
@@ -16,7 +15,6 @@ const DISMISS_KEY = 'bss_onboarding_integrations_done';
  *  MPIN → Government integrations. Shown as a blocking modal until the consent
  *  and MPIN steps are done; the integrations step is a dismissible nudge. */
 export default function WorkerOnboardingWizard() {
-  const router = useRouter();
   const [status, setStatus] = useState<Status | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -38,6 +36,7 @@ export default function WorkerOnboardingWizard() {
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time bootstrap
   useEffect(() => { void load(); }, [load]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- read the persisted preference once
   useEffect(() => { try { setDismissed(localStorage.getItem(DISMISS_KEY) === '1'); } catch { /* ignore */ } }, []);
 
   if (!status) return null;
@@ -137,7 +136,11 @@ export default function WorkerOnboardingWizard() {
             <ul className="text-xs text-gray-700 space-y-1.5">
               {([['aadhaar', 'Aadhaar (UIDAI)'], ['pan', 'PAN'], ['bank', 'Bank account'], ['uan', 'UAN (EPFO)'], ['esic', 'ESIC IP']] as const).map(([k, label]) => <li key={k} className="flex items-center justify-between"><span>{label}</span>{status.integrations[k] ? <CheckCircle2 size={14} className="text-emerald-600"/> : <span className="text-[10px] font-bold text-amber-600">Pending</span>}</li>)}
             </ul>
-            <button onClick={() => { dismissIntegrations(); router.push('/worker/Profile?tab=integrations'); }} className="w-full h-10 rounded-lg bg-[#073B67] text-white text-sm font-bold inline-flex items-center justify-center gap-1.5"><ArrowRight size={14}/>Open integrations</button>
+            {/* Full navigation is intentional: a router.push to the same route
+                would reuse the mounted Profile page and its one-time ?tab=
+                deep-link would never re-run, leaving the Worker Identity tab. */}
+            {/* eslint-disable-next-line @next/next/no-location-assign-relative-destination */}
+            <button onClick={() => { dismissIntegrations(); window.location.assign('/worker/Profile?tab=integrations'); }} className="w-full h-10 rounded-lg bg-[#073B67] text-white text-sm font-bold inline-flex items-center justify-center gap-1.5"><ArrowRight size={14}/>Open integrations</button>
             <button onClick={dismissIntegrations} className="w-full h-9 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600">Do this later</button>
           </>}
 

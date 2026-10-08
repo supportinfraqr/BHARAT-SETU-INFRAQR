@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     );
 
     await createSession({ subject: result.subject, role: 'Worker', sessionId: result.sessionId, accessToken: result.accessToken });
-    return NextResponse.json({ bssId: result.bssId, redirectTo: '/worker/Profile' }, { status: 201 });
+    return NextResponse.json({ bssId: result.bssId, redirectTo: '/worker/Profile?tab=integrations' }, { status: 201 });
   } catch (error) {
     return apiError(error, 'Aadhaar verification could not be completed.');
   }

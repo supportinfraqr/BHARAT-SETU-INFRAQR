@@ -71,7 +71,7 @@ export async function upstreamRequest<T>(baseUrl: string | undefined, path: stri
   const idempotent = method === 'GET' || method === 'HEAD';
   // Callers may extend the timeout for slow upstreams (e.g. UIDAI/Sandbox
   // Aadhaar calls), bounded by the configured ceiling.
-  const timeoutMs = Math.min(options.timeoutMs ?? config.requestTimeoutMs, 150_000);
+  const timeoutMs = Math.min(options.timeoutMs ?? config.requestTimeoutMs, 120_000);
   let attempt = 0;
   for (;;) {
     attempt += 1;

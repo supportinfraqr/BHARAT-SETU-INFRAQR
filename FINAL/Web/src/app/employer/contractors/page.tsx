@@ -110,6 +110,7 @@ function Field({ name, label, type = 'text', pattern, placeholder }: { name:stri
 function Info({ label, value }: { label:string; value:string }) { return <div className="rounded-lg border border-gray-100 p-2.5"><dt className="text-gray-400 text-[10px]">{label}</dt><dd className="font-semibold text-gray-800 mt-0.5">{value}</dd></div>; }
 function ActionMenu({ open, onToggle, onViewProfile }: { open: boolean; onToggle: () => void; onViewProfile: () => void }) {
   const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [anchor, setAnchor] = useState<{ top?: number; bottom?: number; right: number; maxHeight: number } | null>(null);
 
   useEffect(() => {
@@ -118,12 +119,11 @@ function ActionMenu({ open, onToggle, onViewProfile }: { open: boolean; onToggle
       const rect = btnRef.current?.getBoundingClientRect();
       if (!rect) return;
       const right = Math.max(8, window.innerWidth - rect.right);
-      const spaceBelow = window.innerHeight - rect.bottom - 8;
-      const spaceAbove = rect.top - 8;
-      const ESTIMATED = 180;
-      if (spaceBelow < ESTIMATED && spaceAbove > spaceBelow) {
-        const height = Math.min(ESTIMATED, spaceAbove);
-        setAnchor({ top: rect.top - height - 4, right, maxHeight: Math.max(120, spaceAbove) });
+      const spaceBelow = window.innerHeight - rect.bottom - 12;
+      const spaceAbove = rect.top - 12;
+      const menuHeight = menuRef.current?.offsetHeight || 180;
+      if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+        setAnchor({ bottom: window.innerHeight - rect.top + 4, right, maxHeight: Math.max(120, spaceAbove) });
       } else {
         setAnchor({ top: rect.bottom + 4, right, maxHeight: Math.max(120, spaceBelow) });
       }
@@ -141,7 +141,7 @@ function ActionMenu({ open, onToggle, onViewProfile }: { open: boolean; onToggle
     <button ref={btnRef} onClick={onToggle} aria-label="Contractor actions" aria-expanded={open} className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-100 text-gray-400"><MoreVertical size={16}/></button>
     {open && anchor && createPortal(<>
       <div className="fixed inset-0 z-[110]" onClick={onToggle} />
-      <div role="menu" className="fixed z-[120] w-52 bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-900/5 p-1.5 overflow-y-auto" style={{ top: anchor.top, bottom: anchor.bottom, right: anchor.right, maxHeight: anchor.maxHeight }}>
+      <div ref={menuRef} role="menu" className="fixed z-[120] w-52 bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-900/5 p-1.5 overflow-y-auto" style={{ top: anchor.top, bottom: anchor.bottom, right: anchor.right, maxHeight: anchor.maxHeight }}>
         <button role="menuitem" onClick={onViewProfile} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><UserRound size={14} className="text-gray-400"/>View Profile</button>
       </div>
     </>, document.body)}

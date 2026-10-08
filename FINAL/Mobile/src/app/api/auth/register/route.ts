@@ -6,7 +6,7 @@ import { createSession } from '@/server/session';
 import type { PortalRole } from '@/types/portal';
 
 const registrationByRole: Record<string, { path: string; redirectTo: string }> = {
-  Worker: { path: '/v1/auth/register/worker', redirectTo: '/worker/Profile' },
+  Worker: { path: '/v1/auth/register/worker', redirectTo: '/worker/Profile?tab=integrations' },
   Contractor: { path: '/v1/auth/register/contractor', redirectTo: '/contractor/profile' },
   Employer: { path: '/v1/auth/register/employer', redirectTo: '/employer/profile' },
 };

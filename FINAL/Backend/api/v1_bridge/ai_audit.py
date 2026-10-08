@@ -123,24 +123,20 @@ def _call_provider(cred, system, prompt, timeout=60):
     return resp.json()["choices"][0]["message"]["content"]
 
 
-def _call_provider_any(system, prompt, timeout=40):
-    """Call the configured AI providers in order (default first), returning as
-    soon as one answers. Returns ``(text, cred, error)`` — ``text`` is None when
-    every provider failed. Bounds each attempt with a connect/read timeout so a
-    stalled provider degrades gracefully instead of killing the worker."""
-    last_error = ""
-    creds = _provider_credentials()
-    if not creds:
+def _call_provider_any(system, prompt, timeout=60):
+    """Call the AI provider the admin set as default (no fallback), bounded by a
+    connect/read timeout so a stalled provider degrades gracefully instead of
+    killing the worker. Returns ``(text, cred, error)``."""
+    cred = _default_credential()
+    if cred is None or not cred.has_key:
         return None, None, "no provider configured"
-    for cred in creds:
-        try:
-            text = _call_provider(cred, system, prompt, timeout=timeout)
-            if text and str(text).strip():
-                return text, cred, ""
-            last_error = f"{cred.provider}: empty response"
-        except Exception as exc:  # noqa: BLE001 — try the next provider
-            last_error = f"{cred.provider}: {exc}"
-    return None, None, last_error
+    try:
+        text = _call_provider(cred, system, prompt, timeout=timeout)
+    except Exception as exc:  # noqa: BLE001
+        return None, cred, f"{cred.provider}: {exc}"
+    if text and str(text).strip():
+        return text, cred, ""
+    return None, cred, f"{cred.provider}: empty response"
 
 
 def _parse_json_block(raw):

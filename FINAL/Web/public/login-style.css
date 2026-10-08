@@ -3078,3 +3078,85 @@ html:has(.newLoginPage) {
         font-size: 12px;
     }
 }
+
+/* ============================================================
+   TABLET / IPAD RESPONSIVE ENHANCEMENTS (768px – 1024px)
+   ============================================================ */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .newLoginMain {
+        padding: 24px 28px;
+    }
+
+    .newLoginContent {
+        gap: 24px;
+    }
+
+    .newLoginHero {
+        max-width: 580px;
+    }
+
+    .newLoginBrandLogo {
+        height: 64px;
+    }
+
+    .newLoginBrandTitle {
+        font-size: 38px;
+    }
+
+    .newLoginHeroHeading h2 {
+        font-size: 16px;
+        line-height: 1.5;
+    }
+
+    .newLoginFeatureRow {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        width: 100%;
+    }
+
+    .newLoginFeatureBox {
+        width: 100%;
+        padding: 10px 6px;
+    }
+
+    .newLoginFeatureBox img {
+        height: 36px;
+        margin-bottom: 6px;
+    }
+
+    .newLoginFeatureBox h4 {
+        font-size: 13px;
+    }
+
+    .newLoginFeatureBox p {
+        font-size: 11px;
+    }
+
+    .newLoginStatsBanner {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        padding: 14px 18px;
+        width: 100%;
+    }
+
+    .newLoginStatsItem {
+        justify-content: center;
+        text-align: center;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .newLoginStatsContent h4 {
+        font-size: 15px;
+    }
+
+    .newLoginStatsContent p {
+        font-size: 11px;
+    }
+
+    .newLoginFormWrap {
+        max-width: 480px;
+    }
+}

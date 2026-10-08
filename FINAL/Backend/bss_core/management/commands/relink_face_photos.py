@@ -26,7 +26,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         dry = options["dry_run"]
         try:
-            _dirs, persons = default_storage.listdir(BASE)
+            # listdir returns (dirs, files) — the person folders are the dirs.
+            persons, _files = default_storage.listdir(BASE)
         except Exception as exc:  # noqa: BLE001
             self.stderr.write(f"Could not list {BASE}: {exc}")
             return
