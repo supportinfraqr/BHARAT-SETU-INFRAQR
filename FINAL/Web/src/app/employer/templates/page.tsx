@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { FileDown, LayoutTemplate } from 'lucide-react';
+import { LayoutTemplate } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import DocumentTemplateManager from '@/components/documentEngine/TemplateManager';
 import { DocumentGeneratorModal } from '@/components/documentEngine/DocumentFlow';
@@ -24,10 +24,6 @@ export default function EmployerTemplatesPage() {
 
       <div className="flex flex-wrap gap-2 border-b border-gray-200">
         <button className="px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px inline-flex items-center gap-2 border-[#073B67] text-[#073B67]"><LayoutTemplate size={16}/>Document Templates</button>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <button className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold inline-flex items-center gap-2" onClick={() => setGenerateType('permanent-gate-pass')}><FileDown size={15}/>Generate a gate pass</button>
       </div>
 
       <DocumentTemplateManager owner={owner} onGenerate={type => setGenerateType(type)} />
