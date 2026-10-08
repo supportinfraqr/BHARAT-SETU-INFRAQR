@@ -392,7 +392,10 @@ def worker_face_enroll(request):
             continue
         name = f"worker_face_photos/{person}/{datetime.utcnow():%Y%m%d%H%M%S}_{index}.jpg"
         path = default_storage.save(name, ContentFile(raw))
-        WorkerFacePhoto.objects.create(user=request.user, person=person, slot=index + 1, path=path)
+        try:
+            WorkerFacePhoto.objects.create(user=request.user, person=person, slot=index + 1, path=path)
+        except Exception:  # noqa: BLE001 — never lose the pipeline enrollment over a DB write
+            pass
         saved += 1
 
     try:
