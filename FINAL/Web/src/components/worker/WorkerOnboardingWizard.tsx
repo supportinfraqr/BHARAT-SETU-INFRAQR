@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ArrowRight, CheckCircle2, Fingerprint, ShieldCheck, UserCheck } from "lucide-react";
 
 type Status = {
@@ -39,7 +40,21 @@ export default function WorkerOnboardingWizard() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- read the persisted preference once
   useEffect(() => { try { setDismissed(localStorage.getItem(DISMISS_KEY) === '1'); } catch { /* ignore */ } }, []);
 
-  if (!status) return null;
+  const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only portal mount
+  useEffect(() => { setMounted(true); }, []);
+
+  // While a blocking step (consent / MPIN) is on screen: lock page scroll and
+  // hide the floating Scan & Bind / Listen actions so nothing pokes outside the
+  // dimmed backdrop.
+  const blocking = !!status && (!status.steps.consent || !status.steps.mpin);
+  useEffect(() => {
+    if (!blocking) return;
+    document.body.classList.add('bss-modal-open');
+    return () => document.body.classList.remove('bss-modal-open');
+  }, [blocking]);
+
+  if (!status || !mounted) return null;
   const { steps } = status;
 
   const step: 'consent' | 'mpin' | 'integrations' | null =
@@ -94,9 +109,9 @@ export default function WorkerOnboardingWizard() {
     integrations: 'Step 3 of 3 · Government integrations',
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm grid place-items-center p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-label="Onboarding">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden my-8">
+  return createPortal(
+    <div className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-md grid place-items-center p-4 overflow-hidden overscroll-none" role="dialog" aria-modal="true" aria-label="Onboarding">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[calc(100dvh-2rem)] flex flex-col">
         <header className="px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1 text-[10px] font-bold">
@@ -108,7 +123,7 @@ export default function WorkerOnboardingWizard() {
             {titles[step]}
           </h2>
         </header>
-        <div className="p-5 space-y-3">
+        <div className="p-5 space-y-3 overflow-y-auto">
           {step === 'consent' && <>
             <p className="text-xs text-gray-600">Bharat Shram Setu processes your identity, employment and payroll data to run statutory compliance and site access for you. Please read and accept to continue.</p>
             <ul className="text-[11px] text-gray-500 list-disc pl-4 space-y-1">
@@ -147,6 +162,7 @@ export default function WorkerOnboardingWizard() {
           {error && <p role="alert" className="text-xs font-semibold text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

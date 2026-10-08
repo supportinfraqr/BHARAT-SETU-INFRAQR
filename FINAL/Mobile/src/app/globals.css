@@ -218,6 +218,18 @@ body:has(.bss-mobile-menu) .bss-voice-guide {
   display: none !important;
 }
 
+/* While a blocking onboarding/setup modal is open: lock page scroll and hide the
+   floating Scan & Bind and Listen & Learn actions so they never show outside the
+   dimmed, blurred backdrop. */
+body.bss-modal-open {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+body.bss-modal-open .bss-voice-guide,
+body.bss-modal-open .bss-scan-fab {
+  display: none !important;
+}
+
 .bss-mobile-menu a,
 .bss-mobile-menu button {
   min-height: 2.75rem;
