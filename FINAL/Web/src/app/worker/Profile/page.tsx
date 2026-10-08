@@ -986,7 +986,7 @@ export default function WorkerProfilePage() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                   {[1, 2, 3, 4, 5].map((idx) => {
-                    const imgUrl = facePhotos[idx] || enrolledPhotos[idx] || (idx === 1 ? worker.identity.photoUrl : '');
+                    const imgUrl = facePhotos[idx] || enrolledPhotos[idx] || '';
                     return (
                       <div
                         key={idx}

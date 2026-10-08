@@ -105,28 +105,7 @@ export default function WorkerOverview() {
     {!worker.identity.aadhaarVerified && <section className="bg-[#FFF8F0] border border-[#F47A32]/20 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3"><span className="w-10 h-10 rounded-xl bg-[#F47A32] grid place-items-center flex-shrink-0 text-white"><Fingerprint size={20}/></span><div className="flex-1"><p className="text-sm font-bold text-[#9A3412]">Link your Aadhaar</p><p className="text-xs text-[#9A3412]/80 mt-0.5">Enter your Aadhaar to verify via OTP and auto-fill your name, date of birth, address and photo.</p></div><Link href="/worker/Profile?tab=integrations" className="h-9 px-3 rounded-lg bg-[#F47A32] text-white text-xs font-bold inline-flex items-center gap-1.5 hover:bg-[#e06a24] flex-shrink-0">Link Aadhaar<ArrowRight size={13}/></Link></section>}
 
     {/* AI CCTV Face Attendance Photo Enrolment */}
-    {faceReady ? (
-      <section className="bg-gradient-to-r from-emerald-900 via-slate-900 to-emerald-950 border border-emerald-700/60 text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
-        <div className="flex items-start sm:items-center gap-3.5">
-          <span className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 grid place-items-center flex-shrink-0 text-emerald-300">
-            <CheckCircle2 size={22} />
-          </span>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Required for Daily Attendance</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">CCTV Ready</span>
-            </div>
-            <p className="text-sm font-bold text-white mt-0.5">Face photos uploaded</p>
-            <p className="text-xs text-slate-300 mt-0.5">
-              Your {Math.max(faceUploaded, faceEnrolled)} face photo(s) are on record — AI camera attendance auto-marking is active.
-            </p>
-          </div>
-        </div>
-        <Link href="/worker/Profile?tab=personal" className="h-10 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5 transition-colors flex-shrink-0 whitespace-nowrap">
-          Manage photos
-        </Link>
-      </section>
-    ) : (
+    {!faceReady && (
       <section className="bg-gradient-to-r from-blue-900 via-slate-900 to-indigo-950 border border-blue-700/60 text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
         <div className="flex items-start sm:items-center gap-3.5">
           <span className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/40 grid place-items-center flex-shrink-0 text-blue-300">
