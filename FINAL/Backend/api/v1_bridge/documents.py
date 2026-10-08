@@ -65,9 +65,28 @@ def worker_documents(request):
         return Response({"error": "You must complete Aadhaar verification before uploading documents."},
                         status=status.HTTP_403_FORBIDDEN)
 
-    # Documents go straight to manual verification in BSS. OCR keyword matching
-    # was removed: it produced false "OCR failed" flags (e.g. on bank documents)
-    # and never blocked the upload anyway.
+    # OCR-verify the upload against the selected slot before accepting it. A
+    # document that cannot be read, or that clearly is a different type (e.g. an
+    # Aadhaar card in the Bank Passbook slot), or that fails the Address Proof
+    # content checks, is rejected. The photo/signature slots and system letters
+    # have no OCR check and always pass.
+    data = file_obj.read()
+    file_obj.seek(0)
+    try:
+        text = ocr_client.extract_text(data, file_obj.name)
+    except ocr_client.OcrError:
+        return Response({
+            "error": "We couldn't read this document. Please upload a clear, well-lit scan or photo of the correct document.",
+            "points": [{"key": "readable", "label": "Readable document", "passed": False,
+                        "detail": "OCR could not read the file"}],
+        }, status=status.HTTP_400_BAD_REQUEST)
+    ok, message, points = ocr_client.check_worker_document(master.code, text)
+    if not ok:
+        return Response({"error": message, "points": points},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    # Documents go straight to manual verification in BSS once they pass the OCR
+    # slot check above.
     WorkerDocument.objects.filter(user=user, document=master).delete()
     doc = WorkerDocument(
         user=user, document=master,

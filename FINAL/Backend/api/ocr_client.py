@@ -131,6 +131,99 @@ _DOC_MARKERS = {
         "EMPLOYEES STATE INSURANCE",
         "ESIC",
     ],
+    "bank": [
+        "PASSBOOK",
+        "PASS BOOK",
+        "BANK PASSBOOK",
+        "CANCELLED CHEQUE",
+        "CANCELED CHEQUE",
+        "CANCELLED CHECK",
+        "IFSC",
+        "MICR",
+        "SAVINGS BANK",
+        "SAVINGS ACCOUNT",
+        "A/C NO",
+        "ACCOUNT NO",
+        "ACCOUNT NUMBER",
+        "STATE BANK OF INDIA",
+        "PUNJAB NATIONAL BANK",
+        "BANK OF BARODA",
+        "CANARA BANK",
+        "HDFC BANK",
+        "ICICI BANK",
+        "AXIS BANK",
+        "KOTAK MAHINDRA",
+        "UNION BANK",
+        "BANK OF INDIA",
+        "INDIAN BANK",
+    ],
+    "bocw": [
+        "BOCW",
+        "BUILDING AND OTHER CONSTRUCTION WORKERS",
+        "CONSTRUCTION WORKERS",
+        "WELFARE BOARD",
+    ],
+    "education": [
+        "CERTIFICATE",
+        "BOARD OF",
+        "UNIVERSITY",
+        "MARKSHEET",
+        "MARKS STATEMENT",
+        "SECONDARY",
+        "HIGHER SECONDARY",
+        "EXAMINATION",
+        "ROLL NO",
+    ],
+    "skill": [
+        "SKILL",
+        "TRAINING",
+        "NSDC",
+        "NSQF",
+        "COMPETENCY",
+        "TRADE",
+        "ITI",
+    ],
+    "medical": [
+        "MEDICAL",
+        "FITNESS",
+        "MEDICALLY FIT",
+        "DOCTOR",
+        "PHYSICIAN",
+        "MBBS",
+        "REGISTERED MEDICAL PRACTITIONER",
+    ],
+    "address_proof": [
+        "AADHAAR",
+        "UIDAI",
+        "UNIQUE IDENTIFICATION AUTHORITY",
+        "PASSBOOK",
+        "BANK PASSBOOK",
+        "IFSC",
+        "CANCELLED CHEQUE",
+        "CANCELED CHEQUE",
+        "ELECTION COMMISSION",
+        "ELECTOR",
+        "VOTER",
+        "PASSPORT",
+        "REPUBLIC OF INDIA",
+        "DRIVING LICENCE",
+        "DRIVING LICENSE",
+        "TRANSPORT DEPARTMENT",
+        "RTO",
+        "ELECTRICITY",
+        "WATER BILL",
+        "GAS BILL",
+        "TELEPHONE",
+        "BROADBAND",
+        "UTILITY BILL",
+        "RENT AGREEMENT",
+        "LEASE AGREEMENT",
+        "TENANCY",
+        "LANDLORD",
+        "RATION CARD",
+        "PUBLIC DISTRIBUTION",
+        "FAIR PRICE SHOP",
+    ],
 }
 
 _DOC_DISPLAY = {
@@ -138,7 +231,156 @@ _DOC_DISPLAY = {
     "pan": "PAN",
     "uan": "UAN",
     "esic": "ESIC",
+    "bank": "Bank Passbook / Cancelled Cheque",
+    "bocw": "BOCW Card",
+    "education": "Educational Certificate",
+    "skill": "Skill Certificate",
+    "medical": "Medical Fitness Certificate",
+    "address_proof": "Address Proof",
 }
+
+# Most-specific first: an Aadhaar/passbook also carries an address, so identity
+# document types must win over the generic "address_proof" bucket when we name
+# the type a document looks like.
+_DETECT_ORDER = ("aadhaar", "pan", "uan", "esic", "bank", "bocw", "medical",
+                 "education", "skill", "address_proof")
+
+# Distinctive identity/bank documents whose detection reliably identifies a
+# *different* type than the slot the user picked. Certificate-like slots share
+# generic words, so they are excluded from the hard cross-type block.
+_STRONG_TYPES = frozenset({"aadhaar", "pan", "uan", "esic", "bank"})
+
+# Master document code -> expected OCR type (None/unlisted = no OCR check: the
+# photo/signature slots and system-issued letters carry no readable text).
+_WORKER_DOC_TYPE = {
+    "WM01": "aadhaar", "AADHAR": "aadhaar",
+    "WM02": "pan", "PAN": "pan",
+    "WM03": "address_proof",
+    "WM04": "education", "EDU": "education",
+    "WM05": "skill",
+    "BANK": "bank",
+    "UAN": "uan",
+    "ESIC": "esic",
+    "BOCW": "bocw",
+    "MED": "medical",
+}
+
+_AADHAAR_NUM_RE = re.compile(r"(?<!\d)\d{4}\s?\d{4}\s?\d{4}(?!\d)")
+_PIN_RE = re.compile(r"\b[1-9]\d{5}\b")
+
+_ADDRESS_KEYWORDS = (
+    "ADDRESS", "S/O", "D/O", "W/O", "C/O", "VILLAGE", "POST", "DISTRICT",
+    "STATE", "PIN", "PINCODE", "PIN CODE", "HOUSE", "H.NO", "H NO", "ROAD",
+    "STREET", "NAGAR", "COLONY", "BLOCK", "TEHSIL", "TALUK", "TALUKA",
+    "MANDAL", "DOOR NO", "FLAT", "APARTMENT", "SECTOR",
+)
+
+
+def _present(marker: str, upper: str, squashed: str) -> bool:
+    """True when ``marker`` appears verbatim (case-insensitive) or squashed."""
+    m = (marker or "").upper()
+    if not m:
+        return False
+    if m in upper:
+        return True
+    sq = _squash(marker)
+    return bool(sq) and sq in squashed
+
+
+def detect_document_type(text: str):
+    """Name the document type the OCR text most specifically looks like.
+
+    Returns one of ``_DETECT_ORDER`` or ``None`` when nothing is confidently
+    recognised. Used to reject an upload that is clearly a *different* document
+    type than the slot the user selected.
+    """
+    upper = (text or "").upper()
+    squashed = _squash(text)
+    if not squashed:
+        return None
+    markers_by_type = dict(_DOC_MARKERS)
+    for doc_type in _DETECT_ORDER:
+        if doc_type == "aadhaar" and _AADHAAR_NUM_RE.search(text or ""):
+            return "aadhaar"
+        if any(_present(marker, upper, squashed) for marker in markers_by_type.get(doc_type, ())):
+            return doc_type
+    return None
+
+
+def address_proof_check(text: str):
+    """Score an upload against address-proof criteria.
+
+    Returns ``(ok, message, points)``. A document qualifies as an address proof
+    when it is a recognised address-bearing document AND it shows a PIN code AND
+    it has an address block.
+    """
+    value = text or ""
+    upper = value.upper()
+    squashed = _squash(value)
+    has_doc = any(_present(m, upper, squashed) for m in _DOC_MARKERS["address_proof"])
+    has_pin = bool(_PIN_RE.search(value))
+    has_address = any(_present(k, upper, squashed) for k in _ADDRESS_KEYWORDS)
+    points = [
+        {"key": "doctype", "label": "Recognised address document (Aadhaar / passbook / voter ID / passport / DL / utility bill / rent / ration)",
+         "passed": has_doc, "detail": "" if has_doc else "not a recognised address document"},
+        {"key": "pincode", "label": "PIN code present",
+         "passed": has_pin, "detail": "" if has_pin else "no 6-digit PIN code found"},
+        {"key": "address", "label": "Address block present",
+         "passed": has_address, "detail": "" if has_address else "no address lines found"},
+    ]
+    if has_doc and has_pin and has_address:
+        return True, "", points
+    missing = [p["label"] for p in points if not p["passed"]]
+    return False, "This does not look like a valid address proof (" + "; ".join(missing) + ").", points
+
+
+def check_worker_document(code: str, ocr_text: str):
+    """Verify a worker document upload against its catalogue slot.
+
+    Returns ``(ok, message, points)``. Blocks (``ok=False``) when the document
+    cannot be read, is clearly a different document type, or fails the
+    address-proof checks for the Address Proof slot. Slots without a text-based
+    check (photo/signature/system letters) always pass.
+    """
+    expected = _WORKER_DOC_TYPE.get((code or "").strip().upper())
+    if not expected:
+        return True, "", []
+
+    text = ocr_text or ""
+    squashed = _squash(text)
+    if len(squashed) < 15:
+        return False, ("We couldn't read any text from this document. Please upload a clear, "
+                       "well-lit scan or photo of the correct document."), [
+            {"key": "readable", "label": "Readable document", "passed": False,
+             "detail": "no readable text found"},
+        ]
+
+    if expected == "address_proof":
+        return address_proof_check(text)
+
+    label = _DOC_DISPLAY.get(expected, expected)
+    upper = text.upper()
+    detected = detect_document_type(text)
+
+    # A clearly identified *different* identity/bank document always blocks,
+    # even when a generic shared word (e.g. "GOVERNMENT OF INDIA" on an Aadhaar)
+    # happens to match the expected slot's markers.
+    if detected and detected in _STRONG_TYPES and detected != expected:
+        return False, (f"This looks like a different document ({_DOC_DISPLAY.get(detected, detected)}), "
+                       f"not {label}. Please upload the correct document."), []
+
+    markers = _DOC_MARKERS.get(expected, ())
+    own = any(_present(m, upper, squashed) for m in markers)
+    if expected == "aadhaar" and not own:
+        own = bool(_AADHAAR_NUM_RE.search(text))
+    if own:
+        return True, "", []
+
+    if detected and detected != expected:
+        return False, (f"This looks like a different document ({_DOC_DISPLAY.get(detected, detected)}), "
+                       f"not {label}. Please upload the correct document."), []
+    return False, (f"We couldn't confirm this is a valid {label}. "
+                   f"Please upload a clear {label} document."), []
 
 
 def verify_document_text(doc_type, ocr_text, expected_number="", expected_name=""):

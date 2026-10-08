@@ -119,8 +119,11 @@ export default function DocumentsModule() {
       form.append('code', target.code);
       form.append('name', target.name);
       const response = await fetch('/api/worker/documents', { method: 'POST', body: form });
-      const json = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(json.error || 'Upload failed.');
+      const json = await response.json() as { error?: string; points?: { label?: string; passed?: boolean }[] };
+      if (!response.ok) {
+        const failed = (json.points || []).filter(p => !p.passed && p.label).map(p => p.label as string);
+        throw new Error((json.error || 'Upload failed.') + (failed.length ? ` (${failed.join('; ')})` : ''));
+      }
       setNotice(`${target.name} uploaded — pending verification.`);
       await load();
     } catch (err) {
