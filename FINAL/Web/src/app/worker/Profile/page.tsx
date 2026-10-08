@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BssTaxonomies } from '@/data/taxonomies';
-import { INDIAN_BANKS } from '@/lib/banks';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
 import type { WorkerRecord } from '@/types/portal';
@@ -10,7 +9,7 @@ import { MobilitySection, type MobilitySectionHandle } from '@/components/worker
 import DownSelect from '@/components/ui/DownSelect';
 import { ResendOtp } from '@/components/auth/ResendOtp';
 import { 
-  UserCircle, Save, CheckCircle2, ShieldCheck, 
+  UserCircle, Save, CheckCircle2, CheckCheck, ShieldCheck, 
   MapPin, FileText, Users,
   Building2, CreditCard, Briefcase, Award, BadgeCheck,
   Clock,
@@ -35,7 +34,7 @@ function normDisabilityStatus(v: unknown): string {
 
 export default function WorkerProfilePage() {
   const { t } = useLanguage();
-  const { worker, portal, updateWorker, saveWorker } = useWorker();
+  const { worker, portal, updateWorker, saveWorker, refresh } = useWorker();
   const mobilityRef = useRef<MobilitySectionHandle>(null);
   const [activeTab, setActiveTab] = useState<'personal' | 'attendance' | 'contact' | 'family' | 'social' | 'banking' | 'classification' | 'employment' | 'skills' | 'welfare' | 'other' | 'integrations'>('personal');
   const [isSaving, setIsSaving] = useState(false);
@@ -87,7 +86,6 @@ export default function WorkerProfilePage() {
   const [emergencyRelation, setEmergencyRelation] = useState(() => worker.identity.emergencyContactRelation || '');
   const [alternateMobile, setAlternateMobile] = useState(() => worker.contact.alternateMobile || '');
   const [email, setEmail] = useState(() => worker.contact.email || '');
-  const [bankName, setBankName] = useState(() => worker.banking.bankName || '');
   const [sector, setSector] = useState(() => worker.classification?.sector || '');
   const [occupation, setOccupation] = useState(() => worker.classification?.occupation || '');
 
@@ -404,12 +402,25 @@ export default function WorkerProfilePage() {
   const verifyBank = async () => {
     setBankVerify({ busy: true, message: '', error: '' });
     try {
-      const response = await fetch('/api/portal/bank-verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-      const result = await response.json() as { data?: { verified?: boolean; nameAtBank?: string; utr?: string; message?: string }; error?: string };
+      // The worker only supplies account number + IFSC; the bank reads the rest.
+      const form = document.querySelector('form');
+      const accountInput = form?.querySelector('[name="banking.accountNumber"]') as HTMLInputElement | null;
+      const ifscInput = form?.querySelector('[name="banking.ifsc"]') as HTMLInputElement | null;
+      const accountNumber = (accountInput?.value || '').trim() || worker.banking.accountNumber || '';
+      const ifsc = (ifscInput?.value || '').trim().toUpperCase() || worker.banking.ifsc || '';
+      if (!accountNumber || !ifsc) {
+        setBankVerify({ busy: false, message: '', error: 'Enter your bank account number and IFSC first.' });
+        return;
+      }
+      const response = await fetch('/api/portal/bank-verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountNumber, ifsc }),
+      });
+      const result = await response.json() as { data?: { verified?: boolean; bankName?: string; nameAtBank?: string; nameMatchesAadhaar?: boolean; utr?: string; message?: string }; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error || 'Verification failed.');
+      await refresh();
       if (result.data.verified) {
-        updateWorker({ banking: { ...worker.banking, verificationStatus: 'Verified', holderName: result.data.nameAtBank || worker.banking.holderName } });
-        setBankVerify({ busy: false, message: `Verified — account holder ${result.data.nameAtBank || worker.banking.holderName}${result.data.utr ? ` · UTR ${result.data.utr}` : ''}.`, error: '' });
+        setBankVerify({ busy: false, message: `Verified — ${result.data.bankName || 'bank'} · account holder ${result.data.nameAtBank || worker.banking.holderName}${result.data.nameMatchesAadhaar ? ' (matches Aadhaar)' : ''}${result.data.utr ? ` · UTR ${result.data.utr}` : ''}.`, error: '' });
       } else {
         setBankVerify({ busy: false, message: '', error: result.data.message || 'Account could not be verified.' });
       }
@@ -1328,34 +1339,36 @@ export default function WorkerProfilePage() {
                       <span className="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-[#2F9E67] px-2 py-0.5 rounded-full">Receives Salary</span>
                     </div>
                     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
-                      <div className="sm:col-span-2">
-                        <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Name</label>
-                        <DownSelect
-                          name="banking.bankName"
-                          value={bankName}
-                          onChange={setBankName}
-                          placeholder="Select bank…"
-                          options={[
-                            ...(worker.banking.bankName && !INDIAN_BANKS.includes(worker.banking.bankName) ? [worker.banking.bankName] : []),
-                            ...INDIAN_BANKS,
-                          ]}
-                        />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Account Holder Name</label>
-                        <input name="banking.holderName" type="text" defaultValue={worker.banking.holderName} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
-                      </div>
                       <div>
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Account Number</label>
                         <input name="banking.accountNumber" type="password" defaultValue="" placeholder="Enter account number" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
+                        <p className="text-[10px] text-gray-400 mt-1">Current: {maskId(worker.banking.accountNumber, 4) || '—'} · re-enter to change</p>
                       </div>
                       <div>
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">IFSC Code</label>
                         <input name="banking.ifsc" type="text" defaultValue={worker.banking.ifsc} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] uppercase focus:outline-none focus:border-[#0066CC]"/>
                       </div>
-                      <div className="sm:col-span-2">
-                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full ${worker.banking.verificationStatus === 'Verified' ? 'text-[#2F9E67] bg-[#E8F5E9]' : 'text-[#F47A32] bg-[#FFF8F0]'}`}><ShieldCheck size={12}/> {worker.banking.verificationStatus === 'Verified' ? 'KYC Verified (NPCI Penny Drop)' : 'KYC pending — verify in Govt. Integrations'}</span>
+                      <div>
+                        <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Name <span className="normal-case font-medium text-gray-400">(auto-filled)</span></label>
+                        <input readOnly value={worker.banking.bankName} placeholder="Fetched from IFSC" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F]"/>
                       </div>
+                      <div>
+                        <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Account Holder Name <span className="normal-case font-medium text-gray-400">(from bank)</span></label>
+                        <div className="relative">
+                          <input readOnly value={worker.banking.holderName} placeholder="Fetched on verification" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-3 py-2.5 pr-10 text-[13px] font-medium text-[#1D1D1F]"/>
+                          {worker.banking.nameMatchesAadhaar && <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#2F9E67]" title="Matches your Aadhaar name"><CheckCheck size={17}/></span>}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Branch <span className="normal-case font-medium text-gray-400">(auto-filled)</span></label>
+                        <input readOnly value={worker.banking.branch} placeholder="—" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F]"/>
+                      </div>
+                      <div className="sm:col-span-2 flex flex-wrap items-center gap-3 pt-1">
+                        <button type="button" onClick={verifyBank} disabled={bankVerify.busy} className="h-10 px-4 rounded-xl bg-[#073B67] text-white text-[13px] font-bold inline-flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-50">{bankVerify.busy ? 'Verifying…' : 'Verify via Penny Drop (₹1)'}</button>
+                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full ${worker.banking.verificationStatus === 'Verified' ? 'text-[#2F9E67] bg-[#E8F5E9]' : 'text-[#F47A32] bg-[#FFF8F0]'}`}><ShieldCheck size={12}/> {worker.banking.verificationStatus === 'Verified' ? 'KYC Verified (NPCI Penny Drop)' : 'KYC pending'}</span>
+                      </div>
+                      {bankVerify.message && <p role="status" className="sm:col-span-2 text-[12px] text-[#2F9E67] bg-[#E8F5E9] border border-[#2F9E67]/20 rounded-lg px-3 py-2">{bankVerify.message}</p>}
+                      {bankVerify.error && <p role="alert" className="sm:col-span-2 text-[12px] text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{bankVerify.error}</p>}
                     </div>
                   </div>
                 </div>
@@ -2090,6 +2103,15 @@ export default function WorkerProfilePage() {
                       <h4 className="text-[15px] font-bold text-gray-900">PAN Card Verification</h4>
                       <p className="text-[13px] text-gray-500 mb-3">Financial KYC details (NSDL).</p>
                       <p className="font-mono text-[15px] font-semibold uppercase text-gray-800">{panDisplay || 'Not linked'}</p>
+                      {(worker.identity.panHolderName || worker.identity.panVerified) && (
+                        <p className="text-[13px] text-gray-700 mt-1 inline-flex items-center gap-1.5">
+                          <span className="text-gray-400">Name:</span>
+                          <span className="font-semibold">{worker.identity.panNameMatchesAadhaar ? (worker.identity.name || worker.identity.panHolderName) : (worker.identity.panHolderName || '—')}</span>
+                          {worker.identity.panNameMatchesAadhaar && (
+                            <span className="text-[#2F9E67] inline-flex" title="Matched with Aadhaar"><CheckCheck size={16}/></span>
+                          )}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center justify-start md:justify-end min-w-[140px]">
                       {worker.identity.panVerified ? (
@@ -2130,25 +2152,8 @@ export default function WorkerProfilePage() {
                         <p className="text-[13px] text-gray-500 mt-0.5">Your salary account, verified via the NPCI bank verification API. Update details in the Banking tab.</p>
                       </div>
                       <div className="rounded-[14px] border border-gray-200 bg-white p-4 space-y-4">
-                        <p className="flex items-center justify-between gap-2 text-[13px] font-bold text-gray-800"><span className="inline-flex items-center gap-1.5"><CheckCircle size={14} className="text-[#2F9E67]"/> {bankName || worker.banking.bankName || 'Bank account'}</span>{bankVerified ? <span className="inline-flex items-center gap-1 text-[11px] font-bold text-green-700 bg-green-50 border border-green-100 rounded-lg px-2 py-1"><CheckCircle size={13}/> KYC Verified</span> : <span className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600 bg-orange-50 border border-orange-100 rounded-lg px-2 py-1"><Clock size={13}/> Pending</span>}</p>
+                        <p className="flex items-center justify-between gap-2 text-[13px] font-bold text-gray-800"><span className="inline-flex items-center gap-1.5"><CheckCircle size={14} className="text-[#2F9E67]"/> {worker.banking.bankName || 'Bank account'}</span>{bankVerified ? <span className="inline-flex items-center gap-1 text-[11px] font-bold text-green-700 bg-green-50 border border-green-100 rounded-lg px-2 py-1"><CheckCircle size={13}/> KYC Verified</span> : <span className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600 bg-orange-50 border border-orange-100 rounded-lg px-2 py-1"><Clock size={13}/> Pending</span>}</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
-                          <div className="sm:col-span-2">
-                            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Bank Name</label>
-                            <DownSelect
-                              name="banking.bankName"
-                              value={bankName}
-                              onChange={setBankName}
-                              placeholder="Select bank…"
-                              options={[
-                                ...(worker.banking.bankName && !INDIAN_BANKS.includes(worker.banking.bankName) ? [worker.banking.bankName] : []),
-                                ...INDIAN_BANKS,
-                              ]}
-                            />
-                          </div>
-                          <div className="sm:col-span-2">
-                            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Bank Account Holder Name</label>
-                            <input name="banking.holderName" type="text" defaultValue={worker.banking.holderName} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
-                          </div>
                           <div>
                             <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Bank Account Number</label>
                             <input name="banking.accountNumber" type="password" defaultValue="" placeholder="Enter account number" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
@@ -2157,6 +2162,21 @@ export default function WorkerProfilePage() {
                           <div>
                             <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">IFSC Code</label>
                             <input name="banking.ifsc" type="text" defaultValue={worker.banking.ifsc} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] uppercase focus:outline-none focus:border-[#0066CC]"/>
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Bank Name <span className="normal-case font-medium text-gray-400">(auto-filled)</span></label>
+                            <input readOnly value={worker.banking.bankName} placeholder="Fetched from IFSC" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F]"/>
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Account Holder Name <span className="normal-case font-medium text-gray-400">(from bank)</span></label>
+                            <div className="relative">
+                              <input readOnly value={worker.banking.holderName} placeholder="Fetched on verification" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-3 py-2.5 pr-10 text-[13px] font-medium text-[#1D1D1F]"/>
+                              {worker.banking.nameMatchesAadhaar && <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#2F9E67]" title="Matches your Aadhaar name"><CheckCheck size={17}/></span>}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider select-none mb-1.5">Branch <span className="normal-case font-medium text-gray-400">(auto-filled)</span></label>
+                            <input readOnly value={worker.banking.branch} placeholder="—" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F]"/>
                           </div>
                           <div className="sm:col-span-2">
                             <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">UPI</label>
@@ -2167,11 +2187,9 @@ export default function WorkerProfilePage() {
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <button type="submit" disabled={isSaving} className="h-10 px-4 rounded-xl border border-[#073B67]/25 bg-white text-[#073B67] text-[13px] font-bold inline-flex items-center gap-2 hover:bg-[#073B67]/5 disabled:opacity-50">{isSaving ? 'Saving…' : 'Save details'}</button>
-                          {!bankVerified && (
-                            <button type="button" onClick={verifyBank} disabled={bankVerify.busy || !worker.banking.accountNumber || !worker.banking.ifsc} className="h-10 px-4 rounded-xl bg-[#073B67] text-white text-[13px] font-bold inline-flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-50">{bankVerify.busy ? 'Verifying…' : 'Verify via Penny Drop (₹1)'}</button>
-                          )}
+                          <button type="button" onClick={verifyBank} disabled={bankVerify.busy} className="h-10 px-4 rounded-xl bg-[#073B67] text-white text-[13px] font-bold inline-flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-50">{bankVerify.busy ? 'Verifying…' : 'Verify via Penny Drop (₹1)'}</button>
                         </div>
-                        <p className="text-[11px] text-gray-400">Save your bank details here (or on the Banking tab), then verify. A ₹1 test credit is sent to your account to confirm the account number and holder name (NPCI, via Sandbox.co.in).</p>
+                        <p className="text-[11px] text-gray-400">Enter your account number and IFSC — the bank name, branch and account-holder name are fetched from the bank for you. A ₹1 test credit confirms the account (NPCI, via Sandbox.co.in).</p>
                       </div>
                       {bankVerify.message && <p role="status" className="text-[12px] text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">{bankVerify.message}</p>}
                       {bankVerify.error && <p role="alert" className="text-[12px] text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{bankVerify.error}</p>}

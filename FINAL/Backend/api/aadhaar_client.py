@@ -149,3 +149,22 @@ def verify_bank_account(ifsc: str, account_number: str) -> dict:
     if resp.status_code != 200:
         raise SandboxError(_error_message(resp), resp.status_code)
     return resp.json()
+
+
+def verify_ifsc(ifsc: str) -> dict:
+    """GET /bank/{ifsc} (IFSC verification) — bank branch details.
+
+    Returns Sandbox branch data such as BANK, BANKCODE, BRANCH, ADDRESS, CITY,
+    STATE, DISTRICT, CENTRE, MICR, CONTACT, SWIFT, ISO3166 and the rail flags
+    (UPI, NEFT, IMPS, RTGS). The payload may be wrapped in ``data`` — callers
+    should handle both shapes.
+    """
+    token = get_access_token()
+    resp = requests.get(
+        f"{settings.AADHAAR_BASE_URL}/bank/{ifsc}",
+        headers=_authed_headers(token, include_version=True),
+        timeout=20,
+    )
+    if resp.status_code != 200:
+        raise SandboxError(_error_message(resp), resp.status_code)
+    return resp.json()

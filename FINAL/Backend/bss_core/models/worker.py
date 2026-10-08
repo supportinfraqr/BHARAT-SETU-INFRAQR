@@ -36,6 +36,10 @@ class WorkerIdentity(models.Model):
     photo = models.CharField(max_length=255, blank=True)
     pan = models.CharField(max_length=20, blank=True)
     pan_verified = models.BooleanField(default=False)
+    # PAN holder name (read from the fetched DigiLocker PAN PDF) and whether it
+    # matches the worker's Aadhaar name.
+    pan_holder_name = models.CharField(max_length=120, blank=True)
+    pan_name_matches_aadhaar = models.BooleanField(null=True, blank=True)
     aadhaar = models.CharField(max_length=20, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -181,6 +185,10 @@ class WorkerBanking(models.Model):
     ifsc_code = models.CharField(max_length=20, blank=True)
     bank_verification_status = models.CharField(max_length=40, blank=True)
     upi_enabled = models.BooleanField(null=True, blank=True)
+    # Branch auto-filled from IFSC verification (Sandbox /bank/{ifsc}).
+    bank_branch = models.CharField(max_length=120, blank=True)
+    # True when the account-holder name (Penny Drop) matches the Aadhaar name.
+    bank_holder_matches_aadhaar = models.BooleanField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

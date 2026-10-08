@@ -19,6 +19,8 @@ def _worker_identity_section(identity):
         "category": category,
         "aadhaarVerified": bool(identity and identity.aadhaar),
         "panVerified": bool(identity and identity.pan_verified),
+        "panHolderName": _identity_display(identity, "pan_holder_name"),
+        "panNameMatchesAadhaar": bool(identity and identity.pan_name_matches_aadhaar),
         "photoUrl": _identity_display(identity, "photo"),
         "dob": _dts(identity.date_of_birth if identity else None),
         "gender": _identity_display(identity, "gender"),
@@ -496,6 +498,8 @@ def _worker_banking_section(user):
         "ifsc": _d(b.ifsc_code) if b else "",
         "verificationStatus": _d(b.bank_verification_status) if b else "",
         "upiEnabled": bool(b and b.upi_enabled),
+        "branch": _d(b.bank_branch) if b else "",
+        "nameMatchesAadhaar": bool(b and b.bank_holder_matches_aadhaar),
     }
 
 

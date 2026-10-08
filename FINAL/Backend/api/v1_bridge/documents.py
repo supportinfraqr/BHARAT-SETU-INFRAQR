@@ -85,6 +85,25 @@ def worker_documents(request):
         return Response({"error": message, "points": points},
                         status=status.HTTP_400_BAD_REQUEST)
 
+    # Aadhaar-only extra check: the uploaded card must match the worker's verified
+    # Aadhaar record (number + name). All other documents keep the simple check.
+    if (master.code or "").strip().upper() in ("AADHAR", "WM01"):
+        from ..identity_utils import names_match
+        fields = ocr_client.extract_fields("aadhaar", text)
+        proc_aadhaar = str(fields.get("aadhaar") or "").strip()
+        proc_name = str(fields.get("name") or "").strip()
+        problems = []
+        if identity.aadhaar and proc_aadhaar and proc_aadhaar != identity.aadhaar:
+            problems.append("the Aadhaar number does not match your verified Aadhaar")
+        if identity.name and proc_name and not names_match(proc_name, identity.name):
+            problems.append("the name does not match your Aadhaar name")
+        if problems:
+            return Response({
+                "error": "This doesn't look like your Aadhaar card — " + "; ".join(problems) + ".",
+                "points": [{"key": "aadhaar_match", "label": "Matches your Aadhaar record",
+                            "passed": False, "detail": "; ".join(problems)}],
+            }, status=status.HTTP_400_BAD_REQUEST)
+
     # Documents go straight to manual verification in BSS once they pass the OCR
     # slot check above.
     WorkerDocument.objects.filter(user=user, document=master).delete()

@@ -18,6 +18,8 @@ export type WorkerRecord = {
     category: string;
     aadhaarVerified: boolean;
     panVerified: boolean;
+    panHolderName: string;
+    panNameMatchesAadhaar: boolean;
     photoUrl: string;
     dob: string;
     gender: string;
@@ -87,7 +89,7 @@ export type WorkerRecord = {
   contact: { mobile: string; alternateMobile: string; email: string; preferredLanguage: string; preferredChannel: string };
   address: { current: string; currentState: string; currentDistrict: string; currentCity: string; currentLocality: string; currentPin: string; permanent: string; permanentState: string; permanentDistrict: string; permanentCity: string; permanentLocality: string; permanentPin: string; migrant: boolean; migrationType: string; sameAsPermanent: boolean };
   personal: { maritalStatus: string; bloodGroup: string; fatherName: string; motherName: string; spouseName: string; disabilityStatus: string; religion: string; caste: string };
-  banking: { bankName: string; holderName: string; accountNumber: string; ifsc: string; verificationStatus: string; upiEnabled: boolean };
+  banking: { bankName: string; holderName: string; accountNumber: string; ifsc: string; verificationStatus: string; upiEnabled: boolean; branch: string; nameMatchesAadhaar: boolean };
   preferences: { consentToPublicPhoto: boolean; consentToDataSharing: boolean };
   settings: {
     interfaceLanguage: string; preferredChannel: string;

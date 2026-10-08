@@ -858,6 +858,30 @@ def _sync_document_register(user, master_code, file_bytes, filename, mime=""):
     doc.save()
 
 
+def _capture_pan_name(user, file_bytes):
+    """Read the PAN holder name from the fetched DigiLocker PAN PDF (OCR) and
+    record whether it matches the worker's Aadhaar name."""
+    if user is None or not file_bytes:
+        return
+    identity = WorkerIdentity.objects.filter(user=user).first()
+    if identity is None or identity.pan_holder_name:
+        return
+    try:
+        from . import ocr_client
+        text = ocr_client.extract_text(file_bytes, "pan.pdf")
+        fields = ocr_client.extract_fields("pan", text)
+    except Exception as exc:
+        logging.getLogger(__name__).warning("PAN name OCR failed: %s", exc)
+        return
+    name = str(fields.get("name") or "").strip()
+    if not name:
+        return
+    from .identity_utils import names_match
+    identity.pan_holder_name = name[:120]
+    identity.pan_name_matches_aadhaar = names_match(name, identity.name)
+    identity.save(update_fields=["pan_holder_name", "pan_name_matches_aadhaar", "updated_at"])
+
+
 def _background_fetch_documents(session, access_token, profile, user):
     """Download issued docs in the background; failures recorded per doc so the
     sync response stays fast."""
@@ -908,6 +932,8 @@ def _background_fetch_documents(session, access_token, profile, user):
                             f.write(file_bytes)
                         existing.file.save(fname, ContentFile(file_bytes), save=False)
                         existing.file_path = existing.file.name
+                        if dl.extract_pan(uri):
+                            _capture_pan_name(user, file_bytes)
                 except Exception as exc:
                     logging.getLogger(__name__).warning("DigiLocker re-download %s failed: %s", uri, exc)
                 existing.downloaded_at = tz.now()
@@ -923,6 +949,8 @@ def _background_fetch_documents(session, access_token, profile, user):
                 fpath = os.path.join(folder, fname)
                 with open(fpath, "wb") as f:
                     f.write(file_bytes)
+                if dl.extract_pan(uri) or dl.extract_pan(item.get("name") or ""):
+                    _capture_pan_name(user, file_bytes)
                 DigiLockerDocument.objects.create(
                     profile=profile, user=user,
                     uri=uri,
