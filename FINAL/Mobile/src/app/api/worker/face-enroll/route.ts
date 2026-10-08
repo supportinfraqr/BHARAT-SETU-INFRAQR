@@ -12,10 +12,12 @@ export async function POST(request: Request) {
     const session = await requireApiSession('Worker');
     const config = getRuntimeConfig();
     const body = await readJsonObject(request, 3_000_000);
+    // Face enrolment runs face-detection + embedding on all 5 photos in the
+    // attendance controller, so allow well beyond the default request timeout.
     const result = await upstreamRequest(config.apiBaseUrl, '/v1/worker/face-enroll', session, {
       method: 'POST',
       body: JSON.stringify(body),
-    });
+    }, { timeoutMs: 170_000 });
     return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return apiError(error, 'Face photos could not be enrolled.');

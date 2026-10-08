@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     const result = await upstreamRequest(config.apiBaseUrl, '/v1/worker/face-check', session, {
       method: 'POST',
       body: JSON.stringify(body),
-    });
+    }, { timeoutMs: 60_000 });
     return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return apiError(error, 'The photo could not be checked.');
