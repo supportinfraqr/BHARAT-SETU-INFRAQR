@@ -159,6 +159,7 @@ _STYLE = """
   .sign .line { border-top:1px solid #4b5563; width:80%; margin:30px auto 4px; padding-top:4px; font-weight:600; }
   .sign .id { font-size:9px; color:#6b7280; font-family:monospace; margin-top:2px; }
   .foot { margin-top:14px; border-top:1px solid #e5e7eb; padding-top:6px; font-size:9px; color:#6b7280; text-align:center; }
+  .expired-wm { position: fixed; top: 38%; left: -12%; width: 124%; text-align: center; transform: rotate(-24deg); font-size: 96px; font-weight: 900; letter-spacing: 14px; color: rgba(220, 38, 38, 0.14); z-index: 9999; }
 """
 
 
@@ -355,6 +356,7 @@ def _render_card(binding) -> str:
     issued = _fmt(binding.accepted_at or binding.created_at)
     relieved = _fmt(getattr(binding, "unbound_at", None))
     body = f"""
+    <div class="expired-wm">EXPIRED</div>
     <h1>Employment Card</h1>
     <div class="meta"><span>Card No.: {ref}</span><span>Issued: {issued}</span></div>
     <table class="kv">

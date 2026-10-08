@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useMemo } from 'react';
-import { Download, Share2, ChevronLeft, Home, RadioTower, ShieldCheck, Briefcase, CheckCircle2, UserRound, IdCard } from 'lucide-react';
+import { ChevronLeft, Home, RadioTower, ShieldCheck, Briefcase, CheckCircle2, UserRound, IdCard } from 'lucide-react';
 import Link from 'next/link';
 import WorkerQr from '@/components/qr/WorkerQr';
 import CredentialQrPanel from '@/components/idcard/CredentialQrPanel';
@@ -15,9 +15,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 export default function IdentityCardPage() {
   const [cardFormat, setCardFormat] = useState<'standard' | 'employment'>('standard');
   const [isFlipped, setIsFlipped] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportError, setExportError] = useState('');
-  const [exportNotice, setExportNotice] = useState('');
   const { worker } = useWorker();
   const { t } = useLanguage();
   const [passPreview, setPassPreview] = useState<{ html: string; title: string } | null>(null);
@@ -29,153 +26,6 @@ export default function IdentityCardPage() {
   // contractor. Until then, only the Standard BSS ID Card is shown.
   const isBound = Boolean((worker.employment.contractor || worker.employment.contractorDetails?.code || '').trim());
   const isEmployment = cardFormat === 'employment' && isBound;
-
-  const handleDownload = async () => {
-    if (!frontRef.current || !backRef.current || isExporting) return;
-    const preview = window.open('about:blank', '_blank');
-    if (preview) {
-      preview.opener = null;
-      preview.document.title = `Preparing ${isEmployment ? 'Employment' : 'BSS'} Card…`;
-      preview.document.body.innerHTML = '<main style="font:14px system-ui;padding:32px;color:#334155">Preparing your print-ready ID Card…</main>';
-    }
-    setIsExporting(true);
-    setExportError('');
-    setExportNotice('');
-    try {
-      await document.fonts.ready;
-      const [{ toPng }, { jsPDF }] = await Promise.all([import('html-to-image'), import('jspdf')]);
-      const w = isEmployment ? 374 : 400;
-      const h = isEmployment ? 560 : 252;
-      const captureOptions = {
-        width: w,
-        height: h,
-        pixelRatio: 4,
-        cacheBust: true,
-        backgroundColor: isEmployment ? '#ffffff' : '#0A192F',
-        style: {
-          position: 'relative',
-          inset: 'auto',
-          width: `${w}px`,
-          height: `${h}px`,
-          transform: 'none',
-          backfaceVisibility: 'visible',
-          WebkitBackfaceVisibility: 'visible',
-          opacity: '1',
-          boxShadow: 'none',
-        },
-      } as const;
-      const [frontImage, backImage] = await Promise.all([
-        toPng(frontRef.current, captureOptions),
-        toPng(backRef.current, captureOptions),
-      ]);
-      const cardWidth = isEmployment ? 85.6 : 85.6;
-      const cardHeight = isEmployment ? 128 : 53.98;
-      const orientation = isEmployment ? 'portrait' : 'landscape';
-      const pdf = new jsPDF({ orientation, unit: 'mm', format: [cardWidth, cardHeight], compress: true, precision: 16 });
-      pdf.setProperties({
-        title: `BSS ${isEmployment ? 'Employment' : 'ID'} Card - ${worker.identity.bssId}`,
-        subject: `Print-ready ${isEmployment ? 'Form XV Employment' : 'ISO/IEC 7810 ID-1'} worker identity card`,
-        author: 'Bharat Shram Setu',
-        creator: 'Bharat Shram Setu Worker Portal'
-      });
-      pdf.addImage(frontImage, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
-      pdf.addPage([cardWidth, cardHeight], orientation);
-      pdf.addImage(backImage, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
-      const pdfUrl = URL.createObjectURL(pdf.output('blob'));
-      if (preview && !preview.closed) {
-        preview.location.replace(pdfUrl);
-      } else {
-        const download = document.createElement('a');
-        download.href = pdfUrl;
-        download.download = `BSS-${isEmployment ? 'Employment' : 'ID'}-Card-${worker.identity.bssId}.pdf`;
-        download.rel = 'noopener';
-        document.body.appendChild(download);
-        download.click();
-        download.remove();
-        setExportNotice('Your browser blocked the preview tab, so the PDF was downloaded instead.');
-      }
-      window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 60_000);
-    } catch (error) {
-      if (preview && !preview.closed) preview.close();
-      console.error('ID card PDF export failed', error);
-      setExportError('The print-ready PDF could not be created. Please ensure card images have loaded and try again.');
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleShare = async () => {
-    if (!frontRef.current || !backRef.current || isExporting) return;
-    setIsExporting(true);
-    setExportError('');
-    setExportNotice('');
-    try {
-      await document.fonts.ready;
-      const [{ toPng }, { jsPDF }] = await Promise.all([import('html-to-image'), import('jspdf')]);
-      const w = isEmployment ? 374 : 400;
-      const h = isEmployment ? 560 : 252;
-      const captureOptions = {
-        width: w,
-        height: h,
-        pixelRatio: 4,
-        cacheBust: true,
-        backgroundColor: isEmployment ? '#ffffff' : '#0A192F',
-        style: {
-          position: 'relative',
-          inset: 'auto',
-          width: `${w}px`,
-          height: `${h}px`,
-          transform: 'none',
-          backfaceVisibility: 'visible',
-          WebkitBackfaceVisibility: 'visible',
-          opacity: '1',
-          boxShadow: 'none',
-        },
-      } as const;
-      const [frontImage, backImage] = await Promise.all([
-        toPng(frontRef.current, captureOptions),
-        toPng(backRef.current, captureOptions),
-      ]);
-      const cardWidth = isEmployment ? 85.6 : 85.6;
-      const cardHeight = isEmployment ? 128 : 53.98;
-      const orientation = isEmployment ? 'portrait' : 'landscape';
-      const pdf = new jsPDF({ orientation, unit: 'mm', format: [cardWidth, cardHeight], compress: true, precision: 16 });
-      pdf.setProperties({ title: `BSS ID Card - ${worker.identity.bssId}`, subject: 'Worker identity card', author: 'Bharat Shram Setu', creator: 'Bharat Shram Setu Worker Portal' });
-      pdf.addImage(frontImage, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
-      pdf.addPage([cardWidth, cardHeight], orientation);
-      pdf.addImage(backImage, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
-
-      const blob = pdf.output('blob');
-      const fileName = `BSS-${isEmployment ? 'Employment' : 'ID'}-Card-${worker.identity.bssId}.pdf`;
-      const file = new File([blob], fileName, { type: 'application/pdf' });
-      const verifyUrl = `${window.location.origin}/verify/${encodeURIComponent(worker.identity.bssId)}`;
-      const shareText = `${worker.identity.name} · ${worker.identity.bssId}\nVerify: ${verifyUrl}`;
-
-      if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: `BSS Worker ${isEmployment ? 'Employment' : 'ID'} Card`, text: shareText, url: verifyUrl });
-        setExportNotice('Card shared.');
-      } else {
-        const url = URL.createObjectURL(blob);
-        const download = document.createElement('a');
-        download.href = url;
-        download.download = fileName;
-        download.rel = 'noopener';
-        document.body.appendChild(download);
-        download.click();
-        download.remove();
-        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-        if (navigator.share) await navigator.share({ title: 'BSS Worker ID', text: worker.identity.bssId, url: verifyUrl });
-        else await navigator.clipboard.writeText(verifyUrl);
-        setExportNotice('Card downloaded — file sharing isn’t supported here, so the verification link was shared instead.');
-      }
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') return;
-      console.error('ID card share failed', error);
-      setExportError('The ID card could not be shared. Please try again.');
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   const getGenderInitial = (gender?: string) => {
     if (!gender) return 'M';
@@ -653,18 +503,7 @@ export default function IdentityCardPage() {
         description="This large QR carries the same BSS credential as the card — use it when the printed card QR is too small to scan. Anyone can scan it to verify your identity."
       />
 
-      <div className="flex gap-3 pt-2">
-        <button disabled title="ID Card PDF download option is disabled" className="flex-1 bg-gray-400 opacity-60 cursor-not-allowed text-white px-4 py-3 rounded-[12px] font-bold text-sm shadow-sm flex justify-center items-center gap-2">
-          <Download size={18} /> View / Download Print-Ready PDF
-        </button>
-        <button disabled title="Share Digital ID option is disabled" className="bg-gray-100 border border-gray-200 text-gray-400 opacity-60 cursor-not-allowed px-4 py-3 rounded-[12px] font-bold text-sm shadow-sm flex justify-center items-center gap-2">
-          <Share2 size={18} /> Share Digital ID
-        </button>
-      </div>
-
       <p className="text-center text-xs text-gray-500">ISO/IEC 7810 ID-1 · 85.60 × 53.98 mm · front and back · 4× raster capture</p>
-      {exportError && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{exportError}</p>}
-      {exportNotice && <p role="status" className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg p-3">{exportNotice}</p>}
 
       {passPreview && <GatePassViewer html={passPreview.html} title={passPreview.title} onClose={() => setPassPreview(null)} />}
 
