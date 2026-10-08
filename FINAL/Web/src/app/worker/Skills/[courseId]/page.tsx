@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Award, BookOpen, Check, ClipboardList, Clock3, Download, Lock, Play, PlayCircle, Sparkles, X } from 'lucide-react';
 import { useWorker } from '@/contexts/WorkerContext';
+import { youTubeEmbed, youTubeThumb } from '@/lib/youtube';
 import type { CourseAssignmentView, CourseModuleView, CourseReadingView } from '@/types/portal';
 
 type CourseSummary = { progress?: number; status?: string; certificateNo?: string; skillAwarded?: string; completedLessonIds?: string[]; assignmentScores?: Record<string, number>; modules?: Array<{ moduleId: string; completed: boolean }> };
@@ -106,7 +107,7 @@ export default function CoursePage({ params }: { params: Promise<{ courseId: str
       <div className="bg-white border rounded-2xl overflow-hidden">
         <div className="aspect-video bg-[#0A192F] relative">
           {activeLesson?.videoUrl
-            ? <iframe className="absolute inset-0 w-full h-full" src={activeLesson.videoUrl} title={activeLesson.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen/>
+            ? <iframe className="absolute inset-0 w-full h-full" src={youTubeEmbed(activeLesson.videoUrl) ?? activeLesson.videoUrl} title={activeLesson.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen/>
             : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center p-6"><PlayCircle size={52} className="text-white/80"/><p className="text-sm font-semibold text-white">{activeLesson?.title ?? 'Select a lesson'}</p><p className="text-xs text-white/60 max-w-sm">No video attached to this lesson.</p></div>}
           {activeLesson?.completed && <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[10px] font-bold text-green-300 bg-green-500/20 border border-green-400/30 px-2 py-0.5 rounded-full"><Check size={11}/>Completed</span>}
         </div>
@@ -124,9 +125,16 @@ export default function CoursePage({ params }: { params: Promise<{ courseId: str
             {m.completed ? <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full"><Check size={11}/>Module complete</span> : <span className="text-[10px] font-bold text-gray-400">{m.lessons.filter(l => l.completed).length}/{m.lessons.length} lessons</span>}
           </div>
           <div className="divide-y divide-gray-50">
-            {m.lessons.map(l => <button key={l.id} type="button" onClick={() => setActive({ moduleId: m.id, lessonId: l.id })} className={`w-full text-left p-3 flex justify-between gap-3 items-center hover:bg-gray-50 ${active?.lessonId === l.id ? 'bg-blue-50/40' : ''}`}>
-              <span className="flex gap-3 min-w-0"><span className={`w-6 h-6 rounded-full grid place-items-center flex-shrink-0 text-[11px] ${l.completed ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{l.completed ? <Check size={12}/> : <Play size={11}/>}</span><span className="min-w-0"><span className="block text-sm font-medium text-gray-800 truncate">{l.title}</span><span className="block text-[11px] text-gray-400">{l.duration}</span></span></span>
-            </button>)}
+            {m.lessons.map(l => {
+              const thumb = youTubeThumb(l.videoUrl);
+              return <button key={l.id} type="button" onClick={() => setActive({ moduleId: m.id, lessonId: l.id })} className={`w-full text-left p-3 flex justify-between gap-3 items-center hover:bg-gray-50 ${active?.lessonId === l.id ? 'bg-blue-50/40' : ''}`}>
+              <span className="flex gap-3 min-w-0"><span className="relative w-[72px] h-[44px] rounded-md overflow-hidden bg-slate-900 grid place-items-center flex-shrink-0">
+                {thumb ? <img src={thumb} alt="" className="absolute inset-0 w-full h-full object-cover"/> : <Play size={13} className="text-white/80"/>}
+                {!l.completed && thumb && <span className="absolute inset-0 bg-black/25 grid place-items-center"><Play size={14} className="text-white"/></span>}
+                {l.completed && <span className="absolute inset-0 bg-black/45 grid place-items-center"><Check size={16} className="text-green-300"/></span>}
+              </span><span className="min-w-0"><span className="block text-sm font-medium text-gray-800 truncate">{l.title}</span><span className="block text-[11px] text-gray-400">{l.duration}</span></span></span>
+            </button>;
+            })}
             {m.assignments.map(a => <Link key={a.id} href={`/worker/Skills/${courseId}/assignment/${a.id}`} className="w-full text-left p-3 flex justify-between gap-3 items-center hover:bg-gray-50 transition-colors">
               <span className="flex gap-3 min-w-0"><span className={`w-6 h-6 rounded-full grid place-items-center flex-shrink-0 ${a.passed ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}><ClipboardList size={12}/></span><span className="min-w-0"><span className="block text-sm font-medium text-gray-800 truncate">{a.title}</span><span className="block text-[11px] text-gray-400">{a.type === 'QUIZ' ? 'Quiz (Dedicated Page)' : a.type === 'WRITING' ? 'Written assignment' : 'File upload'} · pass {a.passScore}%</span></span></span>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${a.passed ? 'text-green-700 bg-green-50' : a.score !== null ? 'text-red-600 bg-red-50' : 'text-gray-500 bg-gray-100'}`}>{a.score !== null ? `${a.score}%` : 'Start'}</span>
