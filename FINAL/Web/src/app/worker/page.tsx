@@ -122,7 +122,7 @@ export default function WorkerOverview() {
             </p>
           </div>
         </div>
-        <Link href="/worker/Profile?tab=personal" className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5 transition-colors flex-shrink-0 whitespace-nowrap shadow-sm">
+        <Link href="/worker/Profile?tab=attendance" className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5 transition-colors flex-shrink-0 whitespace-nowrap shadow-sm">
           Upload 5 Photos &rarr;
         </Link>
       </section>
