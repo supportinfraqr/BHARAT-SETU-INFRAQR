@@ -65,11 +65,10 @@ def worker_documents(request):
         return Response({"error": "You must complete Aadhaar verification before uploading documents."},
                         status=status.HTTP_403_FORBIDDEN)
 
-    # OCR is mandatory: verify the uploaded document belongs to the worker and
-    # matches its type. On failure the caller may force-submit (explicit
-    # confirmation); the document then carries an "OCR failed" marker.
+    # OCR is advisory only: verify the uploaded document belongs to the worker
+    # and matches its type, and record the outcome as a "needs review" marker.
+    # It never blocks the upload — every document goes to manual verification.
     worker_name = (identity.name or f"{user.first_name} {user.last_name}").strip()
-    force = str(request.data.get("force") or "").strip().lower() in ("1", "true", "yes", "on")
     ocr_ok = True
     ocr_findings = ""
     try:
@@ -92,10 +91,6 @@ def worker_documents(request):
             ocr_findings = msg or "OCR verification failed."
     except Exception as exc:
         logging.getLogger(__name__).warning("OCR verification skipped/failed during document upload: %s", exc)
-
-    if not ocr_ok and not force:
-        return Response({"ocrFailed": True, "requiresForce": True, "findings": [ocr_findings]},
-                        status=status.HTTP_200_OK)
 
     WorkerDocument.objects.filter(user=user, document=master).delete()
     doc = WorkerDocument(
