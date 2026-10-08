@@ -87,7 +87,7 @@ from .learning import (
     CourseQuestion,
     CourseEnrollment,
 )
-from .submissions import SubmissionEvidence
+from .submissions import SubmissionEvidence, WorkerFacePhoto
 from .aadhaar import AadhaarChallenge
 from .digilocker import DigiLockerProfile, DigiLockerDocument, DigiLockerSession
 from .cctv import SiteCctvCamera, encrypt_cctv_password, decrypt_cctv_password
@@ -185,7 +185,7 @@ __all__ = [
     "RbacPermission", "QrRoleAccess", "LookupValue", "WorkerCategoryMaster",
     "AttendanceDevice", "Attendance", "WorkerWages", "WagePayment",
     "WorkerGatePass", "WorkerGrievance", "DocumentAccessToken",
-    "SubmissionEvidence",
+    "SubmissionEvidence", "WorkerFacePhoto",
     "AadhaarChallenge",
     "DigiLockerProfile", "DigiLockerDocument", "DigiLockerSession",
     "EntityLockerAuth",

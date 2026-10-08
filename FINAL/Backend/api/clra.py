@@ -792,9 +792,9 @@ def _write_template_sheet(wb, template, rows, context=None, signature=None):
                 pass
 
     _grid_row(table_row)
-    if sub_header:
+    if has_dates_expansion:
         _grid_row(table_row + 1)
-    first_data_row = table_row + (2 if sub_header else 1)
+    first_data_row = table_row + (2 if has_dates_expansion else 1)
     for r in range(first_data_row, first_data_row + len(render_rows)):
         _grid_row(r)
     if not render_rows and not has_declaration:
