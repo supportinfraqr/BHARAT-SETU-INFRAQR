@@ -115,6 +115,11 @@ def _submissions(request):
     required_format = (request.data.get("requiredFormat") or request.data.get("required_format") or "").strip()
     if file_obj:
         checksum = payloads.sha256_checksum(file_obj)
+    # When the caller asks to skip OCR (additional forms — the client runs the AI
+    # audit as a separate, dedicated call), only persist the file here. Running
+    # OCR + the AI audit inline made this call exceed the proxy timeout on real
+    # PDFs and surfaced as "The BSS service timed out".
+    if file_obj and not no_ocr:
         from bss_core.models import CustomFormName, RegisterTemplate
 
         from . import ai_audit
