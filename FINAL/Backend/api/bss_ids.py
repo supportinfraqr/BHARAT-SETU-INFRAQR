@@ -157,7 +157,7 @@ def new_bss_site_code():
 
 
 # Letter reference prefixes: A = appointment letter, R = releasing (experience).
-LETTER_PREFIX = {"appointment": "A", "experience": "R"}
+LETTER_PREFIX = {"appointment": "A", "experience": "R", "card": "C"}
 
 
 def letter_bss_id(binding_id, letter_type):

@@ -22,8 +22,8 @@ from bss_core.models import (
     WorkerWages,
 )
 
-LETTER_CODES = {"appointment": "APPT", "experience": "EXPL"}
-LETTER_NAMES = {"appointment": "Appointment Letter", "experience": "Experience Letter"}
+LETTER_CODES = {"appointment": "APPT", "experience": "EXPL", "card": "CARD"}
+LETTER_NAMES = {"appointment": "Appointment Letter", "experience": "Experience Letter", "card": "Employment Card"}
 
 
 def _e(value) -> str:
@@ -346,7 +346,42 @@ def _render_template_html(html_text: str, tokens: dict, letter_type: str = "APPO
     return out
 
 
+def _render_card(binding) -> str:
+    """A frozen Employment Card snapshot, issued when an engagement ends and
+    kept in the worker's Employment History."""
+    w = _worker_facts(binding.worker)
+    p = _party_facts(binding)
+    ref = bss_ids.letter_bss_id(binding.id, "card")
+    issued = _fmt(binding.accepted_at or binding.created_at)
+    relieved = _fmt(getattr(binding, "unbound_at", None))
+    body = f"""
+    <h1>Employment Card</h1>
+    <div class="meta"><span>Card No.: {ref}</span><span>Issued: {issued}</span></div>
+    <table class="kv">
+      <tr><td>Worker Name</td><td>{w['name']}</td></tr>
+      <tr><td>BSS Worker ID</td><td>{w['bssId']}</td></tr>
+      <tr><td>Father's Name</td><td>{_dash(w['father'])}</td></tr>
+      <tr><td>Date of Birth</td><td>{w['dob']}</td></tr>
+      <tr><td>Designation</td><td>{_dash(w['designation'])}</td></tr>
+      <tr><td>Department / Unit</td><td>{_dash(w['department'])}</td></tr>
+      <tr><td>Contractor / Service Provider</td><td>{p['contractor']} ({_dash(p['contractorBss'])})</td></tr>
+      <tr><td>Principal Employer</td><td>{p['employer']}</td></tr>
+      <tr><td>Site</td><td>{_dash(p['site'])}</td></tr>
+      <tr><td>Date of Joining</td><td>{w['doj']}</td></tr>
+      <tr><td>Date of Relieving</td><td>{relieved}</td></tr>
+      <tr><td>Record Status</td><td>Frozen — engagement closed</td></tr>
+    </table>
+    <p>This Employment Card is a frozen snapshot of the engagement, retained in the worker's Employment History.</p>
+    <div class="sign">
+      <div><div class="line">{p['contractor']}</div>Contractor / Authorized Signatory</div>
+    </div>
+    """
+    return _shell(f"Employment Card — {w['name']}", body)
+
+
 def render_letter(binding, letter_type: str) -> str:
+    if letter_type == "card":
+        return _render_card(binding)
     template = _resolve_letter_template(binding, letter_type)
     if template is not None:
         return _render_template_html(

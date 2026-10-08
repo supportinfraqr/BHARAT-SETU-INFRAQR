@@ -718,6 +718,8 @@ def binding_consent(request, binding_id):
         if b.binding_status == "CANCELLED":
             _unlink_employment_from_binding(b)
             _issue_binding_letter(b, "experience")
+            # Freeze the employment card as a PDF snapshot for the history.
+            _issue_binding_letter(b, "card")
             # Notify both sides that unbind is completed
             actor_name = payloads._notification_actor_name(user)
             _create_notification(

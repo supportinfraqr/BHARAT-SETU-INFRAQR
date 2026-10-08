@@ -998,7 +998,7 @@ def _worker_issued_letters(user):
         rows.append({
             "id": d.id,
             "name": _d(m.document_name if m else ""),
-            "letterType": "appointment" if (match and match.group(1) == "APPT") else "experience",
+            "letterType": {"APPT": "appointment", "EXPL": "experience", "CARD": "card"}.get((match.group(1) if match else ""), "experience"),
             "code": _d(d.document.code if d.document else ""),
             "date": _dts(d.uploaded_at),
             "fileName": _d(d.file_name),
@@ -1069,6 +1069,7 @@ def _worker_employment_history(user):
             "current": su == "ACCEPTED",
             "appointmentLetter": letters.get("appointment"),
             "experienceLetter": letters.get("experience"),
+            "employmentCard": letters.get("card"),
         })
     return out
 

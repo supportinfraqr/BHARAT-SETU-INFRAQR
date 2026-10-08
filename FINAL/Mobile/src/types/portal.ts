@@ -72,6 +72,7 @@ export type WorkerRecord = {
       startDate: string; endDate: string; status: string; current: boolean;
       appointmentLetter?: { id: number; name: string; date: string; downloadUrl: string } | null;
       experienceLetter?: { id: number; name: string; date: string; downloadUrl: string } | null;
+      employmentCard?: { id: number; name: string; date: string; downloadUrl: string } | null;
     }>;
   };
   compliance: {
