@@ -13,6 +13,7 @@ process (lazy, thread-safe) and reused across requests.
 import io
 import logging
 import threading
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +22,10 @@ class OcrError(Exception):
     pass
 
 
-MAX_PDF_PAGES = 8          # never OCR a bottomless PDF
-MAX_PIXELS = 8_000_000     # downscale pages so OCR stays fast (~300dpi A4)
-PDF_RENDER_SCALE = 2.0     # base render scale (pypdfium2: 1.0 == 72dpi)
+MAX_PDF_PAGES = 6          # never OCR a bottomless PDF
+MAX_PIXELS = 3_500_000     # downscale pages so OCR stays fast (~180dpi A4)
+PDF_RENDER_SCALE = 1.6     # base render scale (pypdfium2: 1.0 == 72dpi)
+OCR_TIME_BUDGET_S = 50     # stop between pages once past this — return partial text
 
 _ENGINE_LOCK = threading.Lock()
 _ENGINE = None
@@ -96,9 +98,13 @@ def _open_image(file_bytes: bytes):
     return [img]
 
 
-def _ocr_frames(engine, frames):
+def _ocr_frames(engine, frames, budget_s=OCR_TIME_BUDGET_S):
     lines = []
-    for img in frames:
+    start = time.monotonic()
+    for index, img in enumerate(frames):
+        if index and time.monotonic() - start > budget_s:
+            logger.warning("OCR time budget (%ss) reached; returning partial text", budget_s)
+            break
         try:
             result, _ = engine(img)
         except Exception as exc:
