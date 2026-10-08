@@ -427,7 +427,7 @@ export default function WorkerProfilePage() {
   }, [activeTab]);
 
   // ── DigiLocker document wallet ──────────────────────────────────────────
-  type DigiLockerDoc = { id: number; doctype?: string; issuer?: string; doc_date?: string; file_name?: string; file_url?: string; status?: string };
+  type DigiLockerDoc = { id: number; doctype?: string; issuer?: string; doc_date?: string; file_name?: string; file_url?: string; status?: string; downloaded_at?: string; created_at?: string };
   const [digilockerDocs, setDigilockerDocs] = useState<DigiLockerDoc[]>([]);
   const [digilockerStatus, setDigilockerStatus] = useState<'idle' | 'linking' | 'linked' | 'error'>('idle');
   const [digilockerMessage, setDigilockerMessage] = useState('');
@@ -2170,6 +2170,7 @@ export default function WorkerProfilePage() {
                               <div className="min-w-0">
                                 <p className="text-[13px] font-semibold text-gray-800 truncate">{doc.doctype || 'Document'}</p>
                                 <p className="text-[11px] text-gray-500 truncate">{[doc.issuer, doc.doc_date].filter(Boolean).join(' · ')}</p>
+                                {(doc.downloaded_at || doc.created_at) && <p className="text-[10px] text-gray-400">Fetched {new Date((doc.downloaded_at || doc.created_at) as string).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>}
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 {doc.file_url && <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold text-sky-700 hover:underline">View</a>}
