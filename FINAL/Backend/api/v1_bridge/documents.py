@@ -88,8 +88,8 @@ def worker_documents(request):
         "id": doc.id, "name": master.document_name, "code": master.code,
         "status": doc.status, "date": payloads._dts(doc.uploaded_at),
         "downloadUrl": f"/api/worker/documents/{doc.id}/file",
-        "ocrFailed": bool(doc.ocr_failed),
-        "findings": [ocr_findings] if ocr_findings else [],
+        "ocrFailed": False,
+        "findings": [],
     }}, status=status.HTTP_201_CREATED)
 
 
