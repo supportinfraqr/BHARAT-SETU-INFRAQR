@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Download, FileCheck2, FileSpreadsheet, FileText, Landmark, Loader2, TriangleAlert } from 'lucide-react';
+import { CheckCircle2, Clock3, Download, FileCheck2, FileSpreadsheet, FileText, Landmark, Loader2, TriangleAlert } from 'lucide-react';
 import ComplianceSubmissions from '@/components/contractor/ComplianceSubmissions';
 import BatchDrilldown from '@/components/compliance/BatchDrilldown';
 import VersionHistory from '@/components/compliance/VersionHistory';
@@ -114,11 +114,12 @@ export default function ContractorCompliancePage() {
   const activeSiteBoard = siteBoards.find(b => String(b.siteId) === String(activeSite?.id));
   const activeAdopted = activeSiteBoard ? activeSiteBoard.gated : !!activeAdoption?.adopted;
 
-  // Sites already generated for the SELECTED frequency + period (so a repeat
-  // generation is obvious). Matches batches by fiscal year + month + frequency.
+  // Per-site generation status for the SELECTED frequency + period — every
+  // allotted site marked Done (already generated) or Pending. Matches batches by
+  // fiscal year + month + frequency.
   const fyKey = `${year}-${String((Number(year) + 1) % 100).padStart(2, '0')}`;
-  const alreadyGenerated = useMemo(() => {
-    const map = new Map<string, { site: string; version: number; status: string }>();
+  const generatedForPeriod = useMemo(() => {
+    const map = new Map<string, { version: number; status: string }>();
     (contractor.complianceBatches || [])
       .filter(b => (b.financialYear || '') === fyKey && b.month === month && (b.frequency || 'Monthly') === freq)
       .forEach(b => {
@@ -126,10 +127,18 @@ export default function ContractorCompliancePage() {
         if (!key) return;
         const version = b.version ?? 1;
         const prev = map.get(key);
-        if (!prev || version > prev.version) map.set(key, { site: b.site || b.siteCode || '—', version, status: b.status });
+        if (!prev || version > prev.version) map.set(key, { version, status: b.status });
       });
-    return Array.from(map.values()).sort((a, b) => a.site.localeCompare(b.site));
+    return map;
   }, [contractor.complianceBatches, fyKey, month, freq]);
+  const siteStatus = useMemo(() => (contractor.sites || [])
+    .map(s => {
+      const hit = generatedForPeriod.get(s.name) || generatedForPeriod.get(s.code);
+      return { name: s.name, code: s.code, state: s.state || '', done: !!hit, version: hit?.version ?? 0, status: hit?.status || '' };
+    })
+    .sort((a, b) => (a.state || '').localeCompare(b.state || '') || a.name.localeCompare(b.name)),
+    [contractor.sites, generatedForPeriod]);
+  const doneCount = siteStatus.filter(s => s.done).length;
 
   useEffect(() => {
     let active = true;
@@ -351,9 +360,24 @@ export default function ContractorCompliancePage() {
             <button onClick={generateRegisters} disabled={busy} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"><Landmark size={14}/>{busy ? 'Generating registers…' : 'Generate CLRA Registers'}</button>
             <label className="flex items-center gap-2 text-[11px] font-semibold text-gray-600 ml-1"><input type="checkbox" checked={includeNonDue} onChange={e => setIncludeNonDue(e.target.checked)} className="accent-[#073B67] w-4 h-4"/>Include forms not due this period</label>
           </div>
-          {alreadyGenerated.length > 0 && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[11px] text-emerald-800">
-              <strong>Already generated</strong> for {period} · {freq}: {alreadyGenerated.length} site{alreadyGenerated.length === 1 ? '' : 's'} — {alreadyGenerated.map(s => `${s.site} (V${s.version}${s.status && s.status !== 'Generated' ? ` · ${s.status}` : ''})`).join(', ')}
+          {siteStatus.length > 0 && (
+            <div className="rounded-xl border border-gray-200 bg-white p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Generation status · {period} · {freq}</p>
+                <span className="text-[11px] font-semibold text-gray-500">{doneCount} of {siteStatus.length} generated</span>
+              </div>
+              <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                {siteStatus.map(s => (
+                  <li key={`${s.state}-${s.name}-${s.code}`} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 px-2.5 py-1.5 text-xs">
+                    <span className="min-w-0 truncate text-gray-700">{s.name}{s.state ? <span className="text-gray-400"> · {s.state}</span> : null}</span>
+                    {s.done ? (
+                      <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" title={s.status ? `Status: ${s.status}` : 'Already generated'}><CheckCircle2 size={11}/>Done{s.version > 1 ? ` · V${s.version}` : ''}</span>
+                    ) : (
+                      <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200"><Clock3 size={11}/>Pending</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
           <p className="text-[11px] text-gray-400">Pick a <strong>Frequency</strong> and <strong>Period</strong>. Monthly generates every month; choosing Quarterly / Half-Yearly / Yearly generates only those forms for the selected period (a not-yet-due period is forced). Tick below to also include other forms not due this period.</p>
