@@ -9,7 +9,7 @@ import { MobilitySection, type MobilitySectionHandle } from '@/components/worker
 import DownSelect from '@/components/ui/DownSelect';
 import { ResendOtp } from '@/components/auth/ResendOtp';
 import { 
-  UserCircle, Save, CheckCircle2, CheckCheck, ShieldCheck, History, 
+  UserCircle, Save, CheckCircle2, CheckCheck, ShieldCheck, 
   MapPin, FileText, Users,
   Building2, CreditCard, Briefcase, Award, BadgeCheck,
   Clock,
@@ -1772,45 +1772,6 @@ export default function WorkerProfilePage() {
               </div>
               
 
-              <div className="pt-6 border-t border-black/5">
-                <h3 className="text-[15px] font-semibold text-[#1D1D1F] mb-1 flex items-center gap-2"><History size={16}/>Employment History</h3>
-                <p className="text-[13px] text-[#86868B] mb-4">Your completed engagements — appointment, experience letters and employment card, kept as a permanent record. Requests declined by either party are not shown.</p>
-                {(!worker.employment.history || worker.employment.history.length === 0) ? (
-                  <p className="text-[13px] text-[#86868B]">No employment history yet.</p>
-                ) : (
-                  <div className="space-y-4">
-                    {worker.employment.history.map(h => (
-                      <div key={h.id} className="rounded-2xl border border-gray-200 bg-white p-4">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="text-[14px] font-bold text-[#1D1D1F]">{h.contractor}</h4>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${h.current ? 'bg-green-50 text-green-700' : h.status === 'Site Changed' ? 'bg-sky-50 text-sky-700' : 'bg-gray-100 text-gray-600'}`}>{h.status}</span>
-                            </div>
-                            <p className="text-[11px] text-gray-500 mt-0.5">{h.employer}{h.site ? ` · ${h.site}` : ''} · {h.ref}</p>
-                          </div>
-                          <p className="text-[11px] text-gray-500">{h.startDate || '—'} → {h.endDate || 'Present'}</p>
-                        </div>
-                        <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-[12px]">
-                          <div><p className="text-gray-400">Contractor BSS ID</p><p className="font-mono font-semibold text-gray-800">{h.contractorCode || '—'}</p></div>
-                          <div><p className="text-gray-400">Employer BSS ID</p><p className="font-mono font-semibold text-gray-800">{h.employerCode || '—'}</p></div>
-                          <div><p className="text-gray-400">Site ID</p><p className="font-mono font-semibold text-gray-800">{h.siteId || '—'}</p></div>
-                          <div><p className="text-gray-400">Designation</p><p className="font-semibold text-gray-800">{h.designation || '—'}</p></div>
-                          <div><p className="text-gray-400">Department</p><p className="font-semibold text-gray-800">{h.department || '—'}</p></div>
-                          <div><p className="text-gray-400">Shift</p><p className="font-semibold text-gray-800">{h.shift || '—'}</p></div>
-                          <div><p className="text-gray-400">Wage</p><p className="font-semibold text-gray-800">{h.wage ? `₹${h.wage.toLocaleString('en-IN')}` : '—'}</p></div>
-                          <div><p className="text-gray-400">Joined</p><p className="font-semibold text-gray-800">{h.startDate || '—'}</p></div>
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-2">
-                          {h.appointmentLetter?.downloadUrl && <a href={h.appointmentLetter.downloadUrl} target="_blank" rel="noopener noreferrer" className="h-8 px-3 rounded-lg border border-[#073B67]/20 text-[#073B67] text-[11px] font-bold inline-flex items-center gap-1.5"><FileText size={12}/>Appointment letter</a>}
-                          {h.experienceLetter?.downloadUrl && <a href={h.experienceLetter.downloadUrl} target="_blank" rel="noopener noreferrer" className="h-8 px-3 rounded-lg border border-[#073B67]/20 text-[#073B67] text-[11px] font-bold inline-flex items-center gap-1.5"><FileText size={12}/>Experience letter</a>}
-                          <a href="/worker/idcard" className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold inline-flex items-center gap-1.5"><BadgeCheck size={12}/>Employment card</a>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
             </div>
           )}
