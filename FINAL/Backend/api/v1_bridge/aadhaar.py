@@ -206,6 +206,67 @@ def _aadhaar_care_of_parts(care_of):
     return name, ""
 
 
+def _reuse_recent(aadhaar, window_minutes=3, message=""):
+    """Return a *fresh, still-valid* OTP reference so a repeated request reuses
+    the OTP already delivered instead of tripping UIDAI's resend cooldown.
+
+    Only references created within ``window_minutes`` and not yet lapsed locally
+    are reused — never an old/dead reference (that was surfacing as "OTP
+    expired" on verify).
+    """
+    now = timezone.now()
+    recent = (AadhaarChallenge.objects
+              .filter(aadhaar_number=aadhaar,
+                      created_at__gte=now - timedelta(minutes=window_minutes),
+                      expires_at__gt=now)
+              .exclude(reference_id__isnull=True).exclude(reference_id="")
+              .exclude(status__in=["VERIFIED", "FAILED", "EXPIRED"])
+              .order_by("-expires_at", "-created_at").first())
+    if recent is None:
+        return None
+    payload = {
+        "referenceId": recent.reference_id,
+        "expiresIn": max(0, int((recent.expires_at - now).total_seconds())),
+        "reused": True,
+    }
+    if message:
+        payload["message"] = message
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+def _generate_fresh_otp(aadhaar, consent=True):
+    """Ask Sandbox for a brand-new OTP and record the challenge. Raises
+    ``SandboxError`` on failure."""
+    AadhaarChallenge.objects.create(aadhaar_number=aadhaar, status="CALL")
+    result = aadhaar_client.generate_otp(aadhaar)
+    ref_id = (result.get("data") or {}).get("reference_id")
+    if result.get("code") != 200 or not ref_id:
+        raise aadhaar_client.SandboxError(
+            str((result.get("data") or {}).get("message") or "OTP could not be generated"), 502)
+    return AadhaarChallenge.objects.create(
+        aadhaar_number=aadhaar, consent=consent, reference_id=str(ref_id),
+        status="OTP_SENT",
+        expires_at=timezone.now() + timedelta(minutes=settings.AADHAAR_OTP_TTL_MIN),
+        response_json=json.dumps(result, default=str))
+
+
+def _expired_otp_response(aadhaar):
+    """A lapsed OTP: automatically issue a fresh one so the user isn't stuck
+    re-entering a dead code. Returns a 200 the client can act on."""
+    try:
+        fresh = _generate_fresh_otp(aadhaar)
+    except aadhaar_client.SandboxError:
+        return Response({
+            "error": "Your Aadhaar OTP expired. Please wait a few seconds, then tap 'Resend OTP'.",
+            "expired": True, "otpPending": True, "retryAfterSeconds": 45,
+        }, status=status.HTTP_200_OK)
+    return Response({
+        "error": "The previous OTP expired — a new OTP has been sent to your Aadhaar mobile. Enter the new code.",
+        "expired": True, "referenceId": fresh.reference_id,
+        "expiresIn": settings.AADHAAR_OTP_TTL_MIN * 60,
+    }, status=status.HTTP_200_OK)
+
+
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -217,49 +278,14 @@ def aadhaar_otp(request):
         return Response({"error": "Enter a valid 12-digit Aadhaar number"},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    def _reuse_recent(window_minutes, message=""):
-        """Return a recent OTP reference so a repeated request reuses the OTP
-        already delivered instead of tripping Sandbox's rate limit.
-
-        Sandbox is the source of truth for OTP validity: when it reports an OTP
-        was already generated for this Aadhaar we must hand back the last
-        reference we saw — even if our local TTL says it lapsed — otherwise the
-        user is stuck (Sandbox won't issue a new OTP, and we refuse the old one).
-        """
-        now = timezone.now()
-        recent = (AadhaarChallenge.objects
-                  .filter(aadhaar_number=aadhaar,
-                          created_at__gte=now - timedelta(minutes=window_minutes))
-                  .exclude(reference_id__isnull=True).exclude(reference_id="")
-                  .exclude(status__in=["VERIFIED", "FAILED", "EXPIRED"])
-                  .order_by("-expires_at", "-created_at").first())
-        if recent is None:
-            return None
-        expires = recent.expires_at or (recent.created_at + timedelta(minutes=settings.AADHAAR_OTP_TTL_MIN))
-        payload = {
-            "referenceId": recent.reference_id,
-            "expiresIn": max(0, int((expires - now).total_seconds())),
-            "reused": True,
-        }
-        if message:
-            payload["message"] = message
-        return Response(payload, status=status.HTTP_200_OK)
-
     now = timezone.now()
 
-    # 1) If we already hold a still-valid OTP reference, reuse it and do NOT
-    #    call Sandbox — repeated clicks must not reset its resend cooldown.
-    valid = (AadhaarChallenge.objects
-             .filter(aadhaar_number=aadhaar, status__in=["INITIATED", "OTP_SENT"],
-                     expires_at__gt=now)
-             .exclude(reference_id__isnull=True).exclude(reference_id="")
-             .order_by("-expires_at").first())
-    if valid is not None:
-        return Response({
-            "referenceId": valid.reference_id,
-            "expiresIn": max(0, int((valid.expires_at - now).total_seconds())),
-            "reused": True,
-        }, status=status.HTTP_200_OK)
+    # 1) Reuse a *fresh, still-valid* reference only (i.e. tapped again within a
+    #    few minutes) — never an old/dead one. Otherwise fall through to a real
+    #    send so the user always gets a live OTP.
+    reused = _reuse_recent(aadhaar, 3)
+    if reused is not None:
+        return reused
 
     # 2) Debounce Sandbox: at most one OTP request per ~45s per Aadhaar, so a
     #    burst of clicks cannot keep resetting the upstream cooldown (which is
@@ -269,7 +295,7 @@ def aadhaar_otp(request):
                          created_at__gte=now - timedelta(seconds=45))
                  .order_by("-created_at").first())
     if last_call is not None:
-        fallback = _reuse_recent(24 * 60)
+        fallback = _reuse_recent(aadhaar, 3)
         if fallback is not None:
             return fallback
         wait = max(1, 45 - int((now - last_call.created_at).total_seconds()))
@@ -291,7 +317,7 @@ def aadhaar_otp(request):
             # reference so the user still reaches the OTP screen with the OTP
             # they received, instead of being blocked.
             msg = str(exc)
-            fallback = _reuse_recent(24 * 60, msg)
+            fallback = _reuse_recent(aadhaar, 3, msg)
             if fallback is not None:
                 return fallback
             return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
@@ -302,7 +328,7 @@ def aadhaar_otp(request):
     if result.get("code") != 200 or not ref_id:
         msg = str((result.get("data") or {}).get("message") or "").strip() or \
             "Aadhaar verification service is currently experiencing delays."
-        fallback = _reuse_recent(24 * 60, msg)
+        fallback = _reuse_recent(aadhaar, 3, msg)
         if fallback is not None:
             return fallback
         return Response(
@@ -409,8 +435,8 @@ def aadhaar_verify(request):
             challenge.status = "EXPIRED"
             challenge.expires_at = timezone.now()
             challenge.save(update_fields=["status", "expires_at", "updated_at"])
-            return Response({"error": "Your Aadhaar OTP has expired. Tap 'Resend OTP' to get a new code.",
-                             "expired": True}, status=status.HTTP_400_BAD_REQUEST)
+            # Auto-issue a fresh OTP so the user isn't stuck on a dead code.
+            return _expired_otp_response(aadhaar)
         msg = raw_msg or "Aadhaar verification failed. Check the OTP and try again."
         # A wrong OTP must NOT permanently kill the challenge: the user may have
         # mistyped, and marking it failed also blocks the reuse path, so the
@@ -575,8 +601,8 @@ def worker_link_aadhaar(request):
             challenge.status = "EXPIRED"
             challenge.expires_at = timezone.now()
             challenge.save(update_fields=["status", "expires_at", "updated_at"])
-            return Response({"error": "Your Aadhaar OTP has expired. Tap 'Resend OTP' to get a new code.",
-                             "expired": True}, status=status.HTTP_400_BAD_REQUEST)
+            # Auto-issue a fresh OTP so the user isn't stuck on a dead code.
+            return _expired_otp_response(aadhaar)
         msg = raw_msg or "Aadhaar verification failed. Check the OTP and try again."
         if challenge.otp_attempts >= challenge.max_attempts:
             challenge.status = "FAILED"

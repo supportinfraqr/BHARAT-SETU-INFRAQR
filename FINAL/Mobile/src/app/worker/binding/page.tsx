@@ -73,7 +73,7 @@ export default function BindingRequestsPage() {
   const boundContractor = (worker.employment.status === 'Active' && worker.employment.contractor?.trim()) ? worker.employment.contractor : null;
   const [authRequestId, setAuthRequestId] = useState<number | null>(null);
   const authRequest = requests.find(r => r.id === authRequestId) ?? null;
-  const [confirm, setConfirm] = useState<{ req: BindingRequest; kind: 'accept' | 'decline' | 'unbind' } | null>(null);
+  const [confirm, setConfirm] = useState<{ req: BindingRequest; kind: 'accept' | 'decline' | 'unbind' | 'withdraw' } | null>(null);
   const [historyFor, setHistoryFor] = useState<BindingRequest | null>(null);
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<'action' | 'active' | 'all'>('all');
@@ -84,6 +84,7 @@ export default function BindingRequestsPage() {
     setConfirm(null);
     if (kind === 'accept') { requestAccept(req); return; }
     if (kind === 'unbind') { void requestUnbind(req); return; }
+    if (kind === 'withdraw') { void withdraw(req); return; }
     void act(req.id, 'decline');
   }
 
@@ -131,6 +132,21 @@ export default function BindingRequestsPage() {
       void refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not request unbinding.');
+    } finally { setBusyId(null); }
+  };
+
+  const withdraw = async (req: BindingRequest) => {
+    setBusyId(req.id); setError(''); setNotice('');
+    try {
+      const response = await fetch('/api/worker/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: req.id, action: 'withdraw' }) });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || 'Could not withdraw the request.');
+      setRequests(current => current.map(r => r.id === req.id ? { ...r, status: 'Cancelled' as BindingRequest['status'] } : r));
+      setNotice('Binding request withdrawn — the contractor has been notified.');
+      void refresh();
+      setTimeout(() => setNotice(''), 6000);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not withdraw the request.');
     } finally { setBusyId(null); }
   };
 
@@ -249,8 +265,9 @@ export default function BindingRequestsPage() {
             // This worker raised the request (scanned the contractor QR), so their
             // consent is already recorded — it is waiting on the contractor, not on
             // the worker. Never show "Accept" on the worker's own request.
-            <div className="mt-auto pt-4 border-t border-gray-100">
+            <div className="mt-auto pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs font-semibold text-amber-700 flex items-center gap-1.5"><Clock3 size={14}/>Awaiting contractor approval — you raised this request.</p>
+              <button onClick={() => setConfirm({ req, kind: 'withdraw' })} disabled={busyId===req.id} className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold flex items-center gap-1.5 hover:bg-red-50 disabled:opacity-60"><XCircle size={14}/>{busyId===req.id?'Withdrawing…':'Withdraw request'}</button>
             </div>
           ) : (
             <div className="mt-auto pt-4 border-t border-gray-100 flex flex-wrap gap-2">
@@ -288,19 +305,21 @@ export default function BindingRequestsPage() {
     <ConfirmDialog
       open={!!confirm}
       tone={confirm?.kind === 'accept' ? 'positive' : 'negative'}
-      title={confirm?.kind === 'decline' ? 'Decline this binding?' : confirm?.kind === 'unbind' ? 'Unbind this binding?' : 'Accept this binding?'}
+      title={confirm?.kind === 'decline' ? 'Decline this binding?' : confirm?.kind === 'withdraw' ? 'Withdraw this binding request?' : confirm?.kind === 'unbind' ? 'Unbind this binding?' : 'Accept this binding?'}
       description={confirm?.kind === 'decline'
         ? 'The contractor will be notified and this request will be declined. This cannot be undone.'
-        : confirm?.kind === 'unbind'
-          ? 'This requests unbinding. The binding is cancelled only when both parties confirm.'
-          : 'Both parties must approve before you are bound. Accepting records your consent and starts your employment at the site.'}
+        : confirm?.kind === 'withdraw'
+          ? 'Your binding request will be withdrawn and the contractor notified. You can send a new request later.'
+          : confirm?.kind === 'unbind'
+            ? 'This requests unbinding. The binding is cancelled only when both parties confirm.'
+            : 'Both parties must approve before you are bound. Accepting records your consent and starts your employment at the site.'}
       details={confirm ? [
         { label: 'Contractor', value: confirm.req.contractor },
         { label: 'Contractor ID', value: confirm.req.contractorCode },
         { label: 'Site', value: confirm.req.site },
         { label: 'Designation', value: confirm.req.designation },
       ] : []}
-      confirmLabel={confirm?.kind === 'decline' ? 'Confirm decline' : confirm?.kind === 'unbind' ? 'Confirm unbind' : 'Confirm accept'}
+      confirmLabel={confirm?.kind === 'decline' ? 'Confirm decline' : confirm?.kind === 'withdraw' ? 'Withdraw request' : confirm?.kind === 'unbind' ? 'Confirm unbind' : 'Confirm accept'}
       busy={!!confirm && busyId === confirm.req.id}
       onCancel={() => setConfirm(null)}
       onConfirm={runConfirm}

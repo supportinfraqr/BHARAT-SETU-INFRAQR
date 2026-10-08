@@ -61,6 +61,10 @@ export async function POST(request: Request) {
     } else if (action === 'decline-unbind') {
       consent.action = 'decline-unbind';
       if (body.side === 'contractor' || body.side === 'worker') consent.side = body.side;
+    } else if (action === 'withdraw') {
+      // The worker withdraws their own still-pending binding request.
+      consent.action = 'withdraw';
+      consent.side = 'worker';
     } else {
       return NextResponse.json({ error: 'Unsupported binding action.' }, { status: 400 });
     }

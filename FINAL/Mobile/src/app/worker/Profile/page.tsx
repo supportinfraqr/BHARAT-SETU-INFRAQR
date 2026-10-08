@@ -386,7 +386,19 @@ export default function WorkerProfilePage() {
     setAadhaarLink(s => ({ ...s, busy: true, error: '', notice: '' }));
     try {
       const response = await fetch('/api/worker/link-aadhaar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aadhaar, referenceId: aadhaarLink.referenceId, otp: aadhaarLink.otp }) });
-      const json = await response.json() as { error?: string };
+      const json = await response.json() as { error?: string; expired?: boolean; referenceId?: string; otpPending?: boolean; retryAfterSeconds?: number };
+      // The OTP lapsed server-side: it auto-issued a fresh one. Adopt the new
+      // reference and clear the box so the user enters the newest code.
+      if (json.expired) {
+        setAadhaarLink(s => ({
+          ...s, busy: false, error: '',
+          referenceId: json.referenceId || s.referenceId,
+          otp: '', sent: true,
+          otpCooldown: json.otpPending ? (json.retryAfterSeconds || 45) : 0,
+          notice: json.error || 'The previous OTP expired — a new OTP was sent. Enter the new code.',
+        }));
+        return;
+      }
       if (!response.ok) throw new Error(json.error || 'Aadhaar verification failed.');
       const profileResponse = await fetch('/api/worker/profile', { cache: 'no-store' });
       const profileJson = await profileResponse.json() as { data?: typeof worker };

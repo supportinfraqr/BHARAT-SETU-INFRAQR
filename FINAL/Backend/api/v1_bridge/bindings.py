@@ -657,6 +657,32 @@ def binding_consent(request, binding_id):
             link="/contractor/qr/requests" if other_user.role == "contractor" else "/worker/binding"
         )
         return Response({"data": payloads._binding_row(b)}, status=status.HTTP_200_OK)
+    if action == "withdraw":
+        # The initiator withdraws their own still-pending request. Only the
+        # worker's own worker-initiated PENDING request can be withdrawn; a
+        # contractor-initiated request the worker declines is handled by
+        # "decline" instead.
+        if side != "worker" or b.worker_id != user.id:
+            return Response({"error": "Only the worker can withdraw their own request."},
+                            status=status.HTTP_403_FORBIDDEN)
+        if (str(b.binding_status).upper() != "PENDING"
+                or str(b.initiated_by or "").lower() != "worker"):
+            return Response({"error": "Only your own pending binding request can be withdrawn."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        b.binding_status = "CANCELLED"
+        b.rejected_by = "worker"
+        b.rejected_at = timezone.now()
+        b.consent_worker = False
+        b.save(update_fields=["binding_status", "rejected_by", "rejected_at",
+                              "consent_worker", "updated_at"])
+        _create_notification(
+            user=b.contractor,
+            title="Binding request withdrawn",
+            body=f"{payloads._notification_actor_name(user)} withdrew their binding request.",
+            notif_type="INFO",
+            link="/contractor/qr/requests",
+        )
+        return Response({"data": payloads._binding_row(b)}, status=status.HTTP_200_OK)
     if action == "decline-unbind":
         # A party declined the unbind request — the binding stays active.
         if not b.unbind_requested_at:
