@@ -135,9 +135,9 @@ DEMO_COURSES = [
                 "title": "Module 1 · Safety Foundations",
                 "lessons": [
                     {"title": "Why site safety matters", "duration": "15 min",
-                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=construction%20site%20safety%20basics"},
+                     "youtube_url": "https://www.youtube.com/embed/Dhxf5mm7g1g"},
                     {"title": "Personal Protective Equipment (PPE)", "duration": "20 min",
-                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=construction%20PPE%20safety%20equipment"},
+                     "youtube_url": "https://www.youtube.com/embed/p_9hOqdw75o"},
                 ],
                 "assignments": [
                     {"title": "Assignment 1 · Safety basics", "pass_score": 60, "questions": [
@@ -157,9 +157,9 @@ DEMO_COURSES = [
                 "title": "Module 2 · Working at Height",
                 "lessons": [
                     {"title": "Working at height & fall protection", "duration": "25 min",
-                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=working%20at%20height%20fall%20protection"},
+                     "youtube_url": "https://www.youtube.com/embed/g2PGCtJEZow"},
                     {"title": "Emergency response on site", "duration": "15 min",
-                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=construction%20site%20emergency%20response"},
+                     "youtube_url": "https://www.youtube.com/embed/m7g3eGbJbAM"},
                 ],
                 "assignments": [
                     {"title": "Assignment 2 · Height & emergencies", "pass_score": 70, "questions": [
@@ -185,9 +185,9 @@ DEMO_COURSES = [
                 "title": "Module 1 · Digital Banking",
                 "lessons": [
                     {"title": "Setting up UPI safely", "duration": "20 min",
-                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=UPI%20payment%20setup%20tutorial%20hindi"},
+                     "youtube_url": "https://www.youtube.com/embed/NKGy1g07rP4"},
                     {"title": "Sending money home securely", "duration": "20 min",
-                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=send%20money%20UPI%20safely"},
+                     "youtube_url": "https://www.youtube.com/embed/w_ZUOSlFw5s"},
                 ],
                 "assignments": [
                     {"title": "Assignment 1 · UPI basics", "pass_score": 60, "questions": [
@@ -201,7 +201,7 @@ DEMO_COURSES = [
                 "title": "Module 2 · Staying Safe",
                 "lessons": [
                     {"title": "Spotting scams and frauds", "duration": "20 min",
-                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=UPI%20fraud%20scam%20awareness"},
+                     "youtube_url": "https://www.youtube.com/embed/hKVMYtEzR00"},
                 ],
                 "assignments": [
                     {"title": "Assignment 2 · Fraud awareness", "pass_score": 70, "questions": [
@@ -224,7 +224,7 @@ DEMO_COURSES = [
                 "title": "Module 1 · Materials & Mix",
                 "lessons": [
                     {"title": "Understanding modern mix ratios", "duration": "30 min",
-                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=cement%20mortar%20mix%20ratio%20masonry"},
+                     "youtube_url": "https://www.youtube.com/embed/r3ZJVom-qt4"},
                 ],
                 "assignments": [
                     {"title": "Assignment 1 · Mix ratios", "pass_score": 60, "questions": [
@@ -238,9 +238,9 @@ DEMO_COURSES = [
                 "title": "Module 2 · Technique & Curing",
                 "lessons": [
                     {"title": "Efficient bricklaying", "duration": "30 min",
-                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=bricklaying%20techniques%20mason"},
+                     "youtube_url": "https://www.youtube.com/embed/aqfp63d0VWY"},
                     {"title": "Waterproofing & curing", "duration": "30 min",
-                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=concrete%20curing%20waterproofing"},
+                     "youtube_url": "https://www.youtube.com/embed/zUdCVzk_woI"},
                 ],
                 "assignments": [
                     {"title": "Assignment 2 · Curing", "pass_score": 70, "questions": [
@@ -263,9 +263,9 @@ DEMO_COURSES = [
                 "title": "Module 1 · Scaffold Basics",
                 "lessons": [
                     {"title": "Types of scaffolding", "duration": "25 min",
-                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=scaffolding%20types%20construction"},
+                     "youtube_url": "https://www.youtube.com/embed/IjVT7sPdyIk"},
                     {"title": "Harness and fall protection", "duration": "25 min",
-                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=scaffolding%20harness%20fall%20protection"},
+                     "youtube_url": "https://www.youtube.com/embed/dbf4Yg0zjhA"},
                 ],
                 "assignments": [
                     {"title": "Assignment 1 · Scaffold safety", "pass_score": 60, "questions": [
@@ -279,7 +279,7 @@ DEMO_COURSES = [
                 "title": "Module 2 · Inspection",
                 "lessons": [
                     {"title": "Pre-use inspection checklist", "duration": "25 min",
-                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=scaffold%20inspection%20checklist"},
+                     "youtube_url": "https://www.youtube.com/embed/lGg9F34PkDE"},
                 ],
                 "assignments": [
                     {"title": "Assignment 2 · Inspection", "pass_score": 70, "questions": [
