@@ -9,7 +9,7 @@ import { MobilitySection, type MobilitySectionHandle } from '@/components/worker
 import DownSelect from '@/components/ui/DownSelect';
 import { ResendOtp } from '@/components/auth/ResendOtp';
 import { 
-  UserCircle, Save, CheckCircle2, CheckCheck, ShieldCheck, 
+  UserCircle, Save, CheckCircle2, CheckCheck, ShieldCheck, History, 
   MapPin, FileText, Users,
   Building2, CreditCard, Briefcase, Award, BadgeCheck,
   Clock,
@@ -1638,7 +1638,7 @@ export default function WorkerProfilePage() {
                    <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.name ?? worker.employment.employer} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer Code</label>
+                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer BSS ID</label>
                    <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.code} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
@@ -1666,7 +1666,7 @@ export default function WorkerProfilePage() {
                    <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.name ?? worker.employment.contractor} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Contractor Code</label>
+                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Contractor BSS ID</label>
                    <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.code} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
@@ -1695,7 +1695,7 @@ export default function WorkerProfilePage() {
                     <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.name ?? worker.employment.site} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
-                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Site Code</label>
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Site ID</label>
                     <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.code} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
@@ -1771,6 +1771,43 @@ export default function WorkerProfilePage() {
                 </div>
               </div>
               
+
+              <div className="pt-6 border-t border-black/5">
+                <h3 className="text-[15px] font-semibold text-[#1D1D1F] mb-1 flex items-center gap-2"><History size={16}/>Employment History</h3>
+                <p className="text-[13px] text-[#86868B] mb-4">Your past and current engagements. An engagement is created when a binding with a contractor is accepted.</p>
+                {(!portal.bindings || portal.bindings.length === 0) ? (
+                  <p className="text-[13px] text-[#86868B]">No employment history yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100">
+                          <th className="py-2 pr-3">Contractor</th>
+                          <th className="py-2 pr-3">Contractor BSS ID</th>
+                          <th className="py-2 pr-3">Site</th>
+                          <th className="py-2 pr-3">Designation</th>
+                          <th className="py-2 pr-3">From</th>
+                          <th className="py-2">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...(portal.bindings ?? [])]
+                          .sort((a, b) => (b.requestedOn || '').localeCompare(a.requestedOn || ''))
+                          .map(b => (
+                          <tr key={b.id} className="border-b border-gray-50 text-[13px]">
+                            <td className="py-2.5 pr-3 font-semibold text-gray-800">{b.contractor}</td>
+                            <td className="py-2.5 pr-3 font-mono text-gray-600">{b.contractorCode}</td>
+                            <td className="py-2.5 pr-3 text-gray-600">{b.site}</td>
+                            <td className="py-2.5 pr-3 text-gray-600">{b.designation || '—'}</td>
+                            <td className="py-2.5 pr-3 text-gray-500">{b.requestedOn || '—'}</td>
+                            <td className="py-2.5"><span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${b.status === 'Accepted' ? 'bg-green-50 text-green-700' : b.status === 'Pending' ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-500'}`}>{b.status}</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
 
             </div>
           )}
