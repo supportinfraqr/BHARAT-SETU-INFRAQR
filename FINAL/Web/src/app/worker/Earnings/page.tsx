@@ -71,7 +71,7 @@ export default function EarningsPage() {
     finally { setBusy(false); }
   };
 
-  return <ModuleShell title="Wage History & Earnings" description="Payment records reported by your employer or contractor." icon={IndianRupee}>
+  return <ModuleShell title="Wage History & Earnings" description="Payment records reported by your employer or contractor." icon={IndianRupee} watermark="Under Development">
     <UnderDevelopmentBanner note="Wage history and salary advances are being finalised. The figures shown here are provisional." />
     <DataBadge demo={portal.dataMode === 'demo'} source={wageData.source} syncedAt={wageData.syncedAt} />
     {notice && <p role="status" className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16} />{notice}</p>}

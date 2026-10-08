@@ -54,7 +54,7 @@ export default function BenefitsPage() {
   const applicationStatusTone: Record<string, string> = { Submitted:'bg-orange-50 text-orange-700', 'Under examination':'bg-blue-50 text-blue-700', Approved:'bg-green-50 text-green-700', Disbursed:'bg-green-50 text-green-700', Rejected:'bg-red-50 text-red-600' };
 
 
-  return <ModuleShell title="Retirement Fund & Benefits" description="Recorded long-term benefit information." icon={Landmark}>
+  return <ModuleShell title="Retirement Fund & Benefits" description="Recorded long-term benefit information." icon={Landmark} watermark="Under Development">
     <UnderDevelopmentBanner note="Retirement fund and benefits are being finalised. The figures shown here are provisional." />
     <div className="text-xs bg-blue-50 border border-blue-100 text-blue-800 rounded-xl px-4 py-3">
       <strong>How your records are sourced:</strong> Provident Fund (UAN) and Gratuity are <strong>autofetched from government / business sources</strong> ({pfData.source}). Bonus and Leave Encashment are <strong>filled and uploaded by your contractor</strong> ({bonus.source}).
