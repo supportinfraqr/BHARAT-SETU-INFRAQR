@@ -451,13 +451,12 @@ def _sync_employment_from_binding(binding):
         return
     emp, _ = WorkerEmployment.objects.get_or_create(user=binding.worker)
     emp.assignment = binding
-    if binding.designation:
-        emp.designation = binding.designation
-    if binding.department:
-        emp.department = binding.department
-    if binding.shift:
-        emp.shift = binding.shift
-    if binding.accepted_at and not emp.doj:
+    # A new engagement overwrites the previous engagement's terms so stale values
+    # (e.g. a former designation) can never carry over.
+    emp.designation = binding.designation or ""
+    emp.department = binding.department or ""
+    emp.shift = binding.shift or ""
+    if binding.accepted_at:
         emp.doj = binding.accepted_at.date()
     emp.status = "Active"
     if not emp.id_card_issue_date:
@@ -479,7 +478,7 @@ def _unlink_employment_from_binding(binding):
     if binding is None:
         return
     WorkerEmployment.objects.filter(user=binding.worker, assignment=binding).update(
-        assignment=None, status="Inactive")
+        assignment=None, status="Inactive", designation="", department="", shift="", doj=None)
 
 
 def _issue_binding_letter(binding, letter_type):

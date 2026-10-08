@@ -226,17 +226,32 @@ def attendance_upload(request):
     }}, status=status.HTTP_200_OK)
 
 
-@api_view(["GET"])
+@api_view(["GET", "POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def attendance_uploaded(request):
-    """Attendance rows that came from uploaded sheets, for a date range."""
+    """GET: attendance rows that came from uploaded sheets, for a date range.
+    POST: the contractor marks today's attendance for a scanned worker.
+
+    This exact path (``contractor/attendance``) is registered ahead of the
+    generic portal-mutation route, so the POST that the QR-scan page sends must
+    be served here too — otherwise it 405s against this GET-only view.
+    """
     from bss_core.models import Attendance
 
     user = request.user
     if user.role != "contractor":
-        return Response({"error": "Only contractors can view attendance."},
+        return Response({"error": "Only contractors can view or mark attendance."},
                         status=status.HTTP_403_FORBIDDEN)
+    if request.method == "POST":
+        from .common import PortalMutationError
+        from .leave import _handle_mark_attendance
+        try:
+            attendance_id = _handle_mark_attendance(user, request.data or {})
+        except PortalMutationError as exc:
+            return Response({"error": exc.message}, status=exc.status_code)
+        return Response({"success": True, "data": {"id": attendance_id}},
+                        status=status.HTTP_200_OK)
     qs = (Attendance.objects.filter(contractor=user, capture_method="SHEET")
           .select_related("worker", "site").order_by("-attendance_date", "worker__username")[:1000])
     start = sheets.parse_date(request.query_params.get("start"))

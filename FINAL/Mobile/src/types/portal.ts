@@ -62,6 +62,17 @@ export type WorkerRecord = {
     contractorDetails?: { name: string; code: string; contact: string; email: string; lin: string; state?: string; address?: string };
     employerDetails?: { name: string; code: string; industry: string; email: string; lin: string; state?: string; address?: string };
     siteDetails?: { name: string; code: string; location: string; medicalOfficer: string; officerContact: string; state?: string; colour?: string };
+    /** Completed engagements (accepted, ended or site-changed) with their issued letters. */
+    history?: Array<{
+      id: number; ref: string;
+      contractor: string; contractorCode: string;
+      employer: string; employerCode: string;
+      site: string; siteId: string;
+      designation: string; department: string; shift: string; wage: number;
+      startDate: string; endDate: string; status: string; current: boolean;
+      appointmentLetter?: { id: number; name: string; date: string; downloadUrl: string } | null;
+      experienceLetter?: { id: number; name: string; date: string; downloadUrl: string } | null;
+    }>;
   };
   compliance: {
     siteInduction: boolean;

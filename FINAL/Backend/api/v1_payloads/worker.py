@@ -42,13 +42,29 @@ def _worker_employment_section(user, identity):
     binding = None
     if emp and emp.assignment_id:
         binding = emp.assignment
-    if binding is None:
+    if binding is None or str(getattr(binding, "binding_status", "")).upper() != "ACCEPTED":
         # No WorkerEmployment record yet — fall back to the most recent accepted
         # binding so the dashboard reflects the current employment.
         binding = (WorkerContractorBinding.objects
                    .filter(worker=user, binding_status="ACCEPTED")
                    .select_related("site", "site__employer", "contractor")
                    .order_by("-accepted_at", "-created_at").first())
+    if binding is None:
+        # No active engagement (e.g. after unbind). Return a clean "no current
+        # employment" section rather than leaking stale WorkerEmployment fields
+        # (which previously left the last designation visible).
+        return {
+            "status": "", "employer": "", "contractor": "", "site": "",
+            "department": "", "designation": "", "doj": "", "shift": "",
+            "campNo": "", "refWorkerId": "", "transportFacility": "", "route": "", "busNo": "",
+            "pfAccount": "", "natureOfJob": "", "typeOfWork": "",
+            "idCardIssueDate": "", "idCardValidityTill": "",
+            "costSheet": "", "costSheetName": "", "offeredWage": 0, "ctc": 0, "costBreakdown": {},
+            "contractorDetails": {"name": "", "code": "", "contact": "", "email": "", "lin": "", "state": "", "address": ""},
+            "employerDetails": {"name": "", "code": "", "industry": "", "email": "", "lin": "", "state": "", "address": ""},
+            "siteDetails": {"name": "", "code": "", "location": "", "medicalOfficer": "", "officerContact": "", "state": "", "colour": ""},
+            "history": _worker_employment_history(user),
+        }
     employer_name = ""
     employer_code = ""
     employer_industry = ""
@@ -171,7 +187,8 @@ def _worker_employment_section(user, identity):
             "officerContact": officer_contact,
             "state": site_state,
             "colour": site_colour,
-        }
+        },
+        "history": _worker_employment_history(user),
     }
 
 
@@ -990,6 +1007,70 @@ def _worker_issued_letters(user):
             "current": bool(binding_id and active_binding and binding_id == active_binding),
         })
     return rows
+
+
+def _worker_employment_history(user):
+    """Completed engagements for the worker's Employment History.
+
+    Only engagements whose binding completed are included — ACCEPTED (active),
+    CANCELLED (ended/unbound) and TRANSFERRED (site changed). Requests that were
+    rejected by either party (or expired/never accepted) are excluded. Each entry
+    carries the engagement's issued Appointment and Experience letters.
+    """
+    from bss_core.models import WorkerContractorBinding
+
+    letters_by_binding: dict = {}
+    for row in _worker_issued_letters(user):
+        bid = row.get("bindingId")
+        if bid:
+            letters_by_binding.setdefault(bid, {})[row["letterType"]] = {
+                "id": row["id"], "name": row["name"],
+                "date": row["date"], "downloadUrl": row["downloadUrl"],
+            }
+
+    qs = (WorkerContractorBinding.objects
+          .filter(worker=user, binding_status__in=("ACCEPTED", "CANCELLED", "TRANSFERRED"))
+          .select_related("contractor", "contractor__contractor_profile",
+                          "site", "site__employer", "site__employer__employer_profile")
+          .order_by("-accepted_at", "-created_at"))
+    out = []
+    for b in qs:
+        cp = getattr(b.contractor, "contractor_profile", None)
+        emp = getattr(b.site, "employer", None) if b.site else None
+        ep = getattr(emp, "employer_profile", None) if emp else None
+        su = str(b.binding_status).upper()
+        status_label = ("Active" if su == "ACCEPTED"
+                        else "Ended" if su == "CANCELLED" else "Site Changed")
+        if su == "CANCELLED":
+            period_end = _dts(b.unbound_at) if b.unbound_at else ""
+        elif su == "TRANSFERRED":
+            period_end = _dts(b.updated_at) if b.updated_at else ""
+        else:
+            period_end = ""
+        letters = letters_by_binding.get(b.id, {})
+        out.append({
+            "id": b.id,
+            "ref": f"BIND-2026-{b.id:03d}",
+            "contractor": _org_name(b.contractor),
+            "contractorCode": _d(getattr(cp, "contractor_code", "")
+                                 or _bss_contractor_code(b.contractor_id)),
+            "employer": _org_name(emp) if emp else "",
+            "employerCode": _d(getattr(ep, "employer_code", "")
+                               or (_bss_employer_code(b.site.employer_id) if b.site and b.site.employer_id else "")),
+            "site": _d(b.site.site_name) if b.site else "",
+            "siteId": _d(getattr(b.site, "site_code", "") if b.site else ""),
+            "designation": _d(b.designation),
+            "department": _d(b.department),
+            "shift": _d(b.shift),
+            "wage": _num(b.offered_wage) if b.offered_wage is not None else 0,
+            "startDate": _dts(b.accepted_at) if b.accepted_at else "",
+            "endDate": period_end,
+            "status": status_label,
+            "current": su == "ACCEPTED",
+            "appointmentLetter": letters.get("appointment"),
+            "experienceLetter": letters.get("experience"),
+        })
+    return out
 
 
 def _worker_job_requests(user):

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Eye, FileText, History, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, Eye, FileText, ShieldCheck } from 'lucide-react';
 import { useWorker } from '@/contexts/WorkerContext';
 import { GatePassViewer } from '@/components/documentEngine/GatePassViewer';
 import { buildGatePassHtml } from '@/lib/documentEngine/gatePass';
@@ -15,8 +15,9 @@ export default function IssuedLettersPage() {
   const legacyLetters = (portal.documents ?? []).filter(doc => /letter/i.test(doc.name) && (doc.downloadUrl || doc.status === 'ISSUED'))
     .map(doc => ({ id: 0, name: doc.name, letterType: /appointment/i.test(doc.name) ? 'appointment' as const : 'experience' as const, code: '', date: doc.date, fileName: '', downloadUrl: doc.downloadUrl ?? '', bindingId: null, current: true }));
   const all = (portal.issuedLetters?.length ? portal.issuedLetters : legacyLetters);
+  // Show only the letters tied to the CURRENT engagement — older letters live
+  // in the worker's Employment History (Profile → Employment).
   const currentLetters = all.filter(l => l.current);
-  const olderLetters = all.filter(l => !l.current);
   const [preview, setPreview] = useState<{ html: string; title: string } | null>(null);
 
   const docView = useMemo(() => {
@@ -75,20 +76,6 @@ export default function IssuedLettersPage() {
           ))}
         </div> : <p className="text-sm text-gray-500 mt-3">Appointment and releasing letters for your current engagement appear here automatically.</p>}
       </section>
-
-      {olderLetters.length > 0 && <section className="rounded-2xl border border-gray-200 bg-white p-5">
-        <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2"><History size={16} className="text-gray-400"/>Older Letters</h2>
-        <p className="text-[11px] text-gray-500 mt-1">Letters from your previous engagements, kept as a permanent record.</p>
-        <div className="mt-4 grid sm:grid-cols-2 gap-3">
-          {olderLetters.map((letter, index) => (
-            <div key={`old-${letter.id}-${letter.date ?? index}`} className="rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center justify-between gap-2"><strong className="text-sm text-gray-900">{letter.name}</strong><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">Archived</span></div>
-              <p className="text-[11px] text-gray-500 mt-0.5">Issued {letter.date ? new Date(letter.date).toLocaleDateString('en-IN') : '—'}</p>
-              {letter.downloadUrl && <a href={letter.downloadUrl} target="_blank" rel="noopener noreferrer" className="mt-3 h-8 px-3 rounded-lg bg-gray-700 text-white text-[11px] font-semibold inline-flex items-center gap-1"><Eye size={12}/>View letter</a>}
-            </div>
-          ))}
-        </div>
-      </section>}
 
       {preview && <GatePassViewer html={preview.html} title={preview.title} onClose={() => setPreview(null)} />}
     </div>
