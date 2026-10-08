@@ -51,19 +51,19 @@ def _extract_text(data, name):
                     cells = [str(c) for c in row if c is not None]
                     if cells:
                         parts.append(" | ".join(cells))
-            return "\n".join(parts)[:20000]
+            return "\n".join(parts)[:12000]
         if n.endswith(".csv"):
-            return data.decode("utf-8", "ignore")[:20000]
+            return data.decode("utf-8", "ignore")[:12000]
         if n.endswith(".docx"):
             import zipfile
 
             with zipfile.ZipFile(io.BytesIO(data)) as z:
                 xml = z.read("word/document.xml").decode("utf-8", "ignore")
-            return re.sub(r"<[^>]+>", " ", xml)[:20000]
+            return re.sub(r"<[^>]+>", " ", xml)[:12000]
         # pdf / images -> OCR
         from .. import ocr_client
 
-        return ocr_client.extract_text(data, name)[:20000]
+        return ocr_client.extract_text(data, name)[:12000]
     except Exception as exc:  # noqa: BLE001
         return f"__EXTRACT_ERROR__{exc}"
 
@@ -73,6 +73,15 @@ def _default_credential():
 
     return (AiProviderCredential.objects.filter(is_default=True, enabled=True).first()
             or AiProviderCredential.objects.filter(enabled=True).order_by("id").first())
+
+
+def _provider_credentials():
+    """Enabled credentials with a key, default first (then by id)."""
+    from bss_core.models import AiProviderCredential
+    creds = [c for c in AiProviderCredential.objects.filter(enabled=True).order_by("id")
+             if c.has_key]
+    creds.sort(key=lambda c: (not c.is_default, c.id))
+    return creds
 
 
 def _call_provider(cred, system, prompt, timeout=60):
@@ -89,7 +98,7 @@ def _call_provider(cred, system, prompt, timeout=60):
         resp = requests.post(url, headers={
             "x-api-key": key, "anthropic-version": "2023-06-01", "Content-Type": "application/json",
         }, json={"model": model, "max_tokens": 1200, "system": system,
-                 "messages": [{"role": "user", "content": prompt}]}, timeout=timeout)
+                 "messages": [{"role": "user", "content": prompt}]}, timeout=(10, timeout))
         resp.raise_for_status()
         return resp.json()["content"][0]["text"]
     if provider == "google":
@@ -97,7 +106,7 @@ def _call_provider(cred, system, prompt, timeout=60):
         resp = requests.post(url, json={
             "system_instruction": {"parts": [{"text": system}]},
             "contents": [{"parts": [{"text": prompt}]}],
-        }, timeout=timeout)
+        }, timeout=(10, timeout))
         resp.raise_for_status()
         return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
     if provider == "azure":
@@ -107,11 +116,31 @@ def _call_provider(cred, system, prompt, timeout=60):
         url = f"{base}/chat/completions"
         headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     resp = requests.post(url, headers=headers, json={
-        "model": model, "temperature": 0,
+        "model": model, "temperature": 0, "max_tokens": 1500,
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],
-    }, timeout=timeout)
+    }, timeout=(10, timeout))
     resp.raise_for_status()
     return resp.json()["choices"][0]["message"]["content"]
+
+
+def _call_provider_any(system, prompt, timeout=40):
+    """Call the configured AI providers in order (default first), returning as
+    soon as one answers. Returns ``(text, cred, error)`` — ``text`` is None when
+    every provider failed. Bounds each attempt with a connect/read timeout so a
+    stalled provider degrades gracefully instead of killing the worker."""
+    last_error = ""
+    creds = _provider_credentials()
+    if not creds:
+        return None, None, "no provider configured"
+    for cred in creds:
+        try:
+            text = _call_provider(cred, system, prompt, timeout=timeout)
+            if text and str(text).strip():
+                return text, cred, ""
+            last_error = f"{cred.provider}: empty response"
+        except Exception as exc:  # noqa: BLE001 — try the next provider
+            last_error = f"{cred.provider}: {exc}"
+    return None, None, last_error
 
 
 def _parse_json_block(raw):
@@ -145,8 +174,7 @@ def _run_ai_audit(form_name, text, required_format, site_name="", extra=None):
     from bss_core.models import AI_PROVIDERS
 
     extra = extra or {}
-    cred = _default_credential()
-    if cred is None or not cred.has_key:
+    if not _provider_credentials():
         return {"status": "unavailable",
                 "message": "No AI provider is configured. Add one in Admin → AI Audit Settings."}
     if not text.strip():
@@ -215,11 +243,12 @@ def _run_ai_audit(form_name, text, required_format, site_name="", extra=None):
             "----- DOCUMENT TEXT (may be OCR, so ignore minor noise) -----\n"
             f"{text}"
         )
-    try:
-        raw = _call_provider(cred, system, prompt)
-    except Exception as exc:  # noqa: BLE001
-        return {"status": "error", "message": f"AI audit failed: {exc}",
-                "provider": cred.provider, "model": cred.model}
+    raw, cred, provider_error = _call_provider_any(system, prompt)
+    if raw is None:
+        return {"status": "unavailable",
+                "message": f"The AI provider could not be reached ({provider_error or 'timeout'}). "
+                           f"The document was saved — retry the audit shortly.",
+                "provider": "", "model": ""}
     parsed = _parse_json_block(raw) or {}
     results = parsed.get("checkpointResults") or []
     # Enforce the checklist: a failed REQUIRED checkpoint (or a missing required

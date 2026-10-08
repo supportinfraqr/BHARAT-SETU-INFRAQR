@@ -231,12 +231,6 @@ def _ai_assessment(meta, report):
     Returns a dict (or None when no provider is configured / it fails)."""
     from . import ai_audit
 
-    try:
-        cred = ai_audit._default_credential()
-    except Exception:  # noqa: BLE001 — never let a credential lookup break the report
-        return None
-    if cred is None or not cred.has_key:
-        return None
     t = report["totals"]
     params = "\n".join(
         f"- {p['label']} ({p['population']}): applicable {p['applicable']}, verified {p['verified']}, "
@@ -280,9 +274,8 @@ def _ai_assessment(meta, report):
         '"verdict": "Passed|Passed with observations|Needs attention"}. '
         "Only list a material exception where the parameter actually shows C3/C4/C5."
     )
-    try:
-        raw = ai_audit._call_provider(cred, system, prompt)
-    except Exception:  # noqa: BLE001
+    raw, _cred, _err = ai_audit._call_provider_any(system, prompt)
+    if raw is None:
         return None
     parsed = ai_audit._parse_json_block(raw)
     if not isinstance(parsed, dict):
