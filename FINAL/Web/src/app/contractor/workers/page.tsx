@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { BadgeCheck, Briefcase, CheckCircle2, Download, Eye, FileText, MoreVertical, Plus, Trash2, Upload, UserRound, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
@@ -268,6 +268,7 @@ export default function WorkerMasterPage() {
 
 function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onEmploymentCard, onGatePass }: { open: boolean; onToggle: () => void; onViewProfile: () => void; onViewDocs: () => void; onEmploymentCard?: () => void; onGatePass?: () => void }) {
   const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [anchor, setAnchor] = useState<{ top?: number; bottom?: number; right: number; maxHeight: number } | null>(null);
 
   useEffect(() => {
@@ -279,42 +280,50 @@ function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onEmploymentCar
       const rect = btnRef.current?.getBoundingClientRect();
       if (!rect) return;
       const right = Math.max(8, window.innerWidth - rect.right);
-      const spaceBelow = window.innerHeight - rect.bottom - 8;
-      const spaceAbove = rect.top - 8;
-      const ESTIMATED = 180;
-      if (spaceBelow < ESTIMATED && spaceAbove > spaceBelow) {
-        const height = Math.min(ESTIMATED, spaceAbove);
-        setAnchor({ top: rect.top - height - 4, right, maxHeight: Math.max(120, spaceAbove) });
+      const spaceBelow = window.innerHeight - rect.bottom - 12;
+      const spaceAbove = rect.top - 12;
+      const menuHeight = menuRef.current?.offsetHeight || 180;
+      if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+        setAnchor({ bottom: window.innerHeight - rect.top + 4, right, maxHeight: Math.max(120, spaceAbove) });
       } else {
         setAnchor({ top: rect.bottom + 4, right, maxHeight: Math.max(120, spaceBelow) });
       }
     };
     update();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onToggle(); };
     window.addEventListener('scroll', update, true);
     window.addEventListener('resize', update);
+    window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('scroll', update, true);
       window.removeEventListener('resize', update);
+      window.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open, onToggle]);
+
+  const item = (icon: ReactNode, label: string, onClick: () => void) => (
+    <button role="menuitem" onClick={onClick} className="group w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-gray-700 rounded-lg hover:bg-gray-50 text-left transition-colors">
+      <span className="w-7 h-7 rounded-lg bg-gray-100 text-gray-500 grid place-items-center flex-shrink-0 group-hover:bg-white transition-colors">{icon}</span>{label}
+    </button>
+  );
 
   return <>
-    <button ref={btnRef} onClick={onToggle} aria-label="Worker actions" aria-expanded={open} className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-100 text-gray-400"><MoreVertical size={16}/></button>
+    <button ref={btnRef} onClick={onToggle} aria-label="Worker actions" aria-expanded={open} aria-haspopup="menu" className={`w-8 h-8 grid place-items-center rounded-lg transition-colors ${open ? 'bg-gray-100 text-gray-600' : 'text-gray-400 hover:bg-gray-100'}`}><MoreVertical size={16}/></button>
     {open && anchor && createPortal(<>
       <div className="fixed inset-0 z-[110]" onClick={onToggle} />
-      <div role="menu" className="fixed z-[120] w-52 bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-900/5 p-1.5 overflow-y-auto" style={{ top: anchor.top, bottom: anchor.bottom, right: anchor.right, maxHeight: anchor.maxHeight }}>
-        <button role="menuitem" onClick={onViewProfile} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><UserRound size={14} className="text-gray-400"/>View Profile</button>
+      <div ref={menuRef} role="menu" className="fixed z-[120] w-56 bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-900/10 p-1.5 overflow-y-auto animate-in fade-in zoom-in-95 duration-100" style={{ top: anchor.top, bottom: anchor.bottom, right: anchor.right, maxHeight: anchor.maxHeight }}>
+        {item(<UserRound size={14}/>, 'View Profile', onViewProfile)}
         {onEmploymentCard && (
-          <button role="menuitem" onClick={onEmploymentCard} className="w-full flex items-start gap-2.5 px-3 py-2.5 rounded-lg text-left bg-[#073B67]/[0.06] hover:bg-[#073B67]/[0.12] border border-[#073B67]/15">
-            <span className="mt-0.5 w-6 h-6 rounded-md bg-[#073B67] text-white grid place-items-center flex-shrink-0"><Briefcase size={13}/></span>
+          <button role="menuitem" onClick={onEmploymentCard} className="group w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left bg-[#073B67]/[0.06] hover:bg-[#073B67]/[0.12] border border-[#073B67]/15 transition-colors">
+            <span className="w-7 h-7 rounded-lg bg-[#073B67] text-white grid place-items-center flex-shrink-0"><Briefcase size={14}/></span>
             <span className="min-w-0">
               <span className="block text-xs font-bold text-[#073B67]">Employment Card</span>
               <span className="block text-[10px] text-gray-500 leading-tight">Worker&apos;s site employment ID — view / print</span>
             </span>
           </button>
         )}
-        <button role="menuitem" onClick={onViewDocs} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><FileText size={14} className="text-gray-400"/>Compliance Documents</button>
-        {onGatePass && <button role="menuitem" onClick={onGatePass} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><Eye size={14} className="text-gray-400"/>View Gate Pass</button>}
+        {item(<FileText size={14}/>, 'Compliance Documents', onViewDocs)}
+        {onGatePass && item(<Eye size={14}/>, 'View Gate Pass', onGatePass)}
       </div>
     </>, document.body)}
   </>;
