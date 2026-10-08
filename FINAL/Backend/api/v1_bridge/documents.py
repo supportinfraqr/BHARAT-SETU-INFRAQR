@@ -85,23 +85,28 @@ def worker_documents(request):
         return Response({"error": message, "points": points},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    # Aadhaar-only extra check: the uploaded card must match the worker's verified
-    # Aadhaar record (number + name). All other documents keep the simple check.
+    # Aadhaar-only extra check: the uploaded card must carry the same Aadhaar
+    # number as the record fetched via the oKYC OTP flow. The name is NOT
+    # compared — OCR of a name is unreliable and caused false rejections. All
+    # other documents keep the simple check.
     if (master.code or "").strip().upper() in ("AADHAR", "WM01"):
-        from ..identity_utils import names_match
+        from ..identity_utils import verified_aadhaar
+        ref = verified_aadhaar(user) or {}
+        ref_aadhaar = str(ref.get("aadhaar") or "").strip()
         fields = ocr_client.extract_fields("aadhaar", text)
         proc_aadhaar = str(fields.get("aadhaar") or "").strip()
-        proc_name = str(fields.get("name") or "").strip()
-        problems = []
-        if identity.aadhaar and proc_aadhaar and proc_aadhaar != identity.aadhaar:
-            problems.append("the Aadhaar number does not match your verified Aadhaar")
-        if identity.name and proc_name and not names_match(proc_name, identity.name):
-            problems.append("the name does not match your Aadhaar name")
-        if problems:
+        problem = ""
+        if not proc_aadhaar:
+            problem = "we couldn't read the Aadhaar number — upload a clearer photo"
+        elif not ref_aadhaar:
+            problem = "you have no verified Aadhaar on record to match against"
+        elif proc_aadhaar != ref_aadhaar:
+            problem = "the Aadhaar number does not match your verified Aadhaar"
+        if problem:
             return Response({
-                "error": "This doesn't look like your Aadhaar card — " + "; ".join(problems) + ".",
-                "points": [{"key": "aadhaar_match", "label": "Matches your Aadhaar record",
-                            "passed": False, "detail": "; ".join(problems)}],
+                "error": "This doesn't look like your Aadhaar card — " + problem + ".",
+                "points": [{"key": "aadhaar_match", "label": "Aadhaar number matches your record",
+                            "passed": False, "detail": problem}],
             }, status=status.HTTP_400_BAD_REQUEST)
 
     # Documents go straight to manual verification in BSS once they pass the OCR

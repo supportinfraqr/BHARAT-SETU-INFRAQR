@@ -2,7 +2,7 @@
 
 # ruff: noqa: F401,F403
 from .common import *  # noqa: F401,F403
-from ..identity_utils import names_match
+from ..identity_utils import names_match, verified_aadhaar
 
 
 def _handle_licences(user, body, method, role_path):
@@ -108,10 +108,9 @@ def _handle_bank_verify(user, body):
     exists = bool(data.get("account_exists"))
     name_at_bank = str(data.get("name_at_bank") or "").strip()
 
-    # 3) Account-holder name vs the worker's Aadhaar name (double-tick on match).
-    from bss_core.models import WorkerIdentity
-    identity = WorkerIdentity.objects.filter(user=user).first()
-    aadhaar_name = (getattr(identity, "name", "") or "").strip()
+    # 3) Account-holder name vs the Aadhaar details fetched via the oKYC OTP
+    #    flow (double-tick on match).
+    aadhaar_name = str((verified_aadhaar(user) or {}).get("name") or "").strip()
     name_matches = names_match(name_at_bank, aadhaar_name)
 
     # 4) Persist the account + the bank data we auto-read (no branch contact).

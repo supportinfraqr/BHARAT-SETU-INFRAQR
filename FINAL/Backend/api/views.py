@@ -876,9 +876,10 @@ def _capture_pan_name(user, file_bytes):
     name = str(fields.get("name") or "").strip()
     if not name:
         return
-    from .identity_utils import names_match
+    from .identity_utils import names_match, verified_aadhaar
+    aadhaar_name = str((verified_aadhaar(user) or {}).get("name") or identity.name or "").strip()
     identity.pan_holder_name = name[:120]
-    identity.pan_name_matches_aadhaar = names_match(name, identity.name)
+    identity.pan_name_matches_aadhaar = names_match(name, aadhaar_name)
     identity.save(update_fields=["pan_holder_name", "pan_name_matches_aadhaar", "updated_at"])
 
 

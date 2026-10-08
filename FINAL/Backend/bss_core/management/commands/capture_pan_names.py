@@ -13,7 +13,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from api import ocr_client
-        from api.identity_utils import names_match
+        from api.identity_utils import names_match, verified_aadhaar
         from bss_core.models import DigiLockerDocument, WorkerIdentity
 
         updated = 0
@@ -34,8 +34,9 @@ class Command(BaseCommand):
                 continue
             if not name:
                 continue
+            aadhaar_name = str((verified_aadhaar(doc.user) or {}).get("name") or identity.name or "").strip()
             identity.pan_holder_name = name[:120]
-            identity.pan_name_matches_aadhaar = names_match(name, identity.name)
+            identity.pan_name_matches_aadhaar = names_match(name, aadhaar_name)
             identity.save(update_fields=["pan_holder_name", "pan_name_matches_aadhaar", "updated_at"])
             updated += 1
             self.stdout.write(f"{identity.user_id}: {name} (match={identity.pan_name_matches_aadhaar})")
