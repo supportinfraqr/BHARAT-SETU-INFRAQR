@@ -336,7 +336,7 @@ def _bound_contractors(user):
             status = row.status if row.sap_id else "NOT_MAPPED"
         out.append({
             "id": c.id,
-            "bssId": payloads._bss_contractor_code(c.id),
+            "bssId": (getattr(cp, "contractor_code", "") or payloads._bss_contractor_code(c.id)),
             "name": (cp.contractor_name if cp and cp.contractor_name else (c.get_full_name() or c.username)),
             "sites": sorted(s for s in sites if s),
             "sapId": (row.sap_id if row else ""),

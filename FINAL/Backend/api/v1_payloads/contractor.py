@@ -257,7 +257,7 @@ def _contractor_workers(user):
             "emergencyNumber": _d(wi.emergency_contact_number if wi else ""),
             "emergencyRelation": _d(wi.emergency_contact_relation if wi else ""),
             "contractorName": _org_name(b.contractor),
-            "contractorCode": _bss_contractor_code(b.contractor_id),
+            "contractorCode": _d(cp.contractor_code) if cp else _bss_contractor_code(b.contractor_id),
             "contractorContact": _d(getattr(cp, "mobile", "") or getattr(cp, "contact_person", "")) if cp else "",
             "contractorEmail": _d(getattr(cp, "email", "")) if cp else "",
             "idCardIssueDate": card_issue.isoformat() if card_issue else "",

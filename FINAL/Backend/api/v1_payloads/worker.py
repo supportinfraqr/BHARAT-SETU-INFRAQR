@@ -80,7 +80,8 @@ def _worker_employment_section(user, identity):
         if binding.contractor:
             cp = getattr(binding.contractor, "contractor_profile", None)
             contractor_name = _org_name(binding.contractor)
-            contractor_code = _bss_contractor_code(binding.contractor.id) if binding.contractor else ""
+            contractor_code = (_d(getattr(cp, "contractor_code", "") if cp else "")
+                               or (_bss_contractor_code(binding.contractor.id) if binding.contractor else ""))
             contractor_contact = _d(getattr(cp, "mobile", "") or getattr(cp, "contact_person", "") if cp else "")
             contractor_email = _d(getattr(cp, "email", "") if cp else "")
             if not contractor_email:
@@ -95,7 +96,8 @@ def _worker_employment_section(user, identity):
         if binding.site and binding.site.employer:
             emp_profile = getattr(binding.site.employer, "employer_profile", None)
             employer_name = _org_name(binding.site.employer)
-            employer_code = _bss_employer_code(binding.site.employer.id) if binding.site.employer else ""
+            employer_code = (_d(getattr(emp_profile, "employer_code", "") if emp_profile else "")
+                             or (_bss_employer_code(binding.site.employer.id) if binding.site.employer else ""))
             employer_industry = _d(getattr(emp_profile, "industry", "") if emp_profile else "")
             employer_email = _d(getattr(emp_profile, "email", "") if emp_profile else "")
             employer_lin = _d(getattr(emp_profile, "lin", "") if emp_profile else "")

@@ -641,7 +641,8 @@ def _employer_submissions(user):
         rows.append({
             "id": f"pkg-{cid}-{year}-{month}",
             "contractor": name,
-            "contractorId": _bss_contractor_code(cid) if cid else "",
+            "contractorId": ((_d(getattr(ContractorProfile.objects.filter(user_id=cid).first(), "contractor_code", "")) if cid else "")
+                             or (_bss_contractor_code(cid) if cid else "")),
             "site": ", ".join(sites),
             "type": f"Compliance Submission · {month} {year} ({len(batches)} register batch(es) · {len(evidence)} form(s))",
             "period": _d(f"{month} {year}".strip()),
