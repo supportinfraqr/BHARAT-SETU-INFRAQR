@@ -245,6 +245,8 @@ _v1_patterns = _v1(
     ("admin/courses", v1_bridge.admin_courses, "v1_admin_courses"),
     ("admin/courses/<int:course_id>", v1_bridge.admin_course_detail, "v1_admin_course_detail"),
     ("admin/learning-config", v1_bridge.admin_learning_config, "v1_admin_learning_config"),
+    ("admin/learning-report", v1_bridge.admin_learning_report, "v1_admin_learning_report"),
+    ("admin/course-submissions/<int:submission_id>", v1_bridge.admin_course_submission_grade, "v1_admin_course_submission_grade"),
     ("admin/onboarding/batches", v1_bridge.admin_onboarding_batches, "v1_admin_onboarding_batches"),
     ("admin/onboarding/batches/<int:batch_id>", v1_bridge.onboarding_batch_detail, "v1_onboarding_batch_detail"),
     ("admin/onboarding/batches/<int:batch_id>/review", v1_bridge.admin_onboarding_review, "v1_admin_onboarding_review"),

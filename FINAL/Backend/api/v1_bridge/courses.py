@@ -78,6 +78,39 @@ def _course_summary(user, course, enrollment):
     }
 
 
+def _grade_submission(submission, score, feedback, reviewer):
+    """Grade a written/upload submission, sync the worker's assignment score and
+    complete the course (issuing the certificate + skill) once everything passes.
+    Returns ``(course, enrollment)``."""
+    from bss_core.models import CourseEnrollment
+
+    course = submission.assignment.module.course
+    submission.score = _int_in_range(score, 0, 0, 100)
+    submission.feedback = str(feedback or "")[:500]
+    submission.status = "GRADED"
+    submission.reviewer = reviewer
+    submission.reviewed_at = timezone.now()
+    submission.save(update_fields=["score", "feedback", "status", "reviewer", "reviewed_at"])
+
+    enrollment, _ = CourseEnrollment.objects.get_or_create(worker=submission.worker, course=course)
+    scores = {str(k): v for k, v in (enrollment.assignment_scores or {}).items()}
+    scores[str(submission.assignment_id)] = submission.score
+    enrollment.assignment_scores = scores
+    enrollment.save(update_fields=["assignment_scores", "updated_at"])
+
+    state = _course_state(course, enrollment)
+    if state["allComplete"] and enrollment.status != "COMPLETED":
+        enrollment.status = "COMPLETED"
+        enrollment.certificate_issued = True
+        if not enrollment.certificate_no:
+            enrollment.certificate_no = f"BSS-CERT-{course.id}-{submission.worker_id}"
+        enrollment.completed_at = timezone.now()
+        enrollment.save(update_fields=["status", "certificate_issued", "certificate_no",
+                                       "completed_at", "updated_at"])
+        _award_course_skill(submission.worker, course, enrollment.certificate_no)
+    return course, enrollment
+
+
 def _handle_course_action(user, body):
     """Worker course progress: mark a lesson complete or submit an assignment.
 
@@ -192,28 +225,8 @@ def _handle_course_action(user, body):
         submission = CourseSubmission.objects.filter(pk=body.get("submissionId")).first()
         if submission is None:
             raise PortalMutationError("Submission not found.", 404)
-        submission.score = max(0, min(100, int(body.get("score") or 0)))
-        submission.feedback = str(body.get("feedback") or "")[:500]
-        submission.status = "GRADED"
-        submission.reviewer = user
-        submission.reviewed_at = timezone.now()
-        submission.save(update_fields=["score", "feedback", "status", "reviewer", "reviewed_at"])
-        worker_enrollment, _ = CourseEnrollment.objects.get_or_create(
-            worker=submission.worker, course=course)
-        sc = {str(k): v for k, v in (worker_enrollment.assignment_scores or {}).items()}
-        sc[str(submission.assignment_id)] = submission.score
-        worker_enrollment.assignment_scores = sc
-        worker_enrollment.save(update_fields=["assignment_scores", "updated_at"])
-        state = _course_state(course, worker_enrollment)
-        if state["allComplete"] and worker_enrollment.status != "COMPLETED":
-            worker_enrollment.status = "COMPLETED"
-            worker_enrollment.certificate_issued = True
-            if not worker_enrollment.certificate_no:
-                worker_enrollment.certificate_no = f"BSS-CERT-{course.id}-{submission.worker_id}"
-            worker_enrollment.completed_at = timezone.now()
-            worker_enrollment.save(update_fields=["status", "certificate_issued", "certificate_no",
-                                                  "completed_at", "updated_at"])
-            _award_course_skill(submission.worker, course, worker_enrollment.certificate_no)
+        _, worker_enrollment = _grade_submission(
+            submission, body.get("score"), body.get("feedback"), user)
         return {"submissionId": str(submission.id), "score": submission.score,
                 "workerComplete": worker_enrollment.status == "COMPLETED"}
     else:
@@ -250,28 +263,140 @@ def _admin_course_row(course):
             "id": m.id, "title": m.title,
             "lessons": [{"id": l.id, "title": l.title, "duration": l.duration,
                          "youtubeUrl": l.youtube_url} for l in m.lessons.all()],
+            "readings": [{"id": r.id, "title": r.title, "body": r.body,
+                          "resourceUrl": r.resource_url, "duration": r.duration}
+                         for r in m.readings.all()],
+            "assignments": [{
+                "id": a.id, "title": a.title, "type": a.assignment_type,
+                "instructions": a.instructions, "passScore": a.pass_score,
+                "questions": [{"id": q.id, "question": q.question,
+                               "options": list(q.options or []), "correctIndex": q.correct_index}
+                              for q in a.questions.all()],
+            } for a in m.assignments.all()],
         } for m in course.modules.all()],
     }
 
 
+def _int_in_range(value, default, low, high):
+    try:
+        return max(low, min(high, int(value)))
+    except (TypeError, ValueError):
+        return default
+
+
 def _write_course_modules(course, modules):
-    from bss_core.models import CourseLesson, CourseModule
-    course.modules.all().delete()
+    """Id-aware upsert of a course's modules/lessons/readings/assignments/questions.
+
+    Existing rows are updated in place (matched by the id the client sends) and
+    only genuinely removed items are deleted — so editing a course does NOT wipe
+    workers' assignment submissions (``CourseSubmission`` cascades from
+    ``CourseAssignment``).
+    """
+    from bss_core.models import (CourseAssignment, CourseLesson, CourseModule,
+                                 CourseQuestion, CourseReading)
+
+    def _row_id(value):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    existing_modules = {m.id: m for m in course.modules.all()}
+    kept_modules = set()
     for i, m in enumerate(modules or []):
         m = m if isinstance(m, dict) else {}
         title = str(m.get("title") or "").strip()
         if not title:
             continue
-        module = CourseModule.objects.create(course=course, title=title[:160], sort_order=i)
+        module = existing_modules.get(_row_id(m.get("id")))
+        if module is None:
+            module = CourseModule.objects.create(course=course, title=title[:160])
+        module.title = title[:160]
+        module.sort_order = i
+        module.save(update_fields=["title", "sort_order"])
+        kept_modules.add(module.id)
+
+        existing = {x.id: x for x in module.lessons.all()}
+        kept = set()
         for j, l in enumerate(m.get("lessons") or []):
             l = l if isinstance(l, dict) else {}
             ltitle = str(l.get("title") or "").strip()
             if not ltitle:
                 continue
-            CourseLesson.objects.create(
-                course=course, module=module, title=ltitle[:160],
-                duration=str(l.get("duration") or "")[:40],
-                youtube_url=str(l.get("youtubeUrl") or "")[:255], sort_order=j)
+            lesson = existing.get(_row_id(l.get("id")))
+            if lesson is None:
+                lesson = CourseLesson.objects.create(course=course, module=module, title=ltitle[:160])
+            lesson.title = ltitle[:160]
+            lesson.duration = str(l.get("duration") or "")[:40]
+            lesson.youtube_url = str(l.get("youtubeUrl") or "")[:255]
+            lesson.sort_order = j
+            lesson.save(update_fields=["title", "duration", "youtube_url", "sort_order"])
+            kept.add(lesson.id)
+        module.lessons.exclude(id__in=kept).delete()
+
+        existing = {x.id: x for x in module.readings.all()}
+        kept = set()
+        for j, r in enumerate(m.get("readings") or []):
+            r = r if isinstance(r, dict) else {}
+            rtitle = str(r.get("title") or "").strip()
+            if not rtitle:
+                continue
+            reading = existing.get(_row_id(r.get("id")))
+            if reading is None:
+                reading = CourseReading.objects.create(module=module, title=rtitle[:160])
+            reading.title = rtitle[:160]
+            reading.body = str(r.get("body") or "")
+            reading.resource_url = str(r.get("resourceUrl") or "")[:255]
+            reading.duration = str(r.get("duration") or "")[:40]
+            reading.sort_order = j
+            reading.save(update_fields=["title", "body", "resource_url", "duration", "sort_order"])
+            kept.add(reading.id)
+        module.readings.exclude(id__in=kept).delete()
+
+        existing = {x.id: x for x in module.assignments.all()}
+        kept = set()
+        for j, a in enumerate(m.get("assignments") or []):
+            a = a if isinstance(a, dict) else {}
+            atitle = str(a.get("title") or "").strip()
+            if not atitle:
+                continue
+            atype = str(a.get("type") or "QUIZ").upper()
+            if atype not in ("QUIZ", "WRITING", "UPLOAD"):
+                atype = "QUIZ"
+            assignment = existing.get(_row_id(a.get("id")))
+            if assignment is None:
+                assignment = CourseAssignment.objects.create(module=module, title=atitle[:160])
+            assignment.title = atitle[:160]
+            assignment.assignment_type = atype
+            assignment.instructions = str(a.get("instructions") or "")
+            assignment.pass_score = _int_in_range(a.get("passScore"), 60, 0, 100)
+            assignment.sort_order = j
+            assignment.save(update_fields=["title", "assignment_type", "instructions",
+                                           "pass_score", "sort_order"])
+            kept.add(assignment.id)
+
+            question_rows = a.get("questions") or [] if atype == "QUIZ" else []
+            q_existing = {q.id: q for q in assignment.questions.all()}
+            q_kept = set()
+            for k, q in enumerate(question_rows):
+                q = q if isinstance(q, dict) else {}
+                qtext = str(q.get("question") or "").strip()
+                options = [str(o)[:300] for o in (q.get("options") or []) if str(o).strip()]
+                if not qtext or len(options) < 2:
+                    continue
+                question = q_existing.get(_row_id(q.get("id")))
+                if question is None:
+                    question = CourseQuestion.objects.create(
+                        course=course, assignment=assignment, question=qtext[:300])
+                question.question = qtext[:300]
+                question.options = options
+                question.correct_index = _int_in_range(q.get("correctIndex"), 0, 0, len(options) - 1)
+                question.sort_order = k
+                question.save(update_fields=["question", "options", "correct_index", "sort_order"])
+                q_kept.add(question.id)
+            assignment.questions.exclude(id__in=q_kept).delete()
+        module.assignments.exclude(id__in=kept).delete()
+    course.modules.all().exclude(id__in=kept_modules).delete()
 
 
 def _is_bss_admin(user):
@@ -362,13 +487,110 @@ def admin_course_detail(request, course_id):
     return Response({"data": _admin_course_row(course)}, status=status.HTTP_200_OK)
 
 
+def _admin_worker_label(user):
+    return (user.get_full_name() or "").strip() or getattr(user, "username", "") or ""
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def admin_learning_report(request):
+    """BSS Admin: skilling report — enrollments/progress plus assignment
+    submissions awaiting grading (shown inside the Skilling page)."""
+    from bss_core.models import CourseEnrollment, CourseSubmission
+    if not _is_bss_admin(request.user):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+
+    enrollments, completed = [], 0
+    for e in (CourseEnrollment.objects.select_related("worker", "course")
+              .order_by("-updated_at")[:300]):
+        state = _course_state(e.course, e)
+        if e.status == "COMPLETED":
+            completed += 1
+        enrollments.append({
+            "id": e.id,
+            "workerName": _admin_worker_label(e.worker),
+            "workerId": getattr(e.worker, "username", ""),
+            "course": e.course.title,
+            "status": e.get_status_display(),
+            "progress": state["progress"],
+            "certificateNo": e.certificate_no,
+            "completedAt": _dts(e.completed_at),
+            "updatedAt": _dts(e.updated_at),
+        })
+
+    submissions, pending = [], 0
+    for s in (CourseSubmission.objects
+              .select_related("worker", "assignment__module__course")
+              .order_by("-submitted_at")[:500]):
+        if s.status == "SUBMITTED":
+            pending += 1
+        module = s.assignment.module
+        submissions.append({
+            "id": s.id,
+            "workerName": _admin_worker_label(s.worker),
+            "workerId": getattr(s.worker, "username", ""),
+            "course": module.course.title,
+            "module": module.title,
+            "assignment": s.assignment.title,
+            "type": s.assignment.assignment_type,
+            "content": s.content,
+            "fileUrl": s.file_url,
+            "status": s.get_status_display(),
+            "score": s.score,
+            "feedback": s.feedback,
+            "submittedAt": _dts(s.submitted_at),
+        })
+
+    return Response({"data": {
+        "summary": {
+            "enrollments": len(enrollments),
+            "completed": completed,
+            "submissions": len(submissions),
+            "pendingGrading": pending,
+        },
+        "enrollments": enrollments,
+        "submissions": submissions,
+    }}, status=status.HTTP_200_OK)
+
+
+@api_view(["PATCH"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def admin_course_submission_grade(request, submission_id):
+    """BSS Admin: grade a written/upload assignment submission."""
+    from bss_core.models import CourseSubmission
+    from .admin_console import log_audit
+    if not _is_bss_admin(request.user):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    submission = (CourseSubmission.objects
+                  .select_related("worker", "assignment__module__course")
+                  .filter(pk=submission_id).first())
+    if submission is None:
+        return Response({"error": "Submission not found."}, status=status.HTTP_404_NOT_FOUND)
+    body = request.data if isinstance(request.data, dict) else {}
+    _, enrollment = _grade_submission(
+        submission, body.get("score"), body.get("feedback"), request.user)
+    log_audit(request.user, "UPDATE", "course_submission", submission.id,
+              after={"summary": (f"Graded {submission.assignment.title} for "
+                                 f"{_admin_worker_label(submission.worker)}: {submission.score}%")})
+    return Response({"data": {
+        "submissionId": submission.id, "score": submission.score,
+        "status": submission.get_status_display(),
+        "workerComplete": enrollment.status == "COMPLETED",
+    }}, status=status.HTTP_200_OK)
+
+
 __all__ = [
     "_award_course_skill",
     "_course_state",
     "_course_summary",
+    "_grade_submission",
     "_handle_course_action",
     "_learning_config",
     "admin_learning_config",
     "admin_courses",
     "admin_course_detail",
+    "admin_learning_report",
+    "admin_course_submission_grade",
 ]
