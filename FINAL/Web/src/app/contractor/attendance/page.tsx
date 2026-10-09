@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, CheckCircle2, Download, FileSpreadsheet, Upload } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
-import VideoAttendancePanel from '@/components/attendance/VideoAttendancePanel';
 
 type AttendanceRow = { id: string; date: string; worker: string; site: string; status: string; capture: string };
 type UploadResult = { created: number; updated: number; workers: number; rows: number; unknown: string[]; site: string; start: string; end: string };
@@ -114,9 +113,6 @@ export default function ContractorAttendancePage() {
         <p className="text-[11px] text-gray-400">The CSV has a <strong>BSS ID</strong> column plus one column per date (<code>YYYY-MM-DD</code>). Uploaded rows are stored in the same attendance table as QR / NFC / camera punches, with capture method <strong>Uploaded sheet</strong> — so they flow into payroll and worker attendance views automatically.</p>
       </div>
     </section>
-
-    {/* CCTV attendance — shared panel: uses the employer-configured site cameras */}
-    <VideoAttendancePanel role="contractor" sites={sites} />
 
     <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
       <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between"><div><h2 className="text-sm font-semibold text-gray-950">Uploaded attendance — {start} → {end}</h2><p className="text-xs text-gray-400 mt-0.5">{rows.length} entr{rows.length === 1 ? 'y' : 'ies'} · {presentCount} present</p></div></header>

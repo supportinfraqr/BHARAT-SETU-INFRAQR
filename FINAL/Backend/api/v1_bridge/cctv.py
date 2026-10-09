@@ -1,14 +1,14 @@
-"""Site CCTV camera setup + status (employer configures, contractor reads).
+"""Site CCTV camera setup + status (employer-only).
 
 The employer defines, per site, the cameras the CCTV attendance engine should
 watch. Attendance is driven only by these configured feeds — never a device
-camera. Passwords are stored encrypted and never returned to the browser.
+camera. CCTV is an employer-only capability; contractors have no access.
+Passwords are stored encrypted and never returned to the browser.
 """
 
 # ruff: noqa: F401,F403
 from .common import *  # noqa: F401,F403
 from .bindings import *  # noqa: F401,F403
-from .bindings import _contractor_site_ids
 
 from .. import attendance_control as control
 
@@ -27,20 +27,6 @@ def _employer_site(user, site_id):
     except (TypeError, ValueError):
         return None
     return Site.objects.filter(pk=site_id, employer=user).first()
-
-
-def _contractor_site(user, site_id):
-    from bss_core.models import Site
-
-    if not site_id:
-        return None
-    try:
-        site_id = int(site_id)
-    except (TypeError, ValueError):
-        return None
-    if site_id not in _contractor_site_ids(user):
-        return None
-    return Site.objects.filter(pk=site_id).first()
 
 
 def _masked_source(camera):
@@ -237,10 +223,7 @@ def cctv_camera_snapshot(request, camera_id):
     camera = SiteCctvCamera.objects.select_related("site").filter(pk=camera_id).first()
     if camera is None:
         return Response({"error": "Camera not found."}, status=status.HTTP_404_NOT_FOUND)
-    allowed = (
-        (user.role == "employer" and camera.site is not None and camera.site.employer_id == user.id)
-        or (user.role == "contractor" and camera.site_id in _contractor_site_ids(user))
-    )
+    allowed = user.role == "employer" and camera.site is not None and camera.site.employer_id == user.id
     if not allowed:
         return Response({"error": "You do not have access to this camera."}, status=status.HTTP_403_FORBIDDEN)
     source = camera.build_source()
@@ -261,18 +244,13 @@ def cctv_camera_snapshot(request, camera_id):
 def cctv_status(request):
     """Site CCTV status: configured cameras + which have a live session.
 
-    Employers see their own sites; contractors only sites allotted to them.
+    Employer-only: an employer sees their own sites.
     """
     from bss_core.models import SiteCctvCamera
 
     user = request.user
     site_id = request.query_params.get("siteId")
-    if user.role == "employer":
-        site = _employer_site(user, site_id)
-    elif user.role == "contractor":
-        site = _contractor_site(user, site_id)
-    else:
-        site = None
+    site = _employer_site(user, site_id) if user.role == "employer" else None
     if site is None:
         return Response({"error": "You do not have access to this site."}, status=status.HTTP_403_FORBIDDEN)
 
@@ -297,22 +275,6 @@ def cctv_status(request):
         "cameras": rows,
         "anyRunning": bool(active),
     }})
-
-
-@api_view(["GET"])
-@authentication_classes([BssSessionAuthentication])
-@permission_classes([IsAuthenticated])
-def contractor_cctv_cameras(request):
-    """Read-only CCTV camera list for a site the contractor is allotted to."""
-    from bss_core.models import SiteCctvCamera
-
-    if request.user.role != "contractor":
-        return Response({"error": "Contractors only."}, status=status.HTTP_403_FORBIDDEN)
-    site = _contractor_site(request.user, request.query_params.get("siteId"))
-    if site is None:
-        return Response({"error": "You do not have access to this site."}, status=status.HTTP_403_FORBIDDEN)
-    rows = SiteCctvCamera.objects.filter(site=site).order_by("sort_order", "id")
-    return Response({"data": {"siteId": site.id, "siteKey": _site_key(site), "cameras": [_camera_json(c) for c in rows]}})
 
 
 def cameras_for_site(site):

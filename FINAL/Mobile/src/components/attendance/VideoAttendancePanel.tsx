@@ -10,20 +10,18 @@ type Sighting = { id: number; name: string | null; tsStart: number; camera?: str
 type CameraRow = { id?: number; siteId?: number; label: string; area: string; enabled: boolean; configured: boolean; running?: boolean };
 
 /**
- * CCTV attendance control — shared by the Contractor and Employer portals.
- * Attendance runs ONLY from the employer-configured site CCTV feeds (set up in
- * Employee → CCTV Setup). There is no device/laptop camera here: pressing Start
- * launches the site's configured camera feeds on the attendance engine, and the
- * engine marks recognised workers present automatically.
+ * CCTV attendance control — employer-only. Attendance runs ONLY from the
+ * employer-configured site CCTV feeds (set up in CCTV Setup). There is no
+ * device/laptop camera here: pressing Start launches the site's configured
+ * camera feeds on the attendance engine, and the engine marks recognised
+ * workers present automatically. Contractors have no access to this system.
  */
 export default function VideoAttendancePanel({
-  role,
   sites,
 }: {
-  role: 'contractor' | 'employer';
   sites: SiteOption[];
 }) {
-  const api = role === 'contractor' ? '/api/contractor/attendance/camera' : '/api/employer/attendance/camera';
+  const api = '/api/employer/attendance/camera';
 
   const [siteId, setSiteId] = useState('');
   const [running, setRunning] = useState(false);
@@ -178,14 +176,8 @@ export default function VideoAttendancePanel({
         {noCameras ? (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-200 space-y-2">
             <p className="font-bold">No CCTV cameras configured for this site yet.</p>
-            {role === 'employer' ? (
-              <>
-                <p>Add the site&apos;s camera feeds (IP address, camera, login) in CCTV Setup, then attendance will use them automatically.</p>
-                <Link href="/employer/cctv-setup" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-amber-400 text-slate-950 font-bold"><Settings2 size={14}/> Open CCTV Setup</Link>
-              </>
-            ) : (
-              <p>Ask your principal employer to configure the site&apos;s CCTV cameras.</p>
-            )}
+            <p>Add the site&apos;s camera feeds (IP address, camera, login) in CCTV Setup, then attendance will use them automatically.</p>
+            <Link href="/employer/cctv-setup" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-amber-400 text-slate-950 font-bold"><Settings2 size={14}/> Open CCTV Setup</Link>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-4 items-start">
@@ -194,7 +186,7 @@ export default function VideoAttendancePanel({
                 <div key={c.id ?? c.label} className="flex items-center gap-3">
                   {c.enabled && c.configured && c.id != null ? (
                     <button type="button" onClick={() => setPreviewFor(c)} className="shrink-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-400/40" title="Click to enlarge">
-                      <CameraPreview cameraId={c.id} role={role} label={c.label} className="w-28 h-16" />
+                      <CameraPreview cameraId={c.id} label={c.label} className="w-28 h-16" />
                     </button>
                   ) : (
                     <div className="grid h-16 w-28 shrink-0 place-items-center rounded-lg border border-slate-800 bg-slate-900 text-[9px] text-slate-500">No feed</div>
@@ -219,7 +211,7 @@ export default function VideoAttendancePanel({
                       <span className="text-slate-500">{new Date((d.tsStart || 0) * 1000).toLocaleTimeString()}</span>
                     </li>
                   ))}</ul>}
-              {role === 'employer' && <Link href="/employer/cctv-setup" className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-sky-300 hover:text-sky-200"><Settings2 size={13}/> Manage CCTV cameras</Link>}
+              <Link href="/employer/cctv-setup" className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-sky-300 hover:text-sky-200"><Settings2 size={13}/> Manage CCTV cameras</Link>
             </div>
           </div>
         )}
@@ -236,7 +228,7 @@ export default function VideoAttendancePanel({
               <button type="button" onClick={() => setPreviewFor(null)} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-lg text-slate-300 hover:bg-slate-800"><X size={18}/></button>
             </div>
             <div className="p-4">
-              <CameraPreview cameraId={previewFor.id} role={role} label={previewFor.label} className="w-full aspect-video" />
+              <CameraPreview cameraId={previewFor.id} label={previewFor.label} className="w-full aspect-video" />
             </div>
           </div>
         </div>

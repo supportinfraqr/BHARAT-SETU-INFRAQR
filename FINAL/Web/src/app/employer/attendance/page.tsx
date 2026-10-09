@@ -18,6 +18,6 @@ export default function EmployerAttendancePage() {
       </p>
     </header>
 
-    <VideoAttendancePanel role="employer" sites={sites} />
+    <VideoAttendancePanel sites={sites} />
   </div>;
 }

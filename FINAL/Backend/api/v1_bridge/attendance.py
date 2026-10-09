@@ -583,7 +583,10 @@ def _attendance_marked_today(site):
 
 
 def _controllable_site(user, site_id):
-    """The site this user may start/stop live attendance for, or None."""
+    """The site this user may start/stop live CCTV attendance for, or None.
+
+    CCTV is an employer-only capability (employer configures the cameras and
+    controls the engine). Contractors have no access to the CCTV system."""
     from bss_core.models import Site
 
     if not site_id:
@@ -594,8 +597,6 @@ def _controllable_site(user, site_id):
         return None
     if user.role == "employer":
         return Site.objects.filter(pk=site_id, employer=user).first()
-    if user.role == "contractor" and site_id in _contractor_site_ids(user):
-        return Site.objects.filter(pk=site_id).first()
     return None
 
 
@@ -605,8 +606,8 @@ def _controllable_site(user, site_id):
 def attendance_camera_session(request):
     """Start/stop the site's CCTV attendance engine and read its recent
     detections. Attendance runs ONLY from the employer-configured CCTV feeds —
-    a device/webcam source is never accepted. Employers control their own
-    sites; contractors only sites allotted to them (APPROVED)."""
+    a device/webcam source is never accepted. CCTV is employer-only: each
+    employer controls their own sites."""
     from bss_core.models import SiteCctvCamera
     from .. import attendance_control as control
     from .cctv import cameras_for_site

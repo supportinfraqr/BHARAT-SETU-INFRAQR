@@ -3,22 +3,21 @@
 import { useEffect, useRef, useState } from 'react';
 
 /** A small, auto-refreshing live preview of one configured CCTV camera.
- *  Polls the JPEG snapshot endpoint (~1.5s) and shows a LIVE/Offline badge. */
+ *  Employer-only; polls the JPEG snapshot endpoint (~1.5s) and shows a
+ *  LIVE/Offline badge. */
 export default function CameraPreview({
   cameraId,
-  role = 'employer',
   label,
   className = 'w-40 h-24',
 }: {
   cameraId: number;
-  role?: 'employer' | 'contractor';
   label?: string;
   className?: string;
 }) {
   const [src, setSrc] = useState('');
   const [live, setLive] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const base = role === 'contractor' ? '/api/contractor/cctv' : '/api/employer/cctv';
+  const base = '/api/employer/cctv';
 
   useEffect(() => {
     let active = true;
