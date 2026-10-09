@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { authenticate, requestOtp, type LoginInput } from '@/server/auth';
 import { apiError, assertRateLimit, assertTrustedMutation, readJsonObject } from '@/server/api';
+import { getRuntimeConfig } from '@/server/config';
+import { upstreamRequest } from '@/server/http';
 import { clearSession, createSession, getSession } from '@/server/session';
 import type { PortalRole } from '@/types/portal';
 
@@ -49,6 +51,17 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   assertTrustedMutation(request);
+  try {
+    const session = await getSession();
+    if (session) {
+      const config = getRuntimeConfig();
+      // Revoke the server-side session (and its tokens) before clearing the cookie.
+      await upstreamRequest(config.apiBaseUrl, '/v1/auth/logout', session, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      }).catch(() => { /* best effort — always clear the local cookie */ });
+    }
+  } catch { /* ignore */ }
   await clearSession();
   return NextResponse.json({ authenticated:false });
 }

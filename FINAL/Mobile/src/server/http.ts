@@ -24,6 +24,7 @@ export function isStaleSessionError(error: unknown): boolean {
     // credentials") must surface as-is, not as an expired session.
     return message.includes('token')
       || message.includes('not valid')
+      || message.includes('session is no longer')
       || message.includes('authentication credentials');
   }
   return false;
@@ -52,6 +53,9 @@ function buildUpstreamHeaders(session: PortalSession | null, init: RequestInit):
   if (session) {
     headers.set('X-BSS-Subject', session.subject);
     headers.set('X-BSS-Role', session.role);
+    // Lets the backend enforce the single active session even when the JWT has
+    // expired and only the subject fallback is available.
+    if (session.sessionId) headers.set('X-BSS-Session', session.sessionId);
     headers.set('X-Correlation-ID', session.sessionId);
   }
   return headers;

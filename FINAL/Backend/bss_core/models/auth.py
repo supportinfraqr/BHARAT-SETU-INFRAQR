@@ -57,6 +57,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_verified = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    # Single active session: the id of the one session currently allowed to act
+    # as this user. A successful login overwrites it, immediately invalidating
+    # every previously issued token/session.
+    current_session_id = models.CharField(max_length=64, blank=True, default="", db_index=True)
+    current_session_at = models.DateTimeField(null=True, blank=True)
 
     objects = UserManager()
 

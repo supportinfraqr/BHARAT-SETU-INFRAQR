@@ -54,6 +54,22 @@ def login(request):
 
 
 @api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def logout(request):
+    """End the current session: revoke its tokens and drop the active session.
+
+    A fresh, unheld session id is installed so every token issued so far (this
+    device included) stops working immediately."""
+    import uuid as _uuid
+
+    user = request.user
+    _blacklist_user_tokens(user)
+    _set_current_session(user, str(_uuid.uuid4()))
+    return Response({"data": {"ok": True}}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
 def otp_challenge(request):
@@ -353,6 +369,7 @@ def register_employer(request):
 __all__ = [
     "_register_account",
     "login",
+    "logout",
     "mpin_reset",
     "mpin_set",
     "security_status",

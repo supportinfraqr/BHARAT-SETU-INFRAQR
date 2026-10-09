@@ -20,6 +20,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -284,39 +285,121 @@ def _create_notification(user, title, body, notif_type="APPROVAL", link=""):
         return None
 
 
+SESSION_CACHE_TTL = 60 * 60 * 24
+STALE_SESSION_MESSAGE = "Session is no longer active."
+
+
+def _session_cache_key(user_id):
+    return f"u:{user_id}:sid"
+
+
+def _set_current_session(user, sid):
+    """Persist the single active session id (DB + write-through Redis)."""
+    user.current_session_id = sid
+    user.current_session_at = timezone.now()
+    try:
+        user.save(update_fields=["current_session_id", "current_session_at"])
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        cache.set(_session_cache_key(user.id), sid, SESSION_CACHE_TTL)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _current_session_id(user):
+    """The user's active session id (Redis first, DB fallback)."""
+    key = _session_cache_key(user.id)
+    try:
+        cached = cache.get(key)
+        if cached is not None:
+            return cached
+    except Exception:  # noqa: BLE001
+        pass
+    sid = getattr(user, "current_session_id", "") or ""
+    try:
+        cache.set(key, sid, SESSION_CACHE_TTL)
+    except Exception:  # noqa: BLE001
+        pass
+    return sid
+
+
+def _blacklist_user_tokens(user):
+    """Revoke the user's outstanding refresh tokens (old sessions can't refresh)."""
+    try:
+        from rest_framework_simplejwt.token_blacklist.models import (
+            BlacklistedToken,
+            OutstandingToken,
+        )
+
+        for token in OutstandingToken.objects.filter(user=user):
+            BlacklistedToken.objects.get_or_create(token=token)
+    except Exception:  # noqa: BLE001 — best effort (never block login)
+        pass
+
+
 class BssSessionAuthentication(BaseAuthentication):
-    """Validate a simplejwt Bearer token if supplied; otherwise trust the
-    X-BSS-Subject header (demo tolerance for headers-only callers)."""
+    """Validate a simplejwt Bearer token, enforcing the user's single active
+    session. When the Bearer is absent/expired, the X-BSS-Subject fallback only
+    succeeds if it also carries the matching X-BSS-Session id."""
 
     def authenticate(self, request):
         auth_header = request.META.get("HTTP_AUTHORIZATION", "")
         if auth_header.startswith("Bearer "):
             try:
-                return JWTAuthentication().authenticate(request)
+                result = JWTAuthentication().authenticate(request)
             except Exception:
-                pass
+                result = None
+            if result is not None:
+                user, validated = result
+                if not _session_ok(user, validated.get("sid") if hasattr(validated, "get") else None):
+                    raise AuthenticationFailed(STALE_SESSION_MESSAGE)
+                return (user, validated)
+            # Invalid/expired Bearer: fall through to the header path below,
+            # which requires the active session id.
         subject = request.META.get("HTTP_X_BSS_SUBJECT", "")
         if subject:
             try:
                 user = User.objects.get(username=subject)
             except User.DoesNotExist:
                 return None
+            if not _session_ok(user, request.META.get("HTTP_X_BSS_SESSION", "")):
+                raise AuthenticationFailed(STALE_SESSION_MESSAGE)
             return (user, None)
         return None
 
 
-def _issue_tokens(user):
+def _session_ok(user, sid):
+    """True when the supplied session id is the user's current one.
+
+    A user with no recorded session (never logged in since this feature) is
+    allowed — this lets a still-valid token minted before the change keep
+    working until the next login."""
+    current = _current_session_id(user)
+    if not current:
+        return True
+    return str(sid or "") == current
+
+
+def _issue_tokens(user, sid=""):
     refresh = RefreshToken.for_user(user)
+    if sid:
+        refresh["sid"] = sid
+        refresh.access_token["sid"] = sid
     return str(refresh.access_token), str(refresh)
 
 
 def _make_session_payload(user):
-    access, refresh = _issue_tokens(user)
+    sid = str(uuid.uuid4())
+    # Replacing the active session revokes every previously issued token.
+    _blacklist_user_tokens(user)
+    _set_current_session(user, sid)
+    access, refresh = _issue_tokens(user, sid)
     role = user.role
     return {
         "subject": user.username,
         "role": PORTAL_ROLE.get(role, role),
-        "sessionId": str(uuid.uuid4()),
+        "sessionId": sid,
         "accessToken": access,
         "refreshToken": refresh,
     }
@@ -713,6 +796,11 @@ __all__ = [
     "_issue_otp",
     "_issue_tokens",
     "_make_session_payload",
+    "_set_current_session",
+    "_blacklist_user_tokens",
+    "_current_session_id",
+    "_session_ok",
+    "STALE_SESSION_MESSAGE",
     "_mobile_credential_for",
     "_nominee_doc_blob",
     "_parse_date",
