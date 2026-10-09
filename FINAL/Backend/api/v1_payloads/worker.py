@@ -365,7 +365,8 @@ def _worker_attendance_section(user):
     title = {"PRESENT": "Present", "ABSENT": "Absent", "LEAVE": "Leave",
              "HOLIDAY": "Holiday", "EXPECTED": "Present", "LATE": "Late",
              "HALF_DAY": "Half Day"}
-    method_label = {"QR": "QR Scan", "NFC": "RFID", "CAMERA": "CCTV"}
+    method_label = {"QR": "QR Scan", "NFC": "RFID", "CAMERA": "CCTV",
+                    "SELF": "Self (GPS)", "SHEET": "Uploaded sheet"}
 
     def clock(value):
         if not value:

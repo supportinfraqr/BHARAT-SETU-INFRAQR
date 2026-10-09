@@ -1,10 +1,15 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { IScannerControls } from '@zxing/browser';
 import {
   CalendarDays,
   List,
   QrCode,
   ScanLine,
+  MapPin,
+  Loader2,
+  Upload,
+  X,
   RadioTower,
   CheckCircle2,
   XCircle,
@@ -22,6 +27,8 @@ import { fieldClass, ModuleShell } from '@/components/worker/ModuleShell';
 import type { AttendanceRecord } from '@/types/portal';
 import { useWorker } from '@/contexts/WorkerContext';
 import EnterpriseDataTable, { DataColumn } from '@/components/worker/EnterpriseDataTable';
+import ScanFrame from '@/components/qr/ScanFrame';
+import { createQrReader, QR_VIDEO_CONSTRAINTS, applyContinuousFocus, decodeQrFromImageFile } from '@/lib/qrScanner';
 
 const DAY_CODES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -30,11 +37,88 @@ function dayKey(d: Date) {
 }
 
 export default function AttendancePage() {
-  const { portal } = useWorker();
+  const { portal, refresh } = useWorker();
   const attendanceData = portal.attendance;
   const [view, setView] = useState<'calendar' | 'history'>('calendar');
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
   const records = attendanceData.records;
+
+  // ── Self attendance: scan the site QR + capture GPS ──────────────────────
+  type MarkState = 'idle' | 'scanning' | 'locating' | 'submitting' | 'done' | 'already' | 'error';
+  type MarkResult = { distanceM?: number | null; radiusM?: number | null; outsideM?: number | null; accuracyM?: number | null; within?: boolean | null; clubbed?: boolean | null; geofenceOk?: boolean | null; remarks?: string };
+  const [markOpen, setMarkOpen] = useState(false);
+  const [markState, setMarkState] = useState<MarkState>('idle');
+  const [markMessage, setMarkMessage] = useState('');
+  const [markResult, setMarkResult] = useState<MarkResult | null>(null);
+  const scanVideoRef = useRef<HTMLVideoElement>(null);
+  const scanControls = useRef<IScannerControls | null>(null);
+
+  const stopScan = useCallback(() => { scanControls.current?.stop(); scanControls.current = null; }, []);
+  useEffect(() => () => stopScan(), [stopScan]);
+
+  const submitMark = useCallback((siteToken: string) => {
+    if (!navigator.geolocation) { setMarkState('error'); setMarkMessage('Location is not supported on this device.'); return; }
+    setMarkState('locating'); setMarkMessage('Capturing your location…');
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      setMarkState('submitting'); setMarkMessage('Marking attendance…');
+      try {
+        const response = await fetch('/api/worker/attendance/site-scan', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ siteToken, lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+        });
+        const body = await response.json().catch(() => ({})) as { data?: MarkResult & { alreadyMarked?: boolean; site?: string }; error?: string };
+        if (!response.ok || !body.data) throw new Error(body.error ?? 'Attendance could not be marked.');
+        if (body.data.alreadyMarked) {
+          setMarkState('already');
+          setMarkMessage(`Already marked for today${body.data.site ? ` at ${body.data.site}` : ''}.`);
+          return;
+        }
+        setMarkResult(body.data);
+        setMarkState('done');
+        void refresh();
+      } catch (reason) {
+        setMarkState('error');
+        setMarkMessage(reason instanceof Error ? reason.message : 'Attendance could not be marked.');
+      } finally { stopScan(); }
+    }, (err) => {
+      setMarkState('error');
+      setMarkMessage(err.code === err.PERMISSION_DENIED
+        ? 'Location permission denied. Enable it and try again.'
+        : 'Could not get your location.');
+      stopScan();
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  }, [refresh, stopScan]);
+
+  const handleQrText = useCallback((text: string) => {
+    try {
+      const payload = JSON.parse(text) as { type?: string; siteToken?: string };
+      if (payload?.type !== 'BSS_SITE' || !payload.siteToken) {
+        setMarkState('error'); setMarkMessage('That is not a site QR code. Scan the site QR.');
+        return;
+      }
+      submitMark(payload.siteToken);
+    } catch { setMarkState('error'); setMarkMessage('That QR code is not a site QR.'); }
+  }, [submitMark]);
+
+  const startScan = useCallback(async () => {
+    setMarkOpen(true); setMarkState('scanning'); setMarkMessage('Point the camera at the site QR code'); setMarkResult(null);
+    try {
+      const reader = createQrReader();
+      scanControls.current = await reader.decodeFromConstraints(QR_VIDEO_CONSTRAINTS, scanVideoRef.current!, r => {
+        if (r) { stopScan(); handleQrText(r.getText()); }
+      });
+      applyContinuousFocus(scanControls.current);
+    } catch { setMarkState('error'); setMarkMessage('Camera access was unavailable. You can upload a site QR image instead.'); }
+  }, [handleQrText, stopScan]);
+
+  const scanFile = useCallback(async (file?: File) => {
+    if (!file) return;
+    setMarkState('scanning'); setMarkMessage('Reading QR image…');
+    try { handleQrText(await decodeQrFromImageFile(file)); }
+    catch { setMarkState('error'); setMarkMessage('No valid site QR could be read from that image.'); }
+  }, [handleQrText]);
+
+  const closeMark = useCallback(() => { stopScan(); setMarkOpen(false); setMarkState('idle'); setMarkMessage(''); }, [stopScan]);
 
   // Calendar grid anchor & navigation
   const anchor = records[0]?.date ? new Date(records[0].date) : new Date();
@@ -157,6 +241,86 @@ export default function AttendancePage() {
       icon={CalendarDays}
     >
       <div className="space-y-6">
+        {/* Self attendance — scan the site QR + GPS */}
+        <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+          <header className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+            <MapPin size={16} className="text-[#073B67]" />
+            <div>
+              <h2 className="text-sm font-semibold text-gray-950">Mark today&apos;s attendance</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Scan your site&apos;s QR code while on site. Your GPS location is recorded and compared to the site coordinates.</p>
+            </div>
+          </header>
+          <div className="p-5 flex flex-wrap items-center gap-3">
+            <button type="button" onClick={() => void startScan()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-bold inline-flex items-center gap-2 hover:bg-[#062D4F]">
+              <QrCode size={16} /> Scan site QR &amp; mark attendance
+            </button>
+            <span className="text-[11px] text-gray-400">Source: <b className="text-gray-600">Self (GPS)</b> · one mark per day</span>
+          </div>
+        </section>
+
+        {markOpen && (
+          <div className="fixed inset-0 z-[120] grid place-items-center bg-black/70 p-4" onClick={closeMark}>
+            <div className="w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+              <header className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2"><QrCode size={16} /> Scan site QR</h3>
+                <button type="button" onClick={closeMark} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg text-gray-500 hover:bg-gray-100"><X size={18} /></button>
+              </header>
+              <div className="p-4 space-y-3">
+                {(markState === 'scanning' || markState === 'idle') && (
+                  <div className="relative w-full aspect-square bg-black rounded-xl overflow-hidden">
+                    <video ref={scanVideoRef} className="w-full h-full object-cover" muted playsInline />
+                    <ScanFrame active className="absolute inset-0" />
+                  </div>
+                )}
+
+                {(markState === 'locating' || markState === 'submitting') && (
+                  <p className="text-sm text-gray-600 flex items-center gap-2"><Loader2 size={16} className="animate-spin" />{markMessage}</p>
+                )}
+                {markState === 'already' && (
+                  <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-center gap-2"><Info size={15} />{markMessage}</p>
+                )}
+                {markState === 'error' && (
+                  <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 flex items-center gap-2"><XCircle size={15} />{markMessage}</p>
+                )}
+                {markState === 'done' && markResult && (
+                  <div className={`rounded-lg px-3 py-2 text-sm border ${markResult.geofenceOk ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+                    <p className="font-bold flex items-center gap-2">
+                      {markResult.geofenceOk ? <CheckCircle2 size={15} /> : <Info size={15} />}
+                      {markResult.distanceM == null
+                        ? 'Marked — site has no reference coordinates'
+                        : markResult.geofenceOk
+                          ? (markResult.within ? 'Marked — within site' : 'Marked — within GPS tolerance')
+                          : 'Marked — flagged outside geo-fence'}
+                    </p>
+                    {markResult.distanceM != null && (
+                      <p className="text-xs mt-1">
+                        {markResult.distanceM} m from site · radius {markResult.radiusM} m
+                        {markResult.outsideM ? ` · ${markResult.outsideM} m outside` : ''}
+                        {markResult.accuracyM != null ? ` · ±${markResult.accuracyM} m` : ''}
+                      </p>
+                    )}
+                    {markResult.remarks && <p className="text-[11px] mt-0.5 opacity-80">{markResult.remarks}</p>}
+                  </div>
+                )}
+
+                {(markState === 'scanning' || markState === 'idle' || markState === 'error') && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-gray-500">{markMessage || 'Point the camera at the site QR code'}</span>
+                    <label className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer hover:bg-gray-50">
+                      <Upload size={14} /> Upload QR image
+                      <input type="file" accept="image/*" className="hidden" onChange={e => { void scanFile(e.target.files?.[0]); e.target.value = ''; }} />
+                    </label>
+                  </div>
+                )}
+
+                {(markState === 'done' || markState === 'already') && (
+                  <button type="button" onClick={closeMark} className="w-full h-10 rounded-lg bg-[#073B67] text-white text-sm font-bold">Done</button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Connection Banner */}
         <div className="bg-gradient-to-r from-[#073B67] to-[#0A4D87] rounded-3xl p-6 text-white shadow-xl shadow-[#073B67]/10 relative overflow-hidden">
           <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none" />

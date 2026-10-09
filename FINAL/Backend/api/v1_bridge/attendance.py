@@ -559,6 +559,137 @@ def worker_face_photo_file(request, photo_id):
     return FileResponse(handle, content_type="image/jpeg")
 
 
+def _haversine_m(lat1, lon1, lat2, lon2):
+    """Great-circle distance in metres between two WGS84 points."""
+    import math
+
+    radius = 6371000.0
+    phi1 = math.radians(float(lat1))
+    phi2 = math.radians(float(lat2))
+    dphi = math.radians(float(lat2) - float(lat1))
+    dlambda = math.radians(float(lon2) - float(lon1))
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    return 2 * radius * math.asin(min(1.0, math.sqrt(a)))
+
+
+DEFAULT_GEOFENCE_RADIUS_M = 100.0
+GPS_TOLERANCE_MAX_M = 50.0
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_mark_attendance_site(request):
+    """Worker marks today's attendance by scanning the site's own QR while on site.
+
+    The mark is ALWAYS recorded (never rejected) as capture_method="SELF" /
+    verification_type="gps_self", with the GPS coordinates, distance from the
+    site and the accuracy stored. It is flagged when outside the site geo-fence
+    (default radius 100 m). A worker may only scan a site they are bound to, and
+    a second attempt on the same day returns "already marked"."""
+    from bss_core.models import Attendance, Site, WorkerContractorBinding
+
+    if request.user.role != "worker":
+        return Response({"error": "Only workers can mark their own attendance."},
+                        status=status.HTTP_403_FORBIDDEN)
+    body = request.data if isinstance(request.data, dict) else {}
+    site_token = str(body.get("siteToken") or "").strip()
+    if not site_token:
+        return Response({"error": "Scan the site QR to mark attendance."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    site = Site.objects.filter(site_qr_token=site_token).first()
+    if site is None:
+        return Response({"error": "Unknown site QR."}, status=status.HTTP_404_NOT_FOUND)
+
+    binding = (WorkerContractorBinding.objects
+               .filter(worker=request.user, site=site, binding_status="ACCEPTED")
+               .first())
+    if binding is None:
+        return Response({"error": "You are not bound to this site."},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    today = timezone.localdate()
+    existing = (Attendance.objects.filter(worker=request.user, attendance_date=today)
+                .order_by("id").first())
+    if existing is not None:
+        return Response({"data": {
+            "alreadyMarked": True,
+            "site": site.site_name,
+            "capture": existing.capture_method,
+            "record": {
+                "id": str(existing.id),
+                "status": existing.status,
+                "capture": existing.capture_method,
+                "checkIn": existing.check_in_time.isoformat() if existing.check_in_time else None,
+            },
+        }}, status=status.HTTP_200_OK)
+
+    try:
+        lat = float(body.get("lat"))
+        lng = float(body.get("lng"))
+    except (TypeError, ValueError):
+        return Response({"error": "Location is required to mark attendance."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    try:
+        accuracy = float(body.get("accuracy")) if body.get("accuracy") is not None else None
+    except (TypeError, ValueError):
+        accuracy = None
+
+    now = timezone.now()
+    radius = float(site.geo_fence_radius or DEFAULT_GEOFENCE_RADIUS_M)
+    defaults = {
+        "contractor": binding.contractor,
+        "status": "PRESENT",
+        "capture_method": "SELF",
+        "verification_type": "gps_self",
+        "check_in_time": now,
+        "is_verified": True,
+        "gps_lat": round(lat, 6),
+        "gps_long": round(lng, 6),
+        "gps_accuracy_m": accuracy,
+    }
+
+    distance = within = clubbed = None
+    remarks = "Self attendance via site QR"
+    if site.latitude is not None and site.longitude is not None:
+        distance = _haversine_m(lat, lng, float(site.latitude), float(site.longitude))
+        tolerance = min(accuracy or 0.0, GPS_TOLERANCE_MAX_M)
+        within = distance <= radius
+        clubbed = distance <= radius + tolerance
+        defaults["gps_distance_m"] = round(distance, 2)
+        defaults["is_geofence_ok"] = bool(within or clubbed)
+        if not (within or clubbed):
+            remarks = (f"Self attendance flagged outside geo-fence "
+                       f"({distance - radius:.0f} m beyond the {radius:.0f} m radius)")
+        elif not within:
+            remarks = (f"Self attendance within GPS tolerance "
+                       f"({distance:.0f} m vs {radius:.0f} m radius)")
+        else:
+            remarks = f"Self attendance within geo-fence ({distance:.0f} m)"
+    else:
+        defaults["is_geofence_ok"] = None
+        defaults["gps_distance_m"] = None
+        remarks = "No site reference coordinates found"
+    defaults["remarks"] = remarks[:255]
+
+    attendance = Attendance.objects.create(
+        worker=request.user, site=site, attendance_date=today, **defaults)
+
+    return Response({"data": {
+        "alreadyMarked": False,
+        "id": str(attendance.id),
+        "site": site.site_name,
+        "within": within,
+        "clubbed": clubbed,
+        "distanceM": round(distance, 1) if distance is not None else None,
+        "radiusM": radius if distance is not None else None,
+        "outsideM": round(max(0.0, distance - radius), 1) if distance is not None else None,
+        "accuracyM": round(accuracy, 1) if accuracy is not None else None,
+        "geofenceOk": defaults["is_geofence_ok"],
+        "remarks": remarks,
+    }}, status=status.HTTP_201_CREATED)
+
+
 def _worker_for_token(token):
     """Resolve a pipeline detection token to a worker user (BSS id, username,
     or enrolled face name)."""
@@ -575,7 +706,7 @@ def _worker_for_token(token):
 
 def _mark_worker_attendance(worker, site, verification, score, camera_label="", camera_area=""):
     """Upsert today's CAMERA attendance for one worker (idempotent per day)."""
-    from bss_core.models import Attendance
+    from bss_core.models import Attendance, WorkerContractorBinding
 
     confidence = None
     try:
@@ -585,8 +716,15 @@ def _mark_worker_attendance(worker, site, verification, score, camera_label="", 
     except (TypeError, ValueError):
         confidence = None
 
+    # Attribute the CCTV mark to the worker's contractor (if currently bound) so
+    # camera rows carry the same source attribution as QR / RFID / sheet.
+    binding = (WorkerContractorBinding.objects
+               .filter(worker=worker, binding_status="ACCEPTED")
+               .order_by("-id").first())
+
     defaults = {
         "site": site,
+        "contractor": binding.contractor if binding else None,
         "status": "PRESENT",
         "capture_method": "CAMERA",
         "verification_type": verification,

@@ -40,9 +40,10 @@ class Attendance(models.Model):
               ("HOLIDAY", "Holiday"), ("EXPECTED", "Expected"), ("LATE", "Late"),
               ("HALF_DAY", "Half Day")]
     CAPTURE = [("QR", "QR"), ("NFC", "NFC"), ("CAMERA", "Camera"),
-               ("SHEET", "Uploaded Sheet")]
+               ("SHEET", "Uploaded Sheet"), ("SELF", "Self (GPS)")]
     VERIFY = [("qr_worker", "QR Worker"), ("qr_site", "QR Site"), ("nfc_card", "NFC Card"),
-              ("face_image", "Face Image"), ("badge_image", "Badge Image")]
+              ("face_image", "Face Image"), ("badge_image", "Badge Image"),
+              ("gps_self", "GPS Self")]
 
     worker = models.ForeignKey(User, on_delete=models.CASCADE, related_name="attendance")
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="attendance")
@@ -61,6 +62,10 @@ class Attendance(models.Model):
     gps_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     gps_long = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     is_geofence_ok = models.BooleanField(null=True, blank=True)
+    # Worker self-mark (site-QR + GPS): metres from the site and the reported
+    # GPS accuracy. ``gps_distance_m`` > the site radius means "flagged outside".
+    gps_distance_m = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    gps_accuracy_m = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     # Which configured CCTV camera / attendance area produced this mark (blank
     # for non-CCTV capture).
     camera_label = models.CharField(max_length=120, blank=True)
