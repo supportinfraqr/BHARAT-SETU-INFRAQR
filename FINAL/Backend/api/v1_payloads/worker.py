@@ -6,6 +6,9 @@ from .shared import *  # noqa: F401,F403
 
 
 _LETTER_MASTER_CODES = {"APPT", "EXPL"}
+# Letter documents surfaced as issued letters (incl. the frozen Employment Card
+# shown in the worker's Employment History).
+_ISSUED_LETTER_CODES = {"APPT", "EXPL", "CARD"}
 
 
 def _worker_identity_section(identity):
@@ -981,7 +984,7 @@ def _worker_issued_letters(user):
     engagement. Lets the UI show "current" and "older" letters as separate
     sections instead of collapsing them by document master."""
     masters = {m.code: m for m in WorkerDocumentMaster.objects.filter(
-        code__in=_LETTER_MASTER_CODES)}
+        code__in=_ISSUED_LETTER_CODES)}
     if not masters:
         return []
     active_binding = (WorkerContractorBinding.objects
@@ -993,7 +996,7 @@ def _worker_issued_letters(user):
                       document_id__in=[m.id for m in masters.values()])
               .order_by("-uploaded_at", "-id")):
         m = masters.get(d.document.code) or d.document
-        match = re.match(r"^(APPT|EXPL)-(\d+)-", d.file_name or "")
+        match = re.match(r"^(APPT|EXPL|CARD)-(\d+)-", d.file_name or "")
         binding_id = int(match.group(2)) if match else None
         rows.append({
             "id": d.id,
