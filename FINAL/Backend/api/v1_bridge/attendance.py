@@ -5,7 +5,7 @@ existing ``Attendance`` table marked as ``capture_method="SHEET"``.
 
 import io
 import re
-from datetime import date
+from datetime import date, timedelta
 
 from django.db import transaction
 from django.http import HttpResponse
@@ -268,6 +268,64 @@ def attendance_uploaded(request):
             "site": row.site.site_name if row.site else "",
             "status": row.status, "capture": "Uploaded sheet",
         })
+    return Response({"data": rows}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def contractor_attendance_records(request):
+    """Month-wise, per-site attendance records (ALL sources: QR / RFID / CCTV /
+    Self GPS / uploaded sheet) for a contractor's own workers, with full detail."""
+    from django.db.models import Q
+
+    from bss_core.models import Attendance, WorkerContractorBinding
+
+    user = request.user
+    if user.role != "contractor":
+        return Response({"error": "Only contractors can view attendance records."},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    worker_ids = list(WorkerContractorBinding.objects
+                      .filter(contractor=user, binding_status="ACCEPTED")
+                      .values_list("worker_id", flat=True))
+    qs = (Attendance.objects
+          .filter(Q(contractor=user) | Q(worker_id__in=worker_ids))
+          .select_related("worker", "site", "worker__worker_identity"))
+
+    site_id = request.query_params.get("siteId")
+    if site_id:
+        try:
+            qs = qs.filter(site_id=int(site_id))
+        except (TypeError, ValueError):
+            pass
+
+    start = end = None
+    month = (request.query_params.get("month") or "").strip()  # YYYY-MM
+    if month:
+        try:
+            year, mon = (int(part) for part in month.split("-")[:2])
+            start = date(year, mon, 1)
+            end = (date(year + (1 if mon == 12 else 0), 1 if mon == 12 else mon + 1, 1)
+                   - timedelta(days=1))
+        except (ValueError, TypeError):
+            start = end = None
+    else:
+        start = sheets.parse_date(request.query_params.get("start"))
+        end = sheets.parse_date(request.query_params.get("end"))
+
+    if start:
+        qs = qs.filter(attendance_date__gte=start)
+    if end:
+        qs = qs.filter(attendance_date__lte=end)
+
+    rows = []
+    for a in qs.order_by("-attendance_date", "worker__username")[:2000]:
+        detail = payloads.attendance_detail(a)
+        identity = getattr(a.worker, "worker_identity", None)
+        detail["worker"] = payloads._party_name(a.worker)
+        detail["bssId"] = getattr(identity, "bss_worker_id", "") if identity else ""
+        rows.append(detail)
     return Response({"data": rows}, status=status.HTTP_200_OK)
 
 

@@ -360,34 +360,72 @@ def _worker_advances(user):
     return [_advance_row(a) for a in advances]
 
 
-def _worker_attendance_section(user):
-    rows = Attendance.objects.filter(worker=user).order_by("-attendance_date")[:60]
-    title = {"PRESENT": "Present", "ABSENT": "Absent", "LEAVE": "Leave",
-             "HOLIDAY": "Holiday", "EXPECTED": "Present", "LATE": "Late",
-             "HALF_DAY": "Half Day"}
-    method_label = {"QR": "QR Scan", "NFC": "RFID", "CAMERA": "CCTV",
-                    "SELF": "Self (GPS)", "SHEET": "Uploaded sheet"}
+ATTENDANCE_SOURCE_LABEL = {"QR": "QR Scan", "NFC": "RFID", "CAMERA": "CCTV",
+                           "SELF": "Self (GPS)", "SHEET": "Uploaded sheet"}
+ATTENDANCE_VERIFY_LABEL = {"qr_worker": "QR (worker)", "qr_site": "QR (site)",
+                           "nfc_card": "RFID card", "face_image": "Face (CCTV)",
+                           "badge_image": "Badge image", "gps_self": "GPS self"}
+
+
+def attendance_detail(a):
+    """Full serialization of one Attendance row (source + verification + GPS +
+    camera details) shared by the worker and contractor attendance views."""
+    raw = _d(a.status)
+    capture = _d(a.capture_method)
 
     def clock(value):
         if not value:
             return None
         try:
             return timezone.localtime(value).strftime("%H:%M")
-        except Exception:
+        except Exception:  # noqa: BLE001
             return _dts(value)
+
+    def number(value):
+        try:
+            return float(value) if value is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    return {
+        "id": str(a.id),
+        "date": _dts(a.attendance_date),
+        "statusCode": raw,
+        "source": ATTENDANCE_SOURCE_LABEL.get(capture, capture),
+        "method": ATTENDANCE_SOURCE_LABEL.get(capture, capture),
+        "verification": ATTENDANCE_VERIFY_LABEL.get(_d(a.verification_type), _d(a.verification_type)),
+        "site": a.site.site_name if a.site else "",
+        "siteId": a.site_id,
+        "checkIn": clock(a.check_in_time),
+        "checkOut": clock(a.check_out_time),
+        "camera": a.camera_label or "",
+        "cameraArea": a.camera_area or "",
+        "confidence": number(a.confidence_pct),
+        "geofenceOk": a.is_geofence_ok,
+        "distanceM": number(a.gps_distance_m),
+        "accuracyM": number(a.gps_accuracy_m),
+        "gpsLat": number(a.gps_lat),
+        "gpsLong": number(a.gps_long),
+        "verified": bool(a.is_verified),
+        "remarks": a.remarks or "",
+    }
+
+
+def _worker_attendance_section(user):
+    rows = (Attendance.objects.filter(worker=user).select_related("site")
+            .order_by("-attendance_date")[:400])
+    title = {"PRESENT": "Present", "ABSENT": "Absent", "LEAVE": "Leave",
+             "HOLIDAY": "Holiday", "EXPECTED": "Present", "LATE": "Late",
+             "HALF_DAY": "Half Day"}
 
     records = []
     for a in rows:
-        raw = _d(a.status)
+        detail = attendance_detail(a)
+        raw = detail["statusCode"]
         records.append({
-            "date": _dts(a.attendance_date),
+            **detail,
             "presence": title.get(raw, raw),
             "shift": "",
-            "site": a.site.site_name if a.site else "",
-            "checkIn": clock(a.check_in_time),
-            "checkOut": clock(a.check_out_time),
-            "status": raw,
-            "method": method_label.get(_d(a.capture_method), _d(a.capture_method)),
         })
     return {"source": "BSS Attendance", "records": records, "syncedAt": _dts(timezone.now())}
 
@@ -1346,6 +1384,7 @@ def _worker_compliance_label(worker):
 
 
 __all__ = [
+    "attendance_detail",
     "_worker_address_section",
     "_worker_advances",
     "_worker_announcements",

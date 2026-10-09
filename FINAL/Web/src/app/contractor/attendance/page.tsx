@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, CheckCircle2, Download, FileSpreadsheet, Upload } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CalendarDays, CheckCircle2, Download, FileSpreadsheet, Upload, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
 
-type AttendanceRow = { id: string; date: string; worker: string; site: string; status: string; capture: string };
+type AttendanceRow = {
+  id: string; date: string; worker?: string; bssId?: string; site: string;
+  status?: string; statusCode?: string; capture?: string; source?: string;
+  verification?: string; checkIn?: string; checkOut?: string;
+  camera?: string; cameraArea?: string; confidence?: number | null;
+  geofenceOk?: boolean | null; distanceM?: number | null; accuracyM?: number | null; remarks?: string;
+};
 type UploadResult = { created: number; updated: number; workers: number; rows: number; unknown: string[]; site: string; start: string; end: string };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -26,6 +32,10 @@ function monthBounds() {
   const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   return { start: isoDate(first), end: isoDate(last) };
 }
+function currentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
 
 export default function ContractorAttendancePage() {
   const { contractor } = useContractor();
@@ -36,19 +46,32 @@ export default function ContractorAttendancePage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [result, setResult] = useState<UploadResult | null>(null);
-  const [rows, setRows] = useState<AttendanceRow[]>([]);
+
+  // Month-wise, per-site records (all sources).
+  const [recMonth, setRecMonth] = useState(() => currentMonth());
+  const [recSite, setRecSite] = useState('');
+  const [recRows, setRecRows] = useState<AttendanceRow[]>([]);
+  const [recBusy, setRecBusy] = useState(false);
+  const [recSelected, setRecSelected] = useState<AttendanceRow | null>(null);
 
   const sites = contractor.sites;
 
-  useEffect(() => {
+  const loadRecords = useCallback(() => {
     let active = true;
-    const query = new URLSearchParams({ start, end });
-    void fetch(`/api/contractor/attendance?${query}`, { cache: 'no-store' })
+    setRecBusy(true);
+    const query = new URLSearchParams();
+    if (recMonth) query.set('month', recMonth);
+    if (recSite) query.set('siteId', recSite);
+    void fetch(`/api/contractor/attendance/records?${query}`, { cache: 'no-store' })
       .then(response => (response.ok ? response.json() : null))
-      .then((body: { data?: AttendanceRow[] } | null) => { if (active && body?.data) setRows(body.data); })
-      .catch(() => {});
+      .then((body: { data?: AttendanceRow[] } | null) => { if (active && body?.data) setRecRows(body.data); })
+      .catch(() => {})
+      .finally(() => { if (active) setRecBusy(false); });
     return () => { active = false; };
-  }, [start, end, result]);
+  }, [recMonth, recSite]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial + filter reload
+  useEffect(() => loadRecords(), [loadRecords, result]);
 
   const downloadTemplate = () => {
     setError(''); setNotice('');
@@ -76,26 +99,42 @@ export default function ContractorAttendancePage() {
     } finally { setBusy(false); }
   }
 
-  const columns: DataColumn<AttendanceRow>[] = [
+  const recColumns: DataColumn<AttendanceRow>[] = [
     { id: 'date', header: 'Date', value: r => r.date, render: r => displayDate(r.date) },
-    { id: 'worker', header: 'Worker', value: r => r.worker },
+    { id: 'worker', header: 'Worker', value: r => r.worker || '' },
+    { id: 'bssId', header: 'BSS ID', value: r => r.bssId || '—', render: r => <span className="font-mono text-[11px]">{r.bssId || '—'}</span> },
     { id: 'site', header: 'Site', value: r => r.site || '—', render: r => r.site || '—' },
-    { id: 'status', header: 'Status', value: r => STATUS_LABEL[r.status] ?? r.status, render: r => <span className={r.status === 'PRESENT' ? 'text-green-700' : r.status === 'ABSENT' ? 'text-red-700' : 'text-orange-700'}>{STATUS_LABEL[r.status] ?? r.status}</span> },
-    { id: 'source', header: 'Source', value: r => r.capture, render: r => <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">{r.capture}</span> },
+    { id: 'in', header: 'In', value: r => r.checkIn || '—', render: r => r.checkIn || '—' },
+    { id: 'out', header: 'Out', value: r => r.checkOut || '—', render: r => r.checkOut || '—' },
+    { id: 'status', header: 'Status', value: r => STATUS_LABEL[r.statusCode || r.status || ''] ?? (r.statusCode || r.status || '—'), render: r => <span className={(r.statusCode || r.status) === 'PRESENT' ? 'text-green-700' : (r.statusCode || r.status) === 'ABSENT' ? 'text-red-700' : 'text-orange-700'}>{STATUS_LABEL[r.statusCode || r.status || ''] ?? (r.statusCode || r.status || '—')}</span> },
+    { id: 'source', header: 'Source', value: r => r.source || r.capture || '', render: r => <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">{r.source || r.capture}</span> },
+    { id: 'view', header: '', value: () => '', render: r => <button type="button" onClick={() => setRecSelected(r)} className="text-[11px] font-bold text-[#073B67] hover:underline">Details</button> },
   ];
 
-  const presentCount = useMemo(() => rows.filter(r => r.status === 'PRESENT').length, [rows]);
+  const presentCount = useMemo(() => recRows.filter(r => (r.statusCode || r.status) === 'PRESENT').length, [recRows]);
 
   return <div className="space-y-6 pb-12">
     <header className="bss-page-header flex-col sm:flex-row">
-      <div><p className="bss-eyebrow">Contractor operations</p><h1 className="bss-page-title mt-1">Attendance — Uploaded Sheet</h1><p className="bss-page-description">Pick a start and end date, download the BSS-ID / date-wise CSV template, fill P (Present) / A (Absent) / L (Leave), upload it, and the entries sync into the existing attendance system marked as “from uploaded sheet”.</p></div>
+      <div><p className="bss-eyebrow">Contractor operations</p><h1 className="bss-page-title mt-1">Attendance</h1><p className="bss-page-description">View your workers&apos; attendance month-wise and per site — every source (QR, RFID, CCTV, Self GPS, uploaded sheet) with full detail — and upload a filled sheet when needed.</p></div>
     </header>
 
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
 
     <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-      <header className="px-5 py-4 border-b border-gray-100 flex items-center gap-2"><CalendarDays size={16} className="text-[#073B67]"/><div><h2 className="text-sm font-semibold text-gray-950">Attendance sheet</h2><p className="text-xs text-gray-400 mt-0.5">Choose the site and date range, download the CSV, fill it and upload it back.</p></div></header>
+      <header className="px-5 py-4 border-b border-gray-100 flex items-center gap-2"><CalendarDays size={16} className="text-[#073B67]"/><div><h2 className="text-sm font-semibold text-gray-950">Attendance records</h2><p className="text-xs text-gray-400 mt-0.5">{recRows.length} entr{recRows.length === 1 ? 'y' : 'ies'} · {presentCount} present this month</p></div></header>
+      <div className="p-5 space-y-4">
+        <div className="grid sm:grid-cols-2 gap-3">
+          <label className="text-xs font-semibold">Month<input type="month" value={recMonth} onChange={e => setRecMonth(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white"/></label>
+          <label className="text-xs font-semibold">Site<select value={recSite} onChange={e => setRecSite(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white"><option value="">All my sites</option>{sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` · ${s.code}` : ''}</option>)}</select></label>
+        </div>
+        {recBusy && <p className="text-[11px] text-gray-400">Loading attendance…</p>}
+        <EnterpriseDataTable title="Attendance records" rows={recRows} columns={recColumns} rowKey={r => r.id} filename={`attendance-records-${recMonth}`} />
+      </div>
+    </section>
+
+    <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+      <header className="px-5 py-4 border-b border-gray-100 flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#073B67]"/><div><h2 className="text-sm font-semibold text-gray-950">Upload attendance sheet</h2><p className="text-xs text-gray-400 mt-0.5">Choose the site and date range, download the CSV, fill it and upload it back.</p></div></header>
       <div className="p-5 space-y-4">
         <div className="grid sm:grid-cols-3 gap-3">
           <label className="text-xs font-semibold">Site<select value={site} onChange={e => setSite(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white"><option value="">All my sites</option>{sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.code ? ` · ${s.code}` : ''}</option>)}</select></label>
@@ -110,13 +149,50 @@ export default function ContractorAttendancePage() {
         {result && <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 text-xs text-emerald-800">
           Synced <strong>{result.rows}</strong> worker row(s) → <strong>{result.created}</strong> new + <strong>{result.updated}</strong> updated attendance entries for <strong>{result.workers}</strong> worker(s){result.site ? ` at ${result.site}` : ''} ({result.start} → {result.end}).{result.unknown.length ? ` ${result.unknown.length} BSS ID(s) not matched to your workers: ${result.unknown.slice(0, 5).join(', ')}.` : ''}
         </div>}
-        <p className="text-[11px] text-gray-400">The CSV has a <strong>BSS ID</strong> column plus one column per date (<code>YYYY-MM-DD</code>). Uploaded rows are stored in the same attendance table as QR / NFC / camera punches, with capture method <strong>Uploaded sheet</strong> — so they flow into payroll and worker attendance views automatically.</p>
       </div>
     </section>
 
-    <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-      <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between"><div><h2 className="text-sm font-semibold text-gray-950">Uploaded attendance — {start} → {end}</h2><p className="text-xs text-gray-400 mt-0.5">{rows.length} entr{rows.length === 1 ? 'y' : 'ies'} · {presentCount} present</p></div></header>
-      <EnterpriseDataTable title={`Uploaded attendance — ${start} → ${end}`} rows={rows} columns={columns} rowKey={r => r.id} filename={`attendance-uploaded-${start}-to-${end}`} />
-    </section>
+    {recSelected && (
+      <div className="fixed inset-0 z-[120] grid place-items-center bg-black/60 p-4" onClick={() => setRecSelected(null)}>
+        <div className="w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+          <header className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase">Attendance Detail</p>
+              <h3 className="text-sm font-extrabold text-gray-900">{displayDate(recSelected.date)} · {recSelected.worker}</h3>
+            </div>
+            <button type="button" onClick={() => setRecSelected(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg text-gray-500 hover:bg-gray-100"><X size={18}/></button>
+          </header>
+          <div className="p-4 space-y-2 text-xs">
+            <Detail label="BSS ID" value={recSelected.bssId || '—'} mono />
+            <Detail label="Site" value={recSelected.site || '—'} />
+            <Detail label="Status" value={STATUS_LABEL[recSelected.statusCode || recSelected.status || ''] ?? (recSelected.statusCode || recSelected.status || '—')} />
+            <Detail label="Source" value={recSelected.source || recSelected.capture || '—'} />
+            <Detail label="Verification" value={recSelected.verification || '—'} />
+            <div className="grid grid-cols-2 gap-2">
+              <Detail label="Check In" value={recSelected.checkIn || '—'} />
+              <Detail label="Check Out" value={recSelected.checkOut || '—'} />
+            </div>
+            {recSelected.camera && <Detail label="CCTV Camera" value={`${recSelected.camera}${recSelected.cameraArea && recSelected.cameraArea !== recSelected.camera ? ` · ${recSelected.cameraArea}` : ''}`} />}
+            {(recSelected.geofenceOk !== undefined && recSelected.geofenceOk !== null) && (
+              <Detail label="Geo-fence" value={`${recSelected.geofenceOk ? 'Within site' : 'Flagged outside'}${recSelected.distanceM != null ? ` · ${recSelected.distanceM} m` : ''}`} />
+            )}
+            {typeof recSelected.confidence === 'number' && <Detail label="Match Confidence" value={`${recSelected.confidence}%`} />}
+            {recSelected.remarks && <Detail label="Remarks" value={recSelected.remarks} />}
+          </div>
+          <div className="p-4 pt-0">
+            <button type="button" onClick={() => setRecSelected(null)} className="w-full h-10 rounded-lg bg-[#073B67] text-white text-sm font-bold">Close</button>
+          </div>
+        </div>
+      </div>
+    )}
   </div>;
+}
+
+function Detail({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-gray-50 border border-gray-100">
+      <span className="text-gray-500 font-semibold">{label}</span>
+      <span className={`font-bold text-gray-900 text-right ${mono ? 'font-mono' : ''}`}>{value}</span>
+    </div>
+  );
 }

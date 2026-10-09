@@ -41,7 +41,10 @@ export default function AttendancePage() {
   const attendanceData = portal.attendance;
   const [view, setView] = useState<'calendar' | 'history'>('calendar');
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
+  const [siteFilter, setSiteFilter] = useState('');
   const records = attendanceData.records;
+  const sites = useMemo(() => Array.from(new Set(records.map(r => r.site).filter(Boolean))), [records]);
+  const visibleRecords = useMemo(() => (siteFilter ? records.filter(r => r.site === siteFilter) : records), [records, siteFilter]);
 
   // ── Self attendance: scan the site QR + capture GPS ──────────────────────
   type MarkState = 'idle' | 'scanning' | 'locating' | 'submitting' | 'done' | 'already' | 'error';
@@ -127,7 +130,7 @@ export default function AttendancePage() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstWeekday = new Date(year, month, 1).getDay();
   const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
-  const byDate = useMemo(() => new Map(records.map((r) => [r.date, r])), [records]);
+  const byDate = useMemo(() => new Map(visibleRecords.map((r) => [r.date, r])), [visibleRecords]);
   const todayKey = new Date().toISOString().slice(0, 10);
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -424,7 +427,16 @@ export default function AttendancePage() {
             </span>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            {sites.length > 1 && (
+              <label className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl px-3 py-2">
+                <Building2 size={13} className="text-[#073B67]" /> Site
+                <select value={siteFilter} onChange={e => setSiteFilter(e.target.value)} className="bg-transparent text-xs font-bold text-[#073B67] focus:outline-none">
+                  <option value="">All sites</option>
+                  {sites.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </label>
+            )}
             <div className="flex rounded-xl bg-gray-100 p-1 w-full sm:w-auto">
               <button
                 onClick={() => setView('calendar')}
@@ -576,7 +588,7 @@ export default function AttendancePage() {
         ) : (
           <EnterpriseDataTable
             title="Attendance Records History"
-            rows={records}
+            rows={visibleRecords}
             columns={attendanceColumns}
             rowKey={(r) => r.date}
             filename="bss-attendance-history"
@@ -661,8 +673,46 @@ export default function AttendancePage() {
 
                 {selectedRecord.method && (
                   <div className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100">
-                    <span className="text-xs text-gray-500 font-semibold">Validation Method</span>
-                    <span className="text-xs font-bold text-[#073B67]">{selectedRecord.method}</span>
+                    <span className="text-xs text-gray-500 font-semibold">Source</span>
+                    <span className="text-xs font-bold text-[#073B67]">{selectedRecord.source || selectedRecord.method}</span>
+                  </div>
+                )}
+
+                {selectedRecord.verification && (
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                    <span className="text-xs text-gray-500 font-semibold">Verification</span>
+                    <span className="text-xs font-bold text-gray-900">{selectedRecord.verification}</span>
+                  </div>
+                )}
+
+                {selectedRecord.camera && (
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                    <span className="text-xs text-gray-500 font-semibold">CCTV Camera</span>
+                    <span className="text-xs font-bold text-gray-900">{selectedRecord.camera}{selectedRecord.cameraArea && selectedRecord.cameraArea !== selectedRecord.camera ? ` · ${selectedRecord.cameraArea}` : ''}</span>
+                  </div>
+                )}
+
+                {(selectedRecord.geofenceOk !== undefined && selectedRecord.geofenceOk !== null) && (
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                    <span className="text-xs text-gray-500 font-semibold">Geo-fence</span>
+                    <span className={`text-xs font-bold ${selectedRecord.geofenceOk ? 'text-emerald-700' : 'text-amber-700'}`}>
+                      {selectedRecord.geofenceOk ? 'Within site' : 'Flagged outside'}
+                      {selectedRecord.distanceM != null ? ` · ${selectedRecord.distanceM} m${selectedRecord.accuracyM != null ? ` (±${selectedRecord.accuracyM} m)` : ''}` : ''}
+                    </span>
+                  </div>
+                )}
+
+                {(typeof selectedRecord.confidence === 'number') && (
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                    <span className="text-xs text-gray-500 font-semibold">Match Confidence</span>
+                    <span className="text-xs font-bold text-gray-900">{selectedRecord.confidence}%</span>
+                  </div>
+                )}
+
+                {selectedRecord.remarks && (
+                  <div className="p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                    <span className="text-[10px] text-gray-500 font-bold block uppercase mb-0.5">Remarks</span>
+                    <span className="text-xs text-gray-700">{selectedRecord.remarks}</span>
                   </div>
                 )}
               </div>
@@ -726,5 +776,5 @@ const attendanceColumns: DataColumn<AttendanceRow>[] = [
   { id: 'site', header: 'Site', value: (r) => r.site },
   { id: 'checkIn', header: 'Check-in', value: (r) => r.checkIn ?? '—' },
   { id: 'checkOut', header: 'Check-out', value: (r) => r.checkOut ?? '—' },
-  { id: 'status', header: 'Status', value: (r) => r.status }
+  { id: 'status', header: 'Status', value: (r) => r.status ?? r.statusCode ?? '—' }
 ];
