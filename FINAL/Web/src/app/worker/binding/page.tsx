@@ -76,7 +76,7 @@ export default function BindingRequestsPage() {
   const [confirm, setConfirm] = useState<{ req: BindingRequest; kind: 'accept' | 'decline' | 'unbind' | 'withdraw' } | null>(null);
   const [historyFor, setHistoryFor] = useState<BindingRequest | null>(null);
   const [query, setQuery] = useState('');
-  const [tab, setTab] = useState<'action' | 'active' | 'all'>('all');
+  const [tab, setTab] = useState<'action' | 'active' | 'all'>('active');
 
   function runConfirm() {
     if (!confirm) return;
