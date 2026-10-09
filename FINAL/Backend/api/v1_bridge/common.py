@@ -343,6 +343,12 @@ class BssSessionAuthentication(BaseAuthentication):
     session. When the Bearer is absent/expired, the X-BSS-Subject fallback only
     succeeds if it also carries the matching X-BSS-Session id."""
 
+    def authenticate_header(self, request):
+        # Return a header so an unauthenticated/invalid request yields HTTP 401
+        # (not the DRF 403 fallback) — the frontends treat 401 as a stale
+        # session and redirect to login.
+        return "Bearer"
+
     def authenticate(self, request):
         auth_header = request.META.get("HTTP_AUTHORIZATION", "")
         if auth_header.startswith("Bearer "):

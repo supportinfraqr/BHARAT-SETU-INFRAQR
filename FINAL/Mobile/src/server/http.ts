@@ -17,7 +17,8 @@ export function isStaleSessionError(error: unknown): boolean {
   const message = error.message.toLowerCase();
   if (error.status === 403) {
     return message.includes('authentication credentials')
-      || message.includes('credentials were not provided');
+      || message.includes('credentials were not provided')
+      || message.includes('session is no longer');
   }
   if (error.status === 401) {
     // Only genuine token/session problems. A normal failed login ("Invalid
