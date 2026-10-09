@@ -1,7 +1,7 @@
 /**
  * Shared date formatting for the worker ID / employment cards.
  *
- * Every date on the cards follows the day-month-year concept (`09 Oct 2026`),
+ * Every date on the cards follows the day-month-year concept (`9-10-2026`),
  * regardless of how the source value is stored (ISO `1990-05-14`, a locale
  * string, or a Date). Unparseable values are returned unchanged.
  */
@@ -20,5 +20,5 @@ export function formatCardDate(value?: string | Date | null): string {
       : new Date(raw);
   }
   if (Number.isNaN(parsed.getTime())) return typeof value === 'string' ? value : '';
-  return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  return `${parsed.getDate()}-${parsed.getMonth() + 1}-${parsed.getFullYear()}`;
 }

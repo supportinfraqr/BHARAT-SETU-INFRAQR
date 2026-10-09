@@ -78,7 +78,7 @@ export default function WorkerEmploymentCard({
 
   // Real issue/validity dates come from the worker's employment record; fall
   // back to a 3-year window (issue = today, valid = issue + 3 years). Every
-  // date is rendered day-month-year (e.g. "09 Oct 2026").
+  // date is rendered day-month-year (e.g. "9-10-2026").
   const parseCardDate = (v?: string) => {
     if (!v) return null;
     const parsed = new Date(v);
