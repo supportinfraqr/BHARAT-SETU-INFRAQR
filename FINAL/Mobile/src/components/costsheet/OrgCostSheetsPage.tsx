@@ -106,15 +106,8 @@ export default function OrgCostSheetsPage() {
     if (!editing) return;
     setBusy(true); setError("");
     try {
-      const response = await fetch(`/api/cost-sheets/${editing.id}`, {
-        method:"PATCH", headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ name:editing.name, custom: editing.custom
-          .filter(c => (c.name || "").trim())
-          .map(c => ({ name:c.name, amount: c.isNew ? c.amount : (amounts[c.name] ?? c.amount), rateType:c.rateType, frequency:c.frequency, appliesTo:c.appliesTo })) }),
-      });
-      const body = await response.json().catch(() => ({})) as { data?:Template; error?:string };
-      if (!response.ok || !body.data) throw new Error(body.error ?? "The cost sheet could not be saved.");
-      setRows(current => current.map(r => r.id === editing.id ? body.data! : r));
+      const saved = await persistEditor();
+      setRows(current => current.map(r => r.id === editing.id ? saved : r));
       setEditing(null);
       setNotice("Cost sheet updated.");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Save failed."); }
@@ -152,9 +145,29 @@ export default function OrgCostSheetsPage() {
     finally { setBusy(false); }
   }
 
+  // Persist the editor's pending changes (custom heads / amounts / name).
+  async function persistEditor(): Promise<Template> {
+    if (!editing) throw new Error("Nothing to save.");
+    const response = await fetch(`/api/cost-sheets/${editing.id}`, {
+      method:"PATCH", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ name:editing.name, custom: editing.custom
+        .filter(c => (c.name || "").trim())
+        .map(c => ({ name:c.name, amount: c.isNew ? c.amount : (amounts[c.name] ?? c.amount), rateType:c.rateType, frequency:c.frequency, appliesTo:c.appliesTo })) }),
+    });
+    const body = await response.json().catch(() => ({})) as { data?:Template; error?:string };
+    if (!response.ok || !body.data) throw new Error(body.error ?? "The cost sheet could not be saved.");
+    return body.data;
+  }
+
   async function submitProposal(template: Template) {
     setBusy(true); setError(""); setNotice("");
     try {
+      // Auto-save: persist any pending editor edits before submitting, so a
+      // contractor who clicks Submit without Save never loses their changes.
+      if (editing && editing.id === template.id) {
+        const saved = await persistEditor();
+        setRows(current => current.map(r => r.id === editing.id ? saved : r));
+      }
       const response = await fetch(`/api/cost-sheets/${template.id}/submit`, {
         method:"POST", headers:{ "Content-Type":"application/json" },
       });

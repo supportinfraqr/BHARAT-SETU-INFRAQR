@@ -1,6 +1,6 @@
 "use client";
 import { useState } from 'react';
-import { Building2, CheckCircle2, CreditCard, FileSignature, FileText, Landmark, Lock, MapPin, Phone, ShieldCheck, Users } from 'lucide-react';
+import { Building2, CheckCircle2, CreditCard, FileSignature, FileText, Landmark, Link2, Lock, MapPin, Phone, ShieldCheck, Users } from 'lucide-react';
 import StatutoryLicences from '@/components/portal/StatutoryLicences';
 import GstVerifyCard from '@/components/gst/GstVerifyCard';
 import { useContractor } from '@/contexts/ContractorContext';
@@ -13,6 +13,7 @@ const tabs = [
   ['contact', 'Contact Persons', Phone],
   ['financial', 'Financial', CreditCard],
   ['service', 'Service profile', MapPin],
+  ['principal', 'Principal Employer & Site', Link2],
   ['licences', 'Registrations & Licences', Landmark],
   ['documents', 'Documents', FileText],
   ['declarations', 'Declarations', CheckCircle2],
@@ -105,7 +106,7 @@ export default function ContractorProfilePage() {
               {fields.map((field, index) => {
                 const locked = isLocked(field);
                 const labelLower = field.label.toLowerCase();
-                const isDocField = tab === 'documents' || labelLower.includes('document') || labelLower.includes('certificate') || labelLower.includes('licence');
+                const isDocField = tab === 'documents' || labelLower.includes('document') || labelLower.includes('certificate') || labelLower.includes('licence') || labelLower.includes('proof');
                 const isDateField = field.type === 'date' || labelLower.includes('date');
                 
                 // Define dropdown options based on Excel spec
@@ -128,6 +129,14 @@ export default function ContractorProfilePage() {
                   dropdownOptions = ['Low Risk', 'Medium Risk', 'High Risk'];
                 } else if (labelLower.includes('registration source')) {
                   dropdownOptions = ['Self Portal', 'BSS Assisted', 'Employer Invited', 'Bulk Import'];
+                } else if (labelLower.includes('listed on stock exchange')) {
+                  dropdownOptions = ['Yes', 'No'];
+                } else if (labelLower.includes('company status')) {
+                  dropdownOptions = ['Active', 'Strike Off', 'Dormant', 'Under Liquidation'];
+                } else if (labelLower.includes('company sub category')) {
+                  dropdownOptions = ['Government Company', 'Non-Government Company', 'One Person Company', 'Small Company'];
+                } else if (labelLower.includes('company category')) {
+                  dropdownOptions = ['Company Limited by Shares', 'Company Limited by Guarantee', 'Unlimited Company'];
                 }
 
                 return (

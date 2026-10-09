@@ -1365,12 +1365,21 @@ def _contractor_profile_sections(user):
             _f("Compliance Contact Email", getattr(cp, "compliance_contact_email", "") if cp else "", "Contractor"),
         ],
         "financial": [
-            _f("Bank Name", "", "Contractor"),
+            _f("Bank Name", getattr(cp, "bank_name", "") if cp else "", "Contractor"),
             _f("Bank Account Name", getattr(cp, "bank_account_name", "") if cp else "", "Contractor"),
             _f("Account Number", getattr(cp, "bank_account_number", "") if cp else "", "Contractor"),
             _f("IFSC Code", getattr(cp, "bank_ifsc", "") if cp else "", "Contractor"),
-            _f("Annual Turnover Band", "", "Contractor"),
+            _f("Annual Turnover Band", getattr(cp, "turnover_band", "") if cp else "", "Contractor"),
             _f("Payment Verification Status", "", "System"),
+        ],
+        "principal": [
+            _f("Principal Employer Name", getattr(cp, "principal_employer_name", "") if cp else "", "Contractor"),
+            _f("Principal Employer ID", getattr(cp, "principal_employer_id", "") if cp else "", "Contractor"),
+            _f("Site / Establishment Name", getattr(cp, "site_establishment_name", "") if cp else "", "Contractor"),
+            _f("Site ID", getattr(cp, "site_ref_id", "") if cp else "", "Contractor"),
+            _f("Contract / Work Order Number", getattr(cp, "work_order_number", "") if cp else "", "Contractor"),
+            _f("Contract Start Date", _dts(cp.contract_start_date) if cp and cp.contract_start_date else "", "Contractor", field_type="date"),
+            _f("Contract End Date", _dts(cp.contract_end_date) if cp and cp.contract_end_date else "", "Contractor", field_type="date"),
         ],
         "service": [
             _f("Registered Address", getattr(cp, "address", "") if cp else "", "Contractor"),
@@ -1392,6 +1401,7 @@ def _contractor_profile_sections(user):
         ],
         "declarations": [
             _f("Consent for Data Processing", "", "Contractor"),
+            _f("Registration Date", _dts(cp.registration_date) if cp and cp.registration_date else "", "Contractor", field_type="date"),
             _f("Member of BSS Since", _date_str(getattr(cp, "registered_at", None)) if cp else "", "System", field_type="date"),
             _f("Consent Date", getattr(cp, "consent_date", "") if cp else "", "System", field_type="date"),
             _f("Registration Source", getattr(cp, "registration_source", "") if cp else "", "System"),

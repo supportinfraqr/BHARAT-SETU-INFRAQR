@@ -182,6 +182,19 @@ class ContractorProfile(models.Model):
     insurance_proof = models.CharField(max_length=120, blank=True)
     bank_proof = models.CharField(max_length=120, blank=True)
     other_certs = models.CharField(max_length=255, blank=True)
+    # Financial extras.
+    bank_name = models.CharField(max_length=160, blank=True)
+    turnover_band = models.CharField(max_length=60, blank=True)
+    # Explicit registration date (distinct from the audit registered_at).
+    registration_date = models.DateField(null=True, blank=True)
+    # Principal employer & site / contract (editable on the contractor profile).
+    principal_employer_name = models.CharField(max_length=160, blank=True)
+    principal_employer_id = models.CharField(max_length=40, blank=True)
+    site_establishment_name = models.CharField(max_length=160, blank=True)
+    site_ref_id = models.CharField(max_length=40, blank=True)
+    work_order_number = models.CharField(max_length=80, blank=True)
+    contract_start_date = models.DateField(null=True, blank=True)
+    contract_end_date = models.DateField(null=True, blank=True)
     # Site pre-selected for worker bindings created by scanning a worker QR.
     default_site = models.ForeignKey("bss_core.Site", null=True, blank=True,
                                      on_delete=models.SET_NULL, related_name="+")
