@@ -546,11 +546,11 @@ def _best_face(engine, frame):
 @app.post("/compare")
 def compare():
     """Compare uploaded face photos against a reference photo (e.g. the worker's
-    verified Aadhaar photograph) using cosine similarity + a KNN vote.
+    verified Aadhaar photograph) using cosine similarity.
 
-    Body: {reference, images, person?, top_k?, threshold?}
-    Returns, per image: cosinePct (vs the reference), knnPct (top-k mean over the
-    reference + the person's enrolled variants), matched, distance.
+    Body: {reference, images, threshold?}. Per image returns the cosine
+    similarity (%) to the reference and whether it clears the engine threshold.
+    Advisory only — the caller never rejects on this.
     """
     if not _authorized():
         return jsonify(error="unauthorized"), 401
@@ -559,13 +559,8 @@ def compare():
     body = request.get_json(silent=True) or {}
     reference = body.get("reference") or body.get("image")
     images = body.get("images") or ([body.get("image")] if body.get("image") else [])
-    person = str(body.get("person") or "").strip()
     if not reference or not images:
         return jsonify(error="reference and images are required"), 400
-    try:
-        top_k = max(1, int(body.get("top_k") or 5))
-    except (TypeError, ValueError):
-        top_k = 5
 
     engine, _ = _face_engine()
     threshold = engine.threshold
@@ -583,12 +578,6 @@ def compare():
         return jsonify(error="no face detected in the reference photo"), 422
     ref_emb = ref_face.embedding
 
-    # KNN reference set: the Aadhaar photo + (optionally) the person's already
-    # enrolled gallery variants.
-    pool = [ref_emb]
-    if person:
-        pool.extend(emb for _pid, name, emb in engine.gallery if name == person)
-
     results = []
     for idx, item in enumerate(images):
         frame = _decode_image(str(item))
@@ -599,16 +588,12 @@ def compare():
         if obs is None or obs.embedding is None:
             results.append({"index": idx, "face": False, "reason": "no_face"})
             continue
-        emb = obs.embedding
-        distance = cosine_distance(ref_emb, emb)
+        distance = cosine_distance(ref_emb, obs.embedding)
         cosine_pct = round(max(0.0, min(1.0, 1.0 - distance)) * 100, 1)
-        sims = sorted((1.0 - cosine_distance(emb, e) for e in pool), reverse=True)[:top_k]
-        knn_pct = round(max(0.0, min(1.0, sum(sims) / len(sims))) * 100, 1) if sims else 0.0
         results.append({
             "index": idx, "face": True, "reason": "ok",
             "cosine": round(distance, 4), "cosinePct": cosine_pct,
-            "knnPct": knn_pct, "matched": distance <= threshold,
-            "threshold": threshold,
+            "matched": distance <= threshold, "threshold": threshold,
         })
     return jsonify(count=len(results), results=results)
 

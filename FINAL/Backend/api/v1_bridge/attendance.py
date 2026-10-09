@@ -535,8 +535,8 @@ def worker_face_check(request):
 @permission_classes([IsAuthenticated])
 def worker_face_match(request):
     """Advisory face match: compare the supplied photos against the worker's
-    verified Aadhaar photograph (cosine similarity + KNN). Photos are NOT
-    blocked — the caller shows the per-photo match percentage."""
+    verified Aadhaar photograph (cosine similarity). Photos are NOT blocked —
+    the caller shows the per-photo match percentage."""
     import base64
     import os
 
@@ -580,12 +580,8 @@ def worker_face_match(request):
                         status=status.HTTP_400_BAD_REQUEST)
     reference = "data:image/jpeg;base64," + base64.b64encode(reference_bytes).decode("ascii")
 
-    from bss_core.models import WorkerIdentity
-    identity = WorkerIdentity.objects.filter(user=request.user).first()
-    person = str(getattr(identity, "bss_worker_id", "") or "").strip()
-
     try:
-        result = control.compare_faces(reference, images, person=person or None, top_k=5)
+        result = control.compare_faces(reference, images)
     except control.AttendanceControlError as exc:
         return Response({"error": str(exc)}, status=exc.status_code)
     return Response({"data": result}, status=status.HTTP_200_OK)

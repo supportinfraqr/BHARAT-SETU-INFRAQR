@@ -116,7 +116,7 @@ export default function WorkerProfilePage() {
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [faceEnrollStatus, setFaceEnrollStatus] = useState('');
   const [faceChecks, setFaceChecks] = useState<Record<number, { state: 'checking' | 'ok' | 'error'; message?: string }>>({});
-  const [faceMatch, setFaceMatch] = useState<Record<number, { state: 'checking' | 'ok' | 'error'; pct?: number; knnPct?: number; matched?: boolean; message?: string }>>({});
+  const [faceMatch, setFaceMatch] = useState<Record<number, { state: 'checking' | 'ok' | 'error'; pct?: number; matched?: boolean; message?: string }>>({});
   const [faceSaveBusy, setFaceSaveBusy] = useState(false);
   const [faceEnrolled, setFaceEnrolled] = useState(0);
   const [enrolledPhotos, setEnrolledPhotos] = useState<Record<number, string>>({});
@@ -156,7 +156,7 @@ export default function WorkerProfilePage() {
         body: JSON.stringify({ images: [dataUrl] }),
       });
       const body = await response.json().catch(() => ({})) as {
-        data?: { results?: Array<{ face?: boolean; cosinePct?: number; knnPct?: number; matched?: boolean }> };
+        data?: { results?: Array<{ face?: boolean; cosinePct?: number; matched?: boolean }> };
         error?: string;
       };
       if (!response.ok || !body.data) throw new Error(body.error ?? 'Match unavailable');
@@ -165,7 +165,7 @@ export default function WorkerProfilePage() {
         setFaceMatch(prev => ({ ...prev, [slot]: { state: 'error', message: 'No face' } }));
         return;
       }
-      setFaceMatch(prev => ({ ...prev, [slot]: { state: 'ok', pct: result.cosinePct, knnPct: result.knnPct, matched: result.matched } }));
+      setFaceMatch(prev => ({ ...prev, [slot]: { state: 'ok', pct: result.cosinePct, matched: result.matched } }));
     } catch (reason) {
       setFaceMatch(prev => ({ ...prev, [slot]: { state: 'error', message: reason instanceof Error ? reason.message : 'Match unavailable' } }));
     }
@@ -1104,8 +1104,8 @@ export default function WorkerProfilePage() {
                         {faceChecks[idx]?.state === 'error' && <span className="text-[9.5px] text-red-600 font-semibold mt-1 max-w-[120px] leading-tight">{faceChecks[idx].message || 'Retake'}</span>}
                         {faceMatch[idx]?.state === 'checking' && <span className="text-[9.5px] text-slate-400 mt-0.5">Matching Aadhaar…</span>}
                         {faceMatch[idx]?.state === 'ok' && (
-                          <span className={`text-[9.5px] font-bold mt-0.5 ${faceMatch[idx].matched ? 'text-emerald-600' : 'text-amber-600'}`} title="Cosine similarity vs your Aadhaar photo (KNN in brackets)">
-                            {faceMatch[idx].matched ? '✓' : '⚠'} Aadhaar {faceMatch[idx].pct}%{typeof faceMatch[idx].knnPct === 'number' ? ` (KNN ${faceMatch[idx].knnPct}%)` : ''}
+                          <span className={`text-[9.5px] font-bold mt-0.5 ${faceMatch[idx].matched ? 'text-emerald-600' : 'text-amber-600'}`} title="Cosine similarity vs your Aadhaar photo — advisory, uploads are never blocked">
+                            {faceMatch[idx].matched ? '✓' : '⚠'} Aadhaar {faceMatch[idx].pct}%
                           </span>
                         )}
                         {faceMatch[idx]?.state === 'error' && <span className="text-[9px] text-slate-400 mt-0.5 max-w-[120px] leading-tight">{faceMatch[idx].message || 'Match unavailable'}</span>}
