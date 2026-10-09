@@ -47,6 +47,7 @@ export default function AdminCoursesPage() {
   const [notice, setNotice] = useState('');
   const [draft, setDraft] = useState<Draft | null>(null);
   const [audienceOptions, setAudienceOptions] = useState<{ contractors: AudienceOption[]; employers: AudienceOption[] }>({ contractors: [], employers: [] });
+  const [thumbBusy, setThumbBusy] = useState(false);
 
   const [report, setReport] = useState<Report | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
@@ -99,6 +100,22 @@ export default function AdminCoursesPage() {
       setNotice(body.data.coursesEnabled ? 'Courses enabled — workers can see the catalog.' : 'Courses disabled — the worker skills catalog is hidden.');
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not update.'); }
     finally { setBusy(false); }
+  }
+
+  async function uploadThumbnail(file?: File) {
+    if (!file || !draft) return;
+    setThumbBusy(true); setError(''); setNotice('');
+    try {
+      const form = new FormData();
+      form.set('file', file);
+      const response = await fetch('/api/admin/courses/thumbnail', { method: 'POST', body: form });
+      const body = await response.json().catch(() => ({})) as { data?: { url?: string }; error?: string };
+      if (!response.ok || !body.data?.url) throw new Error(body.error ?? 'The image could not be uploaded.');
+      const url = body.data.url;
+      setDraft(cur => (cur ? { ...cur, imageUrl: url } : cur));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The image could not be uploaded.');
+    } finally { setThumbBusy(false); }
   }
 
   function edit(c: Course) {
@@ -292,10 +309,19 @@ export default function AdminCoursesPage() {
             <label className="text-xs font-semibold text-gray-700">Skill added on completion<input className={input} value={draft.skillName} onChange={e => setDraft({ ...draft, skillName: e.target.value })}/></label>
             <label className="text-xs font-semibold text-gray-700">Pass score (%)<input type="number" className={input} value={draft.passScore} onChange={e => setDraft({ ...draft, passScore: Number(e.target.value) })}/></label>
           </div>
-          <label className="block text-xs font-semibold text-gray-700">Thumbnail image URL
-            <input className={input} placeholder="https://…/course-banner.jpg" value={draft.imageUrl} onChange={e => setDraft({ ...draft, imageUrl: e.target.value })}/>
-          </label>
-          {draft.imageUrl && <img src={draft.imageUrl} alt="thumbnail preview" className="h-28 w-48 object-cover rounded-lg border border-gray-200"/>}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-gray-700">Thumbnail image
+              <input className={input} placeholder="Paste an image URL or upload below" value={draft.imageUrl} onChange={e => setDraft({ ...draft, imageUrl: e.target.value })}/>
+            </label>
+            <div className="flex items-center gap-2">
+              <label className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer hover:bg-gray-50">
+                {thumbBusy ? 'Uploading…' : 'Upload image'}
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" disabled={thumbBusy} onChange={e => { void uploadThumbnail(e.target.files?.[0]); e.target.value = ''; }}/>
+              </label>
+              {draft.imageUrl && <button type="button" onClick={() => setDraft({ ...draft, imageUrl: '' })} className="text-xs text-gray-500 hover:text-red-600">Clear</button>}
+            </div>
+            {draft.imageUrl && <img src={draft.imageUrl} alt="thumbnail preview" className="h-28 w-48 object-cover rounded-lg border border-gray-200"/>}
+          </div>
           <label className="block text-xs font-semibold text-gray-700">Visible to
             <select className={input} value={draft.audience} onChange={e => setDraft({ ...draft, audience: e.target.value })}>
               <option value="all">All workers</option>

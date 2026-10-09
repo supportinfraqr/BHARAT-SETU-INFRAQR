@@ -481,6 +481,35 @@ def admin_courses(request):
     return Response({"data": rows}, status=status.HTTP_200_OK)
 
 
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def admin_course_thumbnail(request):
+    """BSS Admin: upload a course thumbnail image; returns its media URL."""
+    import os
+    import uuid
+
+    from django.core.files.base import ContentFile
+    from django.core.files.storage import default_storage
+
+    if not _is_bss_admin(request.user):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    upload = (request.FILES.get("file") or request.FILES.get("image")
+              or request.FILES.get("thumbnail"))
+    if upload is None:
+        return Response({"error": "No image uploaded."}, status=status.HTTP_400_BAD_REQUEST)
+    ext = os.path.splitext(upload.name or "")[1].lower().lstrip(".")
+    if ext not in ("png", "jpg", "jpeg", "webp", "gif"):
+        return Response({"error": "Upload a PNG, JPG, WEBP or GIF image."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    data = upload.read()
+    if len(data) > 3 * 1024 * 1024:
+        return Response({"error": "Image must be under 3 MB."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    stored = default_storage.save(f"course_thumbnails/{uuid.uuid4().hex}.{ext}", ContentFile(data))
+    return Response({"data": {"url": f"/media/{stored}"}}, status=status.HTTP_201_CREATED)
+
+
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -644,6 +673,7 @@ __all__ = [
     "admin_courses",
     "admin_course_detail",
     "admin_course_audience_options",
+    "admin_course_thumbnail",
     "admin_learning_report",
     "admin_course_submission_grade",
 ]

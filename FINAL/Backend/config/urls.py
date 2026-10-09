@@ -248,6 +248,7 @@ _v1_patterns = _v1(
     ("employer/onboarding/batches/<int:batch_id>", v1_bridge.onboarding_batch_detail, "v1_employer_onboarding_batch_detail"),
     ("employer/onboarding/batches/<int:batch_id>/review", v1_bridge.employer_onboarding_review, "v1_employer_onboarding_review"),
     ("admin/courses/audience-options", v1_bridge.admin_course_audience_options, "v1_admin_course_audience_options"),
+    ("admin/courses/thumbnail", v1_bridge.admin_course_thumbnail, "v1_admin_course_thumbnail"),
     ("admin/courses", v1_bridge.admin_courses, "v1_admin_courses"),
     ("admin/courses/<int:course_id>", v1_bridge.admin_course_detail, "v1_admin_course_detail"),
     ("admin/learning-config", v1_bridge.admin_learning_config, "v1_admin_learning_config"),
