@@ -740,19 +740,51 @@ def org_cost_sheet_update(request, template_id):
         t.save(update_fields=["name", "updated_at"])
     custom = body.get("custom")
     if isinstance(custom, list):
-        for row in custom:
-            if not isinstance(row, dict) or row.get("amount") is None:
+        from bss_core.models import CostSheetCustomLine
+
+        existing = {c.name: c for c in t.custom_lines.all()}
+        keep = set()
+        for order, row in enumerate(custom):
+            if not isinstance(row, dict):
                 continue
-            line = t.custom_lines.filter(name=str(row.get("name") or "")).first()
-            # The contractor may adjust its own cost heads (Part C): any custom
-            # line that applies to the contractor (or both), plus platform heads
-            # explicitly flagged editable by the org. Employer-only heads stay
-            # locked (the principal employer's cost).
-            editable = line is not None and (
-                line.editable_by_org or line.applies_to in ("contractor", "both"))
-            if editable:
-                line.amount = _num(row["amount"])
-                line.save(update_fields=["amount", "updated_at"])
+            name = str(row.get("name") or "").strip()[:80]
+            if not name:
+                continue
+            keep.add(name)
+            amount = _num(row.get("amount") or 0)
+            line = existing.get(name)
+            if line is not None:
+                # The contractor may adjust its own cost heads (Part C): any
+                # custom line that applies to the contractor (or both), plus
+                # platform heads flagged editable by the org. Employer-only heads
+                # stay locked (the principal employer's cost).
+                if line.editable_by_org or line.applies_to in ("contractor", "both"):
+                    line.amount = amount
+                    fields = ["amount", "updated_at"]
+                    freq = str(row.get("frequency") or "").upper()
+                    if freq in ("ONE_TIME", "MONTHLY", "ANNUAL") and freq != line.frequency:
+                        line.frequency = freq
+                        fields.append("frequency")
+                    line.save(update_fields=fields)
+            else:
+                # The contractor adds its own cost head (Part C).
+                applies = str(row.get("appliesTo") or "contractor").lower()
+                if applies not in ("contractor", "both"):
+                    applies = "contractor"
+                freq = str(row.get("frequency") or "MONTHLY").upper()
+                if freq not in ("ONE_TIME", "MONTHLY", "ANNUAL"):
+                    freq = "MONTHLY"
+                rate = str(row.get("rateType") or "FIXED").upper()
+                if rate not in ("FIXED", "PERCENT"):
+                    rate = "FIXED"
+                CostSheetCustomLine.objects.create(
+                    template=t, name=name, amount=amount, rate_type=rate,
+                    frequency=freq, applies_to=applies, editable_by_org=True,
+                    sort_order=100 + order)
+        # Drop contractor-added heads (sort_order >= 100) no longer in the list.
+        for name, line in existing.items():
+            if name not in keep and line.sort_order >= 100:
+                line.delete()
     log_audit(request.user, "UPDATE", "cost_sheet_template", t.id,
               after={"summary": f"Org updated cost sheet {t.code}"})
     return Response({"data": _template_row(t, full=True)}, status=status.HTTP_200_OK)

@@ -1,10 +1,31 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Calculator, CheckCircle2, Copy, Loader2, Save, X } from "lucide-react";
+import { Calculator, CheckCircle2, Copy, Loader2, Save, Trash2, X } from "lucide-react";
 import EnterpriseDataTable, { type DataColumn } from "@/components/worker/EnterpriseDataTable";
 
-type Custom = { name:string; amount:number; rateType:string; frequency:string; appliesTo:string; editableByOrg:boolean };
+type Custom = { name:string; amount:number; rateType:string; frequency:string; appliesTo:string; editableByOrg:boolean; isNew?:boolean };
+
+// The standard (optional) custom cost heads — one-click to add (matches admin 3C).
+const STANDARD_HEADS: Array<Omit<Custom, 'isNew'>> = [
+  { name:"Uniform", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"PPE / Safety Equipment", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Medical Examination", amount:0, rateType:"FIXED", frequency:"ANNUAL", appliesTo:"both", editableByOrg:true },
+  { name:"Insurance", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Training", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Food", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Accommodation", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Transport", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Administrative Cost", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true },
+  { name:"Reliever Cost", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true },
+  { name:"Site Allowance", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Shift Allowance", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Risk Allowance", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Profit Margin", amount:0, rateType:"PERCENT", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true },
+  { name:"Service Charges", amount:0, rateType:"PERCENT", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true },
+  { name:"Applicable Taxes (GST)", amount:0, rateType:"PERCENT", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true },
+  { name:"BSS Platform Cost", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:false },
+];
 type Template = {
   id:number; name:string; code:string; state:string; industry:string; workerCategory:string;
   designation:string; status:string; ownerId:number | null; currency:string;
@@ -91,13 +112,33 @@ export default function OrgCostSheetsPage() {
     void computeCost(template).catch(() => {});
   }
 
+  function setCustom(i: number, patch: Partial<Custom>) {
+    setEditing(e => e ? { ...e, custom: e.custom.map((x, j) => j === i ? { ...x, ...patch } : x) } : e);
+  }
+  function addCustomHead() {
+    setEditing(e => e ? { ...e, custom: [...e.custom, { name:"", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true, isNew:true }] } : e);
+  }
+  function addStandardHeads() {
+    setEditing(e => {
+      if (!e) return e;
+      const existing = new Set(e.custom.map(c => c.name));
+      const add = STANDARD_HEADS.filter(h => !existing.has(h.name)).map(h => ({ ...h, isNew:true }));
+      return { ...e, custom: [...e.custom, ...add] };
+    });
+  }
+  function removeCustom(i: number) {
+    setEditing(e => e ? { ...e, custom: e.custom.filter((_, j) => j !== i) } : e);
+  }
+
   async function saveEditor() {
     if (!editing) return;
     setBusy(true); setError("");
     try {
       const response = await fetch(`/api/cost-sheets/${editing.id}`, {
         method:"PATCH", headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ name:editing.name, custom: editing.custom.map(c => ({ name:c.name, amount:amounts[c.name] ?? c.amount })) }),
+        body: JSON.stringify({ name:editing.name, custom: editing.custom
+          .filter(c => (c.name || "").trim())
+          .map(c => ({ name:c.name, amount: c.isNew ? c.amount : (amounts[c.name] ?? c.amount), rateType:c.rateType, frequency:c.frequency, appliesTo:c.appliesTo })) }),
       });
       const body = await response.json().catch(() => ({})) as { data?:Template; error?:string };
       if (!response.ok || !body.data) throw new Error(body.error ?? "The cost sheet could not be saved.");
@@ -253,12 +294,24 @@ export default function OrgCostSheetsPage() {
           <div className="rounded-xl border border-gray-100 p-4">
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Custom cost heads</p>
             <div className="space-y-2">{editing.custom.map((c, i) => {
-              const canEdit = c.editableByOrg || c.appliesTo === "contractor" || c.appliesTo === "both";
-              return <div key={i} className="grid grid-cols-[1.6fr_120px_120px] gap-2 items-center text-xs">
-              <span className="font-semibold text-gray-800">{c.name}{!canEdit && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Platform fixed</span>}</span>
-              <input type="number" disabled={!editable || !canEdit} value={amounts[c.name] ?? c.amount} onChange={e => setAmounts(a => ({ ...a, [c.name]:Number(e.target.value) }))} className="h-9 border border-gray-200 rounded-lg px-2 text-xs disabled:bg-gray-50"/>
-              <span className="text-gray-400">{c.frequency === "ONE_TIME" ? "one-time" : c.frequency.toLowerCase()} · {c.appliesTo}</span>
-            </div>; })}</div>
+              const canAmount = c.isNew || c.editableByOrg || c.appliesTo === "contractor" || c.appliesTo === "both";
+              return <div key={i} className="grid grid-cols-[1.5fr_110px_120px_auto] gap-2 items-center text-xs">
+                {c.isNew
+                  ? <input value={c.name} onChange={e => setCustom(i, { name:e.target.value })} placeholder="Cost head" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
+                  : <span className="font-semibold text-gray-800">{c.name}{!canAmount && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Platform fixed</span>}</span>}
+                <input type="number" disabled={!editable || !canAmount} value={c.isNew ? c.amount : (amounts[c.name] ?? c.amount)} onChange={e => c.isNew ? setCustom(i, { amount:Number(e.target.value) }) : setAmounts(a => ({ ...a, [c.name]:Number(e.target.value) }))} className="h-9 border border-gray-200 rounded-lg px-2 text-xs disabled:bg-gray-50"/>
+                {c.isNew
+                  ? <select value={c.frequency} onChange={e => setCustom(i, { frequency:e.target.value })} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white"><option value="ONE_TIME">One-time</option><option value="MONTHLY">Monthly</option><option value="ANNUAL">Annual</option></select>
+                  : <span className="text-gray-400">{c.frequency === "ONE_TIME" ? "one-time" : c.frequency.toLowerCase()} · {c.appliesTo}</span>}
+                {editable && c.isNew
+                  ? <button type="button" onClick={() => removeCustom(i)} aria-label="Remove cost head" className="text-gray-400 hover:text-red-600 justify-self-center"><Trash2 size={13}/></button>
+                  : <span/>}
+              </div>;
+            })}</div>
+            {editable && <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" onClick={addCustomHead} className="text-xs font-semibold text-[#073B67] border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50">Add cost head</button>
+              <button type="button" onClick={addStandardHeads} className="text-xs font-semibold text-[#073B67] border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50">Add standard heads</button>
+            </div>}
           </div>
 
           {preview && <div className="rounded-xl border border-gray-100 p-4">
