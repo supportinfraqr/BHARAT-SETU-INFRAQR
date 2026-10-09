@@ -447,6 +447,67 @@ def worker_face_check(request):
     return Response({"data": result}, status=status.HTTP_200_OK)
 
 
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_face_match(request):
+    """Advisory face match: compare the supplied photos against the worker's
+    verified Aadhaar photograph (cosine similarity + KNN). Photos are NOT
+    blocked — the caller shows the per-photo match percentage."""
+    import base64
+    import os
+
+    from django.conf import settings as dj_settings
+
+    from bss_core.models import AadhaarChallenge
+    from .. import attendance_control as control
+
+    if request.user.role != "worker":
+        return Response({"error": "Only workers can match their own face."},
+                        status=status.HTTP_403_FORBIDDEN)
+    body = request.data if isinstance(request.data, dict) else {}
+    images = body.get("images") or ([body.get("image")] if body.get("image") else [])
+    images = [str(i) for i in images if i]
+    if not images:
+        return Response({"error": "No image supplied."}, status=status.HTTP_400_BAD_REQUEST)
+
+    challenge = (AadhaarChallenge.objects
+                 .filter(user=request.user, status="VERIFIED")
+                 .exclude(photo_path="")
+                 .order_by("-updated_at", "-id")
+                 .first())
+    if challenge is None or not challenge.photo_path:
+        return Response({"error": "No verified Aadhaar photo on file to compare against."},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    filename = os.path.basename(challenge.photo_path)
+    candidates = [
+        os.path.join(getattr(dj_settings, "AADHAAR_PHOTO_DIR", ""), filename),
+        os.path.join(getattr(dj_settings, "MEDIA_ROOT", ""), "aadhaar", filename),
+        os.path.join(getattr(dj_settings, "MEDIA_ROOT", ""), "aadhaar_photos", filename),
+    ]
+    reference_bytes = None
+    for path in candidates:
+        if path and os.path.isfile(path):
+            with open(path, "rb") as handle:
+                reference_bytes = handle.read()
+            break
+    if not reference_bytes:
+        return Response({"error": "The Aadhaar photo file could not be read."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    reference = "data:image/jpeg;base64," + base64.b64encode(reference_bytes).decode("ascii")
+
+    from bss_core.models import WorkerIdentity
+    identity = WorkerIdentity.objects.filter(user=request.user).first()
+    person = str(getattr(identity, "bss_worker_id", "") or "").strip()
+
+    try:
+        result = control.compare_faces(reference, images, person=person or None, top_k=5)
+    except control.AttendanceControlError as exc:
+        return Response({"error": str(exc)}, status=exc.status_code)
+    return Response({"data": result}, status=status.HTTP_200_OK)
+
+
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])

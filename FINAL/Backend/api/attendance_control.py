@@ -120,6 +120,17 @@ def check_faces(images):
     return _request("POST", "/check-face", {"images": list(images)}, timeout=60)
 
 
+def compare_faces(reference, images, person=None, top_k=5, threshold=None):
+    """Compare face photos to a reference (e.g. the Aadhaar photo) using cosine
+    similarity + a KNN vote → per-image {cosinePct, knnPct, matched, distance}."""
+    payload = {"reference": str(reference), "images": list(images), "top_k": int(top_k)}
+    if person:
+        payload["person"] = str(person)
+    if threshold is not None:
+        payload["threshold"] = float(threshold)
+    return _request("POST", "/compare", payload, timeout=60)
+
+
 def enroll_status(person):
     """How many face vectors are enrolled for a person."""
     return _request("GET", "/enroll/status", params={"person": str(person)}, timeout=15)

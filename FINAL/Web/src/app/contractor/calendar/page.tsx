@@ -438,7 +438,7 @@ export default function ContractorCalendarPage() {
               <Building2 size={13} className="text-[#F47A32]" />
               <span>Master Configuration</span>
             </div>
-            <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">Site Calendar & Leave Setup</h1>
+            <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">Leave Calendar</h1>
             <p className="text-white/80 text-sm max-w-2xl">
               Configure official holidays and annual leave policies for your allotted project sites. All workers mapped to the selected site automatically inherit these settings.
             </p>

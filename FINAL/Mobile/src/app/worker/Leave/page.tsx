@@ -139,7 +139,7 @@ export default function LeavePage(){
       <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center">
         <CalendarHeart size={30} className="mx-auto text-[#F47A32]"/>
         <h2 className="text-base font-semibold text-gray-900 mt-3">Leave calendar not set up yet</h2>
-        <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">Your contractor hasn&apos;t set up the leave calendar for your site yet. Your leave types and balances will appear here once they configure them in <strong>Site Calendar &amp; Leave Setup</strong>.</p>
+        <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">Your contractor hasn&apos;t set up the leave calendar for your site yet. Your leave types and balances will appear here once they configure them in <strong>Leave Calendar</strong>.</p>
       </div>
     </ModuleShell>;
   }

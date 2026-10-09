@@ -531,6 +531,88 @@ def enroll_status():
     return jsonify(person=person, enrolled=enrolled)
 
 
+def _best_face(engine, frame):
+    """Largest detected face in a frame (or None)."""
+    observations = engine.recognize_frame(frame)
+    if not observations:
+        return None
+    return max(
+        observations,
+        key=lambda o: (o.face_box[2] - o.face_box[0]) * (o.face_box[3] - o.face_box[1])
+        if o.face_box else 0,
+    )
+
+
+@app.post("/compare")
+def compare():
+    """Compare uploaded face photos against a reference photo (e.g. the worker's
+    verified Aadhaar photograph) using cosine similarity + a KNN vote.
+
+    Body: {reference, images, person?, top_k?, threshold?}
+    Returns, per image: cosinePct (vs the reference), knnPct (top-k mean over the
+    reference + the person's enrolled variants), matched, distance.
+    """
+    if not _authorized():
+        return jsonify(error="unauthorized"), 401
+    from src.face_engine import cosine_distance
+
+    body = request.get_json(silent=True) or {}
+    reference = body.get("reference") or body.get("image")
+    images = body.get("images") or ([body.get("image")] if body.get("image") else [])
+    person = str(body.get("person") or "").strip()
+    if not reference or not images:
+        return jsonify(error="reference and images are required"), 400
+    try:
+        top_k = max(1, int(body.get("top_k") or 5))
+    except (TypeError, ValueError):
+        top_k = 5
+
+    engine, _ = _face_engine()
+    threshold = engine.threshold
+    if body.get("threshold") is not None:
+        try:
+            threshold = float(body.get("threshold"))
+        except (TypeError, ValueError):
+            pass
+
+    ref_frame = _decode_image(str(reference))
+    if ref_frame is None:
+        return jsonify(error="reference image could not be decoded"), 400
+    ref_face = _best_face(engine, ref_frame)
+    if ref_face is None or ref_face.embedding is None:
+        return jsonify(error="no face detected in the reference photo"), 422
+    ref_emb = ref_face.embedding
+
+    # KNN reference set: the Aadhaar photo + (optionally) the person's already
+    # enrolled gallery variants.
+    pool = [ref_emb]
+    if person:
+        pool.extend(emb for _pid, name, emb in engine.gallery if name == person)
+
+    results = []
+    for idx, item in enumerate(images):
+        frame = _decode_image(str(item))
+        if frame is None:
+            results.append({"index": idx, "face": False, "reason": "invalid_image"})
+            continue
+        obs = _best_face(engine, frame)
+        if obs is None or obs.embedding is None:
+            results.append({"index": idx, "face": False, "reason": "no_face"})
+            continue
+        emb = obs.embedding
+        distance = cosine_distance(ref_emb, emb)
+        cosine_pct = round(max(0.0, min(1.0, 1.0 - distance)) * 100, 1)
+        sims = sorted((1.0 - cosine_distance(emb, e) for e in pool), reverse=True)[:top_k]
+        knn_pct = round(max(0.0, min(1.0, sum(sims) / len(sims))) * 100, 1) if sims else 0.0
+        results.append({
+            "index": idx, "face": True, "reason": "ok",
+            "cosine": round(distance, 4), "cosinePct": cosine_pct,
+            "knnPct": knn_pct, "matched": distance <= threshold,
+            "threshold": threshold,
+        })
+    return jsonify(count=len(results), results=results)
+
+
 if __name__ == "__main__":
     print(f"[controller] listening on 0.0.0.0:{CONTROL_PORT} "
           f"(default source: {DEFAULT_SOURCE})", flush=True)

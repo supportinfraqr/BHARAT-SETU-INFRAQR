@@ -166,6 +166,7 @@ _v1_patterns = _v1(
     ("admin/ai/providers/<int:credential_id>/default", v1_bridge.admin_ai_provider_default, "v1_admin_ai_provider_default"),
     ("worker/face-enroll", v1_bridge.worker_face_enroll, "v1_worker_face_enroll"),
     ("worker/face-check", v1_bridge.worker_face_check, "v1_worker_face_check"),
+    ("worker/face-match", v1_bridge.worker_face_match, "v1_worker_face_match"),
     ("worker/face-status", v1_bridge.worker_face_status, "v1_worker_face_status"),
     ("worker/face-photos", v1_bridge.worker_face_photos, "v1_worker_face_photos"),
     ("worker/face-photos/<int:photo_id>/file", v1_bridge.worker_face_photo_file, "v1_worker_face_photo_file"),
