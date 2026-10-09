@@ -35,6 +35,8 @@ export type EmploymentCardProps = {
   validTill?: string;
   /** Site colour for the card header (defaults to the BSS site orange). */
   siteColour?: string;
+  /** Optional diagonal watermark (e.g. "EXPIRED") drawn over the cards. */
+  watermark?: string;
   onClose?: () => void;
 };
 
@@ -67,6 +69,7 @@ export default function WorkerEmploymentCard({
   issueDate,
   validTill,
   siteColour = "#F47A32",
+  watermark,
   onClose,
 }: EmploymentCardProps) {
   const [isExporting, setIsExporting] = useState(false);
@@ -340,6 +343,12 @@ export default function WorkerEmploymentCard({
 
           </div>
         </div>
+
+        {watermark && (
+          <div aria-hidden className="pointer-events-none absolute inset-0 z-30 grid place-items-center overflow-hidden">
+            <span className="text-[72px] font-black uppercase tracking-[0.35em] text-red-500/15 -rotate-[24deg] whitespace-nowrap">{watermark}</span>
+          </div>
+        )}
 
         {/* Scoped CSS (print + card frame) */}
         <style jsx>{`
