@@ -6,26 +6,6 @@ import EnterpriseDataTable, { type DataColumn } from "@/components/worker/Enterp
 
 type Custom = { name:string; amount:number; rateType:string; frequency:string; appliesTo:string; editableByOrg:boolean; isNew?:boolean };
 
-// The standard (optional) custom cost heads — one-click to add (matches admin 3C).
-const STANDARD_HEADS: Array<Omit<Custom, 'isNew'>> = [
-  { name:"Uniform", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
-  { name:"PPE / Safety Equipment", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
-  { name:"Medical Examination", amount:0, rateType:"FIXED", frequency:"ANNUAL", appliesTo:"both", editableByOrg:true },
-  { name:"Insurance", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
-  { name:"Training", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
-  { name:"Food", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
-  { name:"Accommodation", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
-  { name:"Transport", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
-  { name:"Administrative Cost", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true },
-  { name:"Reliever Cost", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true },
-  { name:"Site Allowance", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
-  { name:"Shift Allowance", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
-  { name:"Risk Allowance", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
-  { name:"Profit Margin", amount:0, rateType:"PERCENT", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true },
-  { name:"Service Charges", amount:0, rateType:"PERCENT", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true },
-  { name:"Applicable Taxes (GST)", amount:0, rateType:"PERCENT", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true },
-  { name:"BSS Platform Cost", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:false },
-];
 type Template = {
   id:number; name:string; code:string; state:string; industry:string; workerCategory:string;
   designation:string; status:string; ownerId:number | null; currency:string;
@@ -117,14 +97,6 @@ export default function OrgCostSheetsPage() {
   }
   function addCustomHead() {
     setEditing(e => e ? { ...e, custom: [...e.custom, { name:"", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true, isNew:true }] } : e);
-  }
-  function addStandardHeads() {
-    setEditing(e => {
-      if (!e) return e;
-      const existing = new Set(e.custom.map(c => c.name));
-      const add = STANDARD_HEADS.filter(h => !existing.has(h.name)).map(h => ({ ...h, isNew:true }));
-      return { ...e, custom: [...e.custom, ...add] };
-    });
   }
   function removeCustom(i: number) {
     setEditing(e => e ? { ...e, custom: e.custom.filter((_, j) => j !== i) } : e);
@@ -310,7 +282,6 @@ export default function OrgCostSheetsPage() {
             })}</div>
             {editable && <div className="mt-3 flex flex-wrap gap-2">
               <button type="button" onClick={addCustomHead} className="text-xs font-semibold text-[#073B67] border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50">Add cost head</button>
-              <button type="button" onClick={addStandardHeads} className="text-xs font-semibold text-[#073B67] border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50">Add standard heads</button>
             </div>}
           </div>
 

@@ -150,6 +150,38 @@ class ContractorProfile(models.Model):
     lin = models.CharField(max_length=40, blank=True)
     approval_status = models.CharField(max_length=20, choices=APPROVAL, default="PENDING")
     is_active = models.BooleanField(default=True)
+    # Identity / legal extras (BSS Feature Comparison — Contractor Identity).
+    company_name = models.CharField(max_length=160, blank=True)
+    listed_on_stock_exchange = models.CharField(max_length=20, blank=True)
+    company_status = models.CharField(max_length=60, blank=True)
+    nic_description = models.TextField(blank=True)
+    auth_designation = models.CharField(max_length=80, blank=True)
+    # Director / signatory (Directors tab).
+    din = models.CharField(max_length=30, blank=True)
+    director_name = models.CharField(max_length=160, blank=True)
+    director_designation = models.CharField(max_length=80, blank=True)
+    director_appointment_date = models.DateField(null=True, blank=True)
+    director_cessation = models.CharField(max_length=40, blank=True)
+    director_cessation_date = models.DateField(null=True, blank=True)
+    # Address extras.
+    city = models.CharField(max_length=60, blank=True)
+    pincode = models.CharField(max_length=10, blank=True)
+    # Compliance contacts.
+    compliance_contact_name = models.CharField(max_length=120, blank=True)
+    compliance_contact_mobile = models.CharField(max_length=20, blank=True)
+    compliance_contact_email = models.EmailField(max_length=120, blank=True)
+    # Banking & commercial.
+    bank_account_name = models.CharField(max_length=160, blank=True)
+    bank_account_number = models.CharField(max_length=40, blank=True)
+    bank_ifsc = models.CharField(max_length=20, blank=True)
+    # Worker management.
+    qr_device_id = models.CharField(max_length=120, blank=True)
+    # Document references.
+    pf_reg_cert = models.CharField(max_length=120, blank=True)
+    esic_reg_proof = models.CharField(max_length=120, blank=True)
+    insurance_proof = models.CharField(max_length=120, blank=True)
+    bank_proof = models.CharField(max_length=120, blank=True)
+    other_certs = models.CharField(max_length=255, blank=True)
     # Site pre-selected for worker bindings created by scanning a worker QR.
     default_site = models.ForeignKey("bss_core.Site", null=True, blank=True,
                                      on_delete=models.SET_NULL, related_name="+")
