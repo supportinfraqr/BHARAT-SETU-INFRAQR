@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react";
 import { Download, Printer, X, ShieldCheck, UserRound } from "lucide-react";
 import WorkerQr from "@/components/qr/WorkerQr";
+import { formatCardDate } from "@/lib/cardDate";
 
 export type EmploymentCardProps = {
   companyName?: string;
@@ -76,8 +77,8 @@ export default function WorkerEmploymentCard({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Real issue/validity dates come from the worker's employment record; fall
-  // back to a 3-year window (issue = today, valid = issue + 3 years).
-  const fmtCardDate = (d: Date) => d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+  // back to a 3-year window (issue = today, valid = issue + 3 years). Every
+  // date is rendered day-month-year (e.g. "09 Oct 2026").
   const parseCardDate = (v?: string) => {
     if (!v) return null;
     const parsed = new Date(v);
@@ -89,8 +90,8 @@ export default function WorkerEmploymentCard({
     d.setFullYear(d.getFullYear() + 3);
     return d;
   })();
-  const resolvedIssue = fmtCardDate(issueDateObj);
-  const resolvedValid = fmtCardDate(validDateObj);
+  const resolvedIssue = formatCardDate(issueDateObj);
+  const resolvedValid = formatCardDate(validDateObj);
 
   const handlePrint = () => {
     window.print();

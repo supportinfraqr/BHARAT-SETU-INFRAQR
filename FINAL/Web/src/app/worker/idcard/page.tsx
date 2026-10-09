@@ -11,6 +11,7 @@ import type { OwnerScope } from '@/lib/documentEngine/types';
 import type { PortalView, WorkerLike } from '@/lib/documentEngine/workerDataService';
 import { useWorker } from '@/contexts/WorkerContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { formatCardDate } from '@/lib/cardDate';
 
 export default function IdentityCardPage() {
   const [cardFormat, setCardFormat] = useState<'standard' | 'employment'>('standard');
@@ -35,13 +36,9 @@ export default function IdentityCardPage() {
   const fallbackIssue = new Date();
   const fallbackValidity = new Date();
   fallbackValidity.setFullYear(fallbackValidity.getFullYear() + 3);
-  const formatCardDate = (value?: string) => {
-    if (!value) return '';
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  };
-  const currentDate = formatCardDate(worker.employment.idCardIssueDate) || fallbackIssue.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const validTill = formatCardDate(worker.employment.idCardValidityTill) || fallbackValidity.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const currentDate = formatCardDate(worker.employment.idCardIssueDate) || formatCardDate(fallbackIssue);
+  const validTill = formatCardDate(worker.employment.idCardValidityTill) || formatCardDate(fallbackValidity);
+  const dateOfBirth = formatCardDate(worker.identity.dob);
   // Site colour drives the card's top band (front & back). Falls back to a
   // neutral band when the site has no colour set.
   const siteColour = (worker.employment.siteDetails?.colour || '').trim() || '#F47A32';
@@ -190,7 +187,7 @@ export default function IdentityCardPage() {
                    <div className="flex gap-7 mt-3.5">
                      <div>
                        <p className="text-[6px] text-slate-300 uppercase tracking-[0.16em] font-bold mb-1">Date of Birth</p>
-                       <p className="text-[10px] font-bold tracking-[0.06em] text-white leading-none">{worker.identity.dob}</p>
+                       <p className="text-[10px] font-bold tracking-[0.06em] text-white leading-none">{dateOfBirth || '—'}</p>
                      </div>
                      <div>
                        <p className="text-[6px] text-slate-300 uppercase tracking-[0.16em] font-bold mb-1">Gender</p>
