@@ -591,9 +591,16 @@ def worker_face_match(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def worker_face_status(request):
-    """How many face photos are enrolled for the current worker."""
-    from bss_core.models import WorkerIdentity
+    """Enrolment status for the current worker: how many face vectors are
+    enrolled, plus how many stored photos there are and how many are distinct
+    (duplicate captures collapse into one vector)."""
+    import hashlib
+
+    from django.core.files.storage import default_storage
+
+    from bss_core.models import WorkerFacePhoto, WorkerIdentity
     from .. import attendance_control as control
+
     identity = WorkerIdentity.objects.filter(user=request.user).first()
     person = str(getattr(identity, "bss_worker_id", "") or "").strip()
     enrolled = 0
@@ -602,8 +609,22 @@ def worker_face_status(request):
             enrolled = int(control.enroll_status(person).get("enrolled", 0))
         except Exception:  # noqa: BLE001 — pipeline offline just reports 0
             enrolled = 0
-    return Response({"data": {"person": person, "enrolled": enrolled}},
-                    status=status.HTTP_200_OK)
+
+    photos = list(WorkerFacePhoto.objects.filter(user=request.user))
+    hashes = set()
+    for photo in photos:
+        if not photo.path:
+            continue
+        try:
+            hashes.add(hashlib.md5(default_storage.open(photo.path, "rb").read()).hexdigest())
+        except Exception:  # noqa: BLE001
+            pass
+    return Response({"data": {
+        "person": person,
+        "enrolled": enrolled,
+        "photoCount": len(photos),
+        "distinctPhotos": len(hashes) if photos else 0,
+    }}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])

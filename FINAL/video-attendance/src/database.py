@@ -224,6 +224,20 @@ class Database:
         )
         self.conn.commit()
 
+    def delete_embeddings(self, person_id: int, model_name: Optional[str] = None) -> int:
+        """Remove a person's stored vectors (all models, or one). Used to make
+        re-enrolment replace the previous set instead of accumulating."""
+        if model_name:
+            cur = self.conn.execute(
+                "DELETE FROM face_embeddings WHERE person_id = %s AND model_name = %s",
+                (person_id, model_name),
+            )
+        else:
+            cur = self.conn.execute(
+                "DELETE FROM face_embeddings WHERE person_id = %s", (person_id,))
+        self.conn.commit()
+        return cur.rowcount
+
     def load_gallery(self, model_name: str) -> List[Tuple[int, str, np.ndarray]]:
         rows = self.conn.execute(
             """SELECT fe.person_id, p.name, fe.embedding

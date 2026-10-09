@@ -294,9 +294,21 @@ class FaceEngine:
         return out
 
     def enroll_from_images(self, person: str, frames) -> int:
-        """Enrol a set of photos under `person` (a BSS worker id). Picks the
-        largest face in each frame and stores its embedding; skips duplicates
-        so re-uploading the same photos is idempotent."""
+        """(Re-)enrol a worker's face photos (BSS id). The person's previous
+        vectors are dropped first, so a re-enrolment REPLACES the previous set —
+        the enrolled count then equals the distinct photos just uploaded (no
+        accumulation), and near-identical frames within the new set are still
+        deduplicated."""
+        if self.db is None:
+            return 0
+        row = self.db.get_person_by_name(person)
+        pid = row[0] if row else self.db.add_person(person, notes="enrolled via BSS face photos")
+        # Replace: clear the old vectors from the DB + in-memory gallery/store.
+        self.db.delete_embeddings(pid, self.model_name)
+        with self._lock:
+            self.gallery[:] = [g for g in self.gallery if g[0] != pid]
+            self._store.rebuild(self.gallery)
+
         added = 0
         for frame in frames:
             observations = self.recognize_frame(frame)
@@ -307,19 +319,11 @@ class FaceEngine:
                 key=lambda o: (o.face_box[2] - o.face_box[0]) * (o.face_box[3] - o.face_box[1])
                 if o.face_box else 0,
             )
-            row = self.db.get_person_by_name(person) if self.db else None
-            if row is not None:
-                pid = row[0]
-            elif self.db is not None:
-                pid = self.db.add_person(person, notes="enrolled via BSS face photos")
-            else:
-                continue
             with self._lock:
                 if any(p == pid and cosine_distance(best.embedding, e) < 0.05
                        for p, _, e in self.gallery):
                     continue
-                if self.db is not None:
-                    self.db.add_embedding(pid, self.model_name, best.embedding)
+                self.db.add_embedding(pid, self.model_name, best.embedding)
                 self.gallery.append((pid, person, best.embedding))
                 self._store.add(pid, person, best.embedding)
             added += 1

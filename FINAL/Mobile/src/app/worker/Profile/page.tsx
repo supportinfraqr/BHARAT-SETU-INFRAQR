@@ -120,9 +120,20 @@ export default function WorkerProfilePage() {
   const [faceSaveBusy, setFaceSaveBusy] = useState(false);
   const [faceEnrolled, setFaceEnrolled] = useState(0);
   const [enrolledPhotos, setEnrolledPhotos] = useState<Record<number, string>>({});
+  const [faceStats, setFaceStats] = useState<{ photoCount: number; distinctPhotos: number }>({ photoCount: 0, distinctPhotos: 0 });
+  const facePhotosRef = useRef<Record<number, string>>({});
+  useEffect(() => { facePhotosRef.current = facePhotos; }, [facePhotos]);
 
   // Validate ONE staged photo (detect-only) and only keep it if a face is found.
   const checkFacePhoto = async (slot: number, dataUrl: string) => {
+    // Reject an identical photo already staged in another slot — duplicate
+    // captures collapse into a single face vector in the engine.
+    const dup = Object.entries(facePhotosRef.current).find(([s, url]) => Number(s) !== slot && url === dataUrl);
+    if (dup) {
+      setFaceChecks(prev => ({ ...prev, [slot]: { state: 'error', message: `Same as Photo #${dup[0]} — capture a different angle` } }));
+      setFaceEnrollStatus(`Photo #${slot} is identical to Photo #${dup[0]}. Each photo must be a different capture.`);
+      return;
+    }
     setFaceChecks(prev => ({ ...prev, [slot]: { state: 'checking' } }));
     try {
       const response = await fetch('/api/worker/face-check', {
@@ -176,6 +187,23 @@ export default function WorkerProfilePage() {
   const saveFaceEnrollment = async () => {
     const slots = [1, 2, 3, 4, 5];
     if (slots.some(s => !facePhotos[s])) { setFaceEnrollStatus('Add all 5 face photos before saving.'); return; }
+    // Block identical photos before hitting the server (they collapse to one vector).
+    const seen = new Map<string, number>();
+    const dups: number[] = [];
+    for (const s of slots) {
+      const value = facePhotos[s];
+      const first = seen.get(value);
+      if (first !== undefined) dups.push(s); else seen.set(value, s);
+    }
+    if (dups.length) {
+      setFaceChecks(prev => {
+        const next = { ...prev };
+        dups.forEach(s => { next[s] = { state: 'error', message: 'Same as another photo — retake' }; });
+        return next;
+      });
+      setFaceEnrollStatus('Some photos are identical — each of the 5 must be a different capture. Retake the highlighted ones.');
+      return;
+    }
     setFaceSaveBusy(true); setFaceEnrollStatus('Validating and enrolling your 5 photos…');
     try {
       const response = await fetch('/api/worker/face-enroll', {
@@ -198,6 +226,18 @@ export default function WorkerProfilePage() {
       setFaceEnrolled(body.data.enrolled);
       setEnrolledPhotos(prev => ({ ...prev, ...facePhotos }));
       setFaceEnrollStatus(`Enrolled ${body.data.enrolled} of 5 photos for AI attendance.`);
+      // Re-read the authoritative status (distinct photos + engine vectors).
+      void fetch('/api/worker/face-status', { cache: 'no-store' })
+        .then(r => (r.ok ? r.json() : null))
+        .then((b: { data?: { enrolled?: number; photoCount?: number; distinctPhotos?: number } } | null) => {
+          if (!b?.data) return;
+          if (typeof b.data.enrolled === 'number') setFaceEnrolled(b.data.enrolled);
+          setFaceStats({
+            photoCount: b.data.photoCount ?? 5,
+            distinctPhotos: b.data.distinctPhotos ?? 5,
+          });
+        })
+        .catch(() => {});
     } catch (reason) {
       setFaceEnrollStatus(reason instanceof Error ? reason.message : 'Enrolment failed.');
     } finally { setFaceSaveBusy(false); }
@@ -208,8 +248,13 @@ export default function WorkerProfilePage() {
     let active = true;
     void fetch('/api/worker/face-status', { cache: 'no-store' })
       .then(r => (r.ok ? r.json() : null))
-      .then((body: { data?: { enrolled?: number } } | null) => {
-        if (active && body?.data && typeof body.data.enrolled === 'number') setFaceEnrolled(body.data.enrolled);
+      .then((body: { data?: { enrolled?: number; photoCount?: number; distinctPhotos?: number } } | null) => {
+        if (!active || !body?.data) return;
+        if (typeof body.data.enrolled === 'number') setFaceEnrolled(body.data.enrolled);
+        setFaceStats({
+          photoCount: typeof body.data.photoCount === 'number' ? body.data.photoCount : 0,
+          distinctPhotos: typeof body.data.distinctPhotos === 'number' ? body.data.distinctPhotos : 0,
+        });
       })
       .catch(() => {});
     return () => { active = false; };
@@ -1120,8 +1165,12 @@ export default function WorkerProfilePage() {
                     Each photo is checked for a face; nothing is saved until all 5 are valid.
                   </span>
                   <div className="flex items-center gap-3 self-end sm:self-auto">
-                    <span className="font-bold text-[#073B67] whitespace-nowrap">
-                      {faceEnrolled > 0 ? `${faceEnrolled} / 5 Enrolled` : `${[1, 2, 3, 4, 5].filter(i => facePhotos[i]).length} / 5 Selected`}
+                    <span className={`font-bold whitespace-nowrap ${faceStats.photoCount > 0 && faceStats.distinctPhotos < 5 ? 'text-amber-600' : 'text-[#073B67]'}`}>
+                      {faceStats.photoCount > 0 && faceStats.distinctPhotos < 5
+                        ? `${faceStats.distinctPhotos} / 5 distinct — duplicates`
+                        : faceEnrolled > 0
+                          ? `${faceEnrolled} / 5 Enrolled`
+                          : `${[1, 2, 3, 4, 5].filter(i => facePhotos[i] || enrolledPhotos[i]).length} / 5 Selected`}
                     </span>
                     <button
                       type="button"
@@ -1134,6 +1183,12 @@ export default function WorkerProfilePage() {
                     </button>
                   </div>
                 </div>
+                {faceStats.photoCount > 0 && faceStats.distinctPhotos < 5 && (
+                  <p className="text-[11px] font-semibold text-amber-600 mt-1">
+                    {faceStats.photoCount - faceStats.distinctPhotos} of your saved photos are identical, so the system counts fewer than 5.
+                    Add 5 photos from different angles and press Save &amp; Enroll.
+                  </p>
+                )}
                 {faceEnrollStatus && <p role="status" className="text-[11px] font-semibold text-[#073B67] mt-2">{faceEnrollStatus}</p>}
               </div>
             </div>
