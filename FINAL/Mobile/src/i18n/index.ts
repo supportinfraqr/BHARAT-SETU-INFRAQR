@@ -32,6 +32,15 @@ export function translate(language: Language, key: string, values?: Record<strin
   return message;
 }
 
+/**
+ * Every curated value for a language. Used by the runtime auto-translator to
+ * skip strings that are already human-curated (so it never re-translates a
+ * correct dictionary translation).
+ */
+export function dictionaryValuesFor(language: Language): Set<string> {
+  return new Set(Object.values(dictionaryFor(language)));
+}
+
 export function getStoredLanguage(value: string | null | undefined): Language {
   return value && isLanguage(value) ? value : DEFAULT_LANGUAGE;
 }

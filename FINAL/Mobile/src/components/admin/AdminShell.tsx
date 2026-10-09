@@ -45,6 +45,7 @@ const auditOpsGroup = { key: 'Audit & Reports', icon: BookOpenCheck, items: [
   ['Courses & Skills', '/admin/courses'],
   ['Activity Report', '/admin/activity'],
   ['AI Audit Settings', '/admin/audit-settings'],
+  ['Translation', '/admin/translation-settings'],
 ] as const };
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {

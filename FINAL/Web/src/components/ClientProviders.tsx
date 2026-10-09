@@ -5,6 +5,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import type { Language } from '@/i18n';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import VoiceGuide from '@/components/worker/VoiceGuide';
+import AutoTranslate from '@/components/i18n/AutoTranslate';
 
 // After a deploy the previously-loaded JS chunks are replaced (new hashes). An
 // already-open tab can then throw a ChunkLoadError and freeze — buttons and
@@ -37,5 +38,5 @@ function useChunkErrorReload() {
 
 export function ClientProviders({ children, initialLanguage }: { children: React.ReactNode; initialLanguage?: Language }) {
   useChunkErrorReload();
-  return <LanguageProvider initialLanguage={initialLanguage}><NotificationProvider>{children}<VoiceGuide /></NotificationProvider></LanguageProvider>;
+  return <LanguageProvider initialLanguage={initialLanguage}><NotificationProvider>{children}<VoiceGuide /><AutoTranslate /></NotificationProvider></LanguageProvider>;
 }
