@@ -1394,7 +1394,6 @@ def _contractor_profile_sections(user):
             _f("Onboarding Method", getattr(cp, "onboarding_method", "") if cp else "", "Contractor"),
             _f("Attendance Method", getattr(cp, "attendance_method", "") if cp else "", "Contractor"),
             _f("Payroll Method", getattr(cp, "payroll_method", "") if cp else "", "Contractor"),
-            _f("QR Scanner / Device ID", getattr(cp, "qr_device_id", "") if cp else "", "Contractor"),
         ],
     }
     verified = str(getattr(cp, "gst_verification_status", "") or "").upper() == "VERIFIED"
