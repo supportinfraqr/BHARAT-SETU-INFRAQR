@@ -16,8 +16,13 @@ const STAGE: Record<Row['stage'], { label: string; tone: string }> = {
 };
 
 export default function AdminVerificationsPage() {
+  type GstFields = { gstin: string; gstLegalName: string; gstTradeName: string; gstConstitution: string; gstRegistrationDate: string };
+  const emptyGst = (): GstFields => ({ gstin: '', gstLegalName: '', gstTradeName: '', gstConstitution: '', gstRegistrationDate: '' });
   const [rows, setRows] = useState<Row[]>([]);
   const [notes, setNotes] = useState<Record<number, string>>({});
+  const [gst, setGst] = useState<Record<number, GstFields>>({});
+  const gstFor = (row: Row): GstFields => gst[row.userId] ?? { ...emptyGst(), gstin: row.gstin || '', gstLegalName: row.legalName || '' };
+  const setGstField = (id: number, key: keyof GstFields, value: string) => setGst(prev => ({ ...prev, [id]: { ...(prev[id] ?? emptyGst()), [key]: value } }));
   const [busy, setBusy] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -42,7 +47,7 @@ export default function AdminVerificationsPage() {
     try {
       const response = await fetch('/api/admin/verification/review', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: row.userId, role: row.role, status, note: notes[row.userId] || '' }),
+        body: JSON.stringify({ userId: row.userId, role: row.role, status, note: notes[row.userId] || '', ...gstFor(row) }),
       });
       const body = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(body.error || 'Could not save the decision.');
@@ -84,6 +89,16 @@ export default function AdminVerificationsPage() {
                   </a>
                 ))}
               </div>
+              {row.stage === 'PENDING' && (
+                <div className="grid sm:grid-cols-2 gap-2 rounded-xl bg-gray-50/60 border border-gray-100 p-3">
+                  <p className="sm:col-span-2 text-[10px] font-bold uppercase tracking-wider text-gray-400">GST / registration details (fill at approval — required when the firm has no GST)</p>
+                  {([['gstin', 'GSTIN'], ['gstLegalName', 'Legal name (per GST)'], ['gstTradeName', 'Trade name'], ['gstConstitution', 'Constitution'], ['gstRegistrationDate', 'GST registration date']] as const).map(([key, label]) => (
+                    <label key={key} className="text-[10px] font-semibold text-gray-500">{label}
+                      <input value={gstFor(row)[key]} onChange={e => setGstField(row.userId, key, e.target.value)} className="mt-0.5 w-full h-9 border border-gray-200 rounded-lg px-3 text-xs bg-white"/>
+                    </label>
+                  ))}
+                </div>
+              )}
               <input
                 value={notes[row.userId] ?? ''}
                 onChange={e => setNotes(prev => ({ ...prev, [row.userId]: e.target.value }))}

@@ -189,7 +189,10 @@ export default function BindingRequestsPage() {
         <h1 className="text-2xl font-bold text-[#062D4F]">Binding Requests</h1>
         <p className="text-sm text-gray-500 mt-1">Connect a worker with a contractor. Both parties must approve before binding is complete.</p>
       </div>
-      <Link href="/worker" className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-600 hover:text-[#073B67] hover:border-[#073B67] transition-all shadow-sm" title="Go to Dashboard"><Home size={18}/></Link>
+      <div className="flex items-center gap-2">
+        <Link href="/worker/EmploymentHistory" className="h-10 px-3 rounded-full bg-white border border-gray-200 text-[#073B67] text-xs font-bold inline-flex items-center gap-1.5 hover:border-[#073B67] transition-all shadow-sm" title="Trace in employment history"><History size={15}/>History trace</Link>
+        <Link href="/worker" className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-600 hover:text-[#073B67] hover:border-[#073B67] transition-all shadow-sm" title="Go to Dashboard"><Home size={18}/></Link>
+      </div>
     </div>
 
     {notice && <p role="status" className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>{notice}</p>}

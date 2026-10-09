@@ -252,11 +252,13 @@ export default function OrgCostSheetsPage() {
 
           <div className="rounded-xl border border-gray-100 p-4">
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Custom cost heads</p>
-            <div className="space-y-2">{editing.custom.map((c, i) => <div key={i} className="grid grid-cols-[1.6fr_120px_120px] gap-2 items-center text-xs">
-              <span className="font-semibold text-gray-800">{c.name}{!c.editableByOrg && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Platform fixed</span>}</span>
-              <input type="number" disabled={!editable || !c.editableByOrg} value={amounts[c.name] ?? c.amount} onChange={e => setAmounts(a => ({ ...a, [c.name]:Number(e.target.value) }))} className="h-9 border border-gray-200 rounded-lg px-2 text-xs disabled:bg-gray-50"/>
+            <div className="space-y-2">{editing.custom.map((c, i) => {
+              const canEdit = c.editableByOrg || c.appliesTo === "contractor" || c.appliesTo === "both";
+              return <div key={i} className="grid grid-cols-[1.6fr_120px_120px] gap-2 items-center text-xs">
+              <span className="font-semibold text-gray-800">{c.name}{!canEdit && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Platform fixed</span>}</span>
+              <input type="number" disabled={!editable || !canEdit} value={amounts[c.name] ?? c.amount} onChange={e => setAmounts(a => ({ ...a, [c.name]:Number(e.target.value) }))} className="h-9 border border-gray-200 rounded-lg px-2 text-xs disabled:bg-gray-50"/>
               <span className="text-gray-400">{c.frequency === "ONE_TIME" ? "one-time" : c.frequency.toLowerCase()} · {c.appliesTo}</span>
-            </div>)}</div>
+            </div>; })}</div>
           </div>
 
           {preview && <div className="rounded-xl border border-gray-100 p-4">

@@ -744,7 +744,13 @@ def org_cost_sheet_update(request, template_id):
             if not isinstance(row, dict) or row.get("amount") is None:
                 continue
             line = t.custom_lines.filter(name=str(row.get("name") or "")).first()
-            if line is not None and line.editable_by_org:
+            # The contractor may adjust its own cost heads (Part C): any custom
+            # line that applies to the contractor (or both), plus platform heads
+            # explicitly flagged editable by the org. Employer-only heads stay
+            # locked (the principal employer's cost).
+            editable = line is not None and (
+                line.editable_by_org or line.applies_to in ("contractor", "both"))
+            if editable:
                 line.amount = _num(row["amount"])
                 line.save(update_fields=["amount", "updated_at"])
     log_audit(request.user, "UPDATE", "cost_sheet_template", t.id,

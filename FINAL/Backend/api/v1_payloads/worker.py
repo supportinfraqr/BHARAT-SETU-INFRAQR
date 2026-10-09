@@ -844,11 +844,33 @@ def _worker_courses(user=None):
     if cfg is not None and not cfg.courses_enabled:
         return []
     enrollments = {}
+    contractor_id = employer_id = None
     if user is not None:
         enrollments = {e.course_id: e for e in CourseEnrollment.objects.filter(worker=user)}
+        binding = (WorkerContractorBinding.objects
+                   .filter(worker=user, binding_status="ACCEPTED")
+                   .select_related("contractor", "site__employer").first())
+        if binding is not None:
+            contractor_id = binding.contractor_id
+            if binding.site is not None:
+                employer_id = binding.site.employer_id
+
+    def _visible(course):
+        aud = getattr(course, "audience", "all") or "all"
+        if aud == "contractors":
+            return contractor_id is not None
+        if aud == "employers":
+            return employer_id is not None
+        if aud == "selected":
+            return (contractor_id is not None and contractor_id in (course.audience_contractor_ids or [])) \
+                or (employer_id is not None and employer_id in (course.audience_employer_ids or []))
+        return True  # "all"
+
     rows = []
     for c in Course.objects.filter(is_active=True).prefetch_related(
             "modules__lessons", "modules__readings", "modules__assignments__questions"):
+        if not _visible(c):
+            continue
         enrollment = enrollments.get(c.id)
         completed_ids = {str(x) for x in (enrollment.completed_lesson_ids or [])} if enrollment else set()
         scores = {str(k): v for k, v in (enrollment.assignment_scores or {}).items()} if enrollment else {}
@@ -1051,6 +1073,26 @@ def _worker_issued_letters(user):
     return rows
 
 
+def _duration_label(days):
+    """Human duration from a day count (e.g. '1y 2m', '45d')."""
+    try:
+        days = int(days)
+    except (TypeError, ValueError):
+        return "—"
+    if days <= 0:
+        return "—"
+    years, rem = divmod(days, 365)
+    months, d = divmod(rem, 30)
+    parts = []
+    if years:
+        parts.append(f"{years}y")
+    if months:
+        parts.append(f"{months}m")
+    if d and not years:
+        parts.append(f"{d}d")
+    return " ".join(parts) or f"{d}d"
+
+
 def _worker_employment_history(user):
     """Completed engagements for the worker's Employment History.
 
@@ -1090,6 +1132,15 @@ def _worker_employment_history(user):
         else:
             period_end = ""
         letters = letters_by_binding.get(b.id, {})
+        # Engagement duration (start of acceptance -> end of the engagement).
+        start_dt = b.accepted_at
+        if su == "ACCEPTED":
+            end_dt = timezone.now()
+        elif su == "CANCELLED":
+            end_dt = b.unbound_at or b.updated_at or timezone.now()
+        else:  # TRANSFERRED
+            end_dt = b.updated_at or timezone.now()
+        duration_days = max(0, (end_dt.date() - start_dt.date()).days) if start_dt else 0
         out.append({
             "id": b.id,
             "ref": f"BIND-2026-{b.id:03d}",
@@ -1107,12 +1158,18 @@ def _worker_employment_history(user):
             "wage": _num(b.offered_wage) if b.offered_wage is not None else 0,
             "startDate": _dts(b.accepted_at) if b.accepted_at else "",
             "endDate": period_end,
+            "durationDays": duration_days,
+            "durationLabel": _duration_label(duration_days),
             "status": status_label,
             "current": su == "ACCEPTED",
             "appointmentLetter": letters.get("appointment"),
             "experienceLetter": letters.get("experience"),
             "employmentCard": letters.get("card"),
         })
+    # Sequential (chronological) trace, oldest engagement first.
+    out.sort(key=lambda row: (row.get("startDate") or "9999-99-99"))
+    for index, row in enumerate(out, 1):
+        row["sequence"] = index
     return out
 
 

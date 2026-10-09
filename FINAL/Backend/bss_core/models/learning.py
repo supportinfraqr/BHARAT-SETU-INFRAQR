@@ -40,6 +40,16 @@ class Course(models.Model):
     image_url = models.CharField(max_length=255, blank=True)
     badge = models.CharField(max_length=80, blank=True)
     pass_score = models.PositiveIntegerField(default=70)
+    # Audience targeting: which workers may see this course.
+    #   all         -> every worker
+    #   contractors -> workers under any contractor
+    #   employers   -> workers under any employer
+    #   selected    -> only workers under the listed contractor/employer ids
+    AUDIENCE = [("all", "All workers"), ("contractors", "All contractors"),
+                ("employers", "All employers"), ("selected", "Selected")]
+    audience = models.CharField(max_length=20, choices=AUDIENCE, default="all")
+    audience_contractor_ids = models.JSONField(default=list, blank=True)
+    audience_employer_ids = models.JSONField(default=list, blank=True)
     is_active = models.BooleanField(default=True)
     sort_order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)

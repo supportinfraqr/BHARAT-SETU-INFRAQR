@@ -70,6 +70,7 @@ export type WorkerRecord = {
       site: string; siteId: string;
       designation: string; department: string; shift: string; wage: number;
       startDate: string; endDate: string; status: string; current: boolean;
+      durationDays?: number; durationLabel?: string; sequence?: number;
       appointmentLetter?: { id: number; name: string; date: string; downloadUrl: string } | null;
       experienceLetter?: { id: number; name: string; date: string; downloadUrl: string } | null;
       employmentCard?: { id: number; name: string; date: string; downloadUrl: string } | null;

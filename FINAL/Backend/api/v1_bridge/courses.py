@@ -252,12 +252,33 @@ def _learning_config():
     return LearningConfig.objects.first() or LearningConfig.objects.create(courses_enabled=True)
 
 
+def _clean_audience(body, default="all"):
+    value = str(body.get("audience") or default).strip().lower()
+    return value if value in ("all", "contractors", "employers", "selected") else "all"
+
+
+def _clean_ids(value):
+    if not isinstance(value, list):
+        return []
+    out = []
+    for item in value:
+        try:
+            out.append(int(item))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
 def _admin_course_row(course):
     return {
         "id": course.id, "code": course.code, "title": course.title,
         "provider": course.provider, "category": course.category, "duration": course.duration,
         "description": course.description, "instructor": course.instructor,
         "certification": course.certification, "skillName": course.skill_name,
+        "imageUrl": course.image_url, "badge": course.badge,
+        "audience": course.audience,
+        "audienceContractorIds": list(course.audience_contractor_ids or []),
+        "audienceEmployerIds": list(course.audience_employer_ids or []),
         "passScore": course.pass_score, "active": course.is_active, "sortOrder": course.sort_order,
         "modules": [{
             "id": m.id, "title": m.title,
@@ -446,6 +467,10 @@ def admin_courses(request):
             instructor=str(body.get("instructor") or "")[:120],
             certification=str(body.get("certification") or "")[:120],
             skill_name=str(body.get("skillName") or "")[:80],
+            image_url=str(body.get("imageUrl") or "")[:255],
+            audience=_clean_audience(body),
+            audience_contractor_ids=_clean_ids(body.get("audienceContractorIds")),
+            audience_employer_ids=_clean_ids(body.get("audienceEmployerIds")),
             pass_score=int(body.get("passScore") or 70),
             is_active=bool(body.get("active", True)),
         )
@@ -454,6 +479,26 @@ def admin_courses(request):
     rows = [_admin_course_row(c)
             for c in Course.objects.prefetch_related("modules__lessons")]
     return Response({"data": rows}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def admin_course_audience_options(request):
+    """BSS Admin: contractor/employer id+name lists for course audience targeting."""
+    from bss_core.models import ContractorProfile, EmployerProfile
+    if not _is_bss_admin(request.user):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    contractors = [
+        {"id": cp.user_id, "name": cp.contractor_name or cp.trade_name or (cp.user.username if cp.user_id else "")}
+        for cp in ContractorProfile.objects.select_related("user").all()
+    ]
+    employers = [
+        {"id": ep.user_id, "name": ep.employer_name or (ep.user.username if ep.user_id else "")}
+        for ep in EmployerProfile.objects.select_related("user").all()
+    ]
+    return Response({"data": {"contractors": contractors, "employers": employers}},
+                    status=status.HTTP_200_OK)
 
 
 @api_view(["PATCH", "DELETE"])
@@ -473,10 +518,17 @@ def admin_course_detail(request, course_id):
     text_fields = [("title", "title", 160), ("provider", "provider", 120),
                    ("category", "category", 80), ("duration", "duration", 40),
                    ("description", "description", 1000), ("instructor", "instructor", 120),
-                   ("certification", "certification", 120), ("skill_name", "skillName", 80)]
+                   ("certification", "certification", 120), ("skill_name", "skillName", 80),
+                   ("image_url", "imageUrl", 255), ("badge", "badge", 80)]
     for field, key, limit in text_fields:
         if key in body:
             setattr(course, field, str(body.get(key) or "")[:limit])
+    if "audience" in body:
+        course.audience = _clean_audience(body, course.audience)
+    if "audienceContractorIds" in body:
+        course.audience_contractor_ids = _clean_ids(body.get("audienceContractorIds"))
+    if "audienceEmployerIds" in body:
+        course.audience_employer_ids = _clean_ids(body.get("audienceEmployerIds"))
     if "passScore" in body:
         course.pass_score = max(0, min(100, int(body.get("passScore") or 0)))
     if "active" in body:
@@ -591,6 +643,7 @@ __all__ = [
     "admin_learning_config",
     "admin_courses",
     "admin_course_detail",
+    "admin_course_audience_options",
     "admin_learning_report",
     "admin_course_submission_grade",
 ]

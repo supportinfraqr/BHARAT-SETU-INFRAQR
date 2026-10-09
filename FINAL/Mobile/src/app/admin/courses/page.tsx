@@ -14,12 +14,15 @@ type CourseModuleView = { id: number; title: string; lessons: Array<{ id: number
 type Course = {
   id: number; code: string; title: string; provider: string; category: string; duration: string;
   description: string; instructor: string; certification: string; skillName: string;
+  imageUrl?: string; badge?: string; audience?: string; audienceContractorIds?: number[]; audienceEmployerIds?: number[];
   passScore: number; active: boolean; modules: CourseModuleView[];
 };
 type Draft = {
   id?: number; title: string; provider: string; category: string; duration: string; instructor: string;
   certification: string; skillName: string; description: string; passScore: number; active: boolean; modules: Module[];
+  imageUrl: string; audience: string; audienceContractorIds: number[]; audienceEmployerIds: number[];
 };
+type AudienceOption = { id: number; name: string };
 
 type ReportSubmission = { id: number; workerName: string; workerId: string; course: string; module: string; assignment: string; type: string; content: string; fileUrl: string; status: string; score: number | null; feedback: string; submittedAt: string | null };
 type ReportEnrollment = { id: number; workerName: string; workerId: string; course: string; status: string; progress: number; certificateNo: string; completedAt: string | null; updatedAt: string | null };
@@ -29,7 +32,7 @@ const emptyModule = (): Module => ({ title: '', lessons: [{ title: '', duration:
 const emptyAssignment = (): Assignment => ({ title: '', type: 'QUIZ', instructions: '', passScore: 60, questions: [] });
 const emptyQuestion = (): Question => ({ question: '', options: ['', ''], correctIndex: 0 });
 
-const emptyDraft = (): Draft => ({ title: '', provider: 'Bharat Shram Setu', category: '', duration: '', instructor: '', certification: '', skillName: '', description: '', passScore: 70, active: true, modules: [emptyModule()] });
+const emptyDraft = (): Draft => ({ title: '', provider: 'Bharat Shram Setu', category: '', duration: '', instructor: '', certification: '', skillName: '', description: '', passScore: 70, active: true, modules: [emptyModule()], imageUrl: '', audience: 'all', audienceContractorIds: [], audienceEmployerIds: [] });
 
 const input = 'mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm';
 const TYPE_LABEL: Record<string, string> = { QUIZ: 'Quiz', WRITING: 'Written response', UPLOAD: 'File upload' };
@@ -43,6 +46,7 @@ export default function AdminCoursesPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [audienceOptions, setAudienceOptions] = useState<{ contractors: AudienceOption[]; employers: AudienceOption[] }>({ contractors: [], employers: [] });
 
   const [report, setReport] = useState<Report | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
@@ -52,14 +56,17 @@ export default function AdminCoursesPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [cfgRes, listRes] = await Promise.all([
+      const [cfgRes, listRes, optRes] = await Promise.all([
         fetch('/api/admin/learning-config', { cache: 'no-store' }),
         fetch('/api/admin/courses', { cache: 'no-store' }),
+        fetch('/api/admin/courses/audience-options', { cache: 'no-store' }),
       ]);
       const cfg = await cfgRes.json().catch(() => ({})) as { data?: { coursesEnabled: boolean } };
       const list = await listRes.json().catch(() => ({})) as { data?: Course[]; error?: string };
+      const opts = await optRes.json().catch(() => ({})) as { data?: { contractors: AudienceOption[]; employers: AudienceOption[] } };
       if (cfg.data) setEnabled(cfg.data.coursesEnabled);
       if (listRes.ok) setCourses(list.data ?? []);
+      if (opts.data) setAudienceOptions({ contractors: opts.data.contractors ?? [], employers: opts.data.employers ?? [] });
       setError('');
     } catch (e) { setError(e instanceof Error ? e.message : 'Courses could not be loaded.'); }
     finally { setLoading(false); }
@@ -99,6 +106,8 @@ export default function AdminCoursesPage() {
       id: c.id, title: c.title, provider: c.provider, category: c.category, duration: c.duration,
       instructor: c.instructor, certification: c.certification, skillName: c.skillName,
       description: c.description, passScore: c.passScore, active: c.active,
+      imageUrl: c.imageUrl ?? '', audience: c.audience ?? 'all',
+      audienceContractorIds: c.audienceContractorIds ?? [], audienceEmployerIds: c.audienceEmployerIds ?? [],
       modules: c.modules.length ? c.modules.map(m => ({
         id: m.id, title: m.title,
         lessons: m.lessons.map(l => ({ id: l.id, title: l.title, duration: l.duration, youtubeUrl: l.youtubeUrl })),
@@ -283,6 +292,48 @@ export default function AdminCoursesPage() {
             <label className="text-xs font-semibold text-gray-700">Skill added on completion<input className={input} value={draft.skillName} onChange={e => setDraft({ ...draft, skillName: e.target.value })}/></label>
             <label className="text-xs font-semibold text-gray-700">Pass score (%)<input type="number" className={input} value={draft.passScore} onChange={e => setDraft({ ...draft, passScore: Number(e.target.value) })}/></label>
           </div>
+          <label className="block text-xs font-semibold text-gray-700">Thumbnail image URL
+            <input className={input} placeholder="https://…/course-banner.jpg" value={draft.imageUrl} onChange={e => setDraft({ ...draft, imageUrl: e.target.value })}/>
+          </label>
+          {draft.imageUrl && <img src={draft.imageUrl} alt="thumbnail preview" className="h-28 w-48 object-cover rounded-lg border border-gray-200"/>}
+          <label className="block text-xs font-semibold text-gray-700">Visible to
+            <select className={input} value={draft.audience} onChange={e => setDraft({ ...draft, audience: e.target.value })}>
+              <option value="all">All workers</option>
+              <option value="contractors">All contractors (their workers)</option>
+              <option value="employers">All employers (their workers)</option>
+              <option value="selected">Selected contractors / employers</option>
+            </select>
+          </label>
+          {draft.audience === 'selected' && (
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-700 mb-1">Contractors</p>
+                <div className="border border-gray-200 rounded-lg max-h-40 overflow-auto p-2 space-y-1">
+                  {audienceOptions.contractors.length === 0 && <p className="text-[11px] text-gray-400">No contractors.</p>}
+                  {audienceOptions.contractors.map(o => (
+                    <label key={o.id} className="flex items-center gap-2 text-xs text-gray-700">
+                      <input type="checkbox" className="accent-[#073B67]" checked={draft.audienceContractorIds.includes(o.id)}
+                        onChange={e => setDraft({ ...draft, audienceContractorIds: e.target.checked ? [...draft.audienceContractorIds, o.id] : draft.audienceContractorIds.filter(x => x !== o.id) })}/>
+                      {o.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-700 mb-1">Employers</p>
+                <div className="border border-gray-200 rounded-lg max-h-40 overflow-auto p-2 space-y-1">
+                  {audienceOptions.employers.length === 0 && <p className="text-[11px] text-gray-400">No employers.</p>}
+                  {audienceOptions.employers.map(o => (
+                    <label key={o.id} className="flex items-center gap-2 text-xs text-gray-700">
+                      <input type="checkbox" className="accent-[#073B67]" checked={draft.audienceEmployerIds.includes(o.id)}
+                        onChange={e => setDraft({ ...draft, audienceEmployerIds: e.target.checked ? [...draft.audienceEmployerIds, o.id] : draft.audienceEmployerIds.filter(x => x !== o.id) })}/>
+                      {o.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           <label className="block text-xs font-semibold text-gray-700">Description<textarea rows={2} className={input + ' h-auto py-2'} value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })}/></label>
           <label className="flex items-center gap-2 text-xs font-semibold text-gray-700"><input type="checkbox" checked={draft.active} onChange={e => setDraft({ ...draft, active: e.target.checked })} className="accent-[#073B67] w-4 h-4"/>Active (visible to workers)</label>
 

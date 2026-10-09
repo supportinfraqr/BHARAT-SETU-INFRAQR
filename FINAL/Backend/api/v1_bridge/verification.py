@@ -169,7 +169,10 @@ def admin_verification_queue(request):
         return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
     rows = []
     for model, role in ((EmployerProfile, "employer"), (ContractorProfile, "contractor")):
-        for profile in model.objects.filter(gst_verification_status="VERIFIED").select_related("user"):
+        # Include contractors who declared "no GST" — the admin fills the GST /
+        # registration fields at approval.
+        for profile in model.objects.filter(
+                gst_verification_status__in=("VERIFIED", "NOT_APPLICABLE")).select_related("user"):
             user = profile.user
             el_verified = _entitylocker_verified(user)
             manual = profile.manual_verification_status or "NOT_SUBMITTED"
@@ -217,6 +220,15 @@ def admin_verification_review(request):
     profile.manual_verification_status = decision
     profile.manual_verification_note = str(body.get("note") or "")[:255]
     fields = ["manual_verification_status", "manual_verification_note"]
+    # The admin completes the GST / registration fields at approval — mainly for
+    # contractors who declared "no GST".
+    for field, key, limit in (("gstin", "gstin", 20), ("gst_legal_name", "gstLegalName", 200),
+                              ("gst_trade_name", "gstTradeName", 200),
+                              ("gst_constitution", "gstConstitution", 120),
+                              ("gst_registration_date", "gstRegistrationDate", 20)):
+        if body.get(key) is not None:
+            setattr(profile, field, str(body.get(key) or "")[:limit])
+            fields.append(field)
     if decision == "VERIFIED":
         # Approving the account makes its GSTIN valid — a GSTIN may be approved
         # on only one account (contractor or employer).

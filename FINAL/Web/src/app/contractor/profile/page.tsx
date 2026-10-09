@@ -1,9 +1,8 @@
 "use client";
 import { useState } from 'react';
-import { Building2, Calculator, CheckCircle2, CreditCard, FileSignature, FileText, Landmark, Lock, MapPin, Phone, ShieldCheck, Users } from 'lucide-react';
+import { Building2, CheckCircle2, CreditCard, FileSignature, FileText, Landmark, Lock, MapPin, Phone, ShieldCheck, Users } from 'lucide-react';
 import StatutoryLicences from '@/components/portal/StatutoryLicences';
 import GstVerifyCard from '@/components/gst/GstVerifyCard';
-import OrgCostSheetsPage from '@/components/costsheet/OrgCostSheetsPage';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorLicence } from '@/types/portal';
 
@@ -15,7 +14,6 @@ const tabs = [
   ['financial', 'Financial', CreditCard],
   ['service', 'Service profile', MapPin],
   ['licences', 'Registrations & Licences', Landmark],
-  ['cost-sheets', 'Cost Sheet Adoption', Calculator],
   ['documents', 'Documents', FileText],
   ['declarations', 'Declarations', CheckCircle2],
   ['undertaking', 'Undertaking', FileSignature],
@@ -97,8 +95,6 @@ export default function ContractorProfilePage() {
 
         {tab === 'licences' ? (
           <StatutoryLicences rows={licences} onSave={saveLicence} />
-        ) : tab === 'cost-sheets' ? (
-          <OrgCostSheetsPage />
         ) : (
           <section className="bg-white border border-gray-200 rounded-2xl p-6">
             <header className="flex justify-between border-b border-gray-100 pb-4">
