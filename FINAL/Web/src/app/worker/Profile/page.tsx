@@ -182,12 +182,14 @@ export default function WorkerProfilePage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ images: slots.map(s => facePhotos[s]) }),
       });
-      const body = await response.json().catch(() => ({})) as { data?: { enrolled: number; saved: number }; error?: string; photoErrors?: number[] };
+      const body = await response.json().catch(() => ({})) as { data?: { enrolled: number; saved: number }; error?: string; photoErrors?: number[]; duplicateErrors?: number[] };
       if (!response.ok || !body.data) {
-        if (body.photoErrors?.length) {
+        if (body.photoErrors?.length || body.duplicateErrors?.length) {
           setFaceChecks(prev => {
             const next = { ...prev };
-            body.photoErrors!.forEach(i => { next[i + 1] = { state: 'error', message: 'No face detected — retake' }; });
+            body.photoErrors?.forEach(i => { next[i + 1] = { state: 'error', message: 'No face detected — retake' }; });
+            // duplicateErrors are already 1-based slot numbers.
+            body.duplicateErrors?.forEach(slot => { next[slot] = { state: 'error', message: 'Same photo as another slot — retake a different angle' }; });
             return next;
           });
         }

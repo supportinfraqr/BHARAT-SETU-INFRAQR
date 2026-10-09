@@ -432,6 +432,31 @@ def worker_face_enroll(request):
         return Response({"error": "All 5 face photos are mandatory — add all five before saving."},
                         status=status.HTTP_400_BAD_REQUEST)
 
+    # 0) Reject identical photos. The attendance engine collapses identical face
+    #    vectors, so a repeated capture would enrol fewer than 5 — require five
+    #    distinct captures (a common cause of a "2/5 enrolled" count).
+    import base64 as _b64
+    import hashlib as _hashlib
+    seen_hashes: dict = {}
+    duplicate_slots = []
+    for index, data_url in enumerate(images):
+        raw = data_url.split(",", 1)[1] if data_url.startswith("data:") else data_url
+        try:
+            decoded = _b64.b64decode(raw)
+        except Exception:  # noqa: BLE001
+            decoded = b""
+        digest = _hashlib.md5(decoded).hexdigest() if decoded else f"empty-{index}"
+        if digest in seen_hashes:
+            duplicate_slots.append(index + 1)  # 1-based slot numbers for the UI
+        else:
+            seen_hashes[digest] = index
+    if duplicate_slots:
+        return Response({
+            "error": "Some photos are identical — each of the 5 must be a different capture. "
+                     "Retake the highlighted photo(s).",
+            "duplicateErrors": duplicate_slots,
+        }, status=status.HTTP_400_BAD_REQUEST)
+
     # 1) Validate EVERY photo has a detectable face BEFORE saving anything, so a
     #    non-face image (e.g. a bottle) is rejected and nothing is persisted.
     try:
