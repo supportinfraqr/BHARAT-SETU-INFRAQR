@@ -1372,15 +1372,6 @@ def _contractor_profile_sections(user):
             _f("Annual Turnover Band", getattr(cp, "turnover_band", "") if cp else "", "Contractor"),
             _f("Payment Verification Status", "", "System"),
         ],
-        "principal": [
-            _f("Principal Employer Name", getattr(cp, "principal_employer_name", "") if cp else "", "Contractor"),
-            _f("Principal Employer ID", getattr(cp, "principal_employer_id", "") if cp else "", "Contractor"),
-            _f("Site / Establishment Name", getattr(cp, "site_establishment_name", "") if cp else "", "Contractor"),
-            _f("Site ID", getattr(cp, "site_ref_id", "") if cp else "", "Contractor"),
-            _f("Contract / Work Order Number", getattr(cp, "work_order_number", "") if cp else "", "Contractor"),
-            _f("Contract Start Date", _dts(cp.contract_start_date) if cp and cp.contract_start_date else "", "Contractor", field_type="date"),
-            _f("Contract End Date", _dts(cp.contract_end_date) if cp and cp.contract_end_date else "", "Contractor", field_type="date"),
-        ],
         "service": [
             _f("Registered Address", getattr(cp, "address", "") if cp else "", "Contractor"),
             _f("City", getattr(cp, "city", "") if cp else "", "Contractor"),
@@ -1398,16 +1389,6 @@ def _contractor_profile_sections(user):
             _f("Insurance / Workmen Compensation Proof", getattr(cp, "insurance_proof", "") if cp else "", "Contractor"),
             _f("Bank Proof / Cancelled Cheque", getattr(cp, "bank_proof", "") if cp else "", "Contractor"),
             _f("Other Certificates", getattr(cp, "other_certs", "") if cp else "", "Contractor"),
-        ],
-        "declarations": [
-            _f("Consent for Data Processing", "", "Contractor"),
-            _f("Registration Date", _dts(cp.registration_date) if cp and cp.registration_date else "", "Contractor", field_type="date"),
-            _f("Member of BSS Since", _date_str(getattr(cp, "registered_at", None)) if cp else "", "System", field_type="date"),
-            _f("Consent Date", getattr(cp, "consent_date", "") if cp else "", "System", field_type="date"),
-            _f("Registration Source", getattr(cp, "registration_source", "") if cp else "", "System"),
-            _f("Registered By", getattr(cp, "registered_by", "") if cp else "", "System"),
-            _f("Contractor Risk Rating", getattr(cp, "risk_rating", "") if cp else "", "System"),
-            _f("Verified Contractor Badge", getattr(cp, "is_verified_badge", "") if cp else "", "System"),
         ],
         "undertaking": [
             _f("Onboarding Method", getattr(cp, "onboarding_method", "") if cp else "", "Contractor"),

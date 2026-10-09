@@ -1,6 +1,6 @@
 "use client";
 import { useState } from 'react';
-import { Building2, CheckCircle2, CreditCard, FileSignature, FileText, Landmark, Link2, Lock, MapPin, Phone, ShieldCheck, Users } from 'lucide-react';
+import { Building2, CreditCard, FileSignature, FileText, Landmark, Lock, MapPin, Phone, ShieldCheck, Users } from 'lucide-react';
 import StatutoryLicences from '@/components/portal/StatutoryLicences';
 import GstVerifyCard from '@/components/gst/GstVerifyCard';
 import { useContractor } from '@/contexts/ContractorContext';
@@ -13,10 +13,8 @@ const tabs = [
   ['contact', 'Contact Persons', Phone],
   ['financial', 'Financial', CreditCard],
   ['service', 'Service profile', MapPin],
-  ['principal', 'Principal Employer & Site', Link2],
   ['licences', 'Registrations & Licences', Landmark],
   ['documents', 'Documents', FileText],
-  ['declarations', 'Declarations', CheckCircle2],
   ['undertaking', 'Undertaking', FileSignature],
 ] as const;
 
