@@ -1,6 +1,8 @@
 // BSS Document Template Engine — configuration & instance models.
 // Frontend-first: these shapes are JSON-serialisable so a backend can persist them later.
 
+import { formatDate as formatDateDMY } from '@/lib/date';
+
 export type DocumentType = 'appointment-letter' | 'experience-letter' | 'permanent-gate-pass' | 'temporary-gate-pass';
 
 export const DOCUMENT_TYPES: Array<{ id: DocumentType; label: string; short: string; format: 'A4' | 'PGP' | 'A4-LANDSCAPE'; roles?: Array<'employer' | 'contractor'> }> = [
@@ -140,10 +142,7 @@ export const nowIso = () => new Date().toISOString();
 export const today = () => new Date().toISOString().slice(0, 10);
 
 export function formatDate(iso?: string | null, fallback = '—'): string {
-  if (!iso) return fallback;
-  const value = iso.length <= 10 ? new Date(`${iso}T00:00:00`) : new Date(iso);
-  if (Number.isNaN(value.getTime())) return fallback;
-  return value.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatDateDMY(iso, fallback);
 }
 
 export function inr(value?: number | string | null): string {

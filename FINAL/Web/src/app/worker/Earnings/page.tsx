@@ -7,6 +7,7 @@ import type { WageRecord, WorkerAdvance, AdvanceStatus } from '@/types/portal';
 import { useWorker } from '@/contexts/WorkerContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import EnterpriseDataTable, { DataColumn } from '@/components/worker/EnterpriseDataTable';
+import { formatDate } from '@/lib/date';
 
 // Salary advance lifecycle (worker → contractor → payroll)
 // Requested → Approved → Disbursed (Cash/Online) → Accepted → Adjusted in Payroll
@@ -112,9 +113,9 @@ export default function EarningsPage() {
                   </div>
                   <p className="text-sm font-semibold text-gray-900 mt-1">{money(a.amount)} · {a.reason}</p>
                   <p className="text-[11px] text-gray-400 mt-0.5">
-                    Requested {a.requestedOn}
-                    {a.approvedOn && ` · Approved ${a.approvedOn}`}
-                    {a.disbursedOn && ` · Disbursed ${a.disbursedOn}${a.mode ? ` (${a.mode}${a.reference ? ` · ${a.reference}` : ''})` : ''}`}
+                    Requested {formatDate(a.requestedOn)}
+                    {a.approvedOn && ` · Approved ${formatDate(a.approvedOn)}`}
+                    {a.disbursedOn && ` · Disbursed ${formatDate(a.disbursedOn)}${a.mode ? ` (${a.mode}${a.reference ? ` · ${a.reference}` : ''})` : ''}`}
                     {a.payrollPeriod && ` · Adjusted in ${a.payrollPeriod} payroll`}
                   </p>
                   {a.status !== 'Rejected' && <div className="mt-2 flex items-center gap-1">

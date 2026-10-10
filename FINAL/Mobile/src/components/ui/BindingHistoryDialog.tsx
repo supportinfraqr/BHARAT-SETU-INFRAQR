@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { History, X } from "lucide-react";
+import { formatDateTime } from "@/lib/date";
 import type { BindingHistoryEvent } from "@/types/portal";
 
 export type { BindingHistoryEvent };
@@ -11,9 +12,7 @@ const noopSubscribe = () => () => {};
 
 function formatWhen(value?: string): string {
   if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return formatDateTime(value, value);
 }
 
 /**

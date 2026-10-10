@@ -101,6 +101,7 @@ from .engagement import (
     Notification,
     AuditLog,
     ApprovalQueue,
+    GstClaim,
 )
 from .registry import (
     PartyDirector,
@@ -192,7 +193,7 @@ __all__ = [
     "AadhaarChallenge",
     "DigiLockerProfile", "DigiLockerDocument", "DigiLockerSession",
     "EntityLockerAuth",
-    "UserPreference", "Notification", "AuditLog", "ApprovalQueue",
+    "UserPreference", "Notification", "AuditLog", "ApprovalQueue", "GstClaim",
     "PartyDirector", "PartyStatutoryRegistration", "PartyContact",
     "PartyBank", "PartyContract", "PartyDocument", "PartyConsentDeclaration",
     "PartyMaster",

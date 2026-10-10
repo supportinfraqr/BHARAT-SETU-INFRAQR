@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BadgeCheck, TriangleAlert, ShieldCheck, UserRound, Building2 } from 'lucide-react';
+import { formatDate } from '@/lib/date';
 
 type WorkerVerifyData = {
   identity?: { name?: string; bssId?: string; category?: string; aadhaarVerified?: boolean; photoUrl?: string };
@@ -102,19 +103,19 @@ export default function VerifyPage({ params }: { params: Promise<{ bssId: string
                   {((data as ContractorVerifyData)?.bssMemberSince || data?.identity?.bssMemberSince) && (
                     <div>
                       <dt className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Member of BSS since</dt>
-                      <dd className="font-semibold text-gray-800 mt-0.5">{data.bssMemberSince || data.identity?.bssMemberSince}</dd>
+                      <dd className="font-semibold text-gray-800 mt-0.5">{formatDate(data.bssMemberSince || data.identity?.bssMemberSince)}</dd>
                     </div>
                   )}
                   {((data as ContractorVerifyData)?.consentDate || data?.identity?.consentDate) && (
                     <div>
                       <dt className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Consent accepted</dt>
-                      <dd className="font-semibold text-gray-800 mt-0.5">{data.consentDate || data.identity?.consentDate}</dd>
+                      <dd className="font-semibold text-gray-800 mt-0.5">{formatDate(data.consentDate || data.identity?.consentDate)}</dd>
                     </div>
                   )}
                   {((data as ContractorVerifyData)?.bindingDate || data?.identity?.bindingDate) && (
                     <div>
                       <dt className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Bound to you since</dt>
-                      <dd className="font-semibold text-gray-800 mt-0.5">{data.bindingDate || data.identity?.bindingDate}</dd>
+                      <dd className="font-semibold text-gray-800 mt-0.5">{formatDate(data.bindingDate || data.identity?.bindingDate)}</dd>
                     </div>
                   )}
                 </dl>

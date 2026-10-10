@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { BadgeCheck, Banknote, Briefcase, Building2, CalendarDays, Droplet, GraduationCap, HeartPulse, IdCard, Landmark, MapPin, Phone, ShieldCheck, UserRound } from "lucide-react";
+import { formatDate } from "@/lib/date";
 
 export type ScanVerifyData = {
   relationship?: "public" | "bound" | "self";
@@ -120,12 +121,12 @@ export default function ScanIdentityCard({ data }: { data: ScanVerifyData }) {
         <Field label="Experience" value={skills.primary?.experienceYears ? `${skills.primary.experienceYears} yrs` : ""} />
         <Field label="Languages" value={skills.languages} />
         <Field label="Availability" value={id.availableForWork ? "Available for work" : ""} />
-        <Field label="Member of BSS since" value={data.bssMemberSince || id.bssMemberSince || data.details?.org?.bssMemberSince} />
-        <Field label="Consent accepted" value={data.consentDate || id.consentDate || data.details?.org?.consentDate} />
+        <Field label="Member of BSS since" value={formatDate(data.bssMemberSince || id.bssMemberSince || data.details?.org?.bssMemberSince, "")} />
+        <Field label="Consent accepted" value={formatDate(data.consentDate || id.consentDate || data.details?.org?.consentDate, "")} />
         {extended ? (
           <Field
             label={relationship === "self" ? "First binding on BSS since" : "Bound to you since"}
-            value={data.bindingDate || id.bindingDate || data.details?.org?.bindingDate}
+            value={formatDate(data.bindingDate || id.bindingDate || data.details?.org?.bindingDate, "")}
           />
         ) : null}
       </dl>
@@ -217,7 +218,7 @@ export default function ScanIdentityCard({ data }: { data: ScanVerifyData }) {
               <Field label="Designation" value={d.employment.designation || data.employment?.designation} />
               <Field label="Department" value={d.employment.department} />
               <Field label="Shift" value={d.employment.shift} />
-              <Field label="Date of joining" value={d.employment.doj} />
+              <Field label="Date of joining" value={formatDate(d.employment.doj, "")} />
               <Field label="Nature of job" value={d.employment.natureOfJob} />
             </Section>
           )}

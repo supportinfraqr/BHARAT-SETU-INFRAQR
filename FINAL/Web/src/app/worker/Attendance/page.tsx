@@ -29,6 +29,7 @@ import { useWorker } from '@/contexts/WorkerContext';
 import EnterpriseDataTable, { DataColumn } from '@/components/worker/EnterpriseDataTable';
 import ScanFrame from '@/components/qr/ScanFrame';
 import { createQrReader, QR_VIDEO_CONSTRAINTS, applyContinuousFocus, decodeQrFromImageFile } from '@/lib/qrScanner';
+import { formatDate } from '@/lib/date';
 
 const DAY_CODES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -642,7 +643,7 @@ export default function AttendancePage() {
               <div className="flex items-start justify-between border-b border-gray-100 pb-4">
                 <div>
                   <span className="text-xs font-bold text-gray-400 block uppercase">Attendance Detail</span>
-                  <h3 className="text-lg font-extrabold text-gray-900">{selectedRecord.date}</h3>
+                  <h3 className="text-lg font-extrabold text-gray-900">{formatDate(selectedRecord.date)}</h3>
                 </div>
                 <button
                   onClick={() => setSelectedRecord(null)}
@@ -756,10 +757,10 @@ export default function AttendancePage() {
                   </div>
                 )}
 
-                {(typeof selectedRecord.confidence === 'number') && (
+                {selectedRecord.matchStatus && (
                   <div className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100">
-                    <span className="text-xs text-gray-500 font-semibold">Match Confidence</span>
-                    <span className="text-xs font-bold text-gray-900">{selectedRecord.confidence}%</span>
+                    <span className="text-xs text-gray-500 font-semibold">Verification</span>
+                    <span className={`text-xs font-bold ${selectedRecord.matchStatus === 'Verified' ? 'text-emerald-700' : 'text-amber-700'}`}>{selectedRecord.matchStatus}</span>
                   </div>
                 )}
 

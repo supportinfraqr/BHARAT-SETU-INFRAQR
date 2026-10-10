@@ -310,7 +310,7 @@ def _register_account(request, role):
     with transaction.atomic():
         user = User.objects.create_user(
             username=identifier, password=_REGISTRATION[role]["password"],
-            role=role, account_active=True, is_verified=True, is_active=True)
+            role=role, account_active=(role == "worker"), is_verified=True, is_active=True)
         if role == "worker":
             identity = WorkerIdentity.objects.create(
                 user=user, bss_worker_id=bss_ids.new_bss_worker_id(),

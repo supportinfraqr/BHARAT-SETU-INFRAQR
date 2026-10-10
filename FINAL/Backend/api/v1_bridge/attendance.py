@@ -399,7 +399,10 @@ def attendance_camera_punch(request):
     site_id = data.get("siteId")
     device_code = str(data.get("deviceCode") or "").strip()
     status_val = str(data.get("status") or "PRESENT").strip().upper()
-    confidence = data.get("confidencePct") or 98.5
+    try:
+        confidence = float(data.get("confidencePct")) if data.get("confidencePct") is not None else 98.5
+    except (TypeError, ValueError):
+        confidence = 98.5
 
     if not bss_worker_id:
         return Response({"error": "bssWorkerId is required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -423,6 +426,20 @@ def attendance_camera_punch(request):
 
     device_obj = AttendanceDevice.objects.filter(device_code=device_code).first() if device_code else None
 
+    # AI/CCTV confidence thresholds: <35% rejected, 35–<50% needs manual review,
+    # >=50% auto-verified.
+    is_verified, needs_review, rejected = _face_decision(confidence)
+    if rejected:
+        return Response({
+            "message": "Attendance rejected: face-match confidence below 35%.",
+            "data": {"rejected": True, "confidence": confidence, "bssWorkerId": bss_worker_id,
+                     "site": site_obj.site_name, "status": "REJECTED", "created": False},
+        }, status=status.HTTP_200_OK)
+    remarks = "AI CCTV Live Camera Punch"
+    if needs_review:
+        remarks = (f"AI CCTV Live Camera Punch — manual intervention required "
+                   f"(confidence {confidence:g}%)")
+
     # Upsert daily attendance record
     attendance, created = Attendance.objects.update_or_create(
         worker=worker_user,
@@ -435,8 +452,8 @@ def attendance_camera_punch(request):
             "capture_method": "CAMERA",
             "verification_type": "face_image",
             "confidence_pct": confidence,
-            "is_verified": True,
-            "remarks": "AI CCTV Live Camera Punch",
+            "is_verified": is_verified,
+            "remarks": remarks,
         }
     )
 
@@ -451,6 +468,8 @@ def attendance_camera_punch(request):
             "status": attendance.status,
             "captureMethod": "CAMERA",
             "confidence": confidence,
+            "verified": is_verified,
+            "needsReview": needs_review,
             "created": created,
         }
     }, status=status.HTTP_200_OK)
@@ -731,6 +750,28 @@ def _haversine_m(lat1, lon1, lat2, lon2):
 DEFAULT_GEOFENCE_RADIUS_M = 100.0
 GPS_TOLERANCE_MAX_M = 50.0
 
+# Face-match confidence thresholds for AI / CCTV attendance photos:
+#   >= 50%   → auto-verified
+#   35–<50%  → marked but flagged "manual intervention required"
+#   < 35%    → rejected (not recorded)
+FACE_VERIFY_MIN_PCT = 50.0
+FACE_REVIEW_MIN_PCT = 35.0
+
+
+def _face_decision(confidence):
+    """(is_verified, needs_review, rejected) from a face-match confidence %."""
+    if confidence is None:
+        return True, False, False
+    try:
+        value = float(confidence)
+    except (TypeError, ValueError):
+        return True, False, False
+    if value >= FACE_VERIFY_MIN_PCT:
+        return True, False, False
+    if value >= FACE_REVIEW_MIN_PCT:
+        return False, True, False
+    return False, False, True
+
 
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
@@ -876,11 +917,21 @@ def _mark_worker_attendance(worker, site, verification, score, camera_label="", 
     except (TypeError, ValueError):
         confidence = None
 
+    # AI/CCTV confidence thresholds: <35% rejected, 35–<50% needs manual review,
+    # >=50% auto-verified.
+    is_verified, needs_review, rejected = _face_decision(confidence)
+    if rejected:
+        return None
+
     # Attribute the CCTV mark to the worker's contractor (if currently bound) so
     # camera rows carry the same source attribution as QR / RFID / sheet.
     binding = (WorkerContractorBinding.objects
                .filter(worker=worker, binding_status="ACCEPTED")
                .order_by("-id").first())
+
+    remarks = "AI CCTV site attendance"
+    if needs_review:
+        remarks = f"AI CCTV site attendance — manual intervention required (confidence {confidence:g}%)"
 
     defaults = {
         "site": site,
@@ -888,8 +939,8 @@ def _mark_worker_attendance(worker, site, verification, score, camera_label="", 
         "status": "PRESENT",
         "capture_method": "CAMERA",
         "verification_type": verification,
-        "is_verified": True,
-        "remarks": "AI CCTV site attendance",
+        "is_verified": is_verified,
+        "remarks": remarks,
         "confidence_pct": confidence,
         "camera_label": camera_label or "",
         "camera_area": camera_area or "",
@@ -899,9 +950,9 @@ def _mark_worker_attendance(worker, site, verification, score, camera_label="", 
         for field, val in defaults.items():
             setattr(record, field, val)
         record.save(update_fields=list(defaults.keys()) + ["updated_at"])
-        return False
+        return "updated"
     Attendance.objects.create(worker=worker, attendance_date=date.today(), **defaults)
-    return True
+    return "created"
 
 
 def _sync_attendance(site, payload):
@@ -910,7 +961,7 @@ def _sync_attendance(site, payload):
     from bss_core.models import SiteCctvCamera
 
     area_map = {c.label: (c.area or c.label) for c in SiteCctvCamera.objects.filter(site=site)}
-    created = updated = 0
+    created = updated = rejected = 0
     seen = set()
     candidates = []
     for sighting in payload.get("sightings", []):
@@ -927,11 +978,14 @@ def _sync_attendance(site, payload):
         if worker.id in seen:
             continue
         seen.add(worker.id)
-        if _mark_worker_attendance(worker, site, verification, score, camera_label, camera_area):
+        result = _mark_worker_attendance(worker, site, verification, score, camera_label, camera_area)
+        if result == "created":
             created += 1
-        else:
+        elif result == "updated":
             updated += 1
-    return {"workers": len(seen), "created": created, "updated": updated}
+        else:
+            rejected += 1
+    return {"workers": len(seen), "created": created, "updated": updated, "rejected": rejected}
 
 
 def _attendance_marked_today(site):

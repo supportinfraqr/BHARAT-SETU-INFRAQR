@@ -44,7 +44,17 @@ def _fmt(value) -> str:
     if not value:
         return "—"
     try:
-        return value.strftime("%d %b %Y")
+        return value.strftime("%d/%m/%Y")
+    except AttributeError:
+        return str(value)
+
+
+def _fmt_dt(value) -> str:
+    """Datetime as DD/MM/YYYY HH:mm (portal-wide format)."""
+    if not value:
+        return "—"
+    try:
+        return value.strftime("%d/%m/%Y %H:%M")
     except AttributeError:
         return str(value)
 
@@ -217,7 +227,7 @@ def _letter_tokens(binding, letter_type: str, logo_url: str = "") -> dict:
     w = _worker_facts(binding.worker)
     p = _party_facts(binding)
     ref = bss_ids.letter_bss_id(binding.id, letter_type)
-    issue = _fmt(binding.accepted_at or binding.created_at)
+    issue = _fmt_dt(binding.accepted_at or binding.created_at)
     # Form XV asks for the period of employment, which ends on the relieving date.
     relieving = _fmt(getattr(binding, "unbound_at", None) or binding.accepted_at
                      or binding.created_at)
@@ -353,7 +363,7 @@ def _render_card(binding) -> str:
     w = _worker_facts(binding.worker)
     p = _party_facts(binding)
     ref = bss_ids.letter_bss_id(binding.id, "card")
-    issued = _fmt(binding.accepted_at or binding.created_at)
+    issued = _fmt_dt(binding.accepted_at or binding.created_at)
     relieved = _fmt(getattr(binding, "unbound_at", None))
     body = f"""
     <div class="expired-wm">EXPIRED</div>
@@ -393,7 +403,7 @@ def render_letter(binding, letter_type: str) -> str:
     w = _worker_facts(binding.worker)
     p = _party_facts(binding)
     ref = bss_ids.letter_bss_id(binding.id, letter_type)
-    issue = _fmt(binding.accepted_at or binding.created_at)
+    issue = _fmt_dt(binding.accepted_at or binding.created_at)
     wage = _money(_offered_wage(binding))
     cost_sheet_html = _cost_sheet_section(getattr(binding, "cost_sheet", None),
                                           getattr(binding, "cost_breakdown", {}) or {})

@@ -8,6 +8,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { workerCompletion, completionHref } from '@/lib/workerProfileCompletion';
+import { formatDate } from '@/lib/date';
 
 export default function WorkerOverview() {
   const { worker, portal, saveWorker } = useWorker(); const { t } = useLanguage();
@@ -89,7 +90,7 @@ export default function WorkerOverview() {
     {label:'Rozgar requests',detail:'Review employment invitations',href:'/worker/rozgar',icon:BriefcaseBusiness},
     {label:'Attendance',detail:'View calendar and attendance history',href:'/worker/Attendance',icon:CalendarDays},
     {label:'Leave',detail:'Apply and track leave requests',href:'/worker/Leave',icon:CalendarDays},
-    {label:'Holiday calendar',detail:nextHoliday?`${nextHoliday.date} · ${nextHoliday.name}`:'No upcoming holiday',href:'/worker/Holidays',icon:CalendarDays},
+    {label:'Holiday calendar',detail:nextHoliday?`${formatDate(nextHoliday.date)} · ${nextHoliday.name}`:'No upcoming holiday',href:'/worker/Holidays',icon:CalendarDays},
     {label:'Wage History',detail:lastWage?`${inr(lastWage.net)} · ${lastWage.status}`:'No payroll record',href:'/worker/Earnings',icon:IndianRupee},
     {label:'Retirement benefits',detail:`${inr(pfTotal)} recorded PF`,href:'/worker/Benefits',icon:Landmark},
     {label:t('nav.documents'),detail:'Upload and verify records',href:'/worker/Documents',icon:FileText},
@@ -183,7 +184,6 @@ export default function WorkerOverview() {
   </div>;
 }
 
-function formatDate(value?: string) { if (!value) return '—'; const date = new Date(value); return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
 function Status({label,value,note,tone,icon:Icon,href}:{label:string;value:string;note:string;tone:'blue'|'orange'|'red'|'green';icon:typeof UserRound;href?:string}) { const colors={blue:'bg-blue-50 text-blue-700',orange:'bg-orange-50 text-orange-700',red:'bg-red-50 text-red-700',green:'bg-green-50 text-green-700'}; const card = <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">{label}</span><span className={`bss-kpi-icon ${colors[tone]}`}><Icon size={16}/></span></div><strong>{value}</strong><p>{note}</p></article>; return href ? <Link href={href} className="block transition-opacity hover:opacity-90" aria-label={`Open ${label}`}>{card}</Link> : card; }
 function Attention({href,icon:Icon,title,text,tone}:{href:string;icon:typeof AlertCircle;title:string;text:string;tone:'red'|'orange'|'blue'}) { const colors={red:'bg-red-50 text-red-600',orange:'bg-orange-50 text-orange-600',blue:'bg-blue-50 text-blue-700'}; return <Link href={href} className="px-5 py-4 flex items-center gap-3 hover:bg-gray-50 group"><span className={`w-9 h-9 rounded-lg flex items-center justify-center ${colors[tone]}`}><Icon size={17}/></span><span className="flex-1 min-w-0"><strong className="block text-sm font-semibold text-gray-850">{title}</strong><small className="block text-xs text-gray-400 mt-0.5 truncate">{text}</small></span><ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500"/></Link> }
 

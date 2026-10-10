@@ -3,6 +3,7 @@ import { templateService } from './services';
 import { renderDocumentHtml, openPrintHtml } from './render';
 import { resolveWorkerTokens, type PortalView, type WorkerLike } from './workerDataService';
 import { today, type DocumentType, type OwnerScope } from './types';
+import { createWorkerQrPayload } from '@/components/qr/WorkerQr';
 
 export type GatePassOverrides = {
   number?: string;
@@ -35,25 +36,10 @@ function daysBetween(fromIso: string, toIso: string): number {
   return Math.max(1, Math.round((to - from) / 86400000));
 }
 
-const PASS_PREFIX: Record<string, string> = { 'permanent-gate-pass': 'BSS-P', 'temporary-gate-pass': 'BSS-T' };
-const ALNUM = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-
-/** BSS-P + 11 alphanumeric (permanent) / BSS-T + 11 alphanumeric (temporary),
- *  derived from the worker BSS id with FNV-1a so it matches the backend number
- *  and stays stable across renders. */
-export function autoPassNo(bssId: string, type: DocumentType): string {
-  const prefix = PASS_PREFIX[type] ?? 'BSS-P';
-  const material = `${bssId}:${type === 'permanent-gate-pass' ? 'PGP' : 'TGP'}`;
-  let hash = 2166136261;
-  let suffix = '';
-  for (let round = 0; round < 11; round += 1) {
-    for (let index = 0; index < material.length; index += 1) {
-      hash ^= (material.charCodeAt(index) + round) >>> 0;
-      hash = Math.imul(hash, 16777619) >>> 0;
-    }
-    suffix += ALNUM[hash % ALNUM.length];
-  }
-  return prefix + suffix;
+/** A gate pass no longer has its own BSS id — it uses the worker's single BSS id
+ *  (and QR). Temporary and permanent passes share the worker's id/QR. */
+export function autoPassNo(bssId: string): string {
+  return bssId;
 }
 
 function generatedStamp(): string {
@@ -120,7 +106,7 @@ export async function buildGatePassHtml(
     if (branding.logoUrl) template.styles.showLogo = true;
   }
   const { tokens } = resolveWorkerTokens(view, worker);
-  const passNo = overrides.number || tokens['document.number'] || autoPassNo(worker.bssId, type);
+  const passNo = overrides.number || tokens['document.number'] || autoPassNo(worker.bssId);
   const issue = overrides.issueDate || overrides.validFrom || today();
   let validTo = overrides.validTo || plusDays(issue, type === 'permanent-gate-pass' ? 365 : 7);
   // A temporary pass is never valid for more than 7 days, whatever dates are set.
@@ -128,11 +114,11 @@ export async function buildGatePassHtml(
     const cap = plusDays(issue, 7);
     if (validTo > cap) validTo = cap;
   }
-  // QR carries two things: the worker BSS ID and the pass/card ID.
-  // Every pass carries a unique QR so it can be scanned at the gate.
-  const verifyUrl = `https://bharatshramsetu.com/verify/pass?worker=${encodeURIComponent(worker.bssId)}&pass=${encodeURIComponent(passNo)}`;
+  // One QR for the worker: the gate-pass QR IS the worker QR (same payload the
+  // worker ID card / scanner use), so any BSS scanner accepts it.
+  const qrPayload = createWorkerQrPayload(worker.bssId);
   let qr = '';
-  try { qr = await qrWithLogo(verifyUrl); } catch { qr = ''; }
+  try { qr = await qrWithLogo(qrPayload); } catch { qr = ''; }
   const merged: Record<string, string> = {
     ...tokens,
     'document.number': passNo,

@@ -9,6 +9,7 @@ import { MobilitySection, type MobilitySectionHandle } from '@/components/worker
 import { workerCompletion, completionTab } from '@/lib/workerProfileCompletion';
 import DownSelect from '@/components/ui/DownSelect';
 import { ResendOtp } from '@/components/auth/ResendOtp';
+import { formatDate } from '@/lib/date';
 import { 
   UserCircle, Save, CheckCircle2, CheckCheck, ShieldCheck, 
   MapPin, FileText, Users,
@@ -1712,7 +1713,7 @@ export default function WorkerProfilePage() {
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Consent for Data Sharing</label>
                     <div className="flex items-center gap-2 w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3">
                       <CheckCircle2 size={18} className="text-[#2F9E67]"/>
-                      <span className="text-[14px] font-medium text-[#1D1D1F]">{worker.other?.consentDate ? `Granted on ${worker.other.consentDate}` : 'Not granted'}</span>
+                      <span className="text-[14px] font-medium text-[#1D1D1F]">{worker.other?.consentDate ? `Granted on ${formatDate(worker.other.consentDate)}` : 'Not granted'}</span>
                     </div>
                   </div>
                 </div>
@@ -2151,7 +2152,7 @@ export default function WorkerProfilePage() {
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Consent Date</label>
-                  <input name="other.consentDate" type="text" defaultValue={worker.other?.consentDate} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                  <input name="other.consentDate" type="text" defaultValue={formatDate(worker.other?.consentDate, '')} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Registration Source</label>
@@ -2163,7 +2164,7 @@ export default function WorkerProfilePage() {
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Registration Date</label>
-                  <input name="other.registrationDate" type="text" defaultValue={worker.other?.registrationDate} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                  <input name="other.registrationDate" type="text" defaultValue={formatDate(worker.other?.registrationDate, '')} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
               </div>
             </div>

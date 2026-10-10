@@ -757,23 +757,11 @@ def _auto_gate_pass_dates(worker, gp_type):
 
 
 def _auto_gate_pass_no(worker, gp_type):
-    """Stable BSS-P + 11 alphanumeric (permanent) / BSS-T + 11 alphanumeric
-    (temporary) id derived from the worker's BSS id, so the same worker/type
-    always renders the same pass number. Uses FNV-1a so the frontend can derive
-    the identical number without a server round-trip."""
+    """The gate pass uses the WORKER's single BSS id (and QR) — there is no
+    separate temporary/permanent pass id. One QR per worker for all passes."""
     identity = _get_identity(worker)
-    seed = (identity.bss_worker_id if identity and identity.bss_worker_id else worker.username) or str(worker.pk)
-    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-    prefix = "BSS-P" if gp_type == "PGP" else "BSS-T"
-    material = f"{seed}:{gp_type}"
-    h = 2166136261
-    out = []
-    for rnd in range(11):
-        for ch in material:
-            h ^= (ord(ch) + rnd) & 0xFFFFFFFF
-            h = (h * 16777619) & 0xFFFFFFFF
-        out.append(alphabet[h % len(alphabet)])
-    return prefix + "".join(out)
+    return (identity.bss_worker_id if identity and identity.bss_worker_id
+            else worker.username) or str(worker.pk)
 
 
 def _submission_review_label(status):

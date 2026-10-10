@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { BadgeCheck, FileText, Loader2 } from 'lucide-react';
+import { formatDate } from '@/lib/date';
 
 type GstStatus = {
   gstin: string; status: string; verifiedAt: string | null;
@@ -12,10 +13,7 @@ type GstStatus = {
 };
 
 function fmtDate(value?: string | null) {
-  if (!value) return '—';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  return formatDate(value);
 }
 
 export default function GstVerifyCard({ role, defaultGstin = '', onVerified }: {
@@ -30,6 +28,11 @@ export default function GstVerifyCard({ role, defaultGstin = '', onVerified }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  // GST ownership claim (raised when the GSTIN is already held by another active account).
+  const [conflictGstin, setConflictGstin] = useState('');
+  const [claimNote, setClaimNote] = useState('');
+  const [claimBusy, setClaimBusy] = useState(false);
+  const [claimSent, setClaimSent] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -46,14 +49,18 @@ export default function GstVerifyCard({ role, defaultGstin = '', onVerified }: {
   useEffect(() => { void load(); }, [load]);
 
   const verify = async () => {
-    setBusy(true); setError(''); setNotice('');
+    setBusy(true); setError(''); setNotice(''); setConflictGstin(''); setClaimSent('');
     try {
       const response = await fetch(`${base}/verify`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gstin }),
       });
       const body = await response.json().catch(() => ({})) as { data?: GstStatus; error?: string };
-      if (!response.ok || !body.data) throw new Error(body.error ?? 'GST lookup failed.');
+      if (!response.ok || !body.data) {
+        // 409 = GSTIN already held by another active account → offer a claim.
+        if (response.status === 409) setConflictGstin(gstin);
+        throw new Error(body.error ?? 'GST lookup failed.');
+      }
       setStatus(body.data);
       setNotice(body.data.status === 'VERIFIED'
         ? `Verified — ${body.data.legalName || body.data.gstin} (${body.data.gstnStatus || 'Active'}).`
@@ -62,6 +69,24 @@ export default function GstVerifyCard({ role, defaultGstin = '', onVerified }: {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'GST lookup failed.');
     } finally { setBusy(false); }
+  };
+
+  const raiseClaim = async () => {
+    if (!conflictGstin) return;
+    setClaimBusy(true); setError('');
+    try {
+      const response = await fetch(`${base}/claim`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gstin: conflictGstin, note: claimNote }),
+      });
+      const body = await response.json().catch(() => ({})) as { data?: { id?: number }; error?: string };
+      if (!response.ok) throw new Error(body.error ?? 'The claim could not be submitted.');
+      setClaimSent(conflictGstin);
+      setConflictGstin('');
+      setClaimNote('');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The claim could not be submitted.');
+    } finally { setClaimBusy(false); }
   };
 
   const verified = status?.status === 'VERIFIED';
@@ -81,6 +106,18 @@ export default function GstVerifyCard({ role, defaultGstin = '', onVerified }: {
       {notice && <p role="status" className="bss-alert bss-alert-success">{notice}</p>}
       {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
 
+      {conflictGstin && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-2">
+          <p className="text-sm font-semibold text-amber-900">GSTIN {conflictGstin} is already used by another active account</p>
+          <p className="text-xs text-amber-800">If this GSTIN is actually yours, raise a claim. A BSS admin will review who should own it and deactivate the other account.</p>
+          <textarea value={claimNote} onChange={e => setClaimNote(e.target.value)} rows={2} placeholder="Add a note (optional) — e.g. your legal name / reason" className="w-full border border-amber-200 rounded-lg px-3 py-2 text-sm bg-white"/>
+          <button type="button" disabled={claimBusy} onClick={() => void raiseClaim()} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-50">{claimBusy ? 'Submitting…' : 'Raise claim on this GSTIN'}</button>
+        </div>
+      )}
+      {claimSent && (
+        <p role="status" className="bss-alert bss-alert-success">Claim submitted for GSTIN {claimSent}. A BSS admin will review it.</p>
+      )}
+
       {verified ? (
         <div className="grid sm:grid-cols-2 gap-3">
           <Field label="GSTIN" value={status?.gstin || '—'}/>
@@ -91,7 +128,7 @@ export default function GstVerifyCard({ role, defaultGstin = '', onVerified }: {
           </div>
           <Field label="Constitution" value={status?.constitution || '—'}/>
           <Field label="GSTN status" value={status?.gstnStatus || 'Active'}/>
-          <Field label="GST registered on" value={status?.registrationDate || '—'}/>
+          <Field label="GST registered on" value={fmtDate(status?.registrationDate)}/>
           <Field label="Date of incorporation" value={fmtDate(status?.incorporationDate)}/>
           <Field label="BSS member since" value={fmtDate(status?.memberSince)}/>
           {status?.hasCertificate && (

@@ -110,3 +110,33 @@ class ApprovalQueue(models.Model):
 
     def __str__(self):
         return f"{self.entity_type}#{self.entity_id} {self.status}"
+
+
+class GstClaim(models.Model):
+    """A contractor/employer asking to be recognised as the owner of a GSTIN that
+    another (active) account already holds. Admin reviews, picks the owner and
+    deactivates the other account, so a GSTIN is unique among *active* accounts."""
+
+    STATUS = [("PENDING", "Pending"), ("APPROVED", "Approved"),
+              ("REJECTED", "Rejected"), ("CANCELLED", "Cancelled")]
+
+    gstin = models.CharField(max_length=20, db_index=True)
+    claimant = models.ForeignKey(User, on_delete=models.CASCADE, related_name="gst_claims")
+    claimant_role = models.CharField(max_length=20)  # contractor | employer
+    note = models.CharField(max_length=500, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="PENDING")
+    resolved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name="+")
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "gst_claim"
+        indexes = [
+            models.Index(fields=["gstin"], name="idx_gst_claim_gstin"),
+            models.Index(fields=["status"], name="idx_gst_claim_status"),
+        ]
+
+    def __str__(self):
+        return f"GST {self.gstin} claim by {self.claimant_id} {self.status}"

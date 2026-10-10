@@ -428,7 +428,10 @@ def _session_ok(user, sid):
 
     A user with no recorded session (never logged in since this feature) is
     allowed — this lets a still-valid token minted before the change keep
-    working until the next login."""
+    working until the next login. A deactivated account (``is_active=False``) is
+    always rejected so admin deactivation takes effect immediately."""
+    if not getattr(user, "is_active", True):
+        return False
     current = _current_session_id(user)
     if not current:
         return True

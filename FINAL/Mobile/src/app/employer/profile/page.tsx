@@ -7,6 +7,7 @@ import GstVerifyCard from '@/components/gst/GstVerifyCard';
 import ClraRegistersPage from '@/components/employer/ClraRegistersPage';
 import OrgCostSheetsPage from '@/components/costsheet/OrgCostSheetsPage';
 import { useEmployer } from '@/contexts/EmployerContext';
+import { formatDate } from '@/lib/date';
 import type { ContractorLicence } from '@/types/portal';
 
 // All 16 BSS_Employer.csv sections (A–P) + BSS preferences.
@@ -199,7 +200,7 @@ export default function EmployerProfilePage() {
                   />
                 )
               ) : (
-                <span className="mt-1 block text-sm normal-case text-gray-900 font-medium">{field.value || '—'}</span>
+                <span className="mt-1 block text-sm normal-case text-gray-900 font-medium">{isDateField ? formatDate(field.value) : (field.value || '—')}</span>
               )}
               {field.note && <span className="mt-1 block text-[10px] font-normal text-gray-400">{field.note}</span>}
             </label>;

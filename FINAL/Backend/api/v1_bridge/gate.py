@@ -16,12 +16,34 @@ def _worker_name(user):
 
 def _resolve_pass(body):
     from bss_core.models import WorkerGatePass, WorkerIdentity
+    import json as _json
     code = str(body.get("gatePassNo") or body.get("pass") or "").strip()
+    # The gate pass QR is the worker QR (JSON {v,type,bssId,issuer}); accept it
+    # as well as a bare worker BSS id or a legacy pass number.
+    bss_candidate = ""
+    if code.startswith("{"):
+        try:
+            payload = _json.loads(code)
+            bss_candidate = str(payload.get("bssId") or "").strip()
+        except (ValueError, TypeError):
+            bss_candidate = ""
+    if bss_candidate:
+        identity = WorkerIdentity.objects.filter(bss_worker_id=bss_candidate).first()
+        if identity is not None:
+            return (WorkerGatePass.objects
+                    .filter(worker=identity.user, status__in=("ACTIVE", "PENDING"))
+                    .select_related("worker", "site").order_by("-created_at").first())
     if code:
         gp = (WorkerGatePass.objects.filter(gate_pass_no=code)
               .select_related("worker", "site").order_by("-created_at").first())
         if gp is not None:
             return gp
+        # The code may itself be the worker's BSS id (the single QR/id).
+        identity = WorkerIdentity.objects.filter(bss_worker_id=code.upper()).first()
+        if identity is not None:
+            return (WorkerGatePass.objects
+                    .filter(worker=identity.user, status__in=("ACTIVE", "PENDING"))
+                    .select_related("worker", "site").order_by("-created_at").first())
     bss_id = str(body.get("bssId") or body.get("worker") or "").strip().upper()
     if bss_id:
         identity = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
@@ -64,7 +86,7 @@ def gate_scan(request):
 
     scan = GatePassScan.objects.create(
         gate_pass=gp, worker=gp.worker, site=gp.site,
-        gate=gate, gate_pass_no=gp.gate_pass_no,
+        gate=gate, gate_pass_no=payloads._auto_gate_pass_no(gp.worker, gp.gate_pass_type),
         result=result, reason=reason, scanned_by=request.user)
 
     if result == "DENY" and gp is not None:
@@ -76,7 +98,8 @@ def gate_scan(request):
         for party in recipients:
             Notification.objects.create(
                 user=party, type="WARNING", title="Gate entry denied",
-                body=f"{gp.gate_pass_no}: {reason}", link="/employer/gate-pass")
+                body=f"{payloads._auto_gate_pass_no(gp.worker, gp.gate_pass_type)}: {reason}",
+                link="/employer/gate-pass")
 
     return Response({"data": {
         "result": result, "reason": reason, "gatePassNo": scan.gate_pass_no,

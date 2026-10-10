@@ -410,6 +410,8 @@ def attendance_detail(a):
         "gpsLong": number(a.gps_long),
         "gpsAddress": a.gps_address or "",
         "verified": bool(a.is_verified),
+        "matchStatus": ("Verified" if a.is_verified
+                        else ("Manual intervention required" if a.confidence_pct is not None else "")),
         "remarks": a.remarks or "",
     }
 
@@ -578,7 +580,7 @@ def _worker_gate_passes(user):
         rows.append({
             "id": g.id,
             "type": label,
-            "number": _d(g.gate_pass_no),
+            "number": _auto_gate_pass_no(g.worker, g.gate_pass_type),
             "site": g.site.site_name if g.site else "",
             "validFrom": _dts(g.start_date), "validTo": _dts(g.end_date),
             "status": "Blocked" if blocked else _GP_STATUS_LABEL.get(_d(g.status), _d(g.status)),
@@ -603,8 +605,8 @@ def _worker_compliance_records(user):
         rows.append({
             "date": _dts(event_date),
             "record": f"{label} issued" if g.status == "ACTIVE" else f"{label} {_GP_STATUS_LABEL.get(_d(g.status), g.status).lower()}",
-            "detail": f"{_d(g.gate_pass_no)}" + (f" · {g.site.site_name}" if g.site else ""),
-            "ref": _d(g.gate_pass_no),
+            "detail": f"{_auto_gate_pass_no(g.worker, g.gate_pass_type)}" + (f" · {g.site.site_name}" if g.site else ""),
+            "ref": _auto_gate_pass_no(g.worker, g.gate_pass_type),
             "result": _GP_STATUS_LABEL.get(_d(g.status), _d(g.status)),
         })
     ws = WorkerWelfareSafety.objects.filter(user=user).first()
@@ -644,11 +646,11 @@ def _worker_welfare_section(user):
         "trainingDate": _dts(ws.training_date) if ws and ws.training_date else "",
         "trainerName": _d(ws.trainer_name) if ws else "",
         "tempGatePassStatus": _GP_WELFARE_LABEL.get(tgp.status, "") if tgp else (_d(ws.temp_gatepass_status) if ws else ""),
-        "tgpNo": _d(tgp.gate_pass_no) if tgp else (_d(ws.tgp_no) if ws else ""),
+        "tgpNo": _auto_gate_pass_no(tgp.worker, tgp.gate_pass_type) if tgp else (_d(ws.tgp_no) if ws else ""),
         "tempGatePassStart": _dts(tgp.start_date) if tgp and tgp.start_date else (_dts(ws.temp_gatepass_start_date) if ws and ws.temp_gatepass_start_date else ""),
         "tempGatePassEnd": _dts(tgp.end_date) if tgp and tgp.end_date else (_dts(ws.temp_gatepass_end_date) if ws and ws.temp_gatepass_end_date else ""),
         "permanentGatePassStatus": _GP_WELFARE_LABEL.get(pgp.status, "") if pgp else (_d(ws.permanent_gatepass_status) if ws else ""),
-        "pgpNo": _d(pgp.gate_pass_no) if pgp else (_d(ws.pgp_no) if ws else ""),
+        "pgpNo": _auto_gate_pass_no(pgp.worker, pgp.gate_pass_type) if pgp else (_d(ws.pgp_no) if ws else ""),
         "permanentGatePassStart": _dts(pgp.start_date) if pgp and pgp.start_date else (_dts(ws.permanent_gatepass_start_date) if ws and ws.permanent_gatepass_start_date else ""),
         "permanentGatePassEnd": _dts(pgp.end_date) if pgp and pgp.end_date else (_dts(ws.permanent_gatepass_end_date) if ws and ws.permanent_gatepass_end_date else ""),
         "medicalExaminationStatus": _d(ws.medical_examination_status) if ws else "",

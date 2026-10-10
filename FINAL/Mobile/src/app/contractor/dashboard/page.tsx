@@ -10,18 +10,12 @@ import {
 import { useContractor } from '@/contexts/ContractorContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { CopyButton } from '@/components/ui/CopyButton';
+import { formatDate } from '@/lib/date';
 import type { GatePassEligibility } from '@/types/portal';
 
 /** Render a stored date (YYYY-MM-DD) as DD/MM/YYYY for display. */
 function fmtDate(value?: string): string {
-  const v = (value ?? '').trim();
-  if (!v || v === '—') return '—';
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) return v;
-  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(v);
-  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return v;
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  return formatDate(value);
 }
 
 export default function ContractorDashboardPage() {

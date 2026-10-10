@@ -21,6 +21,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { formatDate } from '@/lib/date';
 
 export type ApprovedBinding = { contractor: string; approvedOn: string };
 
@@ -92,9 +93,7 @@ export function useAutoDocumentState(): WorkerAutoDocumentState {
   return state;
 }
 
-/** Display format used across the demo document list (e.g. "02 Sep 2026"). */
+/** Display format used across the document list (e.g. "02/09/2026"). */
 export function formatApprovalDate(value: string | Date): string {
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatDate(value, '');
 }

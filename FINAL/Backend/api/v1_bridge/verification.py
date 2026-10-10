@@ -238,17 +238,23 @@ def admin_verification_review(request):
             setattr(profile, field, str(body.get(key) or "")[:limit])
             fields.append(field)
     if decision == "VERIFIED":
-        # Approving the account makes its GSTIN valid — a GSTIN may be approved
-        # on only one account (contractor or employer).
-        from .gst import approved_gstin_owner, gstin_conflict_message
-        clash = approved_gstin_owner(profile.gstin, exclude_user_id=profile.user_id)
+        # Approving the account makes its GSTIN valid — a GSTIN may be held by
+        # only one *active* account (contractor or employer).
+        from .gst import active_gstin_holder, gstin_conflict_message
+        clash = active_gstin_holder(profile.gstin, exclude_user_id=profile.user_id)
         if clash is not None:
             return Response({"error": gstin_conflict_message(clash)},
                             status=status.HTTP_409_CONFLICT)
         # Completing identity verification IS the account approval — no separate
-        # admin approval step exists, so reflect it on the profile.
+        # admin approval step exists, so reflect it on the profile and activate
+        # the account (uniqueness applies to active accounts only).
         profile.approval_status = "APPROVED"
         fields.append("approval_status")
+        user = profile.user
+        if not user.account_active:
+            user.account_active = True
+            user.is_active = True
+            user.save(update_fields=["account_active", "is_active"])
     if decision == "REJECTED":
         # Send the entity back to the "EntityLocker or manual documents?" choice
         # so they can redo it (they are asked again on their next visit).

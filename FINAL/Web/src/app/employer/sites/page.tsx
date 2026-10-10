@@ -7,6 +7,7 @@ import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerSite } from '@/types/portal';
 import SiteCreateForm from '@/components/employer/SiteCreateForm';
 import { SiteQrPanel } from '@/components/qr/WorkerQr';
+import { formatDate } from '@/lib/date';
 
 export default function EmployerSitesPage() {
   const { employer, mutate } = useEmployer();
@@ -87,7 +88,7 @@ export default function EmployerSitesPage() {
         return <article key={site.id} className={`bg-white border rounded-2xl overflow-hidden ${isDefault ? 'border-[#F47A32] ring-1 ring-[#F47A32]/20' : 'border-gray-200'}`}>
         <div className="p-5 border-b border-gray-100"><div className="flex items-start justify-between gap-3"><span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 grid place-items-center"><Building2 size={19}/></span><div className="flex items-center gap-1.5">{isDefault && <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#F47A32] bg-orange-50 px-2 py-1 rounded"><Star size={11}/>Default</span>}<span className={`text-[10px] font-bold px-2 py-1 rounded ${site.status === 'Active' ? 'bg-green-50 text-green-700' : site.status === 'Planned' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{site.status}</span></div></div><h2 className="font-semibold text-gray-950 mt-4">{site.name}</h2><p className="font-mono text-[11px] text-gray-400 mt-1">{site.bssId ? `${site.bssId} · ` : ''}{site.code}</p><p className="text-xs text-gray-500 flex items-center gap-1 mt-3"><MapPin size={12}/>{site.location}, {site.state}</p></div>
         <div className="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100"><SmallMetric icon={Users} value={site.workers} label="Workers"/><SmallMetric icon={Building2} value={site.contractorIds.length} label="Contractors"/><SmallMetric icon={ShieldCheck} value={`${site.compliance}%`} label="Compliance"/></div>
-        <div className="p-4 text-[11px] text-gray-500 flex items-center gap-2"><CalendarDays size={13}/><span>{site.startDate}</span><span>to</span><span>{site.endDate}</span></div>
+        <div className="p-4 text-[11px] text-gray-500 flex items-center gap-2"><CalendarDays size={13}/><span>{formatDate(site.startDate)}</span><span>to</span><span>{formatDate(site.endDate)}</span></div>
         <div className="grid grid-cols-4 divide-x divide-gray-100 border-t border-gray-100">
           <Link href={`/employer/sites/${site.id}`} className="h-9 bg-gray-50 text-[11px] font-semibold text-[#073B67] flex items-center justify-center gap-1 hover:bg-gray-100">View <ArrowRight size={13}/></Link>
           <button type="button" disabled={camBusyId === site.id} onClick={() => void toggleCamera(site)} className={`h-9 text-[11px] font-bold flex items-center justify-center gap-1 disabled:opacity-60 ${camState[site.id] ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'}`}><Camera size={13}/>{camState[site.id] ? 'Stop CCTV' : 'Start CCTV'}</button>

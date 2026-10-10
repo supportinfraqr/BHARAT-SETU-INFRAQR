@@ -116,13 +116,19 @@ def entitylocker_callback(request):
     if auth.user_id:
         from bss_core.models import ContractorProfile, EmployerProfile
 
-        from .gst import approved_gstin_owner
+        from .gst import active_gstin_holder
         profile_model = ContractorProfile if auth.role == "contractor" else EmployerProfile
         profile = profile_model.objects.filter(user_id=auth.user_id).first()
         if profile and profile.approval_status != "APPROVED":
-            if approved_gstin_owner(profile.gstin, exclude_user_id=profile.user_id) is None:
+            if active_gstin_holder(profile.gstin, exclude_user_id=profile.user_id) is None:
                 profile.approval_status = "APPROVED"
                 profile.save(update_fields=["approval_status"])
+                # Activating the account makes its GSTIN "held" (uniqueness is
+                # among active accounts only).
+                if not auth.user.account_active:
+                    auth.user.account_active = True
+                    auth.user.is_active = True
+                    auth.user.save(update_fields=["account_active", "is_active"])
             else:
                 gst_conflict = True
     return Response({"verified": True, "gstConflict": gst_conflict, "data": {

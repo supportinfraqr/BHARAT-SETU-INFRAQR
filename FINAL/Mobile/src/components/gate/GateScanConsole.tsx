@@ -177,7 +177,7 @@ export default function GateScanConsole() {
               value={code}
               onChange={(e) => setCode(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") void processPassCode(code); }}
-              placeholder="e.g. GP-EM-001 or BSS-T7KQ2M9X4RTA"
+              placeholder="Scan the worker QR, or enter the worker BSS ID"
               className="flex-1 min-w-[240px] h-11 rounded-lg border border-gray-200 px-3 text-sm font-mono focus:ring-2 focus:ring-[#073B67] focus:outline-none"
             />
             <button

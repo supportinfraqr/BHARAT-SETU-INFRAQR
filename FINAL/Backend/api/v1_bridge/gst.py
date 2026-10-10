@@ -36,25 +36,34 @@ def _legal_name_attr(profile):
     return getattr(profile, "contractor_name", "") or getattr(profile, "trade_name", "")
 
 
-def approved_gstin_owner(gstin, exclude_user_id=None):
-    """An **approved** contractor/employer profile already holding this GSTIN.
+def active_gstin_holder(gstin, exclude_user_id=None):
+    """An **active** contractor/employer profile already holding this GSTIN.
 
-    A GSTIN can be valid on only one approved account (whether approved by admin
-    or by EntityLocker). Unapproved accounts may still share a GSTIN; uniqueness
-    is enforced only once an account is approved. Returns the clashing profile or
-    None."""
+    Uniqueness is enforced among active accounts only: a profile whose user can
+    sign in (``is_active``) and is admin-active (``account_active``). A
+    deactivated account releases the GSTIN. Returns the clashing profile or None."""
     from bss_core.models import ContractorProfile, EmployerProfile
     value = str(gstin or "").strip().upper()
     if not value:
         return None
     for model in (ContractorProfile, EmployerProfile):
-        qs = model.objects.filter(gstin__iexact=value, approval_status="APPROVED")
+        qs = model.objects.filter(gstin__iexact=value, user__is_active=True,
+                                  user__account_active=True)
         if exclude_user_id:
             qs = qs.exclude(user_id=exclude_user_id)
-        obj = qs.first()
+        obj = qs.select_related("user").first()
         if obj is not None:
             return obj
     return None
+
+
+def deactivate_account(user):
+    """Deactivate an account: block sign-in, clear the active session (killing
+    live tokens) and mark it admin-inactive."""
+    user.is_active = False
+    user.account_active = False
+    user.current_session_id = ""
+    user.save(update_fields=["is_active", "account_active", "current_session_id"])
 
 
 def gstin_conflict_message(owner):
@@ -193,7 +202,7 @@ def gst_verification_initiate(request):
         return Response({"error": "Enter a valid 15-character GSTIN."}, status=status.HTTP_400_BAD_REQUEST)
     # An already-approved account may not take a GSTIN approved elsewhere.
     if (getattr(profile, "approval_status", "") or "").upper() == "APPROVED":
-        owner = approved_gstin_owner(gstin, exclude_user_id=profile.user_id)
+        owner = active_gstin_holder(gstin, exclude_user_id=profile.user_id)
         if owner is not None:
             return Response({"error": gstin_conflict_message(owner)}, status=status.HTTP_409_CONFLICT)
     if not legal_name:
@@ -231,7 +240,7 @@ def gst_verification_validate(request):
     if not gstin or not otp or not txn_id:
         return Response({"error": "gstin, otp and txnId are required."}, status=status.HTTP_400_BAD_REQUEST)
     if (getattr(profile, "approval_status", "") or "").upper() == "APPROVED":
-        owner = approved_gstin_owner(gstin, exclude_user_id=profile.user_id)
+        owner = active_gstin_holder(gstin, exclude_user_id=profile.user_id)
         if owner is not None:
             return Response({"error": gstin_conflict_message(owner)}, status=status.HTTP_409_CONFLICT)
     try:
@@ -275,7 +284,7 @@ def gst_verification_verify(request):
     if not _GSTIN_RE.match(gstin):
         return Response({"error": "Enter a valid 15-character GSTIN."}, status=status.HTTP_400_BAD_REQUEST)
     if (getattr(profile, "approval_status", "") or "").upper() == "APPROVED":
-        owner = approved_gstin_owner(gstin, exclude_user_id=profile.user_id)
+        owner = active_gstin_holder(gstin, exclude_user_id=profile.user_id)
         if owner is not None:
             return Response({"error": gstin_conflict_message(owner)}, status=status.HTTP_409_CONFLICT)
     try:
@@ -322,3 +331,154 @@ def gst_certificate(request):
         return Response({"error": "No GST certificate on file."}, status=status.HTTP_404_NOT_FOUND)
     return FileResponse(profile.gst_certificate.open("rb"), as_attachment=True,
                         filename=f"GST-{profile.gstin}.pdf")
+
+
+# ── GST ownership claims ─────────────────────────────────────────────────────
+
+def _gst_admin(request):
+    return getattr(request.user, "role", "") in ("bss_admin", "bss_staff")
+
+
+def _gst_holders(gstin):
+    """Every contractor/employer profile holding this GSTIN, with active state."""
+    from bss_core.models import ContractorProfile, EmployerProfile
+    rows = []
+    for model, role in ((ContractorProfile, "contractor"), (EmployerProfile, "employer")):
+        for p in model.objects.filter(gstin__iexact=gstin).select_related("user"):
+            user = p.user
+            rows.append({
+                "userId": p.user_id, "role": role,
+                "name": (p.contractor_name if role == "contractor" else p.employer_name) or user.username,
+                "username": user.username,
+                "approval": p.approval_status,
+                "gstStatus": p.gst_verification_status,
+                "isActive": bool(user.is_active),
+                "accountActive": bool(user.account_active),
+                "active": bool(user.is_active and user.account_active),
+            })
+    rows.sort(key=lambda r: (not r["active"], r["name"] or ""))
+    return rows
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def gst_claim(request):
+    """Raise a claim on a GSTIN already held by another active account."""
+    from bss_core.models import GstClaim
+    profile = _profile_for(request.user)
+    if profile is None:
+        return Response({"error": "Only employers and contractors can claim a GSTIN."},
+                        status=status.HTTP_403_FORBIDDEN)
+    body = request.data if isinstance(request.data, dict) else {}
+    gstin = str(body.get("gstin") or profile.gstin or "").strip().upper()
+    if not _GSTIN_RE.match(gstin):
+        return Response({"error": "Enter a valid 15-character GSTIN."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if active_gstin_holder(gstin, exclude_user_id=profile.user_id) is None:
+        return Response({"error": "No active account holds this GSTIN — verify it directly."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    claim, created = GstClaim.objects.get_or_create(
+        gstin=gstin, claimant=request.user, status="PENDING",
+        defaults={"claimant_role": request.user.role,
+                  "note": str(body.get("note") or "")[:500]})
+    if not created:
+        claim.note = str(body.get("note") or claim.note or "")[:500]
+        claim.claimant_role = request.user.role
+        claim.save(update_fields=["note", "claimant_role", "updated_at"])
+    # Best-effort admin notification.
+    try:
+        from bss_core.models import User
+        for admin in User.objects.filter(role__in=("bss_admin", "bss_staff")):
+            _create_notification(
+                user=admin, title="GST ownership claim",
+                body=f"{payloads._notification_actor_name(request.user)} claims GSTIN {gstin}.",
+                notif_type="APPROVAL", link="/admin/gst-claims")
+    except Exception:  # noqa: BLE001 — notification must never block the claim
+        pass
+    return Response({"data": {"id": claim.id, "gstin": gstin, "status": claim.get_status_display()}},
+                    status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def admin_gst_claims(request):
+    """Pending GST ownership claims, each with every account using that GSTIN."""
+    from bss_core.models import GstClaim
+    if not _gst_admin(request):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    rows = []
+    for c in (GstClaim.objects.filter(status="PENDING")
+              .select_related("claimant").order_by("-created_at")):
+        cp = _profile_for(c.claimant)
+        rows.append({
+            "id": c.id, "gstin": c.gstin, "status": c.get_status_display(),
+            "role": c.claimant_role, "note": c.note,
+            "claimant": {
+                "userId": c.claimant_id,
+                "name": (cp.contractor_name if c.claimant_role == "contractor"
+                         else (cp.employer_name if cp else "")) or c.claimant.username,
+                "username": c.claimant.username,
+                "approval": cp.approval_status if cp else "",
+            },
+            "holders": _gst_holders(c.gstin),
+        })
+    return Response({"data": rows}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def admin_gst_claim_review(request):
+    """Approve (make the claimant owner, deactivate the other account) or reject
+    a GST ownership claim."""
+    from bss_core.models import ContractorProfile, EmployerProfile, GstClaim
+    if not _gst_admin(request):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    body = request.data if isinstance(request.data, dict) else {}
+    claim = (GstClaim.objects.filter(pk=body.get("claimId"), status="PENDING")
+             .select_related("claimant").first())
+    if claim is None:
+        return Response({"error": "Claim not found or already resolved."},
+                        status=status.HTTP_404_NOT_FOUND)
+    decision = str(body.get("decision") or body.get("status") or "").strip().upper()
+    if decision in ("APPROVE", "APPROVED"):
+        model = ContractorProfile if claim.claimant_role == "contractor" else EmployerProfile
+        profile = model.objects.filter(user=claim.claimant).first()
+        if profile is None:
+            return Response({"error": "Claimant profile not found."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        # The claimant becomes the GSTIN owner and is activated.
+        profile.gstin = claim.gstin
+        profile.approval_status = "APPROVED"
+        profile.save(update_fields=["gstin", "approval_status"])
+        user = claim.claimant
+        user.account_active = True
+        user.is_active = True
+        user.save(update_fields=["account_active", "is_active"])
+        # Every other account using this GSTIN is deactivated (uniqueness is
+        # only among active accounts).
+        for other_model in (ContractorProfile, EmployerProfile):
+            for other in (other_model.objects.filter(gstin__iexact=claim.gstin)
+                          .exclude(user_id=claim.claimant_id).select_related("user")):
+                deactivate_account(other.user)
+        claim.status = "APPROVED"
+    elif decision in ("REJECT", "REJECTED"):
+        claim.status = "REJECTED"
+    else:
+        return Response({"error": "decision must be APPROVE or REJECT."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    claim.resolved_by = request.user
+    claim.resolved_at = timezone.now()
+    claim.save(update_fields=["status", "resolved_by", "resolved_at", "updated_at"])
+    try:
+        _create_notification(
+            user=claim.claimant, title="GST claim " + claim.get_status_display().lower(),
+            body=(f"Your GSTIN {claim.gstin} ownership claim was "
+                  f"{claim.get_status_display().lower()}."),
+            notif_type="APPROVAL", link="/contractor/profile")
+    except Exception:  # noqa: BLE001
+        pass
+    return Response({"data": {"id": claim.id, "status": claim.get_status_display()}},
+                    status=status.HTTP_200_OK)
