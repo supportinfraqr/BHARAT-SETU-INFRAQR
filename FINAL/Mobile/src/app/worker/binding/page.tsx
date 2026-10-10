@@ -23,6 +23,7 @@ type BindingRequest = {
   costSheet?: string;
   costSheetName?: string;
   requestedOn: string;
+  joiningDate?: string;
   startDate?: string;
   endDate?: string;
   status: 'Pending' | 'Accepted' | 'Rejected' | 'Expired' | 'Cancelled' | 'Site Changed';
@@ -56,6 +57,7 @@ export default function BindingRequestsPage() {
     costSheet: String(req.costSheet || ''),
     costSheetName: String(req.costSheetName || ''),
     requestedOn: String(req.requestedOn || '—'),
+    joiningDate: String(req.joiningDate || ''),
     status: (['Pending', 'Accepted', 'Rejected', 'Expired', 'Cancelled', 'Site Changed'].includes(req.status) ? req.status : 'Pending') as BindingRequest['status'],
     initiatedBy: String(req.initiatedBy || ''),
     acceptedBy: String(req.acceptedBy || ''),
@@ -259,6 +261,7 @@ export default function BindingRequestsPage() {
             <div className="min-w-0"><dt className="text-gray-400">Site</dt><dd className="mt-0.5 flex items-center gap-1 font-semibold text-gray-800"><MapPin size={11} className="shrink-0 text-gray-400"/><span className="break-words min-w-0">{req.site}</span></dd></div>
             <div className="min-w-0"><dt className="text-gray-400">Designation</dt><dd className="mt-0.5 break-words font-semibold text-gray-800">{req.designation}</dd></div>
             <div className="min-w-0"><dt className="text-gray-400">Cost sheet</dt><dd className="mt-0.5 break-all font-semibold text-green-700">{req.costSheetName || req.wage || '—'}</dd></div>
+            {req.joiningDate && <div className="min-w-0"><dt className="text-gray-400">Date of joining</dt><dd className="mt-0.5 break-words font-semibold text-gray-800">{formatApprovalDate(req.joiningDate)}</dd></div>}
           </dl>
 
           {req.status === 'Accepted' && req.contractorDetails && (
@@ -331,6 +334,7 @@ export default function BindingRequestsPage() {
         { label: 'Contractor ID', value: confirm.req.contractorCode },
         { label: 'Site', value: confirm.req.site },
         { label: 'Designation', value: confirm.req.designation },
+        ...(confirm.req.joiningDate ? [{ label: 'Date of joining', value: formatApprovalDate(confirm.req.joiningDate) }] : []),
       ] : []}
       confirmLabel={confirm?.kind === 'decline' ? 'Confirm decline' : confirm?.kind === 'withdraw' ? 'Withdraw request' : confirm?.kind === 'unbind' ? 'Confirm unbind' : 'Confirm accept'}
       busy={!!confirm && busyId === confirm.req.id}

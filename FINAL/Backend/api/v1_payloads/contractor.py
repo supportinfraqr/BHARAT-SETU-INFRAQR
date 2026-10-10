@@ -239,7 +239,7 @@ def _contractor_workers(user):
             "site": site.site_name if site else "",
             "employer": _org_name(b.site.employer) if b.site else "",
             "designation": _d(b.designation) or ((_d(wemp.designation) if wemp else "") or ""),
-            "doj": _dts(b.accepted_at.date()) if b.accepted_at else None,
+            "doj": _dts(b.date_of_joining) if b.date_of_joining else (_dts(b.accepted_at.date()) if b.accepted_at else None),
             "compliance": 0,
             # Mirror the binding status shown on the Binding Requests page / DB.
             "status": _WORKER_BINDING_STATUS.get(str(b.binding_status).upper(),
@@ -857,6 +857,7 @@ def _contractor_binding_requests(user):
             "costSheet": _d(b.cost_sheet.code) if b.cost_sheet_id else "",
             "costSheetName": _d(b.cost_sheet.name) if b.cost_sheet_id else "",
             "requestedOn": _dts(b.created_at),
+            "joiningDate": _dts(b.date_of_joining) if b.date_of_joining else "",
             "status": {"PENDING": "Pending", "ACCEPTED": "Accepted", "REJECTED": "Rejected",
                        "CANCELLED": "Cancelled", "EXPIRED": "Expired",
                        "TRANSFERRED": "Site Changed"}.get(

@@ -542,6 +542,12 @@ class WorkerContractorBinding(models.Model):
                                    null=True, blank=True, related_name="bindings")
     computed_ctc = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     cost_breakdown = models.JSONField(default=dict, blank=True)
+    # The worker's real employment start date, declared by the contractor at bind
+    # time. Distinct from accepted_at (when the relationship was created *on BSS*)
+    # — a contractor may onboard a worker they already employed, whose true
+    # joining date predates the platform binding. Falls back to accepted_at.date()
+    # when left blank. Drives WorkerEmployment.doj, letters and registers.
+    date_of_joining = models.DateField(null=True, blank=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
     # Who declined the request and when (worker / contractor).
     rejected_by = models.CharField(max_length=20, blank=True)

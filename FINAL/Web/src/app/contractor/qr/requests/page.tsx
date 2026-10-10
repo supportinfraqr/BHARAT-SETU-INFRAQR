@@ -264,6 +264,7 @@ export default function ContractorBindingRequestsPage() {
     } },
     { id:'employer', header:'Employer', value:r => r.employer },
     { id:'detail', header:'Designation / Wage', value:r => r.designation, render:r => <div><p className="text-gray-800">{r.designation}</p><p className="text-[10px] text-gray-400">{r.wage}</p></div> },
+    { id:'joining', header:'Date of joining', value:r => r.type === 'Worker' ? (r.joiningDate || '—') : '—' },
     { id:'requested', header:'Requested', value:r => r.requestedOn },
     { id:'initiated', header:'Initiated by', value:r => r.initiatedBy || '—', render:r => <span className="font-semibold text-gray-700">{r.initiatedBy || '—'}</span> },
     { id:'accepted', header:'Accepted by', value:r => r.acceptedBy || '—', render:r => <span className={r.acceptedBy ? 'font-semibold text-green-700' : 'text-gray-400'}>{r.acceptedBy || '—'}</span> },

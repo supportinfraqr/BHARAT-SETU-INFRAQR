@@ -296,14 +296,19 @@ def _worker_requests_contractor(worker_user, contractor_user):
     return Response({"data": payloads._binding_row(binding)}, status=status.HTTP_201_CREATED)
 
 
-def _contractor_binds_worker(contractor_user, worker_user, site=None):
+def _contractor_binds_worker(contractor_user, worker_user, site=None, data=None):
     """Contractor-initiated worker<->contractor binding.
 
     Shared by the worker-QR scan (BSS_WORKER) and the Rozgar 'Hire & bind'
     action, so both routes create the same PENDING request, consent state and
     notification — and land on the worker's and contractor's binding-request
     pages. Enforces the one-live-binding-per-worker rule and raises
-    PortalMutationError with a clear message on any rejection."""
+    PortalMutationError with a clear message on any rejection.
+
+    ``data`` (optional) carries the offered terms (designation/department/shift/
+    cost sheet/date of joining). It is applied *before* the accept transition so
+    WorkerEmployment.doj and the appointment letter use the declared terms even
+    when the worker already consented (immediate accept)."""
     from bss_core.models import WorkerContractorBinding
 
     if worker_user is None or worker_user.role != "worker":
@@ -352,6 +357,10 @@ def _contractor_binds_worker(contractor_user, worker_user, site=None):
     if binding.binding_status == "ACCEPTED":
         # Already bound to this contractor at this site — nothing to request.
         return binding
+    # Offered terms must be captured before we possibly accept below, so the
+    # synced employment record and appointment letter see them.
+    if data:
+        _apply_binding_terms(binding, data)
     binding.consent_contractor = True
     binding.consent_method = "app"
     # If the worker already consented (they applied / scanned the QR first), the
@@ -397,12 +406,27 @@ def _apply_binding_terms(binding, data):
     selected, computes the wage/statutory/custom cost and CTC automatically —
     replacing manual wage entry."""
     from decimal import Decimal, InvalidOperation
+    from datetime import date
     from api import costsheet
 
     for field in ("designation", "department", "shift"):
         value = data.get(field)
         if value not in (None, ""):
             setattr(binding, field, str(value).strip()[:80])
+
+    # Real employment start date declared by the contractor (optional). Must be
+    # today or earlier — a future joining date is a data-entry error. Distinct
+    # from accepted_at (when the relationship was created on BSS). When blank,
+    # the join date falls back to accepted_at.date() at accept time.
+    raw_doj = data.get("dateOfJoining", data.get("date_of_joining", data.get("doj")))
+    if raw_doj not in (None, ""):
+        from django.utils.dateparse import parse_date
+        parsed = raw_doj if isinstance(raw_doj, date) else parse_date(str(raw_doj).strip())
+        if parsed is None:
+            raise PortalMutationError("Enter a valid date of joining (YYYY-MM-DD).", 400)
+        if parsed > timezone.now().date():
+            raise PortalMutationError("Date of joining cannot be in the future.", 400)
+        binding.date_of_joining = parsed
 
     sheet_id = data.get("costSheetId", data.get("cost_sheet_id"))
     if sheet_id not in (None, ""):
@@ -456,7 +480,11 @@ def _sync_employment_from_binding(binding):
     emp.designation = binding.designation or ""
     emp.department = binding.department or ""
     emp.shift = binding.shift or ""
-    if binding.accepted_at:
+    # The contractor-declared joining date (if any) wins; otherwise fall back to
+    # the day the binding was accepted on BSS.
+    if binding.date_of_joining:
+        emp.doj = binding.date_of_joining
+    elif binding.accepted_at:
         emp.doj = binding.accepted_at.date()
     emp.status = "Active"
     if not emp.id_card_issue_date:
@@ -869,13 +897,13 @@ def binding_scan(request):
         requested = str(body.get("site") or "").strip()
         requested_site = Site.objects.filter(site_name__iexact=requested).first() if requested else None
         try:
-            binding = _contractor_binds_worker(user, wi.user, site=requested_site)
+            # Offered terms (designation/department/shift/cost sheet/date of
+            # joining) are captured inside _contractor_binds_worker *before* any
+            # accept, so they drive the worker's Current Employment Details and
+            # the appointment letter issued when the worker approves.
+            binding = _contractor_binds_worker(user, wi.user, site=requested_site, data=body)
         except PortalMutationError as exc:
             return Response({"error": exc.message}, status=exc.status_code)
-        # Offered terms (designation/department/shift/offered wage) captured at
-        # scan time drive the worker's Current Employment Details and the
-        # appointment letter issued when the worker approves.
-        _apply_binding_terms(binding, body)
         # Provenance — a direct QR scan leaves this blank; a Rozgar Setu "invite
         # to bind" tags it so the invitation stays out of the Binding Requests
         # list and the pending-worker counts.

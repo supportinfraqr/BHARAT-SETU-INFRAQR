@@ -337,7 +337,7 @@ def _employer_workers(user):
             "emergencyName": _d(wi.emergency_contact_name if wi else ""),
             "emergencyNumber": _d(wi.emergency_contact_number if wi else ""),
             "emergencyRelation": _d(wi.emergency_contact_relation if wi else ""),
-            "doj": _dts(b.accepted_at.date()) if b.accepted_at else None,
+            "doj": _dts(b.date_of_joining) if b.date_of_joining else (_dts(b.accepted_at.date()) if b.accepted_at else None),
             "compliance": _worker_compliance_label(b.worker),
             "status": _d(b.binding_status), "verified": bool(wi and wi.aadhaar),
             "idCardIssueDate": card_issue.isoformat() if card_issue else "",

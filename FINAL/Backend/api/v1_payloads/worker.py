@@ -145,7 +145,8 @@ def _worker_employment_section(user, identity):
         "designation": (_d(binding.designation) if binding and binding.designation
                         else (_d(getattr(emp, "designation", "")) if emp else "")),
         "doj": (_dts(emp.doj) if emp and emp.doj
-                else (_dts(binding.accepted_at) if binding and binding.accepted_at else "")),
+                else (_dts(binding.date_of_joining) if binding and binding.date_of_joining
+                      else (_dts(binding.accepted_at) if binding and binding.accepted_at else ""))),
         "shift": (_d(binding.shift) if binding and binding.shift
                   else (_d(getattr(emp, "shift", "")) if emp else "")),
         "campNo": _d(emp.camp_no) if emp else "",

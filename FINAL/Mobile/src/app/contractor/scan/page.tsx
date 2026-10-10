@@ -15,6 +15,12 @@ type Payload = { v: number; type: "BSS_WORKER" | "BSS_CONTRACTOR" | "BSS_EMPLOYE
 
 type ScannedEntity = { kind: 'worker' | 'employer'; bssId: string; name: string; employer: string; site: string; designation: string };
 
+/** Today's date as YYYY-MM-DD (local), for the date-input max and DOJ validation. */
+function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export default function ContractorScanPage() {
   const { contractor, refresh } = useContractor();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -35,6 +41,8 @@ export default function ContractorScanPage() {
   const [costSheets, setCostSheets] = useState<Array<{ id:number; name:string; code:string; designation?:string; status?:string; ownerId?:number|null; siteId?:number|null; siteName?:string }>>([]);
   const [costSheetId, setCostSheetId] = useState('');
   const [wageError, setWageError] = useState('');
+  const [dateOfJoining, setDateOfJoining] = useState('');
+  const [dojError, setDojError] = useState('');
   const [sendError, setSendError] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
@@ -200,13 +208,18 @@ export default function ContractorScanPage() {
       setWageError('Pick an employer-accepted cost sheet for this site before sending the binding request.');
       return;
     }
+    if (isWorkerBinding && dateOfJoining && dateOfJoining > todayIso()) {
+      setConfirmOpen(false);
+      setDojError('Date of joining cannot be in the future.');
+      return;
+    }
     setRequestSent(true);
     setSendError('');
     try {
       const response = await fetch('/api/bindings/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: scanned.type, bssId: scanned.bssId, siteToken: scanned.siteToken, site: entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site, costSheetId: isWorkerBinding ? Number(costSheetId) : undefined }),
+        body: JSON.stringify({ type: scanned.type, bssId: scanned.bssId, siteToken: scanned.siteToken, site: entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site, costSheetId: isWorkerBinding ? Number(costSheetId) : undefined, dateOfJoining: isWorkerBinding && dateOfJoining ? dateOfJoining : undefined }),
       });
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
       if (!response.ok) throw new Error(result.error || 'Binding request could not be created.');
@@ -338,6 +351,12 @@ export default function ContractorScanPage() {
                     )}
                     {wageError && <p className="text-[11px] text-red-600 font-semibold mt-1">{wageError}</p>}
                   </div>
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Date of joining (optional)</label>
+                    <input type="date" value={dateOfJoining} max={todayIso()} onChange={e => { setDateOfJoining(e.target.value); setDojError(''); }} className="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white" />
+                    <p className="text-[11px] text-gray-400 mt-1">The worker&apos;s real employment start date. Leave blank to use the binding date. Must be today or earlier.</p>
+                    {dojError && <p className="text-[11px] text-red-600 font-semibold mt-1">{dojError}</p>}
+                  </div>
                 </div>
               )}
               {entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId)
@@ -356,7 +375,7 @@ export default function ContractorScanPage() {
                         {sendError && <p role="alert" className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-xl text-xs font-semibold flex items-start gap-2"><XCircle size={14} className="mt-0.5 flex-shrink-0"/><span>{sendError}</span></p>}
                         {entity.kind === 'worker' && (contractor.sites.length === 0 || !costSheetId)
                           ? <button type="button" disabled className="w-full h-11 rounded-xl bg-gray-200 text-gray-500 text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed"><TriangleAlert size={17}/>{contractor.sites.length === 0 ? 'No site allotted — cannot bind' : 'Pick an accepted cost sheet to bind'}</button>
-                          : <button onClick={() => { setWageError(''); setConfirmOpen(true); }} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>Send binding request</button>}
+                          : <button onClick={() => { setWageError(''); setDojError(''); setConfirmOpen(true); }} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>Send binding request</button>}
                       </div>}
             </div>
           ):result?(
@@ -387,6 +406,7 @@ export default function ContractorScanPage() {
         ...(entity.kind === 'worker' && costSheetId
           ? [{ label: 'Cost sheet', value: availableCostSheets.find(s => String(s.id) === costSheetId)?.name ?? 'Selected cost sheet' }]
           : []),
+        ...(entity.kind === 'worker' ? [{ label: 'Date of joining', value: dateOfJoining || 'Binding date' }] : []),
       ] : []}
       confirmLabel="Send binding request"
       onCancel={() => setConfirmOpen(false)}
