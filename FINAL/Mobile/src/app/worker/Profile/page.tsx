@@ -291,35 +291,25 @@ export default function WorkerProfilePage() {
       img.src = dataUrl;
     });
 
-  // Merge one photo into the slot map (functional update avoids stale state) and
-  // persist, tolerating a full localStorage instead of losing the in-memory set.
+  // Merge one photo into the slot map (session-only; the saved photos come from
+  // the server, so a cleared/re-enrolled state is never masked by stale browser
+  // storage).
   const addFacePhoto = useCallback((slot: number, dataUrl: string) => {
-    setFacePhotos(prev => {
-      const updated = { ...prev, [slot]: dataUrl };
-      try {
-        const storageKey = `bss_face_photos_${worker.identity.bssId || worker.identity.aadhaar || 'current'}`;
-        localStorage.setItem(storageKey, JSON.stringify(updated));
-      } catch (e) {
-        console.error('Failed to persist face photos:', e);
-      }
-      return updated;
-    });
+    setFacePhotos(prev => ({ ...prev, [slot]: dataUrl }));
+    // Drop any legacy localStorage copy so it can't resurface.
+    try {
+      const storageKey = `bss_face_photos_${worker.identity.bssId || worker.identity.aadhaar || 'current'}`;
+      localStorage.removeItem(storageKey);
+    } catch { /* ignore */ }
   }, [worker.identity.bssId, worker.identity.aadhaar]);
 
-  // Restore face photos from localStorage on component mount
+  // Clear any legacy localStorage copy of face photos so the server is the only
+  // source of truth (a cleared account must show empty).
   useEffect(() => {
     try {
       const storageKey = `bss_face_photos_${worker.identity.bssId || worker.identity.aadhaar || 'current'}`;
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved) as Record<number, string>;
-        if (parsed && typeof parsed === 'object') {
-          setFacePhotos(prev => ({ ...parsed, ...prev }));
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load saved face photos:', e);
-    }
+      localStorage.removeItem(storageKey);
+    } catch { /* ignore */ }
   }, [worker.identity.bssId, worker.identity.aadhaar]);
 
   // Stop the webcam stream on unmount (or when it is replaced) so the camera
