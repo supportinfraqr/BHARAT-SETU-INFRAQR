@@ -92,7 +92,7 @@ export default function ContractorDashboardPage() {
       <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
         <div className="grid md:grid-cols-[1fr_1.4fr] divide-y md:divide-y-0 md:divide-x divide-gray-100">
           <div className="p-4 sm:p-5 flex items-center gap-4">
-            <span className="w-14 h-14 rounded-xl bg-blue-50 text-blue-700 grid place-items-center text-xl font-bold flex-shrink-0">{contractor.identity.company.charAt(0)}</span>
+            {contractor.identity.photoUrl ? <img src={contractor.identity.photoUrl} alt={contractor.identity.company} className="w-14 h-14 rounded-xl object-cover border border-gray-200 flex-shrink-0"/> : <span className="w-14 h-14 rounded-xl bg-blue-50 text-blue-700 grid place-items-center text-xl font-bold flex-shrink-0">{contractor.identity.company.charAt(0)}</span>}
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Contractor Information</p>
               <h2 className="font-semibold text-gray-950 mt-0.5">{contractor.identity.company}</h2>
