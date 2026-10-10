@@ -260,64 +260,28 @@ export default function WorkerProfilePage() {
     return () => { active = false; };
   }, [worker.identity.bssId]);
 
-  // Load the stored face photos so they show back after logout / on another
-  // device, and compute the Aadhaar match % (cosine similarity) for the saved
-  // photos too — not just the ones captured in this session.
+  // Load the stored face photos — including their persisted Aadhaar match %.
+  // The match is computed ONCE server-side and stored on the photo, so it is
+  // never recomputed on refresh.
   useEffect(() => {
     let active = true;
-    void (async () => {
-      try {
-        const listRes = await fetch('/api/worker/face-photos', { cache: 'no-store' });
-        const list = await listRes.json().catch(() => null) as { data?: Array<{ id: number; slot: number }> } | null;
-        if (!active || !list?.data) return;
+    void fetch('/api/worker/face-photos', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((body: { data?: Array<{ id: number; slot: number; aadhaarMatchPct?: number | null; aadhaarMatched?: boolean | null }> } | null) => {
+        if (!active || !body?.data) return;
         const map: Record<number, string> = {};
-        const slots: number[] = [];
-        const images: string[] = [];
-        for (const p of list.data) {
-          if (!p.slot) continue;
+        const matches: Record<number, { state: 'ok'; pct?: number; matched?: boolean }> = {};
+        body.data.forEach(p => {
+          if (!p.slot) return;
           map[p.slot] = `/api/worker/face-photos/${p.id}/file`;
-          try {
-            const r = await fetch(`/api/worker/face-photos/${p.id}/file`, { cache: 'no-store' });
-            if (!r.ok) continue;
-            const blob = await r.blob();
-            const dataUrl = await new Promise<string>((resolve, reject) => {
-              const fr = new FileReader();
-              fr.onload = () => resolve(String(fr.result));
-              fr.onerror = reject;
-              fr.readAsDataURL(blob);
-            });
-            images.push(dataUrl);
-            slots.push(p.slot);
-          } catch { /* skip an unreadable photo */ }
-        }
-        if (!active) return;
+          if (typeof p.aadhaarMatchPct === 'number') {
+            matches[p.slot] = { state: 'ok', pct: p.aadhaarMatchPct, matched: p.aadhaarMatched ?? undefined };
+          }
+        });
         setEnrolledPhotos(map);
-        if (!images.length) return;
-        // One batched compare against the worker's verified Aadhaar photo.
-        setFaceMatch(prev => {
-          const next = { ...prev };
-          slots.forEach(s => { next[s] = { state: 'checking' }; });
-          return next;
-        });
-        const res = await fetch('/api/worker/face-match', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ images }),
-        });
-        const mb = await res.json().catch(() => ({})) as { data?: { results?: Array<{ face?: boolean; cosinePct?: number; matched?: boolean }> } };
-        if (!active) return;
-        const results = mb?.data?.results ?? [];
-        setFaceMatch(prev => {
-          const next = { ...prev };
-          slots.forEach((slot, i) => {
-            const r0 = results[i];
-            next[slot] = r0?.face
-              ? { state: 'ok', pct: r0.cosinePct, matched: r0.matched }
-              : { state: 'error', message: 'Match unavailable' };
-          });
-          return next;
-        });
-      } catch { /* ignore */ }
-    })();
+        setFaceMatch(prev => ({ ...prev, ...matches }));
+      })
+      .catch(() => {});
     return () => { active = false; };
   }, [worker.identity.bssId]);
 

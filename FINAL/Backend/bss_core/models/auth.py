@@ -102,6 +102,7 @@ class ContractorProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="contractor_profile")
     contractor_name = models.CharField(max_length=120, blank=True)
     contractor_code = models.CharField(max_length=40, blank=True, unique=True)
+    profile_image = models.CharField(max_length=300, blank=True)
     trade_name = models.CharField(max_length=120, blank=True)
     constitution = models.CharField(max_length=80, blank=True)
     entity_type = models.CharField(max_length=80, blank=True)

@@ -530,6 +530,31 @@ def worker_face_check(request):
     return Response({"data": result}, status=status.HTTP_200_OK)
 
 
+def _aadhaar_reference_b64(user):
+    """The worker's verified Aadhaar photo as a base64 data URL (or None)."""
+    import base64
+    import os
+
+    from django.conf import settings as dj_settings
+
+    from bss_core.models import AadhaarChallenge
+
+    challenge = (AadhaarChallenge.objects
+                 .filter(user=user, status="VERIFIED")
+                 .exclude(photo_path="")
+                 .order_by("-updated_at", "-id").first())
+    if challenge is None or not challenge.photo_path:
+        return None
+    filename = os.path.basename(challenge.photo_path)
+    for path in (os.path.join(getattr(dj_settings, "AADHAAR_PHOTO_DIR", ""), filename),
+                 os.path.join(getattr(dj_settings, "MEDIA_ROOT", ""), "aadhaar", filename),
+                 os.path.join(getattr(dj_settings, "MEDIA_ROOT", ""), "aadhaar_photos", filename)):
+        if path and os.path.isfile(path):
+            with open(path, "rb") as handle:
+                return "data:image/jpeg;base64," + base64.b64encode(handle.read()).decode("ascii")
+    return None
+
+
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -631,11 +656,46 @@ def worker_face_status(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def worker_face_photos(request):
-    """The raw face photos kept for the current worker (to show them back)."""
+    """The raw face photos kept for the current worker (to show them back),
+    including the stored Aadhaar match %. The match is computed ONCE per photo
+    and persisted, so refreshes never re-run the engine."""
+    import base64
+    import os
+
+    from django.core.files.storage import default_storage
+
     from bss_core.models import WorkerFacePhoto
-    photos = WorkerFacePhoto.objects.filter(user=request.user).order_by("slot", "id")
+    from .. import attendance_control as control
+
+    photos = list(WorkerFacePhoto.objects.filter(user=request.user).order_by("slot", "id"))
+    unchecked = [p for p in photos if p.aadhaar_match_pct is None and p.path]
+    if unchecked:
+        reference = _aadhaar_reference_b64(request.user)
+        if reference:
+            images, rows = [], []
+            for p in unchecked:
+                try:
+                    raw = default_storage.open(p.path, "rb").read()
+                except Exception:  # noqa: BLE001
+                    continue
+                images.append("data:image/jpeg;base64," + base64.b64encode(raw).decode("ascii"))
+                rows.append(p)
+            if images:
+                try:
+                    result = control.compare_faces(reference, images)
+                    results = result.get("results") or []
+                    for p, r in zip(rows, results):
+                        if r.get("face"):
+                            p.aadhaar_match_pct = r.get("cosinePct")
+                            p.aadhaar_matched = r.get("matched")
+                        p.aadhaar_checked_at = timezone.now()
+                        p.save(update_fields=["aadhaar_match_pct", "aadhaar_matched", "aadhaar_checked_at"])
+                except control.AttendanceControlError:
+                    pass  # engine offline — leave unchecked, retry on a later load
     return Response({"data": [
-        {"id": p.id, "slot": p.slot, "url": f"/v1/worker/face-photos/{p.id}/file"}
+        {"id": p.id, "slot": p.slot, "url": f"/v1/worker/face-photos/{p.id}/file",
+         "aadhaarMatchPct": float(p.aadhaar_match_pct) if p.aadhaar_match_pct is not None else None,
+         "aadhaarMatched": p.aadhaar_matched}
         for p in photos
     ]}, status=status.HTTP_200_OK)
 

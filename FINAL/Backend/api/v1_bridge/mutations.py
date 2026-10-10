@@ -567,6 +567,41 @@ def _persist_mutation(user, role_path, resource, method, body):
     return int(uuid.uuid4().int % 10**10)
 
 
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def contractor_profile_image(request):
+    """Upload the contractor's own profile image (avatar)."""
+    import os
+    import uuid
+
+    from django.core.files.base import ContentFile
+    from django.core.files.storage import default_storage
+
+    from bss_core.models import ContractorProfile
+
+    if request.user.role != "contractor":
+        return Response({"error": "Only contractors can set a profile image."},
+                        status=status.HTTP_403_FORBIDDEN)
+    upload = request.FILES.get("file") or request.FILES.get("image")
+    if upload is None:
+        return Response({"error": "No image uploaded."}, status=status.HTTP_400_BAD_REQUEST)
+    ext = os.path.splitext(upload.name or "")[1].lower().lstrip(".")
+    if ext not in ("png", "jpg", "jpeg", "webp", "gif"):
+        return Response({"error": "Upload a PNG, JPG, WEBP or GIF image."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    data = upload.read()
+    if len(data) > 3 * 1024 * 1024:
+        return Response({"error": "Image must be under 3 MB."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    stored = default_storage.save(f"contractor_profile/{uuid.uuid4().hex}.{ext}", ContentFile(data))
+    cp, _ = ContractorProfile.objects.get_or_create(user=request.user)
+    cp.profile_image = f"/media/{stored}"
+    cp.save(update_fields=["profile_image"])
+    return Response({"data": {"url": cp.profile_image}}, status=status.HTTP_201_CREATED)
+
+
 __all__ = [
     "_persist_mutation",
+    "contractor_profile_image",
 ]

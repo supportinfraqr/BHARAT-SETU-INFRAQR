@@ -363,7 +363,7 @@ export type PortalSettings = {
 export type ContractorPortalData = {
   accessibility?: { largeText?: boolean; highContrast?: boolean; reduceMotion?: boolean };
   settings?: PortalSettings;
-  identity: { name: string; company: string; bssId: string; incorpDate: string; entity: string; verified: boolean; rating: number; contact: string; email: string; accountStatus?: string; cardIssueDate?: string; cardValidTill?: string };
+  identity: { name: string; company: string; photoUrl?: string; bssId: string; incorpDate: string; entity: string; verified: boolean; rating: number; contact: string; email: string; accountStatus?: string; cardIssueDate?: string; cardValidTill?: string };
   stats: { totalWorkers: number; activeSites: number; complianceScore: number; pendingAlerts: number };
   principalEmployer: { name: string; code: string; industry: string; email: string; lin: string };
   sites: Array<{ id: string; code: string; name: string; employer: string; location: string; workers: number; compliance: number | null; bssId?: string; state?: string; status?: string; boundSince?: string; data?: Record<string, unknown> }>;

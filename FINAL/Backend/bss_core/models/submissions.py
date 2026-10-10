@@ -71,6 +71,12 @@ class WorkerFacePhoto(models.Model):
     person = models.CharField(max_length=64, blank=True, db_index=True)
     slot = models.PositiveSmallIntegerField(default=0)
     path = models.CharField(max_length=300, blank=True)
+    # Aadhaar face match — computed ONCE and stored (never recomputed on every
+    # page load). ``aadhaar_match_pct`` is the cosine similarity (%) vs the
+    # worker's verified Aadhaar photo.
+    aadhaar_match_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    aadhaar_matched = models.BooleanField(null=True, blank=True)
+    aadhaar_checked_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

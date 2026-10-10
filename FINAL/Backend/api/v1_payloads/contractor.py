@@ -91,6 +91,7 @@ def _contractor_identity(user):
     return {
         "name": _org_name(user),
         "company": _d(cp.trade_name if cp else "") or _org_name(user),
+        "photoUrl": _d(cp.profile_image if cp else ""),
         "bssId": _d(cp.contractor_code if cp else _bss_contractor_code(user.id)),
         "incorpDate": _dts(cp.incorporation_date if cp else None),
         "entity": _d(cp.constitution if cp else ""),

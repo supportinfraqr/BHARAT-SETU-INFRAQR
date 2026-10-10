@@ -1,6 +1,6 @@
 "use client";
 import { useState } from 'react';
-import { Building2, CreditCard, FileSignature, FileText, Landmark, Lock, MapPin, Phone, ShieldCheck, Users } from 'lucide-react';
+import { Building2, Camera, CreditCard, FileSignature, FileText, Landmark, Loader2, Lock, MapPin, Phone, ShieldCheck, Users } from 'lucide-react';
 import StatutoryLicences from '@/components/portal/StatutoryLicences';
 import GstVerifyCard from '@/components/gst/GstVerifyCard';
 import { useContractor } from '@/contexts/ContractorContext';
@@ -29,7 +29,24 @@ export default function ContractorProfilePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [licences, setLicences] = useState<ContractorLicence[]>(contractor.licenses);
+  const [logoBusy, setLogoBusy] = useState(false);
   const fields = contractor.profileSections[tab] ?? [];
+
+  async function uploadLogo(file?: File) {
+    if (!file) return;
+    setLogoBusy(true); setError('');
+    try {
+      const form = new FormData();
+      form.set('file', file);
+      const res = await fetch('/api/contractor/profile-image', { method: 'POST', body: form });
+      const body = await res.json().catch(() => ({})) as { data?: { url?: string }; error?: string };
+      if (!res.ok || !body.data?.url) throw new Error(body.error ?? 'The image could not be uploaded.');
+      const url = body.data.url;
+      replaceContractor({ ...contractor, identity: { ...contractor.identity, photoUrl: url } });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The image could not be uploaded.');
+    } finally { setLogoBusy(false); }
+  }
 
   async function save(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -65,7 +82,15 @@ export default function ContractorProfilePage() {
       <GstVerifyCard role="contractor" />
       <section className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col sm:flex-row justify-between gap-5">
         <div className="flex gap-4">
-          <span className="w-16 h-16 rounded-xl bg-blue-50 text-blue-700 grid place-items-center text-2xl font-bold">{contractor.identity.company.charAt(0)}</span>
+          <div className="relative flex-shrink-0">
+            {contractor.identity.photoUrl
+              ? <img src={contractor.identity.photoUrl} alt={contractor.identity.company} className="w-16 h-16 rounded-xl object-cover border border-gray-200"/>
+              : <span className="w-16 h-16 rounded-xl bg-blue-50 text-blue-700 grid place-items-center text-2xl font-bold">{contractor.identity.company.charAt(0)}</span>}
+            <label className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-[#073B67] text-white grid place-items-center cursor-pointer shadow-md hover:bg-[#062D4F]" title="Upload profile image">
+              {logoBusy ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+              <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" disabled={logoBusy} onChange={e => { void uploadLogo(e.target.files?.[0]); e.target.value = ''; }} />
+            </label>
+          </div>
           <div>
             <div className="flex gap-2 items-center"><h1 className="text-2xl font-bold">{contractor.identity.company}</h1>{contractor.identity.verified && <ShieldCheck className="text-green-700" size={20}/>}</div>
             <p className="font-mono text-xs text-gray-500 mt-1">{contractor.identity.bssId}</p>
@@ -169,7 +194,7 @@ export default function ContractorProfilePage() {
                         </select>
                       ) : (
                         <input
-                          required={!isDateField}
+                          required={!isDateField && !labelLower.includes('nic code')}
                           type={isDateField ? 'date' : 'text'}
                           name={`field-${index}`}
                           defaultValue={field.value}

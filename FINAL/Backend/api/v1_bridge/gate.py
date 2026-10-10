@@ -42,12 +42,12 @@ def gate_scan(request):
     body = request.data if isinstance(request.data, dict) else {}
     today = timezone.localdate()
 
+    raw_input = str(body.get("gatePassNo") or body.get("pass") or body.get("bssId") or body.get("worker") or "").strip()
     gp = _resolve_pass(body)
     gate = SiteGate.objects.filter(pk=body.get("gateId")).first() if body.get("gateId") else None
 
-    result, reason = "DENY", ""
     if gp is None:
-        reason = "No gate pass found for this scan."
+        return Response({"error": f"Invalid gate pass number '{raw_input}'. No registered gate pass found in the system."}, status=status.HTTP_404_NOT_FOUND)
     elif gp.status == "REVOKED":
         reason = "This gate pass has been revoked."
     elif gp.status == "EXPIRED" or (gp.end_date and gp.end_date < today):
@@ -63,8 +63,8 @@ def gate_scan(request):
         result, reason = "ALLOW", "Entry allowed."
 
     scan = GatePassScan.objects.create(
-        gate_pass=gp, worker=gp.worker if gp else None, site=gp.site if gp else None,
-        gate=gate, gate_pass_no=gp.gate_pass_no if gp else str(body.get("gatePassNo") or "")[:40],
+        gate_pass=gp, worker=gp.worker, site=gp.site,
+        gate=gate, gate_pass_no=gp.gate_pass_no,
         result=result, reason=reason, scanned_by=request.user)
 
     if result == "DENY" and gp is not None:

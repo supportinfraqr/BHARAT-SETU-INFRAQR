@@ -17,7 +17,7 @@ const workforceGroup = { key:'nav.workforce', icon:Network, items:[
   ['nav.workers','/employer/workers'],
   ['nav.contractors','/employer/contractors'],
   ['Attendance','/employer/attendance'],
-  ['nav.gatePass','/employer/gate-pass'],['Gate Scan','/employer/gate-scan'],['Worker Compliance Checklists','/employer/worker-compliance-checklists'],
+  ['nav.gatePass','/employer/gate-pass'],['Gate Scan','/employer/gate-scan'],['Welfare & Safety','/employer/worker-compliance-checklists'],
   ['nav.grievanceCentre','/employer/grievances'],
 ] };
 const sitesGroup = { key:'nav.sites', icon:LayoutDashboard, items:[

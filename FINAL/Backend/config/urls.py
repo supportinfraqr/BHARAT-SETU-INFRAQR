@@ -194,6 +194,7 @@ _v1_patterns = _v1(
     ("employer/verification/document/<int:document_id>", v1_bridge.verification_document, "v1_employer_verification_document"),
     ("admin/verification/queue", v1_bridge.admin_verification_queue, "v1_admin_verification_queue"),
     ("admin/verification/review", v1_bridge.admin_verification_review, "v1_admin_verification_review"),
+    ("contractor/profile-image", v1_bridge.contractor_profile_image, "v1_contractor_profile_image"),
     ("contractor/attendance/records", v1_bridge.contractor_attendance_records, "v1_contractor_attendance_records"),
     ("contractor/attendance", v1_bridge.attendance_uploaded, "v1_attendance_uploaded"),
     ("contractor/submissions/<int:submission_id>/ai-report", v1_bridge.contractor_ai_audit_report, "v1_contractor_ai_audit_report"),
