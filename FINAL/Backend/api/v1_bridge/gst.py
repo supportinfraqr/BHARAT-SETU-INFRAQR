@@ -37,18 +37,17 @@ def _legal_name_attr(profile):
 
 
 def active_gstin_holder(gstin, exclude_user_id=None):
-    """An **active** contractor/employer profile already holding this GSTIN.
+    """An contractor/employer profile already **active** on this GSTIN.
 
-    Uniqueness is enforced among active accounts only: a profile whose user can
-    sign in (``is_active``) and is admin-active (``account_active``). A
-    deactivated account releases the GSTIN. Returns the clashing profile or None."""
+    Uniqueness is enforced on the ``account_active`` switch only (the
+    approved/active flag): a GSTIN may be held by one active account. Returns
+    the clashing profile or None."""
     from bss_core.models import ContractorProfile, EmployerProfile
     value = str(gstin or "").strip().upper()
     if not value:
         return None
     for model in (ContractorProfile, EmployerProfile):
-        qs = model.objects.filter(gstin__iexact=value, user__is_active=True,
-                                  user__account_active=True)
+        qs = model.objects.filter(gstin__iexact=value, user__account_active=True)
         if exclude_user_id:
             qs = qs.exclude(user_id=exclude_user_id)
         obj = qs.select_related("user").first()

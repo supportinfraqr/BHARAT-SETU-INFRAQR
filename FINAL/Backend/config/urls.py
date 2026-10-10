@@ -191,6 +191,8 @@ _v1_patterns = _v1(
     ("employer/gst/claim", v1_bridge.gst_claim, "v1_employer_gst_claim"),
     ("admin/gst-claims", v1_bridge.admin_gst_claims, "v1_admin_gst_claims"),
     ("admin/gst-claims/review", v1_bridge.admin_gst_claim_review, "v1_admin_gst_claim_review"),
+    ("admin/accounts", v1_bridge.admin_accounts, "v1_admin_accounts"),
+    ("admin/accounts/status", v1_bridge.admin_account_status, "v1_admin_account_status"),
     ("contractor/verification/status", v1_bridge.verification_status, "v1_contractor_verification_status"),
     ("contractor/verification/decline-entitylocker", v1_bridge.verification_decline_entitylocker, "v1_contractor_verification_decline"),
     ("contractor/verification/manual", v1_bridge.verification_manual_submit, "v1_contractor_verification_manual"),
