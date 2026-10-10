@@ -596,8 +596,8 @@ def admin_learning_report(request):
             "status": e.get_status_display(),
             "progress": state["progress"],
             "certificateNo": e.certificate_no,
-            "completedAt": _dts(e.completed_at),
-            "updatedAt": _dts(e.updated_at),
+            "completedAt": payloads._dts(e.completed_at),
+            "updatedAt": payloads._dts(e.updated_at),
         })
 
     submissions, pending = [], 0
@@ -620,7 +620,7 @@ def admin_learning_report(request):
             "status": s.get_status_display(),
             "score": s.score,
             "feedback": s.feedback,
-            "submittedAt": _dts(s.submitted_at),
+            "submittedAt": payloads._dts(s.submitted_at),
         })
 
     return Response({"data": {
