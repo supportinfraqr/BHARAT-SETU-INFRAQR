@@ -18,14 +18,24 @@ export default function EmploymentHistoryPage() {
   const [fSite, setFSite] = useState('');
   const [fStatus, setFStatus] = useState('');
 
-  const contractors = useMemo(() => Array.from(new Set(history.map(h => h.contractor).filter(Boolean))), [history]);
-  const sites = useMemo(() => Array.from(new Set(history.map(h => h.site).filter(Boolean))), [history]);
+  const sortedHistory = useMemo(() => {
+    return [...history].sort((a, b) => {
+      if (a.current && !b.current) return -1;
+      if (!a.current && b.current) return 1;
+      const dateA = a.startDate ? new Date(a.startDate).getTime() : 0;
+      const dateB = b.startDate ? new Date(b.startDate).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [history]);
 
-  const rows = useMemo(() => history.filter(h =>
+  const contractors = useMemo(() => Array.from(new Set(sortedHistory.map(h => h.contractor).filter(Boolean))), [sortedHistory]);
+  const sites = useMemo(() => Array.from(new Set(sortedHistory.map(h => h.site).filter(Boolean))), [sortedHistory]);
+
+  const rows = useMemo(() => sortedHistory.filter(h =>
     (!fContractor || h.contractor === fContractor) &&
     (!fSite || h.site === fSite) &&
     (!fStatus || h.status === fStatus)
-  ), [history, fContractor, fSite, fStatus]);
+  ), [sortedHistory, fContractor, fSite, fStatus]);
 
   return (
     <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
@@ -33,7 +43,7 @@ export default function EmploymentHistoryPage() {
         <Link href="/worker" className="mt-1 w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-600 hover:text-[#073B67] hover:border-[#073B67] transition-all" aria-label="Go back"><ArrowLeft size={18} /></Link>
         <div>
           <h1 className="text-2xl font-bold text-[#062D4F] flex items-center gap-2"><History size={22} />Employment History</h1>
-          <p className="text-sm text-gray-500 mt-1">A sequential trace of your engagements (oldest first) with the duration, contractor, site and the appointment/experience letters and employment card for each. Requests declined by either party are not shown.</p>
+          <p className="text-sm text-gray-500 mt-1">A chronological timeline of your engagements (Active/latest at top, older at bottom) with duration, contractor, site, appointment/experience letters, and employment cards. Requests declined by either party are not shown.</p>
         </div>
       </div>
 

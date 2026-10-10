@@ -231,10 +231,14 @@ export default function ContractorScanPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bssId: entity.bssId, status: 'PRESENT' }),
       });
-      const result = await response.json().catch(() => ({})) as { error?: string };
+      const result = await response.json().catch(() => ({})) as { error?: string; data?: { alreadyMarked?: boolean } };
       if (!response.ok) throw new Error(result.error || 'Attendance could not be marked.');
       setAttendanceMarked(true);
-      setMessage(`Attendance marked for ${entity.name} — it now appears on the worker's Attendance page.`);
+      if (result.data?.alreadyMarked) {
+        setMessage(`Attendance for ${entity.name} is already marked for today — one mark per day is enough.`);
+      } else {
+        setMessage(`Attendance marked for ${entity.name} — it now appears on the worker's Attendance page.`);
+      }
       void refresh();
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Attendance could not be marked.');

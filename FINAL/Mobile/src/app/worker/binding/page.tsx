@@ -182,7 +182,15 @@ export default function BindingRequestsPage() {
   const matchesQuery = (r: BindingRequest) => !q || [r.contractor, r.contractorCode, r.site, r.ref, r.employer, r.designation]
     .some(value => String(value || '').toLowerCase().includes(q));
   const tabFiltered = requests.filter(r => tab === 'all' ? true : tab === 'active' ? r.status === 'Accepted' : r.status === 'Pending');
-  const filtered = tabFiltered.filter(matchesQuery);
+  const filtered = [...tabFiltered.filter(matchesQuery)].sort((a, b) => {
+    const statusPriority: Record<string, number> = { Accepted: 1, Pending: 2, 'Site Changed': 3, Rejected: 4, Cancelled: 5, Expired: 6 };
+    const prioA = statusPriority[a.status] ?? 99;
+    const prioB = statusPriority[b.status] ?? 99;
+    if (prioA !== prioB) return prioA - prioB;
+    const dateA = a.startDate ? new Date(a.startDate).getTime() : (a.requestedOn ? new Date(a.requestedOn).getTime() : 0);
+    const dateB = b.startDate ? new Date(b.startDate).getTime() : (b.requestedOn ? new Date(b.requestedOn).getTime() : 0);
+    return dateB - dateA;
+  });
   const tabCount = (t: 'action' | 'active' | 'all') => requests.filter(r => t === 'all' ? true : t === 'active' ? r.status === 'Accepted' : r.status === 'Pending').length;
 
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">

@@ -23,6 +23,7 @@ from .portals import *  # noqa: F401,F403
 from .letter_templates import *  # noqa: F401,F403
 from .register_templates import *  # noqa: F401,F403
 from .attendance import *  # noqa: F401,F403
+from .history import *  # noqa: F401,F403
 from .cctv import *  # noqa: F401,F403
 from .ai import *  # noqa: F401,F403
 from .translation import *  # noqa: F401,F403

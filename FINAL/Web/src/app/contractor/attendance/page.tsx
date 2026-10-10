@@ -8,7 +8,7 @@ import { useContractor } from '@/contexts/ContractorContext';
 type AttendanceRow = {
   id: string; date: string; worker?: string; bssId?: string; site: string;
   status?: string; statusCode?: string; capture?: string; source?: string;
-  verification?: string; checkIn?: string; checkOut?: string;
+  verification?: string; checkIn?: string; checkOut?: string; singleMark?: boolean;
   camera?: string; cameraArea?: string; confidence?: number | null;
   geofenceOk?: boolean | null; distanceM?: number | null; accuracyM?: number | null; remarks?: string;
 };
@@ -169,8 +169,14 @@ export default function ContractorAttendancePage() {
             <Detail label="Source" value={recSelected.source || recSelected.capture || '—'} />
             <Detail label="Verification" value={recSelected.verification || '—'} />
             <div className="grid grid-cols-2 gap-2">
-              <Detail label="Check In" value={recSelected.checkIn || '—'} />
-              <Detail label="Check Out" value={recSelected.checkOut || '—'} />
+              {recSelected.singleMark ? (
+                <Detail label="Marked At" value={recSelected.checkIn || '—'} />
+              ) : (
+                <>
+                  <Detail label="Check In" value={recSelected.checkIn || '—'} />
+                  <Detail label="Check Out" value={recSelected.checkOut || '—'} />
+                </>
+              )}
             </div>
             {recSelected.camera && <Detail label="CCTV Camera" value={`${recSelected.camera}${recSelected.cameraArea && recSelected.cameraArea !== recSelected.camera ? ` · ${recSelected.cameraArea}` : ''}`} />}
             {(recSelected.geofenceOk !== undefined && recSelected.geofenceOk !== null) && (

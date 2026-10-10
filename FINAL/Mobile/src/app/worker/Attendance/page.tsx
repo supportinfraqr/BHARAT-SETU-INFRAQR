@@ -559,7 +559,7 @@ export default function AttendancePage() {
 
                         {rec.presence === 'Present' && rec.checkIn && (
                           <span className="block text-[9px] font-semibold text-gray-500 text-center">
-                            {rec.checkIn} - {rec.checkOut || 'Active'}
+                            {rec.singleMark ? `Marked · ${rec.checkIn}` : `${rec.checkIn} - ${rec.checkOut || 'Active'}`}
                           </span>
                         )}
 
@@ -679,16 +679,23 @@ export default function AttendancePage() {
                 )}
 
                 {selectedRecord.checkIn && (
-                  <div className="grid grid-cols-2 gap-3">
+                  selectedRecord.singleMark ? (
                     <div className="p-3 rounded-2xl bg-emerald-50/50 border border-emerald-100">
-                      <span className="text-[10px] text-emerald-700 font-bold block uppercase">Check In</span>
+                      <span className="text-[10px] text-emerald-700 font-bold block uppercase">Marked At</span>
                       <strong className="text-sm text-emerald-900">{selectedRecord.checkIn}</strong>
                     </div>
-                    <div className="p-3 rounded-2xl bg-blue-50/50 border border-blue-100">
-                      <span className="text-[10px] text-blue-700 font-bold block uppercase">Check Out</span>
-                      <strong className="text-sm text-blue-900">{selectedRecord.checkOut || 'Active Shift'}</strong>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-2xl bg-emerald-50/50 border border-emerald-100">
+                        <span className="text-[10px] text-emerald-700 font-bold block uppercase">Check In</span>
+                        <strong className="text-sm text-emerald-900">{selectedRecord.checkIn}</strong>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-blue-50/50 border border-blue-100">
+                        <span className="text-[10px] text-blue-700 font-bold block uppercase">Check Out</span>
+                        <strong className="text-sm text-blue-900">{selectedRecord.checkOut || 'Active Shift'}</strong>
+                      </div>
                     </div>
-                  </div>
+                  )
                 )}
 
                 {selectedRecord.method && (

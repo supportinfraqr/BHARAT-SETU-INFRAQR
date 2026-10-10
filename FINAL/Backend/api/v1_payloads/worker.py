@@ -398,6 +398,7 @@ def attendance_detail(a):
         "siteId": a.site_id,
         "checkIn": clock(a.check_in_time),
         "checkOut": clock(a.check_out_time),
+        "singleMark": bool(_d(a.capture_method) in ("SELF", "QR")),
         "camera": a.camera_label or "",
         "cameraArea": a.camera_area or "",
         "confidence": number(a.confidence_pct),
@@ -844,26 +845,29 @@ def _worker_courses(user=None):
     if cfg is not None and not cfg.courses_enabled:
         return []
     enrollments = {}
-    contractor_id = employer_id = None
+    contractor_ids = set()
+    employer_ids = set()
     if user is not None:
         enrollments = {e.course_id: e for e in CourseEnrollment.objects.filter(worker=user)}
-        binding = (WorkerContractorBinding.objects
-                   .filter(worker=user, binding_status="ACCEPTED")
-                   .select_related("contractor", "site__employer").first())
-        if binding is not None:
-            contractor_id = binding.contractor_id
-            if binding.site is not None:
-                employer_id = binding.site.employer_id
+        for b in (WorkerContractorBinding.objects
+                  .filter(worker=user, binding_status="ACCEPTED")
+                  .select_related("contractor", "site__employer")):
+            if getattr(b, "contractor_id", None):
+                contractor_ids.add(b.contractor_id)
+            if b.site is not None and getattr(b.site, "employer_id", None):
+                employer_ids.add(b.site.employer_id)
 
     def _visible(course):
         aud = getattr(course, "audience", "all") or "all"
         if aud == "contractors":
-            return contractor_id is not None
+            return bool(contractor_ids)
         if aud == "employers":
-            return employer_id is not None
+            return bool(employer_ids)
         if aud == "selected":
-            return (contractor_id is not None and contractor_id in (course.audience_contractor_ids or [])) \
-                or (employer_id is not None and employer_id in (course.audience_employer_ids or []))
+            return bool((course.audience_contractor_ids or [])
+                        and contractor_ids.intersection(set(course.audience_contractor_ids))) \
+                or bool((course.audience_employer_ids or [])
+                        and employer_ids.intersection(set(course.audience_employer_ids)))
         return True  # "all"
 
     rows = []

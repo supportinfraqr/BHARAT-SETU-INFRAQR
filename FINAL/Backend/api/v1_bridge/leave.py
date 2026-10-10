@@ -330,10 +330,12 @@ def _handle_mark_attendance(user, body):
         },
     )
     if not created:
-        attendance.status = status
-        attendance.check_out_time = now
-        attendance.save(update_fields=["status", "check_out_time", "updated_at"])
-    return attendance.id
+        # One mark per day — never record a check-out or a second punch for an
+        # already-marked day.
+        return {"id": str(attendance.id), "alreadyMarked": True,
+                "status": attendance.status, "site": site.site_name}
+    return {"id": str(attendance.id), "alreadyMarked": False,
+            "status": attendance.status, "site": site.site_name}
 
 
 __all__ = [
