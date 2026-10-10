@@ -100,6 +100,7 @@ export default function ContractorProfilePage() {
         <div className="text-sm">
           <p><span className="text-gray-500">Authorised signatory:</span> {contractor.identity.name}</p>
           <p className="mt-1"><span className="text-gray-500">Rating:</span> {contractor.identity.rating.toFixed(1)}</p>
+          {contractor.identity.memberSince && <p className="mt-1"><span className="text-gray-500">BSS member since:</span> {contractor.identity.memberSince}</p>}
         </div>
       </section>
 

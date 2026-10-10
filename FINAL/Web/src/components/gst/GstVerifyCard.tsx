@@ -98,7 +98,7 @@ export default function GstVerifyCard({ role, defaultGstin = '', onVerified }: {
         <div className="space-y-3">
           <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
             <p className="text-sm font-semibold text-gray-800">No GST</p>
-            <p className="text-xs text-gray-500 mt-0.5">You&apos;ve declared that your firm is not GST-registered. BSS will complete the GST / registration details when your account is approved.</p>
+            <p className="text-xs text-gray-500 mt-0.5">You&apos;ve declared that your firm is not GST-registered, so your GST / registration status is recorded as Not&nbsp;applicable. Submit your documents and a BSS admin will review and approve your account.</p>
           </div>
           <button type="button" onClick={() => setOverride(true)} className="h-9 px-3 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50">I do have a GSTIN — add it</button>
         </div>

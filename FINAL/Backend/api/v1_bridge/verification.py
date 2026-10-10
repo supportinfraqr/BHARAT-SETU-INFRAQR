@@ -174,8 +174,8 @@ def admin_verification_queue(request):
         return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
     rows = []
     for model, role in ((EmployerProfile, "employer"), (ContractorProfile, "contractor")):
-        # Include contractors who declared "no GST" — the admin fills the GST /
-        # registration fields at approval.
+        # Include contractors who declared "no GST" — their GST fields are NA
+        # and require no admin input at approval.
         for profile in model.objects.filter(
                 gst_verification_status__in=("VERIFIED", "NOT_APPLICABLE")).select_related("user"):
             user = profile.user
@@ -196,6 +196,7 @@ def admin_verification_queue(request):
                 "name": (profile.employer_name if role == "employer" else profile.contractor_name) or user.username,
                 "username": user.username,
                 "gstin": profile.gstin or "", "legalName": profile.gst_legal_name or "",
+                "gstNotApplicable": gst_not_applicable,
                 "stage": stage, "manualStatus": manual,
                 "declined": bool(profile.entity_locker_declined),
                 "documents": _documents(user),
@@ -227,8 +228,8 @@ def admin_verification_review(request):
     profile.manual_verification_status = decision
     profile.manual_verification_note = str(body.get("note") or "")[:255]
     fields = ["manual_verification_status", "manual_verification_note"]
-    # The admin completes the GST / registration fields at approval — mainly for
-    # contractors who declared "no GST".
+    # Optional GST / registration details for GST-verified profiles only.
+    # No-GST firms are left as Not applicable — the frontend never sends these.
     for field, key, limit in (("gstin", "gstin", 20), ("gst_legal_name", "gstLegalName", 200),
                               ("gst_trade_name", "gstTradeName", 200),
                               ("gst_constitution", "gstConstitution", 120),

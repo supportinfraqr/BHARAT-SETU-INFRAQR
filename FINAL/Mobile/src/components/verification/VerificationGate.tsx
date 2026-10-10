@@ -26,6 +26,8 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
   const [confirmNotEl, setConfirmNotEl] = useState(false);
   const [docs, setDocs] = useState<Partial<Record<DocKind, File>>>({});
   const [askGst, setAskGst] = useState(false);
+  const [showIncorp, setShowIncorp] = useState(false);
+  const [incorpDate, setIncorpDate] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -94,7 +96,8 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
     setBusy(true); setError("");
     try {
       const response = await fetch(`/api/${role}/gst/not-applicable`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ incorporationDate: incorpDate }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({})) as { error?: string };
@@ -141,12 +144,27 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
       subtitle = "GST is optional for contractors. Tell us whether you have one to continue.";
       body = askGst ? (
         <GstVerifyCard role={role} onVerified={() => void load()} />
+      ) : showIncorp ? (
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">No problem — GST is optional for contractors. When was your firm incorporated?</p>
+          {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
+          <label className="block text-xs font-semibold text-gray-700 max-w-xs">
+            Date of incorporation
+            <input type="date" value={incorpDate} max={new Date().toISOString().slice(0, 10)} onChange={e => setIncorpDate(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm bg-white" />
+          </label>
+          <div className="flex gap-2 justify-end">
+            <button type="button" onClick={() => setShowIncorp(false)} disabled={busy} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600">Back</button>
+            <button type="button" onClick={() => void continueWithoutGst()} disabled={busy || !incorpDate} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-60">
+              {busy ? <Loader2 size={14} className="animate-spin"/> : <Send size={14}/>}Continue
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-gray-600">Do you have a GST number?</p>
           {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
           <div className="flex gap-2 justify-end">
-            <button type="button" onClick={() => void continueWithoutGst()} disabled={busy} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-700 disabled:opacity-60">No, I don&apos;t have a GST</button>
+            <button type="button" onClick={() => setShowIncorp(true)} disabled={busy} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-700 disabled:opacity-60">No, I don&apos;t have a GST</button>
             <button type="button" onClick={() => setAskGst(true)} disabled={busy} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-60"><BadgeCheck size={14}/>Yes, I have a GST</button>
           </div>
         </div>

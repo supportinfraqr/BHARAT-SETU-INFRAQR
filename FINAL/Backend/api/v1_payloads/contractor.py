@@ -97,6 +97,7 @@ def _contractor_identity(user):
         "entity": _d(cp.constitution if cp else ""),
         "verified": bool(cp and cp.is_verified_badge),
         "rating": 0,
+        "memberSince": _date_str(cp.registered_at if cp else None),
         "contact": _d(cp.contact_person if cp else ""),
         "email": _d(cp.email if cp else ""),
         "accountStatus": _entity_account_status(cp),

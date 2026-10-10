@@ -148,14 +148,25 @@ def gst_verification_status(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def gst_not_applicable(request):
-    """The firm is not GST-registered. GST is optional for contractors — the
-    GST profile fields are filled by the admin at approval instead."""
+    """The firm is not GST-registered. GST is optional for contractors —
+    the contractor supplies the incorporation date and the GST fields stay
+    NA at approval."""
     profile = _profile_for(request.user)
     if profile is None:
         return Response({"error": "Only employers and contractors can do this."},
                         status=status.HTTP_403_FORBIDDEN)
+    # Contractors declaring "no GST" supply the incorporation date here —
+    # the admin no longer asks anything at approval (all GST fields are NA).
+    body = request.data if isinstance(request.data, dict) else {}
+    incorporation = _parse_gst_date(body.get("incorporationDate"))
     profile.gst_verification_status = "NOT_APPLICABLE"
-    profile.save(update_fields=["gst_verification_status"])
+    fields = ["gst_verification_status"]
+    if incorporation is not None:
+        profile.incorporation_date = incorporation
+        fields.append("incorporation_date")
+    if hasattr(profile, "updated_at"):
+        fields.append("updated_at")
+    profile.save(update_fields=sorted(set(fields)))
     return Response({"data": _serialize(profile)}, status=status.HTTP_200_OK)
 
 

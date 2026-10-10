@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, Download, Loader2, XCircle } from 'lucide-react';
+import { CheckCircle2, Download, Loader2, ShieldCheck, XCircle } from 'lucide-react';
 
 type Doc = { id: number; docType: string; fileName: string; uploadedAt: string };
 type Row = {
   userId: number; role: string; name: string; username: string; gstin: string; legalName: string;
+  gstNotApplicable?: boolean;
   stage: 'PENDING' | 'AWAITING_DOCUMENTS' | 'AWAITING_ENTITYLOCKER';
   manualStatus: string; declined: boolean; documents: Doc[];
 };
@@ -45,9 +46,11 @@ export default function AdminVerificationsPage() {
   async function review(row: Row, status: 'VERIFIED' | 'REJECTED') {
     setBusy(row.userId); setError('');
     try {
+      const payload: Record<string, unknown> = { userId: row.userId, role: row.role, status, note: notes[row.userId] || '' };
+      if (!row.gstNotApplicable) Object.assign(payload, gstFor(row)); // GST fields are NA for no-GST firms
       const response = await fetch('/api/admin/verification/review', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: row.userId, role: row.role, status, note: notes[row.userId] || '', ...gstFor(row) }),
+        body: JSON.stringify(payload),
       });
       const body = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(body.error || 'Could not save the decision.');
@@ -78,7 +81,7 @@ export default function AdminVerificationsPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-bold text-gray-900">{row.name}</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">{row.role} · account <span className="font-mono">{row.username}</span> · GSTIN {row.gstin || '—'}{row.legalName ? ` · ${row.legalName}` : ''}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{row.role} · account <span className="font-mono">{row.username}</span> · {row.gstNotApplicable ? 'No GST — Not applicable' : `GSTIN ${row.gstin || '—'}${row.legalName ? ` · ${row.legalName}` : ''}`}</p>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-1 rounded-full border whitespace-nowrap ${STAGE[row.stage].tone}`}>{STAGE[row.stage].label}</span>
               </div>
@@ -90,14 +93,21 @@ export default function AdminVerificationsPage() {
                 ))}
               </div>
               {row.stage === 'PENDING' && (
-                <div className="grid sm:grid-cols-2 gap-2 rounded-xl bg-gray-50/60 border border-gray-100 p-3">
-                  <p className="sm:col-span-2 text-[10px] font-bold uppercase tracking-wider text-gray-400">GST / registration details (fill at approval — required when the firm has no GST)</p>
-                  {([['gstin', 'GSTIN'], ['gstLegalName', 'Legal name (per GST)'], ['gstTradeName', 'Trade name'], ['gstConstitution', 'Constitution'], ['gstRegistrationDate', 'GST registration date']] as const).map(([key, label]) => (
-                    <label key={key} className="text-[10px] font-semibold text-gray-500">{label}
-                      <input value={gstFor(row)[key]} onChange={e => setGstField(row.userId, key, e.target.value)} className="mt-0.5 w-full h-9 border border-gray-200 rounded-lg px-3 text-xs bg-white"/>
-                    </label>
-                  ))}
-                </div>
+                row.gstNotApplicable ? (
+                  <div className="flex items-start gap-2 rounded-xl bg-gray-50/60 border border-gray-100 p-3">
+                    <ShieldCheck className="text-gray-400 mt-0.5 flex-shrink-0" size={14}/>
+                    <p className="text-[11px] text-gray-600">GST / registration details: <span className="font-bold text-gray-700">Not applicable</span> — this firm declared no GST. Nothing to fill at approval.</p>
+                  </div>
+                ) : (
+                  <div className="grid sm:grid-cols-2 gap-2 rounded-xl bg-gray-50/60 border border-gray-100 p-3">
+                    <p className="sm:col-span-2 text-[10px] font-bold uppercase tracking-wider text-gray-400">GST / registration details (as per GST records)</p>
+                    {([['gstin', 'GSTIN'], ['gstLegalName', 'Legal name (per GST)'], ['gstTradeName', 'Trade name'], ['gstConstitution', 'Constitution'], ['gstRegistrationDate', 'GST registration date']] as const).map(([key, label]) => (
+                      <label key={key} className="text-[10px] font-semibold text-gray-500">{label}
+                        <input value={gstFor(row)[key]} onChange={e => setGstField(row.userId, key, e.target.value)} className="mt-0.5 w-full h-9 border border-gray-200 rounded-lg px-3 text-xs bg-white"/>
+                      </label>
+                    ))}
+                  </div>
+                )
               )}
               <input
                 value={notes[row.userId] ?? ''}
