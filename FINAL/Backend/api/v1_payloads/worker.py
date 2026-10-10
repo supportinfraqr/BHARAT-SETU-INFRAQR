@@ -1271,7 +1271,8 @@ def _worker_available_jobs(user):
 
 def _worker_bindings(user):
     """Contractor binding requests (WorkerContractorBinding) — drives /worker/binding."""
-    bindings = WorkerContractorBinding.objects.filter(worker=user).order_by("-created_at")[:10]
+    # Chronological (oldest → newest) so the list reads as a history.
+    bindings = WorkerContractorBinding.objects.filter(worker=user).order_by("created_at")[:50]
     return [_binding_row(b) for b in bindings]
 
 
