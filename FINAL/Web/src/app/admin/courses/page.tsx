@@ -34,6 +34,25 @@ const emptyQuestion = (): Question => ({ question: '', options: ['', ''], correc
 
 const emptyDraft = (): Draft => ({ title: '', provider: 'Bharat Shram Setu', category: '', duration: '', instructor: '', certification: '', skillName: '', description: '', passScore: 70, active: true, modules: [emptyModule()], imageUrl: '', audience: 'all', audienceContractorIds: [], audienceEmployerIds: [] });
 
+const AUDIENCE_LABEL: Record<string, string> = {
+  all: 'All workers',
+  contractors: "All contractors' workers",
+  employers: "All employers' workers",
+  selected: 'Selected contractors / employers',
+};
+
+/** Human-readable summary of a course's visibility, shown on each course card. */
+function audienceText(c: { audience?: string; audienceContractorIds?: number[]; audienceEmployerIds?: number[] }): string {
+  const key = c.audience ?? 'all';
+  const base = AUDIENCE_LABEL[key] ?? 'All workers';
+  if (key === 'selected') {
+    const nc = c.audienceContractorIds?.length ?? 0;
+    const ne = c.audienceEmployerIds?.length ?? 0;
+    return `${base} (${nc} contractor${nc === 1 ? '' : 's'}, ${ne} employer${ne === 1 ? '' : 's'})`;
+  }
+  return base;
+}
+
 const input = 'mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm';
 const TYPE_LABEL: Record<string, string> = { QUIZ: 'Quiz', WRITING: 'Written response', UPLOAD: 'File upload' };
 
@@ -237,6 +256,7 @@ export default function AdminCoursesPage() {
               <div className="min-w-0">
                 <h2 className="text-sm font-semibold text-gray-900 truncate">{c.title}</h2>
                 <p className="text-[11px] text-gray-400">{c.code} · {c.provider || '—'} · {c.modules.length} module(s) · {c.modules.reduce((n, m) => n + m.assignments.length, 0)} assignment(s){c.skillName ? ` · skill: ${c.skillName}` : ''}</p>
+                <p className="text-[11px] text-[#073B67] mt-0.5">Visible to: {audienceText(c)}</p>
               </div>
               <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${c.active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-500'}`}>{c.active ? 'Active' : 'Hidden'}</span>
             </div>

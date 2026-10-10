@@ -74,6 +74,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return f"{self.username} ({self.role})"
 
+    def get_full_name(self):
+        """Display name. Django's AbstractBaseUser omits this (only AbstractUser
+        provides it), yet the codebase calls it as a fallback label."""
+        return (self.full_name or "").strip()
+
+    def get_short_name(self):
+        return self.username
+
 
 class UserCredential(models.Model):
     """Additional sign-in / identity credentials (mobile, email, aadhaar, login_id)."""
