@@ -89,7 +89,7 @@ export default function ContractorRozgarPage() {
   async function inviteToBind(worker: ContractorPortalData['availableWorkers'][number]) {
     setBusy(true); setError(''); setNotice('');
     try {
-      const response = await fetch('/api/bindings/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'BSS_WORKER', bssId: worker.workerId }) });
+      const response = await fetch('/api/bindings/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'BSS_WORKER', bssId: worker.workerId, source: 'rozgar' }) });
       const result = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(result.error || 'Binding request could not be sent.');
       setNotice(`Binding request sent to ${worker.workerName} — they approve it from their portal.`);

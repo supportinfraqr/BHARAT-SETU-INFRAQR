@@ -376,17 +376,13 @@ def _default_site_info(profile):
 
 
 def _site_compliance_pct(user, site):
-    """Real per-site compliance: latest persisted audit report score for the
-    site (Final Submit), else the verification share of evidence submissions.
-    None when the site has no compliance data at all."""
+    """Real per-site compliance: the latest persisted audit report score for the
+    site (submitted package). ``None`` when no audit report exists yet — a site
+    that only has uploaded evidence (no audit) must never read as compliant."""
     rep = ComplianceReport.objects.filter(
         employer=user, site_name=site.site_name).order_by("-report_date").first()
     if rep and rep.score_pct is not None:
         return int(round(float(rep.score_pct)))
-    ev = SubmissionEvidence.objects.filter(user=user, site=site.site_name)
-    total = ev.count()
-    if total:
-        return int(round(100 * ev.filter(status="VERIFIED").count() / total))
     return None
 
 

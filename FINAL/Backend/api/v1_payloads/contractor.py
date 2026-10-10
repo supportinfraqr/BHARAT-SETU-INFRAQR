@@ -195,6 +195,10 @@ def _contractor_pending_sites(user):
 def _contractor_workers(user):
     bindings = list(WorkerContractorBinding.objects
                     .filter(contractor=user, binding_status__in=("PENDING", "ACCEPTED"))
+                    # Pending Rozgar invitations are not yet workers — only the
+                    # accepted engagement counts (so the pending-verification
+                    # count stays zero until the worker accepts).
+                    .exclude(binding_status="PENDING", source="rozgar")
                     .order_by("-created_at"))
     worker_ids = [b.worker_id for b in bindings]
     emp_map = {e.user_id: e for e in WorkerEmployment.objects.filter(user_id__in=worker_ids)}
@@ -465,6 +469,10 @@ def _contractor_employers(user):
             "id": e.id,
             "name": _org_name(e),
             "employerId": _d(ep.employer_code if ep else _bss_employer_code(e.id)),
+            "code": _d(ep.employer_code if ep else _bss_employer_code(e.id)),
+            "industry": _d(ep.industry if ep else ""),
+            "email": _d(ep.email if ep else ""),
+            "lin": _d(ep.lin if ep else ""),
             "sites": [],
             "status": "ACTIVE",
             "boundSince": _dts(eng.accepted_at) if eng.accepted_at else None,
@@ -687,45 +695,32 @@ def _contractor_worker_compliance(user):
 
 
 def _contractor_workforce_growth(user=None):
-    """Compute monthly active bound worker count from real WorkerContractorBinding database records."""
+    """Monthly active workforce — the number of distinct workers who were bound
+    (accepted) at some point during each month, even if they were unbound later.
+    Pending invitations (never accepted) are excluded and a worker bound several
+    times in the same month counts once."""
     now = timezone.localdate()
-    six = []
-    for i in range(6):
-        month_start = (now.replace(day=1) - datetime.timedelta(days=30 * (5 - i))).replace(day=1)
-        next_month = (month_start + datetime.timedelta(days=32)).replace(day=1)
-        count = 0
-        if user:
-            count = WorkerContractorBinding.objects.filter(
-                contractor=user,
-                binding_status__in=("ACCEPTED", "CANCELLED"),
-                created_at__lt=next_month
-            ).filter(
-                Q(unbound_at__isnull=True) | Q(unbound_at__gte=month_start)
-            ).count()
-        six.append({
-            "month": month_start.strftime("%b %Y"),
-            "workers": count
-        })
 
-    one = []
-    for i in range(12):
-        month_start = (now.replace(day=1) - datetime.timedelta(days=30 * (11 - i))).replace(day=1)
-        next_month = (month_start + datetime.timedelta(days=32)).replace(day=1)
-        count = 0
-        if user:
-            count = WorkerContractorBinding.objects.filter(
-                contractor=user,
-                binding_status__in=("ACCEPTED", "CANCELLED"),
-                created_at__lt=next_month
-            ).filter(
-                Q(unbound_at__isnull=True) | Q(unbound_at__gte=month_start)
-            ).count()
-        one.append({
-            "month": month_start.strftime("%b %Y"),
-            "workers": count
-        })
+    def _month_first(offset):
+        """First day of the month `offset` months before the current month."""
+        index = now.year * 12 + (now.month - 1) - offset
+        return datetime.date(index // 12, index % 12 + 1, 1)
 
-    return {"sixMonths": six, "oneYear": one}
+    def _series(length):
+        rows = []
+        for i in range(length):
+            start = _month_first(length - 1 - i)
+            end = _month_first(length - 2 - i)  # first day of the next month (exclusive)
+            count = 0
+            if user:
+                count = (WorkerContractorBinding.objects
+                         .filter(contractor=user, accepted_at__isnull=False, accepted_at__lt=end)
+                         .filter(Q(unbound_at__isnull=True) | Q(unbound_at__gte=start))
+                         .values("worker").distinct().count())
+            rows.append({"month": start.strftime("%b %Y"), "workers": count})
+        return rows
+
+    return {"sixMonths": _series(6), "oneYear": _series(12)}
 
 
 def _contractor_applicability(user=None):
@@ -841,7 +836,9 @@ def _contractor_job_history(user):
 
 def _contractor_binding_requests(user):
     rows = []
-    for b in WorkerContractorBinding.objects.filter(contractor=user):
+    # Rozgar Setu invitations are worker-facing offers, not binding requests —
+    # once the worker accepts, the engagement surfaces via the workforce lists.
+    for b in WorkerContractorBinding.objects.filter(contractor=user).exclude(source="rozgar"):
         wi = WorkerIdentity.objects.filter(user=b.worker).first()
         ep = getattr(b.site.employer, "employer_profile", None) if b.site and b.site.employer else None
         rows.append({

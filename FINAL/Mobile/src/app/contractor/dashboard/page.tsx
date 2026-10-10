@@ -13,7 +13,7 @@ import { CopyButton } from '@/components/ui/CopyButton';
 import type { GatePassEligibility } from '@/types/portal';
 
 export default function ContractorDashboardPage() {
-  const { contractor, employerScope, scoped } = useContractor();
+  const { contractor, employerScope, setEmployerScope, scoped } = useContractor();
   const { t } = useLanguage();
 
   const sites = scoped(contractor.sites, s => s.employer);
@@ -23,22 +23,21 @@ export default function ContractorDashboardPage() {
   const activeWorkers = workers.filter(worker => worker.status === 'Accepted').length;
   const pendingWorkers = workers.filter(worker => worker.status === 'Pending').length;
   const expiringCompliance = compliances.filter(item => item.status === 'Expiring' || item.status === 'Expired').length;
-  const complianceValues = sites.map(s => s.compliance).filter((v): v is number => v != null);
-  const complianceRate = complianceValues.length ? Math.round(complianceValues.reduce((a, b) => a + b, 0) / complianceValues.length) : 0;
   const activeLicenses = contractor.licenses.filter(l => l.status === 'Active').length;
   const pendingBinding = contractor.bindingRequests.filter(r => r.status === 'Pending');
   const pendingPayroll = contractor.payroll.records.filter(r => ['Draft', 'Reviewed', 'Submitted'].includes(r.status)).length;
   const payrollExceptions = contractor.payroll.records.filter(r => r.status === 'Exception' || r.status === 'Returned' || (r.errors && r.errors.length > 0)).length;
-  const openGrievances = contractor.grievances.filter(g => g.status === 'Open' || g.status === 'In Progress' || g.status === 'Reopened').length;
+  const openGrievances = scoped(contractor.grievances, g => g.employer).filter(g => g.status === 'Open' || g.status === 'In Progress' || g.status === 'Reopened').length;
   const totalJobs = contractor.jobHistory.length;
   const totalApplications = contractor.jobHistory.reduce((s, j) => s + j.applications, 0);
   const totalHires = contractor.jobHistory.reduce((s, j) => s + j.hires, 0);
+  const selectedEmployer = employerScope === 'all' ? null : contractor.employers.find(e => e.name === employerScope) ?? null;
 
-  const kpis = [
+  const kpis: Array<{ label: string; value: string; icon: typeof Users; tone: 'blue' | 'orange' | 'green' | 'indigo' | 'red'; href?: string; action?: string }> = [
     { label: t('ui.totalWorkers'), value: workers.length.toLocaleString('en-IN'), icon: Users, tone: 'blue' },
     { label: 'Active Sites / Total', value: `${sites.filter(s => s.workers > 0).length || sites.length}/${sites.length}`, icon: Building2, tone: 'orange' },
     { label: 'Active Licenses', value: activeLicenses.toString(), icon: Landmark, tone: 'green' },
-    { label: t('ui.complianceScore'), value: `${complianceRate}%`, icon: ShieldCheck, tone: 'indigo' },
+    { label: 'Open Grievances', value: openGrievances.toString(), icon: AlertCircle, tone: 'red', href: '/contractor/grievances', action: openGrievances > 0 ? 'Needs attention' : 'All clear' },
   ];
 
   const [growthRange, setGrowthRange] = useState<'6' | '12'>('6');
@@ -102,35 +101,76 @@ export default function ContractorDashboardPage() {
             </div>
           </div>
           <div className="p-4 sm:p-5">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5"><Landmark size={11}/>Principal Employer Scope</p>
-            <p className="text-sm font-semibold text-gray-900 mt-1">{employerScope === 'all' ? contractor.principalEmployer.name : employerScope}</p>
-            <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
-              <div><dt className="text-gray-400">Code</dt><dd className="font-semibold font-mono text-gray-700 mt-0.5">{contractor.principalEmployer.code}</dd></div>
-              <div><dt className="text-gray-400">Industry</dt><dd className="font-semibold text-gray-700 mt-0.5">{contractor.principalEmployer.industry}</dd></div>
-              <div><dt className="text-gray-400">Email</dt><dd className="font-semibold text-gray-700 mt-0.5 truncate">{contractor.principalEmployer.email}</dd></div>
-              <div><dt className="text-gray-400">LIN</dt><dd className="font-semibold font-mono text-gray-700 mt-0.5">{contractor.principalEmployer.lin}</dd></div>
-            </dl>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5"><Landmark size={11}/>Principal Employers</p>
+              {contractor.employers.length > 0 && (
+                <select
+                  value={employerScope}
+                  onChange={e => setEmployerScope(e.target.value)}
+                  className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs font-medium text-gray-700 max-w-[190px]"
+                >
+                  <option value="all">All employers ({contractor.employers.length})</option>
+                  {contractor.employers.map(emp => (
+                    <option key={emp.id} value={emp.name}>{emp.name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {contractor.employers.length === 0 ? (
+              <p className="text-sm text-gray-400 mt-2">Not bound to any employer yet.</p>
+            ) : selectedEmployer ? (
+              <>
+                <p className="text-sm font-semibold text-gray-900 mt-2">{selectedEmployer.name}</p>
+                <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                  <div><dt className="text-gray-400">Code</dt><dd className="font-semibold font-mono text-gray-700 mt-0.5">{selectedEmployer.code || selectedEmployer.employerId || '—'}</dd></div>
+                  <div><dt className="text-gray-400">Industry</dt><dd className="font-semibold text-gray-700 mt-0.5">{selectedEmployer.industry || '—'}</dd></div>
+                  <div><dt className="text-gray-400">Email</dt><dd className="font-semibold text-gray-700 mt-0.5 truncate">{selectedEmployer.email || '—'}</dd></div>
+                  <div><dt className="text-gray-400">LIN</dt><dd className="font-semibold font-mono text-gray-700 mt-0.5">{selectedEmployer.lin || '—'}</dd></div>
+                </dl>
+              </>
+            ) : (
+              <ul className="mt-2 divide-y divide-gray-100">
+                {contractor.employers.map(emp => (
+                  <li key={emp.id} className="py-2 flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 grid place-items-center text-xs font-bold flex-shrink-0">{emp.name.charAt(0)}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{emp.name}</p>
+                      <p className="text-[11px] text-gray-400 font-mono truncate">{emp.code || emp.employerId}{emp.industry ? ` · ${emp.industry}` : ''}</p>
+                    </div>
+                    <span className="text-[10px] font-semibold text-gray-400 flex-shrink-0">{emp.sites.length} site{emp.sites.length === 1 ? '' : 's'}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </section>
 
       {/* KPI Strip */}
       <section className="bss-kpi-grid grid grid-cols-2 md:grid-cols-4 gap-3">
-        {kpis.map((kpi, i) => (
-          <article key={i} className="bss-kpi-card">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-gray-500">{kpi.label}</span>
-              <span className={`bss-kpi-icon ${
-                kpi.tone === 'blue' ? 'bg-blue-50 text-blue-700' :
-                kpi.tone === 'orange' ? 'bg-orange-50 text-orange-700' :
-                kpi.tone === 'green' ? 'bg-green-50 text-green-700' : 'bg-indigo-50 text-indigo-700'
-              }`}>
-                <kpi.icon size={16} />
-              </span>
-            </div>
-            <strong>{kpi.value}</strong>
-          </article>
-        ))}
+        {kpis.map((kpi, i) => {
+          const inner = (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-gray-500">{kpi.label}</span>
+                <span className={`bss-kpi-icon ${
+                  kpi.tone === 'blue' ? 'bg-blue-50 text-blue-700' :
+                  kpi.tone === 'orange' ? 'bg-orange-50 text-orange-700' :
+                  kpi.tone === 'green' ? 'bg-green-50 text-green-700' :
+                  kpi.tone === 'red' ? 'bg-red-50 text-red-600' : 'bg-indigo-50 text-indigo-700'
+                }`}>
+                  <kpi.icon size={16} />
+                </span>
+              </div>
+              <strong>{kpi.value}</strong>
+              {kpi.action && <p className={kpi.tone === 'red' && openGrievances > 0 ? 'font-semibold text-red-600' : 'font-semibold'}>{kpi.action}</p>}
+            </>
+          );
+          return kpi.href
+            ? <Link key={i} href={kpi.href} className="bss-kpi-card hover:border-red-200">{inner}</Link>
+            : <article key={i} className="bss-kpi-card">{inner}</article>;
+        })}
       </section>
 
       {/* Action Required */}

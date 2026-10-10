@@ -876,6 +876,12 @@ def binding_scan(request):
         # scan time drive the worker's Current Employment Details and the
         # appointment letter issued when the worker approves.
         _apply_binding_terms(binding, body)
+        # Provenance — a direct QR scan leaves this blank; a Rozgar Setu "invite
+        # to bind" tags it so the invitation stays out of the Binding Requests
+        # list and the pending-worker counts.
+        source = str(body.get("source") or "").strip().lower()[:20]
+        if source:
+            binding.source = source
         binding.save()
         return Response({"data": payloads._binding_row(binding)}, status=status.HTTP_201_CREATED)
     else:

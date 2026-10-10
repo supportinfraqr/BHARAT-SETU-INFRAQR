@@ -29,6 +29,7 @@ export async function POST(request: Request) {
         offeredWage: Number.isFinite(offeredWage) && offeredWage > 0 ? offeredWage : undefined,
         costSheetId: Number.isFinite(Number(body.costSheetId)) && Number(body.costSheetId) > 0 ? Number(body.costSheetId) : undefined,
         siteIds: Array.isArray(body.siteIds) ? body.siteIds.filter(id => Number.isInteger(id)) : [],
+        source: typeof body.source === 'string' ? body.source : undefined,
         preview: body.preview === true,
       }),
     });

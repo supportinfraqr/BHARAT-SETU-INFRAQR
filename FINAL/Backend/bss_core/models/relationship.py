@@ -526,6 +526,11 @@ class WorkerContractorBinding(models.Model):
     consent_worker = models.BooleanField(default=False)
     consent_contractor = models.BooleanField(default=False)
     consent_method = models.CharField(max_length=20, choices=CONSENT_METHOD, null=True, blank=True)
+    # How the request was created — "" for a direct QR scan / normal flow, or
+    # "rozgar" when a contractor invites an available worker from the Rozgar Setu
+    # job page. A Rozgar invitation is a worker-facing offer, so it is kept out of
+    # the contractor's Binding Requests list and pending-worker counts.
+    source = models.CharField(max_length=20, blank=True, default="")
     # Offered terms captured when the binding is created (drive the worker's
     # Current Employment Details and the binding card).
     designation = models.CharField(max_length=80, blank=True)
