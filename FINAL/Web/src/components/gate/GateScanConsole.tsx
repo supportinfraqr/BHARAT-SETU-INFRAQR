@@ -75,8 +75,8 @@ export default function GateScanConsole() {
     try {
       stopCamera();
       const reader = createQrReader();
-      const ctrl = await reader.decodeFromVideoDevice(
-        undefined,
+      const ctrl = await reader.decodeFromConstraints(
+        QR_VIDEO_CONSTRAINTS,
         videoRef.current!,
         (result, err, c) => {
           controlsRef.current = c;
@@ -86,8 +86,7 @@ export default function GateScanConsole() {
             stopCamera();
             void processPassCode(rawText);
           }
-        },
-        QR_VIDEO_CONSTRAINTS
+        }
       );
       controlsRef.current = ctrl;
     } catch (err) {

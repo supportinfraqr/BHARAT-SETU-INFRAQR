@@ -147,38 +147,12 @@ export default function WorkerProfilePage() {
         addFacePhoto(slot, dataUrl);
         setFaceChecks(prev => ({ ...prev, [slot]: { state: 'ok' } }));
         setFaceEnrollStatus('');
-        void matchFacePhoto(slot, dataUrl);
       } else {
         setFaceChecks(prev => ({ ...prev, [slot]: { state: 'error', message: result?.reason === 'invalid_image' ? 'Not a valid image' : 'No face detected — retake' } }));
         setFaceEnrollStatus('A photo was rejected (no face found). Please use a clear, front-facing photo.');
       }
     } catch (reason) {
       setFaceChecks(prev => ({ ...prev, [slot]: { state: 'error', message: reason instanceof Error ? reason.message : 'Check failed' } }));
-    }
-  };
-
-  // Advisory match of one photo against the worker's verified Aadhaar photo
-  // (cosine + KNN). Never blocks the upload — it only reports the percentage.
-  const matchFacePhoto = async (slot: number, dataUrl: string) => {
-    setFaceMatch(prev => ({ ...prev, [slot]: { state: 'checking' } }));
-    try {
-      const response = await fetch('/api/worker/face-match', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: [dataUrl] }),
-      });
-      const body = await response.json().catch(() => ({})) as {
-        data?: { results?: Array<{ face?: boolean; cosinePct?: number; matched?: boolean }> };
-        error?: string;
-      };
-      if (!response.ok || !body.data) throw new Error(body.error ?? 'Match unavailable');
-      const result = body.data.results?.[0];
-      if (!result?.face) {
-        setFaceMatch(prev => ({ ...prev, [slot]: { state: 'error', message: 'No face' } }));
-        return;
-      }
-      setFaceMatch(prev => ({ ...prev, [slot]: { state: 'ok', pct: result.cosinePct, matched: result.matched } }));
-    } catch (reason) {
-      setFaceMatch(prev => ({ ...prev, [slot]: { state: 'error', message: reason instanceof Error ? reason.message : 'Match unavailable' } }));
     }
   };
 
@@ -210,7 +184,7 @@ export default function WorkerProfilePage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ images: slots.map(s => facePhotos[s]) }),
       });
-      const body = await response.json().catch(() => ({})) as { data?: { enrolled: number; saved: number }; error?: string; photoErrors?: number[]; duplicateErrors?: number[] };
+      const body = await response.json().catch(() => ({})) as { data?: { enrolled: number; saved: number; matches?: Array<{ slot: number; cosinePct: number | null; matched: boolean | null }> }; error?: string; photoErrors?: number[]; duplicateErrors?: number[] };
       if (!response.ok || !body.data) {
         if (body.photoErrors?.length || body.duplicateErrors?.length) {
           setFaceChecks(prev => {
@@ -225,6 +199,16 @@ export default function WorkerProfilePage() {
       }
       setFaceEnrolled(body.data.enrolled);
       setEnrolledPhotos(prev => ({ ...prev, ...facePhotos }));
+      // Final Aadhaar match %, computed once at upload (stored server-side).
+      if (Array.isArray(body.data.matches)) {
+        setFaceMatch(prev => {
+          const next = { ...prev };
+          body.data!.matches!.forEach(m => {
+            if (typeof m.cosinePct === 'number') next[m.slot] = { state: 'ok', pct: m.cosinePct, matched: m.matched ?? undefined };
+          });
+          return next;
+        });
+      }
       setFaceEnrollStatus(`Enrolled ${body.data.enrolled} of 5 photos for AI attendance.`);
       // Re-read the authoritative status (distinct photos + engine vectors).
       void fetch('/api/worker/face-status', { cache: 'no-store' })
