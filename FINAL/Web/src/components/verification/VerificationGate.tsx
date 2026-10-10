@@ -7,6 +7,7 @@ import GstVerifyCard from "@/components/gst/GstVerifyCard";
 type VerificationStatus = {
   applicable: boolean;
   gstVerified: boolean;
+  gstStatus?: string;
   entityLocker: { verified: boolean; declined: boolean };
   manual: { status: string; note: string; documents: Array<{ id: number; docType: string }> };
 };
@@ -24,6 +25,7 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
   const [askEl, setAskEl] = useState(false);
   const [confirmNotEl, setConfirmNotEl] = useState(false);
   const [docs, setDocs] = useState<Partial<Record<DocKind, File>>>({});
+  const [askGst, setAskGst] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -88,6 +90,22 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
     } finally { setBusy(false); }
   }
 
+  async function continueWithoutGst() {
+    setBusy(true); setError("");
+    try {
+      const response = await fetch(`/api/${role}/gst/not-applicable`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error || "Could not continue.");
+      }
+      await load();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not continue.");
+    } finally { setBusy(false); }
+  }
+
   async function submitManual() {
     if (Object.keys(docs).length === 0) { setError("Upload at least one document."); return; }
     setBusy(true); setError("");
@@ -104,17 +122,39 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
   }
 
   if (!status || !status.applicable) return null;
-  const { gstVerified, entityLocker, manual } = status;
+  const { gstVerified, gstStatus, entityLocker, manual } = status;
+  const gstNotApplicable = (gstStatus || "").toUpperCase() === "NOT_APPLICABLE";
+  const gstCleared = gstVerified || gstNotApplicable;
   const done = entityLocker.verified || manual.status === "VERIFIED";
   if (done) return null;
 
   let title = "Verify your organisation";
+  let subtitle = "This step is required to use the portal and can't be skipped.";
   let body: ReactNode = null;
 
-  if (!gstVerified) {
+  if (!gstCleared) {
     title = "Step 1 · GST verification";
-    body = <GstVerifyCard role={role} onVerified={() => void load()} />;
-  } else if (!entityLocker.verified && !entityLocker.declined) {
+    if (role === "contractor") {
+      // GST is optional for contractors — ask first, and route a "no GST"
+      // answer straight to document submission (the admin fills the GST /
+      // registration fields at approval).
+      subtitle = "GST is optional for contractors. Tell us whether you have one to continue.";
+      body = askGst ? (
+        <GstVerifyCard role={role} onVerified={() => void load()} />
+      ) : (
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">Do you have a GST number?</p>
+          {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
+          <div className="flex gap-2 justify-end">
+            <button type="button" onClick={() => void continueWithoutGst()} disabled={busy} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-700 disabled:opacity-60">No, I don&apos;t have a GST</button>
+            <button type="button" onClick={() => setAskGst(true)} disabled={busy} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-60"><BadgeCheck size={14}/>Yes, I have a GST</button>
+          </div>
+        </div>
+      );
+    } else {
+      body = <GstVerifyCard role={role} onVerified={() => void load()} />;
+    }
+  } else if (gstVerified && !entityLocker.verified && !entityLocker.declined) {
     title = "Step 2 · EntityLocker";
     body = askEl ? (
       confirmNotEl ? (
@@ -156,8 +196,8 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
         <button type="button" onClick={() => void declineEntityLocker()} disabled={busy} className="text-[11px] text-gray-500 underline hover:text-gray-700">EntityLocker isn&apos;t working? Continue with document verification</button>
       </div>
     );
-  } else if (entityLocker.declined && (manual.status === "NOT_SUBMITTED" || manual.status === "REJECTED")) {
-    title = "Step 3 · Manual verification documents";
+  } else if ((entityLocker.declined || gstNotApplicable) && (manual.status === "NOT_SUBMITTED" || manual.status === "REJECTED")) {
+    title = gstNotApplicable ? "Step 2 · Verification documents" : "Step 3 · Manual verification documents";
     body = (
       <div className="space-y-4">
         {manual.status === "REJECTED" && (
@@ -200,14 +240,14 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
     );
   }
 
-  const icon = !gstVerified ? <BadgeCheck size={22}/> : <Building2 size={22}/>;
+  const icon = !gstCleared ? <BadgeCheck size={22}/> : <Building2 size={22}/>;
 
   return (
     <div className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-sm grid place-items-center p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-label={title}>
       <div className="bg-[var(--color-bss-bg)] rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden my-8">
         <header className="px-5 py-4 bg-white border-b border-gray-100">
           <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">{icon}{title}</h2>
-          <p className="text-xs text-gray-500 mt-1">This step is required to use the portal and can&apos;t be skipped.</p>
+          <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
         </header>
         <div className="p-5">{body}</div>
       </div>

@@ -51,6 +51,7 @@ def _documents(user):
 def _state(profile, user):
     return {
         "gstVerified": str(getattr(profile, "gst_verification_status", "") or "").upper() == "VERIFIED",
+        "gstStatus": str(getattr(profile, "gst_verification_status", "") or "PENDING").upper(),
         "entityLocker": {
             "verified": _entitylocker_verified(user),
             "declined": bool(getattr(profile, "entity_locker_declined", False)),
@@ -107,7 +108,11 @@ def verification_manual_submit(request):
     profile = _profile_for(request.user)
     if profile is None:
         return Response({"error": "Only employers and contractors."}, status=status.HTTP_403_FORBIDDEN)
-    if not getattr(profile, "entity_locker_declined", False):
+    # Contractors who declared "no GST" go straight to document submission
+    # (GST is optional for them) so they never answer the EntityLocker question.
+    gst_not_applicable = str(
+        getattr(profile, "gst_verification_status", "") or "").upper() == "NOT_APPLICABLE"
+    if not getattr(profile, "entity_locker_declined", False) and not gst_not_applicable:
         return Response({"error": "Answer the EntityLocker question first."},
                         status=status.HTTP_400_BAD_REQUEST)
 
@@ -178,9 +183,11 @@ def admin_verification_queue(request):
             manual = profile.manual_verification_status or "NOT_SUBMITTED"
             if el_verified or manual == "VERIFIED":
                 continue  # already verified
+            gst_not_applicable = str(
+                getattr(profile, "gst_verification_status", "") or "").upper() == "NOT_APPLICABLE"
             if manual == "PENDING":
                 stage = "PENDING"           # documents submitted, admin review due
-            elif profile.entity_locker_declined:
+            elif profile.entity_locker_declined or gst_not_applicable:
                 stage = "AWAITING_DOCUMENTS"
             else:
                 stage = "AWAITING_ENTITYLOCKER"

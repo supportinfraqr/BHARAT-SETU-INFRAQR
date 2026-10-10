@@ -25,6 +25,7 @@ export default function GstVerifyCard({ role, defaultGstin = '', onVerified }: {
   const base = `/api/${role}/gst`;
   const [status, setStatus] = useState<GstStatus | null>(null);
   const [gstin, setGstin] = useState(defaultGstin);
+  const [override, setOverride] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -63,6 +64,7 @@ export default function GstVerifyCard({ role, defaultGstin = '', onVerified }: {
   };
 
   const verified = status?.status === 'VERIFIED';
+  const notApplicable = status?.status === 'NOT_APPLICABLE';
 
   return (
     <section className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
@@ -72,6 +74,7 @@ export default function GstVerifyCard({ role, defaultGstin = '', onVerified }: {
           <p className="text-xs text-gray-500 mt-1">Confirm your entity from your GSTIN (GSTN tax-payer details). No OTP needed.</p>
         </div>
         {verified && <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">Verified</span>}
+        {notApplicable && !override && <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 border border-gray-200 whitespace-nowrap">Not applicable</span>}
       </header>
 
       {notice && <p role="status" className="bss-alert bss-alert-success">{notice}</p>}
@@ -90,6 +93,14 @@ export default function GstVerifyCard({ role, defaultGstin = '', onVerified }: {
           {status?.hasCertificate && (
             <a href={`${base}/certificate`} target="_blank" rel="noreferrer" className="sm:col-span-2 inline-flex items-center gap-1.5 text-[#073B67] text-xs font-semibold hover:underline"><FileText size={14}/>Download GST Registration Certificate (PDF)</a>
           )}
+        </div>
+      ) : notApplicable && !override ? (
+        <div className="space-y-3">
+          <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+            <p className="text-sm font-semibold text-gray-800">No GST</p>
+            <p className="text-xs text-gray-500 mt-0.5">You&apos;ve declared that your firm is not GST-registered. BSS will complete the GST / registration details when your account is approved.</p>
+          </div>
+          <button type="button" onClick={() => setOverride(true)} className="h-9 px-3 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50">I do have a GSTIN — add it</button>
         </div>
       ) : (
         <div className="space-y-3">
