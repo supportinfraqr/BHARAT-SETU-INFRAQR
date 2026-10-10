@@ -12,6 +12,18 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { CopyButton } from '@/components/ui/CopyButton';
 import type { GatePassEligibility } from '@/types/portal';
 
+/** Render a stored date (YYYY-MM-DD) as DD/MM/YYYY for display. */
+function fmtDate(value?: string): string {
+  const v = (value ?? '').trim();
+  if (!v || v === '—') return '—';
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) return v;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(v);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return v;
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
 export default function ContractorDashboardPage() {
   const { contractor, employerScope, setEmployerScope, scoped } = useContractor();
   const { t } = useLanguage();
@@ -97,7 +109,7 @@ export default function ContractorDashboardPage() {
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Contractor Information</p>
               <h2 className="font-semibold text-gray-950 mt-0.5">{contractor.identity.company}</h2>
               <div className="flex items-center gap-2 mt-1"><p className="text-xs text-gray-500 font-mono">{contractor.identity.bssId}</p><CopyButton value={contractor.identity.bssId}/></div>
-              <p className="text-[11px] text-gray-400 mt-1">{contractor.identity.entity} · Incorp. {contractor.identity.incorpDate}</p>
+              <p className="text-[11px] text-gray-400 mt-1">{contractor.identity.entity} · Incorp. {fmtDate(contractor.identity.incorpDate)}</p>
             </div>
           </div>
           <div className="p-4 sm:p-5">

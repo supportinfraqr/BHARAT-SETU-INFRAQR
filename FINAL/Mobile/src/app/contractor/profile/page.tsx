@@ -22,6 +22,18 @@ type Field = { label: string; value: string; sensitive?: boolean; note?: string;
 // BSS IDs and other system-derived values are frozen — never editable on the client.
 const isLocked = (field: Field) => (field.note ?? '').includes('System-calculated') || (field.note ?? '').includes('auto-generated') || (field.note ?? '').includes('Calculated');
 
+/** Render a stored date (YYYY-MM-DD) as DD/MM/YYYY for display. */
+function fmtDate(value?: string): string {
+  const v = (value ?? '').trim();
+  if (!v || v === '—') return '—';
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) return v;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(v);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return v;
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
 export default function ContractorProfilePage() {
   const { contractor, replaceContractor, mutate } = useContractor();
   const [tab, setTab] = useState('basic');
@@ -100,7 +112,7 @@ export default function ContractorProfilePage() {
         <div className="text-sm">
           <p><span className="text-gray-500">Authorised signatory:</span> {contractor.identity.name}</p>
           <p className="mt-1"><span className="text-gray-500">Rating:</span> {contractor.identity.rating.toFixed(1)}</p>
-          {contractor.identity.memberSince && <p className="mt-1"><span className="text-gray-500">BSS member since:</span> {contractor.identity.memberSince}</p>}
+          {contractor.identity.memberSince && <p className="mt-1"><span className="text-gray-500">BSS member since:</span> {fmtDate(contractor.identity.memberSince)}</p>}
         </div>
       </section>
 
@@ -203,7 +215,7 @@ export default function ContractorProfilePage() {
                         />
                       )
                     ) : (
-                      <span className="mt-1 block text-sm normal-case text-gray-900 font-medium">{field.value || '—'}</span>
+                      <span className="mt-1 block text-sm normal-case text-gray-900 font-medium">{isDateField ? fmtDate(field.value) : (field.value || '—')}</span>
                     )}
                   </label>
                 );
