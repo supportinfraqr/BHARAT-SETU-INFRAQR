@@ -6,6 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
 import type { WorkerRecord } from '@/types/portal';
 import { MobilitySection, type MobilitySectionHandle } from '@/components/worker/MobilitySection';
+import { workerCompletion, completionTab } from '@/lib/workerProfileCompletion';
 import DownSelect from '@/components/ui/DownSelect';
 import { ResendOtp } from '@/components/auth/ResendOtp';
 import { 
@@ -36,6 +37,11 @@ export default function WorkerProfilePage() {
   const { t } = useLanguage();
   const { worker, updateWorker, saveWorker, refresh } = useWorker();
   const mobilityRef = useRef<MobilitySectionHandle>(null);
+  // Same source of truth as the dashboard card: the missing items are exactly
+  // the ones dragging the profile-completion percentage down.
+  const profileMissing = workerCompletion(worker).missing;
+  const missingTabs = new Set(profileMissing.map(item => completionTab(item.section)));
+  const [highlightMissing, setHighlightMissing] = useState(false);
   const [activeTab, setActiveTab] = useState<'personal' | 'attendance' | 'contact' | 'family' | 'social' | 'banking' | 'classification' | 'employment' | 'skills' | 'welfare' | 'other' | 'integrations'>('personal');
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -499,11 +505,14 @@ export default function WorkerProfilePage() {
     }
   };
 
-  // Deep-link support: /worker/Profile?tab=attendance
+  // Deep-link support: /worker/Profile?tab=attendance (and ?highlight=missing,
+  // set by the dashboard's profile card; the same link carries the target tab).
   useEffect(() => {
-    const tab = new URLSearchParams(window.location.search).get('tab');
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
     const allowed = ['personal', 'attendance', 'contact', 'family', 'social', 'banking', 'classification', 'employment', 'skills', 'welfare', 'other', 'integrations'] as const;
     if (tab && (allowed as readonly string[]).includes(tab)) setActiveTab(tab as typeof allowed[number]);
+    if (params.get('highlight') === 'missing') setHighlightMissing(true);
   }, []);
 
   // Keep the active section in the URL so a refresh lands back on the same tab
@@ -816,6 +825,25 @@ export default function WorkerProfilePage() {
         )}
       </div>
 
+      {highlightMissing && profileMissing.length > 0 && (
+        <div className="rounded-2xl border border-red-200 bg-red-50/70 p-4">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-red-600">Complete your profile — {profileMissing.length} mandatory {profileMissing.length === 1 ? 'detail' : 'details'} missing</p>
+          <p className="text-xs text-gray-600 mt-1">These are the {profileMissing.length === 1 ? 'detail' : 'details'} counted in your {workerCompletion(worker).percent}% profile completion. Tap one to jump to its section.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {profileMissing.map(item => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setActiveTab(completionTab(item.section))}
+                className="h-8 px-3 rounded-full bg-white border border-red-200 text-red-700 text-[12px] font-semibold hover:bg-red-100"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
         
                 {/* SIDEBAR NAVIGATION */}
@@ -825,6 +853,7 @@ export default function WorkerProfilePage() {
             className={`flex items-center gap-3 px-4 py-3 font-semibold text-[14px] rounded-xl whitespace-nowrap transition-colors focus:outline-none ${activeTab === 'personal' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
           >
             <UserCircle size={18}/> Worker Identity
+            {missingTabs.has('personal') && <span className="ml-auto w-2 h-2 rounded-full bg-red-500" aria-label="Missing mandatory details" />}
           </button>
           <button 
             onClick={() => setActiveTab('attendance')}
@@ -837,6 +866,7 @@ export default function WorkerProfilePage() {
             className={`flex items-center gap-3 px-4 py-3 font-semibold text-[14px] rounded-xl whitespace-nowrap transition-colors focus:outline-none ${activeTab === 'contact' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
           >
             <MapPin size={18}/> Address & Mobility
+            {missingTabs.has('contact') && <span className="ml-auto w-2 h-2 rounded-full bg-red-500" aria-label="Missing mandatory details" />}
           </button>
           <button 
             onClick={() => setActiveTab('employment')}
@@ -849,18 +879,21 @@ export default function WorkerProfilePage() {
             className={`flex items-center gap-3 px-4 py-3 font-semibold text-[14px] rounded-xl whitespace-nowrap transition-colors focus:outline-none ${activeTab === 'family' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
           >
             <Users size={18}/> Family & Dependants
+            {missingTabs.has('family') && <span className="ml-auto w-2 h-2 rounded-full bg-red-500" aria-label="Missing mandatory details" />}
           </button>
           <button 
             onClick={() => setActiveTab('social')}
             className={`flex items-center gap-3 px-4 py-3 font-semibold text-[14px] rounded-xl whitespace-nowrap transition-colors focus:outline-none ${activeTab === 'social' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
           >
             <ShieldCheck size={18}/> Social Security
+            {missingTabs.has('social') && <span className="ml-auto w-2 h-2 rounded-full bg-red-500" aria-label="Missing mandatory details" />}
           </button>
           <button 
             onClick={() => setActiveTab('banking')}
             className={`flex items-center gap-3 px-4 py-3 font-semibold text-[14px] rounded-xl whitespace-nowrap transition-colors focus:outline-none ${activeTab === 'banking' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
           >
             <CreditCard size={18}/> Banking
+            {missingTabs.has('banking') && <span className="ml-auto w-2 h-2 rounded-full bg-red-500" aria-label="Missing mandatory details" />}
           </button>
           <button 
             onClick={() => setActiveTab('classification')}
@@ -879,6 +912,7 @@ export default function WorkerProfilePage() {
             className={`flex items-center gap-3 px-4 py-3 font-semibold text-[14px] rounded-xl whitespace-nowrap transition-colors focus:outline-none ${activeTab === 'skills' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
           >
             <Award size={18}/> Skills & Employability
+            {missingTabs.has('skills') && <span className="ml-auto w-2 h-2 rounded-full bg-red-500" aria-label="Missing mandatory details" />}
           </button>
           <button 
             onClick={() => setActiveTab('other')}

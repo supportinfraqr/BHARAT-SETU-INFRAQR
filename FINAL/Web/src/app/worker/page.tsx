@@ -7,7 +7,7 @@ import { useWorker } from '@/contexts/WorkerContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { CopyButton } from '@/components/ui/CopyButton';
-import { workerCompletion } from '@/lib/workerProfileCompletion';
+import { workerCompletion, completionHref } from '@/lib/workerProfileCompletion';
 
 export default function WorkerOverview() {
   const { worker, portal, saveWorker } = useWorker(); const { t } = useLanguage();
@@ -40,6 +40,10 @@ export default function WorkerOverview() {
   const missingDocuments = portal.documents.filter(item=>item.mandatory&&['Missing','Rejected','Expired'].includes(item.status));
   const pendingBinding = portal.jobRequests.find(item=>item.status==='Pending');
   const profileCompletion = workerCompletion(worker).percent;
+  const profileMissing = workerCompletion(worker).missing;
+  // Clicking the profile card jumps straight to the first incomplete mandatory
+  // section and highlights every missing item there.
+  const profileFixHref = profileMissing.length ? completionHref(profileMissing[0].section) : '/worker/Profile';
   const inr = (amount:number)=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(amount);
   const emp = worker.employment;
   const siteInfo = emp.siteDetails ?? { name: '', code: '', location: '', medicalOfficer: '', officerContact: '' };
@@ -139,7 +143,7 @@ export default function WorkerOverview() {
     </section>
 
     <section className="bss-kpi-grid grid grid-cols-2 md:grid-cols-4 gap-3">
-      <Status label="Profile" value={`${profileCompletion}%`} note="Profile completion" tone="blue" icon={UserRound} href="/worker/Profile"/><Status label="Documents" value={`${worker.documents.uploaded}/${worker.documents.required}`} note="Uploaded" tone="orange" icon={FileText} href="/worker/Documents"/><Status label="Compliance" value={String(worker.compliance.medicalFitnessDaysLeft)} note="Medical days left" tone="red" icon={ShieldCheck} href="/worker/Compliance"/><Status label="Attendance" value={`${attendancePresent}/${portal.attendance.records.length}`} note="Current records" tone="green" icon={CalendarDays} href="/worker/Attendance"/>
+      <Status label="Profile" value={`${profileCompletion}%`} note="Profile completion" tone="blue" icon={UserRound} href={profileFixHref}/><Status label="Documents" value={`${worker.documents.uploaded}/${worker.documents.required}`} note="Uploaded" tone="orange" icon={FileText} href="/worker/Documents"/><Status label="Compliance" value={String(worker.compliance.medicalFitnessDaysLeft)} note="Medical days left" tone="red" icon={ShieldCheck} href="/worker/Compliance"/><Status label="Attendance" value={`${attendancePresent}/${portal.attendance.records.length}`} note="Current records" tone="green" icon={CalendarDays} href="/worker/Attendance"/>
     </section>
 
     {pendingBinding && <section className="bg-orange-50 border border-orange-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4"><span className="w-11 h-11 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center flex-shrink-0"><BriefcaseBusiness size={20}/></span><div className="flex-1 min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-orange-600">Binding Request Pending</p><h2 className="text-sm font-semibold text-gray-900 mt-0.5">Employment invitation from {pendingBinding.employer} · {pendingBinding.site}</h2><p className="text-xs text-gray-500 mt-0.5">Accept or reject this binding request before {pendingBinding.duration ?? 'the stated deadline'}.</p></div><Link href="/worker/binding" className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black flex-shrink-0">Review request<ArrowRight size={15}/></Link></section>}
@@ -156,7 +160,7 @@ export default function WorkerOverview() {
 
         <section className="bg-white border border-gray-200 rounded-2xl p-5"><div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-gray-950">Labour law compliance</h2><Link href="/worker/LabourCompliance" className="text-xs font-semibold text-blue-700">View all</Link></div><div className="grid grid-cols-3 gap-2 mt-4">{['fulfilled','pending','attention'].map(status => { const n = portal.labourLaw.filter(item => item.status === status).length; return <div key={status} className="text-center"><strong className={`block text-lg ${status === 'fulfilled' ? 'text-green-700' : status === 'pending' ? 'text-orange-700' : 'text-red-700'}`}>{n}</strong><span className="text-[10px] uppercase tracking-wide text-gray-400">{status}</span></div>; })}</div>      <div className="mt-4 pt-4 border-t border-gray-100">{portal.labourLaw.find(item => item.status === 'attention') ? <Attention href="/worker/LabourCompliance" icon={ShieldCheck} title={portal.labourLaw.find(item => item.status === 'attention')!.headline} text="A labour-law action item needs your attention." tone='red'/> : portal.labourLaw.find(item => item.status === 'pending') ? <Attention href="/worker/LabourCompliance" icon={ShieldCheck} title={portal.labourLaw.find(item => item.status === 'pending')!.headline} text="A labour-law item is being processed." tone='orange'/> : <p className="text-xs text-green-700">All central labour-law conditions are fulfilled.</p>}</div></section>
 
-        <section className="bg-white border border-gray-200 rounded-2xl p-5"><div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-gray-950">Profile Completion</h2><Link href="/worker/Profile" className="text-xs font-semibold text-blue-700">Complete</Link></div><div className="mt-4 flex items-end justify-between"><strong className="text-2xl font-bold text-gray-900">{profileCompletion}%</strong><span className="text-[11px] text-gray-400 mb-1">{profileCompletion===100?'All set — great job!':'Complete your record to unlock full verification'}</span></div><div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-[#2F9E67] rounded-full" style={{width:profileCompletion+'%'}}/></div></section>
+        <section className="bg-white border border-gray-200 rounded-2xl p-5"><div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-gray-950">Profile Completion</h2><Link href={profileFixHref} className="text-xs font-semibold text-blue-700">Complete</Link></div><div className="mt-4 flex items-end justify-between"><strong className="text-2xl font-bold text-gray-900">{profileCompletion}%</strong><span className="text-[11px] text-gray-400 mb-1">{profileCompletion===100?'All set — great job!':'Complete your record to unlock full verification'}</span></div><div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-[#2F9E67] rounded-full" style={{width:profileCompletion+'%'}}/></div></section>
       </div>
 
       <aside className="space-y-5">

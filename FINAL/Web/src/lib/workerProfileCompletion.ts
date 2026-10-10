@@ -4,6 +4,18 @@ export type CompletionSection = 'contact' | 'personal' | 'identity' | 'social' |
 
 export type CompletionItem = { key: string; label: string; section: CompletionSection; done: boolean };
 
+export type ProfileTab = 'personal' | 'attendance' | 'contact' | 'family' | 'social' | 'banking' | 'classification' | 'employment' | 'skills' | 'welfare' | 'other' | 'integrations';
+
+/** Which Profile page tab fixes each completion section. */
+const SECTION_TAB: Partial<Record<CompletionSection, ProfileTab>> = {
+  contact: 'contact', personal: 'personal', identity: 'personal',
+  social: 'social', banking: 'banking', skills: 'skills', family: 'family',
+};
+
+export function completionTab(section: CompletionSection): ProfileTab {
+  return SECTION_TAB[section] ?? 'personal';
+}
+
 /**
  * Single source of truth for the worker "Profile Completion" percentage.
  *
@@ -34,5 +46,6 @@ export function workerCompletion(worker: WorkerRecord): { percent: number; items
 }
 
 export function completionHref(section: CompletionSection): string {
-  return section === 'documents' ? '/worker/Documents' : '/worker/Profile';
+  if (section === 'documents') return '/worker/Documents';
+  return `/worker/Profile?tab=${completionTab(section)}&highlight=missing`;
 }
