@@ -10,7 +10,7 @@ type AttendanceRow = {
   status?: string; statusCode?: string; capture?: string; source?: string;
   verification?: string; checkIn?: string; checkOut?: string; singleMark?: boolean;
   camera?: string; cameraArea?: string; confidence?: number | null;
-  geofenceOk?: boolean | null; distanceM?: number | null; accuracyM?: number | null; remarks?: string;
+  geofenceOk?: boolean | null; distanceM?: number | null; accuracyM?: number | null; gpsAddress?: string; remarks?: string;
 };
 type UploadResult = { created: number; updated: number; workers: number; rows: number; unknown: string[]; site: string; start: string; end: string };
 
@@ -182,6 +182,7 @@ export default function ContractorAttendancePage() {
             {(recSelected.geofenceOk !== undefined && recSelected.geofenceOk !== null) && (
               <Detail label="Geo-fence" value={`${recSelected.geofenceOk ? 'Within site' : 'Flagged outside'}${recSelected.distanceM != null ? ` · ${recSelected.distanceM} m` : ''}`} />
             )}
+            {recSelected.gpsAddress && <Detail label="Location" value={recSelected.gpsAddress} />}
             {typeof recSelected.confidence === 'number' && <Detail label="Match Confidence" value={`${recSelected.confidence}%`} />}
             {recSelected.remarks && <Detail label="Remarks" value={recSelected.remarks} />}
           </div>

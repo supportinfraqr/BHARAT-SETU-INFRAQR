@@ -408,6 +408,7 @@ def attendance_detail(a):
         "accuracyM": number(a.gps_accuracy_m),
         "gpsLat": number(a.gps_lat),
         "gpsLong": number(a.gps_long),
+        "gpsAddress": a.gps_address or "",
         "verified": bool(a.is_verified),
         "remarks": a.remarks or "",
     }

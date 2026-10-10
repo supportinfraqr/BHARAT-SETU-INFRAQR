@@ -129,6 +129,12 @@ def _serialize(profile):
         "registrationDate": profile.gst_registration_date or "",
         "incorporationDate": payloads._dts(profile.incorporation_date) if profile.incorporation_date else "",
         "memberSince": _member_since(profile),
+        # Principal place of business, populated from the GSTN lookup.
+        "address": profile.address or "",
+        "city": getattr(profile, "city", "") or "",
+        "district": profile.district or "",
+        "state": profile.state or "",
+        "pincode": getattr(profile, "pincode", "") or "",
         "hasCertificate": bool(profile.gst_certificate),
     }
 

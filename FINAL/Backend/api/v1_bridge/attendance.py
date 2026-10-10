@@ -790,6 +790,8 @@ def worker_mark_attendance_site(request):
         accuracy = float(body.get("accuracy")) if body.get("accuracy") is not None else None
     except (TypeError, ValueError):
         accuracy = None
+    # Reverse-geocoded address resolved client-side (best-effort; optional).
+    address = str(body.get("address") or "").strip()[:255]
 
     now = timezone.now()
     radius = float(site.geo_fence_radius or DEFAULT_GEOFENCE_RADIUS_M)
@@ -803,6 +805,7 @@ def worker_mark_attendance_site(request):
         "gps_lat": round(lat, 6),
         "gps_long": round(lng, 6),
         "gps_accuracy_m": accuracy,
+        "gps_address": address,
     }
 
     distance = within = clubbed = None
@@ -842,6 +845,7 @@ def worker_mark_attendance_site(request):
         "outsideM": round(max(0.0, distance - radius), 1) if distance is not None else None,
         "accuracyM": round(accuracy, 1) if accuracy is not None else None,
         "geofenceOk": defaults["is_geofence_ok"],
+        "address": address,
         "remarks": remarks,
     }}, status=status.HTTP_201_CREATED)
 

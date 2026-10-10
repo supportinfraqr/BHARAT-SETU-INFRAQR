@@ -66,6 +66,9 @@ class Attendance(models.Model):
     # GPS accuracy. ``gps_distance_m`` > the site radius means "flagged outside".
     gps_distance_m = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     gps_accuracy_m = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    # Human-readable location resolved (reverse geocoded) from gps_lat/gps_long
+    # at self-mark time. Best-effort — blank when geocoding is unavailable.
+    gps_address = models.CharField(max_length=255, blank=True)
     # Which configured CCTV camera / attendance area produced this mark (blank
     # for non-CCTV capture).
     camera_label = models.CharField(max_length=120, blank=True)

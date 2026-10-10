@@ -8,6 +8,7 @@ type GstStatus = {
   legalName: string; tradeName: string; constitution: string; hasCertificate: boolean;
   gstnStatus?: string; registrationDate?: string; taxpayerType?: string;
   incorporationDate?: string; memberSince?: string;
+  address?: string; city?: string; district?: string; state?: string; pincode?: string;
 };
 
 function fmtDate(value?: string | null) {
@@ -85,6 +86,9 @@ export default function GstVerifyCard({ role, defaultGstin = '', onVerified }: {
           <Field label="GSTIN" value={status?.gstin || '—'}/>
           <Field label="Legal name" value={status?.legalName || '—'}/>
           <Field label="Trade name" value={status?.tradeName || '—'}/>
+          <div className="sm:col-span-2">
+            <Field label="Registered address" value={[status?.address, status?.city, status?.district, status?.state, status?.pincode].filter(Boolean).join(', ') || '—'}/>
+          </div>
           <Field label="Constitution" value={status?.constitution || '—'}/>
           <Field label="GSTN status" value={status?.gstnStatus || 'Active'}/>
           <Field label="GST registered on" value={status?.registrationDate || '—'}/>

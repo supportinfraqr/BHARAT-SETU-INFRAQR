@@ -36,6 +36,17 @@ function dayKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** Resolve coordinates to a human-readable address via the geocode proxy.
+ *  Best-effort — returns '' on any failure so it never blocks marking. */
+async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const res = await fetch(`/api/geocode?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`);
+    if (!res.ok) return '';
+    const body = await res.json() as { data?: { address?: string; label?: string } | null };
+    return String(body.data?.address || body.data?.label || '').trim();
+  } catch { return ''; }
+}
+
 export default function AttendancePage() {
   const { portal, refresh } = useWorker();
   const attendanceData = portal.attendance;
@@ -48,11 +59,12 @@ export default function AttendancePage() {
 
   // ── Self attendance: scan the site QR + capture GPS ──────────────────────
   type MarkState = 'idle' | 'scanning' | 'locating' | 'submitting' | 'done' | 'already' | 'error';
-  type MarkResult = { distanceM?: number | null; radiusM?: number | null; outsideM?: number | null; accuracyM?: number | null; within?: boolean | null; clubbed?: boolean | null; geofenceOk?: boolean | null; remarks?: string };
+  type MarkResult = { distanceM?: number | null; radiusM?: number | null; outsideM?: number | null; accuracyM?: number | null; within?: boolean | null; clubbed?: boolean | null; geofenceOk?: boolean | null; address?: string | null; remarks?: string };
   const [markOpen, setMarkOpen] = useState(false);
   const [markState, setMarkState] = useState<MarkState>('idle');
   const [markMessage, setMarkMessage] = useState('');
   const [markResult, setMarkResult] = useState<MarkResult | null>(null);
+  const [markLocation, setMarkLocation] = useState('');
   const scanVideoRef = useRef<HTMLVideoElement>(null);
   const scanControls = useRef<IScannerControls | null>(null);
 
@@ -63,11 +75,14 @@ export default function AttendancePage() {
     if (!navigator.geolocation) { setMarkState('error'); setMarkMessage('Location is not supported on this device.'); return; }
     setMarkState('locating'); setMarkMessage('Capturing your location…');
     navigator.geolocation.getCurrentPosition(async (pos) => {
+      setMarkMessage('Resolving your location…');
+      const address = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+      if (address) setMarkLocation(address);
       setMarkState('submitting'); setMarkMessage('Marking attendance…');
       try {
         const response = await fetch('/api/worker/attendance/site-scan', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ siteToken, lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+          body: JSON.stringify({ siteToken, lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, address }),
         });
         const body = await response.json().catch(() => ({})) as { data?: MarkResult & { alreadyMarked?: boolean; site?: string }; error?: string };
         if (!response.ok || !body.data) throw new Error(body.error ?? 'Attendance could not be marked.');
@@ -115,14 +130,15 @@ export default function AttendancePage() {
   }, [handleQrText, stopScan]);
 
   const startScan = useCallback(() => {
-    setMarkOpen(true); setMarkState('locating'); setMarkResult(null);
+    setMarkOpen(true); setMarkState('locating'); setMarkResult(null); setMarkLocation('');
     // Ask for location permission BEFORE scanning — attendance can't be marked
     // without it, and the browser prompt needs a user gesture.
     setMarkMessage('We need your location to mark attendance — allow location access to continue.');
     if (!navigator.geolocation) { setMarkState('error'); setMarkMessage('Location is not supported on this device.'); return; }
-    navigator.geolocation.getCurrentPosition(() => {
-      // Permission granted + a fix obtained; a fresh, accurate fix is taken
-      // again at submit time (already granted, so no second prompt).
+    navigator.geolocation.getCurrentPosition((pos) => {
+      // Permission granted + a fix obtained; resolve it to an address for display
+      // and start the scanner. A fresh, accurate fix is taken again at submit.
+      void reverseGeocode(pos.coords.latitude, pos.coords.longitude).then(addr => { if (addr) setMarkLocation(addr); });
       void startCameraScan();
     }, () => {
       setMarkState('error'); setMarkMessage('Location permission is required to mark attendance. Allow location access and try again.');
@@ -285,10 +301,13 @@ export default function AttendancePage() {
               </header>
               <div className="p-4 space-y-3">
                 {(markState === 'scanning' || markState === 'idle') && (
+                  <>
                   <div className="relative w-full aspect-square bg-black rounded-xl overflow-hidden">
                     <video ref={scanVideoRef} className="w-full h-full object-cover" muted playsInline />
                     <ScanFrame active className="absolute inset-0" />
                   </div>
+                  {markLocation && <p className="text-xs text-[#073B67] flex items-start gap-1.5"><MapPin size={13} className="mt-0.5 shrink-0"/><span>{markLocation}</span></p>}
+                  </>
                 )}
 
                 {(markState === 'locating' || markState === 'submitting') && (
@@ -318,6 +337,7 @@ export default function AttendancePage() {
                       </p>
                     )}
                     {markResult.remarks && <p className="text-[11px] mt-0.5 opacity-80">{markResult.remarks}</p>}
+                    {(markResult.address || markLocation) && <p className="text-[11px] mt-1 flex items-start gap-1.5"><MapPin size={12} className="mt-0.5 shrink-0"/><span>{markResult.address || markLocation}</span></p>}
                   </div>
                 )}
 
@@ -726,6 +746,13 @@ export default function AttendancePage() {
                       {selectedRecord.geofenceOk ? 'Within site' : 'Flagged outside'}
                       {selectedRecord.distanceM != null ? ` · ${selectedRecord.distanceM} m${selectedRecord.accuracyM != null ? ` (±${selectedRecord.accuracyM} m)` : ''}` : ''}
                     </span>
+                  </div>
+                )}
+
+                {selectedRecord.gpsAddress && (
+                  <div className="flex items-start justify-between gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                    <span className="text-xs text-gray-500 font-semibold shrink-0">Location</span>
+                    <span className="text-xs font-semibold text-gray-800 text-right">{selectedRecord.gpsAddress}</span>
                   </div>
                 )}
 
