@@ -220,6 +220,8 @@ def _binding_row(b):
         "costSheet": _d(b.cost_sheet.code) if b.cost_sheet_id else "",
         "costSheetName": _d(b.cost_sheet.name) if b.cost_sheet_id else "",
         "requestedOn": _dts(b.created_at),
+        "startDate": _dts(b.accepted_at) if getattr(b, "accepted_at", None) else "",
+        "endDate": _dts(b.unbound_at) if getattr(b, "unbound_at", None) else "",
         "status": status_map.get(str(b.binding_status).upper(), "Pending"),
         "initiatedBy": initiated_by,
         "acceptedBy": accepted_by,

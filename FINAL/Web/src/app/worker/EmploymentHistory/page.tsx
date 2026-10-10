@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { ArrowLeft, BadgeCheck, FileText, Clock, History } from 'lucide-react';
 import { useWorker } from '@/contexts/WorkerContext';
 import WorkerEmploymentCard from '@/components/idcard/WorkerEmploymentCard';
+import { formatApprovalDate } from '@/lib/workerDocumentWorkflow';
+
+function fmt(value?: string) { return value ? (formatApprovalDate(value) || value) : ''; }
 
 export default function EmploymentHistoryPage() {
   const { worker } = useWorker();
@@ -79,7 +82,7 @@ export default function EmploymentHistoryPage() {
                         </div>
                         <p className="text-[11px] text-gray-500 mt-0.5">{h.employer}{h.site ? ` · ${h.site}` : ''} · {h.ref}</p>
                       </div>
-                      <p className="text-[11px] text-gray-500">{h.startDate || '—'} → {h.endDate || 'Present'}</p>
+                      <p className="text-[11px] text-gray-500">{fmt(h.startDate) || '—'} → {h.endDate ? fmt(h.endDate) : 'Present'}</p>
                     </div>
                     <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-[12px]">
                       <div><p className="text-gray-400">Contractor BSS ID</p><p className="font-mono font-semibold text-gray-800">{h.contractorCode || '—'}</p></div>

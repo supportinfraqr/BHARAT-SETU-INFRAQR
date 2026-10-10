@@ -23,6 +23,8 @@ type BindingRequest = {
   costSheet?: string;
   costSheetName?: string;
   requestedOn: string;
+  startDate?: string;
+  endDate?: string;
   status: 'Pending' | 'Accepted' | 'Rejected' | 'Expired' | 'Cancelled' | 'Site Changed';
   initiatedBy?: string;
   acceptedBy?: string;
@@ -241,7 +243,7 @@ export default function BindingRequestsPage() {
                 <p className="text-xs text-gray-500 mt-0.5 font-mono">{req.contractorCode} · {req.lin}</p>
               </div>
             </div>
-            <div className="text-left sm:text-right flex-shrink-0 text-xs text-gray-500"><p>Requested {req.requestedOn}</p><p className="font-mono text-[11px] text-gray-400 mt-0.5">{req.ref}</p><p className="mt-0.5">Initiated by {req.initiatedBy || '—'}{req.acceptedBy ? ` · Accepted by ${req.acceptedBy}` : ''}</p><button onClick={() => setHistoryFor(req)} className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[#073B67] hover:underline"><History size={12}/>History</button></div>
+            <div className="text-left sm:text-right flex-shrink-0 text-xs text-gray-500"><p>Requested {formatApprovalDate(req.requestedOn) || '—'}</p>{req.startDate && <p className="mt-0.5 font-semibold text-green-700">Start {formatApprovalDate(req.startDate)}</p>}{req.endDate && <p className="mt-0.5 font-semibold text-gray-600">End {formatApprovalDate(req.endDate)}</p>}<p className="font-mono text-[11px] text-gray-400 mt-0.5">{req.ref}</p><p className="mt-0.5">Initiated by {req.initiatedBy || '—'}{req.acceptedBy ? ` · Accepted by ${req.acceptedBy}` : ''}</p><button onClick={() => setHistoryFor(req)} className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[#073B67] hover:underline"><History size={12}/>History</button></div>
           </div>
 
           <dl className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
