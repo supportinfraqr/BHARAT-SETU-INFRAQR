@@ -284,12 +284,13 @@ def _handle_leave_decide(user, body):
 
 
 def _handle_mark_attendance(user, body):
-    """Contractor marks attendance for a worker after scanning their QR.
+    """Contractor marks in/out for a worker after scanning their QR.
 
-    Only allowed when the worker has an ACCEPTED binding with this contractor;
-    writes to the shared Attendance table that drives /worker/Attendance.
-    """
-    from bss_core.models import Attendance, WorkerIdentity, WorkerContractorBinding
+    Only allowed when the worker has an ACCEPTED binding with this contractor.
+    Toggles check-in/check-out for the day (source = QR) and appends an
+    attendance event linked to the day's Attendance row."""
+    from bss_core.models import WorkerIdentity, WorkerContractorBinding
+    from .attendance import _record_punch
 
     bss_id = str(body.get("bssId") or "").strip().upper()
     worker_identity = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
@@ -309,33 +310,18 @@ def _handle_mark_attendance(user, body):
             "This worker is not bound to you, so attendance cannot be marked.", 403)
 
     site = binding.site
-    today = timezone.localdate()
     now = timezone.now()
-    status = str(body.get("status") or "PRESENT").strip().upper()
-    if status not in dict(Attendance.STATUS):
-        status = "PRESENT"
-
-    attendance, created = Attendance.objects.get_or_create(
-        worker=worker, site=site, attendance_date=today,
-        defaults={
-            "contractor": user,
-            "capture_method": "QR",
-            "verification_type": "qr_worker",
-            "status": status,
-            "check_in_time": now,
-            "is_verified": True,
-            "verified_by": user,
-            "verified_at": now,
-            "remarks": str(body.get("remarks") or "Marked via contractor QR scan")[:255],
-        },
-    )
-    if not created:
-        # One mark per day — never record a check-out or a second punch for an
-        # already-marked day.
-        return {"id": str(attendance.id), "alreadyMarked": True,
-                "status": attendance.status, "site": site.site_name}
-    return {"id": str(attendance.id), "alreadyMarked": False,
-            "status": attendance.status, "site": site.site_name}
+    attendance, _event, action = _record_punch(
+        worker=worker, site=site, source="QR", method="qr_worker", when=now,
+        marked_by=user, contractor=user,
+        remarks=str(body.get("remarks") or "Marked via contractor QR scan")[:255])
+    return {
+        "id": str(attendance.id), "action": action, "status": attendance.status,
+        "site": site.site_name,
+        "checkIn": attendance.check_in_time.isoformat() if attendance.check_in_time else None,
+        "checkOut": attendance.check_out_time.isoformat() if attendance.check_out_time else None,
+        "finalCheckout": action == "OUT",
+    }
 
 
 __all__ = [

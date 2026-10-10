@@ -53,6 +53,7 @@ from .access import (
 from .operations import (
     AttendanceDevice,
     Attendance,
+    AttendanceEvent,
     WorkerWages,
     WagePayment,
     WorkerGatePass,
@@ -187,7 +188,7 @@ __all__ = [
     "WorkerSkillsEmployability", "WorkerEducation", "WorkerSkill", "WorkerOther", "WorkerDocumentMaster",
     "WorkerDocument",
     "RbacPermission", "QrRoleAccess", "LookupValue", "WorkerCategoryMaster",
-    "AttendanceDevice", "Attendance", "WorkerWages", "WagePayment",
+    "AttendanceDevice", "Attendance", "AttendanceEvent", "WorkerWages", "WagePayment",
     "WorkerGatePass", "WorkerGrievance", "DocumentAccessToken",
     "SubmissionEvidence", "WorkerFacePhoto",
     "AadhaarChallenge",

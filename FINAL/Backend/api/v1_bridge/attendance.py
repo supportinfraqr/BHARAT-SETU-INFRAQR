@@ -151,22 +151,33 @@ def attendance_upload(request):
             holiday_map[(hol.site_id, hol.date.isoformat())] = hol.name or "Holiday"
 
     def upsert(worker, row_site, attendance_date, sheet_status, remarks):
+        from bss_core.models import AttendanceEvent
         existing = Attendance.objects.filter(
             worker=worker, attendance_date=attendance_date, capture_method="SHEET").first()
         if existing is None:
-            Attendance.objects.create(
+            existing = Attendance.objects.create(
                 worker=worker, site=row_site, contractor=user,
                 attendance_date=attendance_date, status=sheet_status,
                 capture_method="SHEET", is_verified=True, remarks=remarks)
-            return True
-        existing.site = row_site
-        existing.contractor = user
-        existing.status = sheet_status
-        existing.is_verified = True
-        existing.remarks = remarks
-        existing.save(update_fields=["site", "contractor", "status",
-                                     "is_verified", "remarks", "updated_at"])
-        return False
+            created = True
+        else:
+            existing.site = row_site
+            existing.contractor = user
+            existing.status = sheet_status
+            existing.is_verified = True
+            existing.remarks = remarks
+            existing.save(update_fields=["site", "contractor", "status",
+                                         "is_verified", "remarks", "updated_at"])
+            created = False
+        # Record/refresh the day's SHEET event so the upload shows in the ledger.
+        from datetime import datetime as _dt, time as _time
+        at = timezone.make_aware(_dt.combine(attendance_date, _time(0, 0)))
+        AttendanceEvent.objects.update_or_create(
+            attendance=existing, source="SHEET", external_id=f"sheet:{existing.id}",
+            defaults={"worker": worker, "site": row_site, "attendance_date": attendance_date,
+                      "method": "sheet", "event_type": "SIGHTING", "at": at,
+                      "meta": {"status": sheet_status}})
+        return created
 
     created = updated = 0
     invalid = []
@@ -291,7 +302,7 @@ def contractor_attendance_records(request):
                       .values_list("worker_id", flat=True))
     qs = (Attendance.objects
           .filter(Q(contractor=user) | Q(worker_id__in=worker_ids))
-          .select_related("worker", "site", "worker__worker_identity"))
+          .select_related("worker", "site", "worker__worker_identity").prefetch_related("events"))
 
     site_id = request.query_params.get("siteId")
     if site_id:
@@ -349,7 +360,7 @@ def employer_attendance_records(request):
                       .values_list("worker_id", flat=True))
     qs = (Attendance.objects
           .filter(Q(site__employer=user) | Q(worker_id__in=worker_ids))
-          .select_related("worker", "site", "worker__worker_identity"))
+          .select_related("worker", "site", "worker__worker_identity").prefetch_related("events"))
 
     site_id = request.query_params.get("siteId")
     if site_id:
@@ -773,6 +784,60 @@ def _face_decision(confidence):
     return False, False, True
 
 
+def _record_punch(worker, site, source, method, when, *, lat=None, lng=None,
+                  accuracy=None, address="", distance=None, geofence_ok=None,
+                  marked_by=None, remarks="", contractor=None):
+    """Record one capture event and roll it into the day's Attendance row.
+
+    The FIRST event of the day marks attendance (creates the row, keeping the
+    source that marked it). Every event's IN/OUT is a toggle on the day's last
+    punch, regardless of source. Returns ``(attendance, event, action)``."""
+    from bss_core.models import Attendance, AttendanceEvent
+
+    today = timezone.localdate()
+    attendance = (Attendance.objects.filter(worker=worker, attendance_date=today)
+                  .order_by("id").first())
+    if attendance is None:
+        attendance = Attendance(
+            worker=worker, site=site, attendance_date=today,
+            contractor=contractor, capture_method=source, verification_type=method,
+            status="PRESENT", check_in_time=when,
+            last_punch_type="IN", last_punch_at=when, is_verified=True,
+            gps_lat=lat, gps_long=lng, gps_accuracy_m=accuracy, gps_address=address,
+            gps_distance_m=distance, is_geofence_ok=geofence_ok,
+            remarks=(remarks or "Marked via " + source)[:255])
+        attendance.save()
+        action = "IN"
+    else:
+        action = "OUT" if (attendance.last_punch_type or "IN") == "IN" else "IN"
+        attendance.last_punch_type = action
+        attendance.last_punch_at = when
+        attendance.is_verified = True
+        if action == "OUT":
+            attendance.check_out_time = when
+        if lat is not None:
+            attendance.gps_lat = lat
+            attendance.gps_long = lng
+        if accuracy is not None:
+            attendance.gps_accuracy_m = accuracy
+        if address:
+            attendance.gps_address = address
+        if distance is not None:
+            attendance.gps_distance_m = distance
+        if geofence_ok is not None:
+            attendance.is_geofence_ok = geofence_ok
+        if remarks:
+            attendance.remarks = remarks[:255]
+        attendance.save()
+
+    event = AttendanceEvent.objects.create(
+        attendance=attendance, worker=worker, site=site, attendance_date=today,
+        source=source, method=method, event_type=action, at=when,
+        gps_lat=lat, gps_long=lng, gps_accuracy_m=accuracy, gps_address=address,
+        is_geofence_ok=geofence_ok, distance_m=distance, marked_by=marked_by)
+    return attendance, event, action
+
+
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -784,7 +849,7 @@ def worker_mark_attendance_site(request):
     site and the accuracy stored. It is flagged when outside the site geo-fence
     (default radius 100 m). A worker may only scan a site they are bound to, and
     a second attempt on the same day returns "already marked"."""
-    from bss_core.models import Attendance, Site, WorkerContractorBinding
+    from bss_core.models import Site, WorkerContractorBinding
 
     if request.user.role != "worker":
         return Response({"error": "Only workers can mark their own attendance."},
@@ -805,22 +870,6 @@ def worker_mark_attendance_site(request):
         return Response({"error": "You are not bound to this site."},
                         status=status.HTTP_403_FORBIDDEN)
 
-    today = timezone.localdate()
-    existing = (Attendance.objects.filter(worker=request.user, attendance_date=today)
-                .order_by("id").first())
-    if existing is not None:
-        return Response({"data": {
-            "alreadyMarked": True,
-            "site": site.site_name,
-            "capture": existing.capture_method,
-            "record": {
-                "id": str(existing.id),
-                "status": existing.status,
-                "capture": existing.capture_method,
-                "checkIn": existing.check_in_time.isoformat() if existing.check_in_time else None,
-            },
-        }}, status=status.HTTP_200_OK)
-
     try:
         lat = float(body.get("lat"))
         lng = float(body.get("lng"))
@@ -836,28 +885,15 @@ def worker_mark_attendance_site(request):
 
     now = timezone.now()
     radius = float(site.geo_fence_radius or DEFAULT_GEOFENCE_RADIUS_M)
-    defaults = {
-        "contractor": binding.contractor,
-        "status": "PRESENT",
-        "capture_method": "SELF",
-        "verification_type": "gps_self",
-        "check_in_time": now,
-        "is_verified": True,
-        "gps_lat": round(lat, 6),
-        "gps_long": round(lng, 6),
-        "gps_accuracy_m": accuracy,
-        "gps_address": address,
-    }
-
     distance = within = clubbed = None
+    geofence_ok = None
     remarks = "Self attendance via site QR"
     if site.latitude is not None and site.longitude is not None:
         distance = _haversine_m(lat, lng, float(site.latitude), float(site.longitude))
         tolerance = min(accuracy or 0.0, GPS_TOLERANCE_MAX_M)
         within = distance <= radius
         clubbed = distance <= radius + tolerance
-        defaults["gps_distance_m"] = round(distance, 2)
-        defaults["is_geofence_ok"] = bool(within or clubbed)
+        geofence_ok = bool(within or clubbed)
         if not (within or clubbed):
             remarks = (f"Self attendance flagged outside geo-fence "
                        f"({distance - radius:.0f} m beyond the {radius:.0f} m radius)")
@@ -867,16 +903,17 @@ def worker_mark_attendance_site(request):
         else:
             remarks = f"Self attendance within geo-fence ({distance:.0f} m)"
     else:
-        defaults["is_geofence_ok"] = None
-        defaults["gps_distance_m"] = None
         remarks = "No site reference coordinates found"
-    defaults["remarks"] = remarks[:255]
 
-    attendance = Attendance.objects.create(
-        worker=request.user, site=site, attendance_date=today, **defaults)
+    attendance, _event, action = _record_punch(
+        worker=request.user, site=site, source="SELF", method="gps_self", when=now,
+        lat=round(lat, 6), lng=round(lng, 6), accuracy=accuracy, address=address,
+        distance=round(distance, 2) if distance is not None else None,
+        geofence_ok=geofence_ok, marked_by=request.user,
+        remarks=remarks, contractor=binding.contractor)
 
     return Response({"data": {
-        "alreadyMarked": False,
+        "action": action,
         "id": str(attendance.id),
         "site": site.site_name,
         "within": within,
@@ -885,9 +922,12 @@ def worker_mark_attendance_site(request):
         "radiusM": radius if distance is not None else None,
         "outsideM": round(max(0.0, distance - radius), 1) if distance is not None else None,
         "accuracyM": round(accuracy, 1) if accuracy is not None else None,
-        "geofenceOk": defaults["is_geofence_ok"],
+        "geofenceOk": geofence_ok,
         "address": address,
         "remarks": remarks,
+        "checkIn": attendance.check_in_time.isoformat() if attendance.check_in_time else None,
+        "checkOut": attendance.check_out_time.isoformat() if attendance.check_out_time else None,
+        "finalCheckout": action == "OUT",
     }}, status=status.HTTP_201_CREATED)
 
 

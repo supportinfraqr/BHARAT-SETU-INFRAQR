@@ -60,7 +60,7 @@ export default function AttendancePage() {
 
   // ── Self attendance: scan the site QR + capture GPS ──────────────────────
   type MarkState = 'idle' | 'scanning' | 'locating' | 'submitting' | 'done' | 'already' | 'error';
-  type MarkResult = { distanceM?: number | null; radiusM?: number | null; outsideM?: number | null; accuracyM?: number | null; within?: boolean | null; clubbed?: boolean | null; geofenceOk?: boolean | null; address?: string | null; remarks?: string };
+  type MarkResult = { action?: 'IN' | 'OUT'; checkIn?: string | null; checkOut?: string | null; finalCheckout?: boolean; site?: string; distanceM?: number | null; radiusM?: number | null; outsideM?: number | null; accuracyM?: number | null; within?: boolean | null; clubbed?: boolean | null; geofenceOk?: boolean | null; address?: string | null; remarks?: string };
   const [markOpen, setMarkOpen] = useState(false);
   const [markState, setMarkState] = useState<MarkState>('idle');
   const [markMessage, setMarkMessage] = useState('');
@@ -85,13 +85,8 @@ export default function AttendancePage() {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ siteToken, lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, address }),
         });
-        const body = await response.json().catch(() => ({})) as { data?: MarkResult & { alreadyMarked?: boolean; site?: string }; error?: string };
+        const body = await response.json().catch(() => ({})) as { data?: MarkResult; error?: string };
         if (!response.ok || !body.data) throw new Error(body.error ?? 'Attendance could not be marked.');
-        if (body.data.alreadyMarked) {
-          setMarkState('already');
-          setMarkMessage(`Already marked for today${body.data.site ? ` at ${body.data.site}` : ''}.`);
-          return;
-        }
         setMarkResult(body.data);
         setMarkState('done');
         void refresh();
@@ -164,6 +159,9 @@ export default function AttendancePage() {
   const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
   const byDate = useMemo(() => new Map(visibleRecords.map((r) => [r.date, r])), [visibleRecords]);
   const todayKey = new Date().toISOString().slice(0, 10);
+  // Next scan action for today (toggle): OUT when already checked in, else IN.
+  const todayRecord = records.find((r) => r.date === todayKey);
+  const nextAction: 'IN' | 'OUT' = todayRecord?.nextAction === 'OUT' ? 'OUT' : 'IN';
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
@@ -287,9 +285,9 @@ export default function AttendancePage() {
           </header>
           <div className="p-5 flex flex-wrap items-center gap-3">
             <button type="button" onClick={() => void startScan()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-bold inline-flex items-center gap-2 hover:bg-[#062D4F]">
-              <QrCode size={16} /> Scan site QR &amp; mark attendance
+              <QrCode size={16} /> Scan site QR &amp; {nextAction === 'OUT' ? 'mark out' : 'mark in'}
             </button>
-            <span className="text-[11px] text-gray-400">Source: <b className="text-gray-600">Self (GPS)</b> · one mark per day</span>
+            <span className="text-[11px] text-gray-400">Source: <b className="text-gray-600">Self (GPS)</b> · {nextAction === 'OUT' ? (todayRecord?.checkIn ? `checked in ${todayRecord.checkIn}` : 'mark out') : 'mark check-in'}</span>
           </div>
         </section>
 
@@ -321,14 +319,12 @@ export default function AttendancePage() {
                   <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 flex items-center gap-2"><XCircle size={15} />{markMessage}</p>
                 )}
                 {markState === 'done' && markResult && (
-                  <div className={`rounded-lg px-3 py-2 text-sm border ${markResult.geofenceOk ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+                  <div className={`rounded-lg px-3 py-2 text-sm border ${markResult.geofenceOk === false ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'}`}>
                     <p className="font-bold flex items-center gap-2">
-                      {markResult.geofenceOk ? <CheckCircle2 size={15} /> : <Info size={15} />}
-                      {markResult.distanceM == null
-                        ? 'Marked — site has no reference coordinates'
-                        : markResult.geofenceOk
-                          ? (markResult.within ? 'Marked — within site' : 'Marked — within GPS tolerance')
-                          : 'Marked — flagged outside geo-fence'}
+                      <CheckCircle2 size={15} />
+                      {markResult.action === 'OUT'
+                        ? `Checked out${markResult.checkOut ? ` at ${new Date(markResult.checkOut).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : ''}${markResult.finalCheckout ? ' — final checkout' : ''}`
+                        : `Checked in${markResult.checkIn ? ` at ${new Date(markResult.checkIn).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : ''}`}
                     </p>
                     {markResult.distanceM != null && (
                       <p className="text-xs mt-1">
@@ -579,8 +575,8 @@ export default function AttendancePage() {
                         )}
 
                         {rec.presence === 'Present' && rec.checkIn && (
-                          <span className="block text-[9px] font-semibold text-gray-500 text-center">
-                            {rec.singleMark ? `Marked · ${rec.checkIn}` : `${rec.checkIn} - ${rec.checkOut || 'Active'}`}
+                          <span className="block text-[9px] font-semibold text-gray-500 text-center leading-tight">
+                            {rec.checkIn} → {rec.checkOut || '—'}
                           </span>
                         )}
 
@@ -700,23 +696,16 @@ export default function AttendancePage() {
                 )}
 
                 {selectedRecord.checkIn && (
-                  selectedRecord.singleMark ? (
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="p-3 rounded-2xl bg-emerald-50/50 border border-emerald-100">
-                      <span className="text-[10px] text-emerald-700 font-bold block uppercase">Marked At</span>
+                      <span className="text-[10px] text-emerald-700 font-bold block uppercase">Check In</span>
                       <strong className="text-sm text-emerald-900">{selectedRecord.checkIn}</strong>
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 rounded-2xl bg-emerald-50/50 border border-emerald-100">
-                        <span className="text-[10px] text-emerald-700 font-bold block uppercase">Check In</span>
-                        <strong className="text-sm text-emerald-900">{selectedRecord.checkIn}</strong>
-                      </div>
-                      <div className="p-3 rounded-2xl bg-blue-50/50 border border-blue-100">
-                        <span className="text-[10px] text-blue-700 font-bold block uppercase">Check Out</span>
-                        <strong className="text-sm text-blue-900">{selectedRecord.checkOut || 'Active Shift'}</strong>
-                      </div>
+                    <div className="p-3 rounded-2xl bg-blue-50/50 border border-blue-100">
+                      <span className="text-[10px] text-blue-700 font-bold block uppercase">Check Out</span>
+                      <strong className="text-sm text-blue-900">{selectedRecord.checkOut || '—'}</strong>
                     </div>
-                  )
+                  </div>
                 )}
 
                 {selectedRecord.method && (
@@ -730,6 +719,20 @@ export default function AttendancePage() {
                   <div className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100">
                     <span className="text-xs text-gray-500 font-semibold">Verification</span>
                     <span className="text-xs font-bold text-gray-900">{selectedRecord.verification}</span>
+                  </div>
+                )}
+
+                {selectedRecord.events && selectedRecord.events.length > 0 && (
+                  <div className="p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                    <span className="text-[10px] text-gray-500 font-bold uppercase block mb-2">Source records ({selectedRecord.events.length})</span>
+                    <ul className="space-y-1.5">
+                      {selectedRecord.events.map((ev, i) => (
+                        <li key={i} className="flex items-center justify-between text-[11px]">
+                          <span className="text-gray-500">{ev.sourceLabel || ev.source} · {ev.typeLabel || ev.type}</span>
+                          <span className="text-gray-800 font-semibold">{ev.at ? new Date(ev.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
 

@@ -54,6 +54,10 @@ class Attendance(models.Model):
     attendance_date = models.DateField(auto_now_add=False)
     check_in_time = models.DateTimeField(null=True, blank=True)
     check_out_time = models.DateTimeField(null=True, blank=True)
+    # In/out toggle state: which punch happened last (drives the next scan's
+    # action). check_in_time = first IN of the day, check_out_time = latest OUT.
+    last_punch_type = models.CharField(max_length=4, blank=True)  # "IN" | "OUT"
+    last_punch_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS, default="PRESENT")
     capture_method = models.CharField(max_length=20, choices=CAPTURE)
     verification_type = models.CharField(max_length=30, choices=VERIFY, null=True, blank=True)
@@ -91,6 +95,57 @@ class Attendance(models.Model):
 
     def __str__(self):
         return f"{self.worker_id} {self.attendance_date} {self.capture_method}"
+
+
+class AttendanceEvent(models.Model):
+    """One record per capture event, linked to the day's Attendance row.
+
+    The FIRST event of the day marks attendance (creates the Attendance row);
+    every later event — from any source — is kept here with its own source, so
+    the day carries a full per-source timeline (self / QR / RFID / CCTV / sheet).
+    """
+
+    SOURCE = [("SELF", "Self (GPS)"), ("QR", "QR"), ("NFC", "RFID"),
+              ("CAMERA", "Camera"), ("SHEET", "Uploaded Sheet")]
+    TYPES = [("IN", "Check-in"), ("OUT", "Check-out"),
+             ("SIGHTING", "Sighting"), ("SCAN", "Scan"), ("TAP", "Tap")]
+
+    attendance = models.ForeignKey(Attendance, on_delete=models.CASCADE,
+                                   related_name="events")
+    worker = models.ForeignKey(User, on_delete=models.CASCADE, related_name="attendance_events")
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="attendance_events")
+    attendance_date = models.DateField()
+    source = models.CharField(max_length=20, choices=SOURCE)
+    method = models.CharField(max_length=30, blank=True)  # verification_type
+    event_type = models.CharField(max_length=12, choices=TYPES, default="IN")
+    at = models.DateTimeField()
+    ended_at = models.DateTimeField(null=True, blank=True)
+    duration_seconds = models.IntegerField(null=True, blank=True)
+    camera_label = models.CharField(max_length=120, blank=True)
+    camera_area = models.CharField(max_length=120, blank=True)
+    confidence = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    gps_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    gps_long = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    gps_accuracy_m = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    gps_address = models.CharField(max_length=255, blank=True)
+    is_geofence_ok = models.BooleanField(null=True, blank=True)
+    distance_m = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    external_id = models.CharField(max_length=60, blank=True)  # e.g. pipeline sighting id
+    meta = models.JSONField(default=dict, blank=True)
+    marked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "attendance_event"
+        indexes = [
+            models.Index(fields=["worker", "attendance_date"], name="idx_attevent_worker_date"),
+            models.Index(fields=["attendance"], name="idx_attevent_attendance"),
+            models.Index(fields=["source"], name="idx_attevent_source"),
+        ]
+
+    def __str__(self):
+        return f"{self.worker_id} {self.attendance_date} {self.source} {self.event_type}"
 
 
 class WorkerWages(models.Model):

@@ -367,6 +367,56 @@ ATTENDANCE_VERIFY_LABEL = {"qr_worker": "QR (worker)", "qr_site": "QR (site)",
                            "nfc_card": "RFID card", "face_image": "Face (CCTV)",
                            "badge_image": "Badge image", "gps_self": "GPS self"}
 
+_ATT_EVENT_TYPE_LABEL = {"IN": "Check-in", "OUT": "Check-out",
+                         "SIGHTING": "Sighting", "SCAN": "Scan", "TAP": "Tap"}
+
+
+def _attendance_source_summary(a):
+    """Per-source rollup of a day's attendance events: count + first/last + dwell."""
+    agg = {}
+    for e in a.events.all():
+        s = agg.get(e.source)
+        if s is None:
+            s = agg[e.source] = {"source": e.source,
+                                 "sourceLabel": ATTENDANCE_SOURCE_LABEL.get(e.source, e.source),
+                                 "count": 0, "first": None, "last": None, "durationSeconds": 0}
+        s["count"] += 1
+        if e.at and (s["first"] is None or e.at < s["first"]):
+            s["first"] = e.at
+        if e.at and (s["last"] is None or e.at > s["last"]):
+            s["last"] = e.at
+        if e.duration_seconds:
+            s["durationSeconds"] += e.duration_seconds
+    out = [{"source": s["source"], "sourceLabel": s["sourceLabel"], "count": s["count"],
+            "first": _dts(s["first"]) if s["first"] else "",
+            "last": _dts(s["last"]) if s["last"] else "",
+            "durationSeconds": s["durationSeconds"]}
+           for s in agg.values()]
+    out.sort(key=lambda r: r["first"] or "")
+    return out
+
+
+def _attendance_events(a):
+    """The day's full per-source event timeline."""
+    rows = []
+    for e in a.events.all().order_by("at", "id"):
+        rows.append({
+            "source": e.source,
+            "sourceLabel": ATTENDANCE_SOURCE_LABEL.get(e.source, e.source),
+            "method": e.method or "",
+            "type": e.event_type,
+            "typeLabel": _ATT_EVENT_TYPE_LABEL.get(e.event_type, e.event_type),
+            "at": _dts(e.at) if e.at else "",
+            "endedAt": _dts(e.ended_at) if e.ended_at else "",
+            "durationSeconds": e.duration_seconds,
+            "camera": e.camera_label or "",
+            "area": e.camera_area or "",
+            "confidence": (float(e.confidence) if e.confidence is not None else None),
+            "address": e.gps_address or "",
+            "geofenceOk": e.is_geofence_ok,
+        })
+    return rows
+
 
 def attendance_detail(a):
     """Full serialization of one Attendance row (source + verification + GPS +
@@ -412,12 +462,16 @@ def attendance_detail(a):
         "verified": bool(a.is_verified),
         "matchStatus": ("Verified" if a.is_verified
                         else ("Manual intervention required" if a.confidence_pct is not None else "")),
+        "nextAction": "OUT" if _d(a.last_punch_type) == "IN" else "IN",
+        "events": _attendance_events(a),
+        "sources": _attendance_source_summary(a),
         "remarks": a.remarks or "",
     }
 
 
 def _worker_attendance_section(user):
     rows = (Attendance.objects.filter(worker=user).select_related("site")
+            .prefetch_related("events")
             .order_by("-attendance_date")[:400])
     title = {"PRESENT": "Present", "ABSENT": "Absent", "LEAVE": "Leave",
              "HOLIDAY": "Holiday", "EXPECTED": "Present", "LATE": "Late",

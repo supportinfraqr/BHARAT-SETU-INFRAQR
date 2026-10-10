@@ -12,6 +12,7 @@ type AttendanceRow = {
   verification?: string; checkIn?: string; checkOut?: string; singleMark?: boolean;
   camera?: string; cameraArea?: string; confidence?: number | null; matchStatus?: string;
   geofenceOk?: boolean | null; distanceM?: number | null; accuracyM?: number | null; gpsAddress?: string; remarks?: string;
+  events?: Array<{ source: string; sourceLabel?: string; type: string; typeLabel?: string; at: string }>;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -110,14 +111,8 @@ export default function EmployerAttendancePage() {
             <Detail label="Source" value={recSelected.source || recSelected.capture || '—'} />
             <Detail label="Verification" value={recSelected.verification || '—'} />
             <div className="grid grid-cols-2 gap-2">
-              {recSelected.singleMark ? (
-                <Detail label="Marked At" value={recSelected.checkIn || '—'} />
-              ) : (
-                <>
-                  <Detail label="Check In" value={recSelected.checkIn || '—'} />
-                  <Detail label="Check Out" value={recSelected.checkOut || '—'} />
-                </>
-              )}
+              <Detail label="Check In" value={recSelected.checkIn || '—'} />
+              <Detail label="Check Out" value={recSelected.checkOut || '—'} />
             </div>
             {recSelected.camera && <Detail label="CCTV Camera" value={`${recSelected.camera}${recSelected.cameraArea && recSelected.cameraArea !== recSelected.camera ? ` · ${recSelected.cameraArea}` : ''}`} />}
             {(recSelected.geofenceOk !== undefined && recSelected.geofenceOk !== null) && (
@@ -125,6 +120,19 @@ export default function EmployerAttendancePage() {
             )}
             {recSelected.gpsAddress && <Detail label="Location" value={recSelected.gpsAddress} />}
             {recSelected.matchStatus && <Detail label="Verification" value={recSelected.matchStatus} />}
+            {recSelected.events && recSelected.events.length > 0 && (
+              <div className="p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                <span className="text-[10px] text-gray-500 font-bold uppercase block mb-2">Source records ({recSelected.events.length})</span>
+                <ul className="space-y-1.5">
+                  {recSelected.events.map((ev, i) => (
+                    <li key={i} className="flex items-center justify-between text-[11px]">
+                      <span className="text-gray-500">{ev.sourceLabel || ev.source} · {ev.typeLabel || ev.type}</span>
+                      <span className="text-gray-800 font-semibold">{ev.at ? new Date(ev.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {recSelected.remarks && <Detail label="Remarks" value={recSelected.remarks} />}
           </div>
           <div className="p-4 pt-0">
