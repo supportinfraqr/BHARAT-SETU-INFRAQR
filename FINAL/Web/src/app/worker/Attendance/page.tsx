@@ -103,8 +103,8 @@ export default function AttendancePage() {
     } catch { setMarkState('error'); setMarkMessage('That QR code is not a site QR.'); }
   }, [submitMark]);
 
-  const startScan = useCallback(async () => {
-    setMarkOpen(true); setMarkState('scanning'); setMarkMessage('Point the camera at the site QR code'); setMarkResult(null);
+  const startCameraScan = useCallback(async () => {
+    setMarkState('scanning'); setMarkMessage('Location captured — point the camera at the site QR code');
     try {
       const reader = createQrReader();
       scanControls.current = await reader.decodeFromConstraints(QR_VIDEO_CONSTRAINTS, scanVideoRef.current!, r => {
@@ -113,6 +113,21 @@ export default function AttendancePage() {
       applyContinuousFocus(scanControls.current);
     } catch { setMarkState('error'); setMarkMessage('Camera access was unavailable. You can upload a site QR image instead.'); }
   }, [handleQrText, stopScan]);
+
+  const startScan = useCallback(() => {
+    setMarkOpen(true); setMarkState('locating'); setMarkResult(null);
+    // Ask for location permission BEFORE scanning — attendance can't be marked
+    // without it, and the browser prompt needs a user gesture.
+    setMarkMessage('We need your location to mark attendance — allow location access to continue.');
+    if (!navigator.geolocation) { setMarkState('error'); setMarkMessage('Location is not supported on this device.'); return; }
+    navigator.geolocation.getCurrentPosition(() => {
+      // Permission granted + a fix obtained; a fresh, accurate fix is taken
+      // again at submit time (already granted, so no second prompt).
+      void startCameraScan();
+    }, () => {
+      setMarkState('error'); setMarkMessage('Location permission is required to mark attendance. Allow location access and try again.');
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  }, [startCameraScan]);
 
   const scanFile = useCallback(async (file?: File) => {
     if (!file) return;
@@ -309,10 +324,15 @@ export default function AttendancePage() {
                 {(markState === 'scanning' || markState === 'idle' || markState === 'error') && (
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs text-gray-500">{markMessage || 'Point the camera at the site QR code'}</span>
-                    <label className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer hover:bg-gray-50">
-                      <Upload size={14} /> Upload QR image
-                      <input type="file" accept="image/*" className="hidden" onChange={e => { void scanFile(e.target.files?.[0]); e.target.value = ''; }} />
-                    </label>
+                    <div className="flex items-center gap-2">
+                      {markState === 'error' && (
+                        <button type="button" onClick={() => void startScan()} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-gray-50">Allow location &amp; retry</button>
+                      )}
+                      <label className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer hover:bg-gray-50">
+                        <Upload size={14} /> Upload QR image
+                        <input type="file" accept="image/*" className="hidden" onChange={e => { void scanFile(e.target.files?.[0]); e.target.value = ''; }} />
+                      </label>
+                    </div>
                   </div>
                 )}
 
