@@ -10,7 +10,7 @@ import { exportMatrixToXlsx } from '@/lib/exportXlsx';
 const YEARS = [2021, 2022, 2023, 2024, 2025, 2026];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-function hashOf(id: string): number { return id.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0); }
+function hashOf(id: string | number): number { return String(id ?? '').split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0); }
 function joinedMeta(worker: GovWorker): { year: number; month: number } {
   const h = hashOf(worker.id);
   return { year: YEARS[h % YEARS.length], month: 1 + ((h >> 3) % 12) };

@@ -755,7 +755,7 @@ export type WorkerPortalData = {
 };
 
 export type GovWorker = {
-  id: string; state: string; district: string; city: string;
+  id: string | number; state: string; district: string; city: string;
   age: number; gender: 'Male' | 'Female' | 'Transgender';
   category: string; occupation: string;
   site: string; siteType: string; employer: string; contractor: string;
