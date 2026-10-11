@@ -101,6 +101,25 @@ def _find_user_by_mobile(mobile):
     return cred.user if cred else None
 
 
+def _bss_id(user):
+    """The account's BSS ID (worker id / contractor code / employer code)."""
+    role = getattr(user, "role", "")
+    if role == "worker":
+        wi = getattr(user, "worker_identity", None)
+        return getattr(wi, "bss_worker_id", "") or ""
+    prof = getattr(user, "contractor_profile", None) or getattr(user, "employer_profile", None)
+    if role == "contractor":
+        return getattr(prof, "contractor_code", "") or ""
+    if role == "employer":
+        return getattr(prof, "employer_code", "") or ""
+    return ""
+
+
+def _already_registered_message(user):
+    bss = _bss_id(user)
+    return f"Account already exists with this phone ({bss})." if bss else "Account already exists with this phone."
+
+
 def _digits(value):
     return "".join(ch for ch in str(value or "") if ch.isdigit())
 
@@ -147,8 +166,10 @@ def _process_employers(rows):
         if pan and not re.match(r"^[A-Z]{5}\d{4}[A-Z]$", pan):
             results.append({"row": name or mobile, "status": "failed", "detail": "PAN format is invalid (AAAAA9999A)."}); continue
         user = _find_user_by_mobile(mobile)
-        if user is not None and user.role != "employer":
-            results.append({"row": mobile, "status": "failed", "detail": f"Mobile belongs to a {user.role}."}); continue
+        if user is not None:
+            if user.role != "employer":
+                results.append({"row": mobile, "status": "failed", "detail": f"Mobile belongs to a {user.role}."}); continue
+            results.append({"row": mobile, "status": "failed", "detail": _already_registered_message(user)}); continue
         exclude = user.id if user else None
         conflict = (_conflict(EmployerProfile, "cin", cin, exclude, "CIN")
                     or _conflict(EmployerProfile, "gstin", gstin, exclude, "GSTIN")
@@ -201,8 +222,10 @@ def _process_contractors(rows):
         if pan and not re.match(r"^[A-Z]{5}\d{4}[A-Z]$", pan):
             results.append({"row": name or mobile, "status": "failed", "detail": "PAN format is invalid (AAAAA9999A)."}); continue
         user = _find_user_by_mobile(mobile)
-        if user is not None and user.role != "contractor":
-            results.append({"row": mobile, "status": "failed", "detail": f"Mobile belongs to a {user.role}."}); continue
+        if user is not None:
+            if user.role != "contractor":
+                results.append({"row": mobile, "status": "failed", "detail": f"Mobile belongs to a {user.role}."}); continue
+            results.append({"row": mobile, "status": "failed", "detail": _already_registered_message(user)}); continue
         exclude = user.id if user else None
         conflict = (_conflict(ContractorProfile, "cin", cin, exclude, "CIN")
                     or _conflict(ContractorProfile, "gstin", gstin, exclude, "GSTIN")
@@ -275,8 +298,10 @@ def _process_workers(rows):
             results.append({"row": label, "status": "failed", "detail": "Duplicate mobile within the file."}); continue
 
         user = _find_user_by_mobile(mobile)
-        if user is not None and user.role != "worker":
-            results.append({"row": mobile, "status": "failed", "detail": f"Mobile belongs to a {user.role}."}); continue
+        if user is not None:
+            if user.role != "worker":
+                results.append({"row": mobile, "status": "failed", "detail": f"Mobile belongs to a {user.role}."}); continue
+            results.append({"row": mobile, "status": "failed", "detail": _already_registered_message(user)}); continue
         exclude = user.id if user else None
         conflict = (_conflict(WorkerIdentity, "aadhaar", aadhaar, exclude, "Aadhaar")
                     or _conflict(WorkerIdentity, "pan", pan, exclude, "PAN")

@@ -16,7 +16,8 @@ import os
 import re
 
 from .common import *  # noqa: F401,F403
-from .admin_bulk import (ENTITIES, _as_date, _conflict, _digits, _find_user_by_mobile,
+from .admin_bulk import (ENTITIES, _already_registered_message, _as_date, _conflict,
+                         _digits, _find_user_by_mobile,
                          _mobile, _process_contractors, _process_employers,
                          _process_relations, _process_workers)
 
@@ -250,13 +251,22 @@ def structure_batch(batch):
                 by_mobile[mobile] = rec
     for rec in records:
         if rec.entity_type != "RELATION":
-            # Mark whether an account already exists live (informational).
+            # Block a phone that already has a live account of the same role.
             mobile = (rec.clean_data or {}).get("mobile")
             live = _find_user_by_mobile(mobile) if mobile else None
             if live is not None:
                 rec.matched_type = "USER"
                 rec.matched_id = live.id
-                rec.save(update_fields=["matched_type", "matched_id", "updated_at"])
+                fields = ["matched_type", "matched_id", "updated_at"]
+                if live.role == rec.entity_type.lower():
+                    note = _already_registered_message(live)
+                    issues = [i for i in (rec.issues or [])
+                              if not str(i.get("message", "")).startswith("Account already exists")]
+                    issues.append(_issue("mobile", "error", note))
+                    rec.issues = issues
+                    rec.status = "FLAGGED"
+                    fields += ["issues", "status"]
+                rec.save(update_fields=fields)
             continue
         data = rec.clean_data or {}
         issues = list(rec.issues or [])
