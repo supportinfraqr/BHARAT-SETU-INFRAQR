@@ -95,7 +95,7 @@ const DEFAULT_SECTIONS = (type: DocumentType): TemplateSection[] => {
     return [
       wrap(0, { type: 'logo', title: 'Branding / Logo', content: '', editable: false, locked: true }),
       wrap(1, { type: 'heading', title: 'Card title', content: 'PERMANENT GATE PASS', align: 'center' }),
-      wrap(2, { type: 'paragraph', title: 'Pass reference', content: 'Pass No.: {{document.number}}\nGenerated: {{document.generatedAt}}', fields: ['document.number', 'document.generatedAt'], align: 'center', spacing: 'tight' }),
+      wrap(2, { type: 'paragraph', title: 'Pass reference', content: 'Generated: {{document.generatedAt}}', fields: ['document.generatedAt'], align: 'center', spacing: 'tight' }),
       wrap(3, { type: 'photo', title: 'Worker photo', content: '{{worker.photo}}', fields: ['worker.photo'], editable: false, locked: true }),
       wrap(4, { type: 'paragraph', title: 'Identity fields', content: 'Name: {{worker.fullName}}\nBSS Worker ID: {{worker.bssId}}\nDesignation: {{employment.designation}}\nDOB: {{worker.dob}}\nBlood Group: {{worker.bloodGroup}}\nEmergency Contact: {{worker.emergencyContact}}', fields: ['worker.fullName', 'worker.bssId', 'employment.designation', 'worker.dob', 'worker.bloodGroup', 'worker.emergencyContact'] }),
       wrap(5, { type: 'paragraph', title: 'Org & validity', content: 'Employer: {{employer.legalName}}\nContractor: {{contractor.legalName}}\nSite: {{site.name}} ({{site.code}}), {{site.address}}\nIssue Date: {{document.issueDate}}\nValid Up To: {{document.validTo}}', fields: ['employer.legalName', 'contractor.legalName', 'site.name', 'site.code', 'site.address', 'document.issueDate', 'document.validTo'] }),
@@ -108,7 +108,7 @@ const DEFAULT_SECTIONS = (type: DocumentType): TemplateSection[] => {
   return [
     wrap(0, { type: 'logo', title: 'Branding / Logo', content: '', editable: false, locked: true }),
     wrap(1, { type: 'heading', title: 'Card title', content: 'TEMPORARY GATE PASS', align: 'center' }),
-    wrap(2, { type: 'paragraph', title: 'Pass reference', content: 'Pass No.: {{document.number}}\nGenerated: {{document.generatedAt}}', fields: ['document.number', 'document.generatedAt'], align: 'center', spacing: 'tight' }),
+    wrap(2, { type: 'paragraph', title: 'Pass reference', content: 'Generated: {{document.generatedAt}}', fields: ['document.generatedAt'], align: 'center', spacing: 'tight' }),
     wrap(3, { type: 'photo', title: 'Worker photo', content: '{{worker.photo}}', fields: ['worker.photo'], editable: false, locked: true }),
     wrap(4, { type: 'paragraph', title: 'Addressee', content: 'To,\nThe Chief Security Officer,\n{{site.name}} ({{site.code}})\n{{site.address}}', fields: ['site.name', 'site.code', 'site.address'] }),
     wrap(5, { type: 'paragraph', title: 'Subject', content: 'Subject: Temporary site access for {{worker.fullName}} — {{employment.designation}}', fields: ['worker.fullName', 'employment.designation'] }),
