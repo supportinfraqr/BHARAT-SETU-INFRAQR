@@ -40,3 +40,4 @@ from .cost_sheets import *  # noqa: F401,F403
 from .gst import *  # noqa: F401,F403
 from .verification import *  # noqa: F401,F403
 from .accounts_admin import *  # noqa: F401,F403
+from .employer_analytics import *  # noqa: F401,F403

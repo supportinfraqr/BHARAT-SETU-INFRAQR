@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ClipboardCheck, FileText, LayoutDashboard, Menu, Network, Settings, ShieldCheck, X, Banknote, Calculator } from 'lucide-react';
+import { ChevronDown, ClipboardCheck, FileText, LayoutDashboard, Menu, Network, Settings, ShieldCheck, X, Banknote, Calculator, Activity } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import BrandText from '@/components/BrandText';
@@ -56,7 +56,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
   const headerRef = useRef<HTMLElement>(null);
   const { employer } = useEmployer();
   const { t } = useLanguage();
-  const groups = [ { key:'nav.dashboard', href:'/employer/dashboard', icon:LayoutDashboard }, workforceGroup, sitesGroup, { key:'nav.payroll', href:'/employer/payroll', icon:Banknote }, complianceGroup, qrGroup, ...(employer.canAccessAdmin ? [adminGroup] : []) ];
+  const groups = [ { key:'nav.dashboard', href:'/employer/dashboard', icon:LayoutDashboard }, { key:'Analytics', href:'/employer/analytics', icon:Activity }, workforceGroup, sitesGroup, { key:'nav.payroll', href:'/employer/payroll', icon:Banknote }, complianceGroup, qrGroup, ...(employer.canAccessAdmin ? [adminGroup] : []) ];
   const mobileItems = groups.reduce<Array<readonly [string,string]>>((items, group) => items.concat('href' in group ? [[group.key, group.href]] : group.items as unknown as readonly [string,string][]), []);
 
   // Close every popover on navigation (adjust state during render — the

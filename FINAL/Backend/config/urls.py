@@ -154,6 +154,7 @@ _v1_patterns = _v1(
     ("contractor/attendance/camera-punch", v1_bridge.attendance_camera_punch, "v1_attendance_camera_punch"),
     ("employer/attendance/camera", v1_bridge.attendance_camera_session, "v1_employer_attendance_camera"),
     ("employer/attendance/records", v1_bridge.employer_attendance_records, "v1_employer_attendance_records"),
+    ("employer/analytics", v1_bridge.employer_analytics, "v1_employer_analytics"),
     ("contractor/workforce-history", v1_bridge.contractor_workforce_history, "v1_contractor_workforce_history"),
     ("employer/workforce-history", v1_bridge.employer_workforce_history, "v1_employer_workforce_history"),
     ("employer/contractor-history", v1_bridge.employer_contractor_history, "v1_employer_contractor_history"),
