@@ -249,13 +249,13 @@ export default function EmployerScanPage() {
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
 
     <div className="grid md:grid-cols-2 gap-6">
-      <section className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-        <header className="p-4 border-b bg-bss-bg flex items-center gap-2 font-bold"><Camera size={18}/> Scanner</header>
+      <section className="bss-3d bss-scroll-rise bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <header className="p-4 border-b border-bss-border bg-gradient-to-r from-bss-navy/5 to-transparent flex items-center gap-2 font-bold text-bss-text-primary"><span className="w-8 h-8 rounded-lg bg-bss-blue-tint text-bss-interactive-blue grid place-items-center"><Camera size={16}/></span> Scanner</header>
         <div className="p-5 space-y-4">
-          <div className="relative bg-black rounded-xl h-64 overflow-hidden flex items-center justify-center">
+          <div className="relative bg-black rounded-2xl h-64 overflow-hidden flex items-center justify-center">
             <video ref={videoRef} className={`w-full h-full object-cover ${state === 'scanning' ? 'block' : 'hidden'}`} muted playsInline/>
             <ScanFrame active={state === 'scanning'} />
-            {state !== 'scanning' && <div className="text-center text-white px-6">{state === 'identified' || state === 'confirmed' ? <ShieldCheck size={48} className="mx-auto text-bss-soft-green"/> : state === 'error' ? <XCircle size={48} className="mx-auto text-bss-orange"/> : <ScanLine size={48} className="mx-auto text-bss-text-muted"/>}<p className="mt-3 text-sm font-semibold">{message || 'Ready to scan a secure credential'}</p></div>}
+            {state !== 'scanning' && <div className="text-center text-white px-6">{state === 'identified' || state === 'confirmed' ? <ShieldCheck size={48} className="mx-auto text-bss-soft-green bss-pulse-halo"/> : state === 'error' ? <XCircle size={48} className="mx-auto text-bss-orange"/> : <ScanLine size={48} className="mx-auto text-bss-text-muted bss-pulse-halo"/>}<p className="mt-3 text-sm font-semibold">{message || 'Ready to scan a secure credential'}</p></div>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <button onClick={state === 'idle' || state === 'error' || state === 'identified' || state === 'confirmed' ? startCamera : reset} className="bg-[#01183A] text-white py-2.5 rounded-lg font-bold text-sm"><Camera size={16} className="inline mr-2"/>{state === 'scanning' ? 'Reset' : 'Use camera'}</button>
@@ -267,8 +267,8 @@ export default function EmployerScanPage() {
         </div>
       </section>
 
-      <section className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-        <header className="p-4 border-b bg-bss-bg flex gap-2 items-center font-bold"><ShieldCheck size={18}/> {state === 'identified' || state === 'confirmed' ? 'Identified entity' : 'Scan result'}</header>
+      <section className="bss-3d bss-scroll-rise bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <header className="p-4 border-b border-bss-border bg-gradient-to-r from-bss-navy/5 to-transparent flex gap-2 items-center font-bold text-bss-text-primary"><span className="w-8 h-8 rounded-lg bg-bss-soft-green text-bss-green grid place-items-center"><ShieldCheck size={16}/></span> {state === 'identified' || state === 'confirmed' ? 'Identified entity' : 'Scan result'}</header>
         <div className="p-5">
           {entity && (state === 'identified' || state === 'confirmed') ? (
             <div className="space-y-4">
