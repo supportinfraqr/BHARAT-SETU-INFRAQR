@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { IScannerControls } from '@zxing/browser';
-import { Building2, CalendarDays, Camera, Check, CheckCircle2, Home, KeyRound, Landmark, Link2, Network, ScanLine, ShieldCheck, Upload, UserRound, X, XCircle } from 'lucide-react';
+import { Building2, CalendarDays, Camera, Check, CheckCircle2, KeyRound, Landmark, Link2, Network, ScanLine, ShieldCheck, Upload, UserRound, X, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useEmployer } from '@/contexts/EmployerContext';
 import { formatDate } from '@/lib/date';
@@ -243,7 +243,7 @@ export default function EmployerScanPage() {
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
     <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
       <div><p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">QR system</p><h1 className="text-2xl font-bold text-[#022B5E] mt-1">QR Scan & Verify</h1><p className="text-sm text-bss-text-muted mt-1">Scan a Worker QR to verify identity and binding · scan a Contractor QR to review the binding. Binding always requires review and confirmation — never scan-to-auto-bind.</p></div>
-      <div className="flex gap-2"><ListenButton /><Link href="/employer/dashboard" className="p-2.5 rounded-full bg-white border" aria-label="Dashboard"><Home size={18}/></Link><Link href="/employer/qr/requests" className="bg-[#01183A] text-white px-4 py-2.5 rounded-lg font-bold text-sm">Binding requests</Link></div>
+      <div className="flex gap-2"><ListenButton /><Link href="/employer/qr/requests" className="bg-[#01183A] text-white px-4 py-2.5 rounded-lg font-bold text-sm">Binding requests</Link></div>
     </div>
 
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
