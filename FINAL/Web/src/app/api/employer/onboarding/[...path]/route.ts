@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiError, assertTrustedMutation, readJsonObject } from '@/server/api';
 import { getRuntimeConfig } from '@/server/config';
-import { upstreamRequest } from '@/server/http';
+import { upstreamRequest, upstreamStream } from '@/server/http';
 import { requireApiSession } from '@/server/session';
 
 export const dynamic = 'force-dynamic';
@@ -13,8 +13,21 @@ export async function GET(request: Request, context: Context) {
     const session = await requireApiSession('Employer');
     const config = getRuntimeConfig();
     const search = new URL(request.url).search;
-    const result = await upstreamRequest(config.apiBaseUrl, `/v1/employer/onboarding/${path.join('/')}${search}`, session);
-    return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
+    const upstream = await upstreamStream(config.apiBaseUrl, `/v1/employer/onboarding/${path.join('/')}${search}`, session);
+    const contentType = upstream.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const text = await upstream.text();
+      const json = text ? JSON.parse(text) : {};
+      return NextResponse.json(json, { status: upstream.status, headers: { 'Cache-Control': 'private, no-store' } });
+    }
+    // Binary/file download (e.g. the onboarding template .xlsx) — stream it through.
+    const headers = new Headers();
+    for (const name of ['Content-Type', 'Content-Length', 'Content-Disposition']) {
+      const value = upstream.headers.get(name);
+      if (value) headers.set(name, value);
+    }
+    headers.set('Cache-Control', 'private, no-store');
+    return new Response(upstream.body, { status: upstream.status, headers });
   } catch (error) { return apiError(error, 'The onboarding request could not be loaded.'); }
 }
 
