@@ -269,11 +269,11 @@ export function WorkerDocumentsDrawer({ owner, view, worker, onClose }: { owner:
   const latestFor = (type: DocumentType) => history.find(item => item.documentType === type);
 
   return (
-    <div className="fixed inset-0 z-[110] bg-black/50 flex justify-end" role="presentation">
-      <section role="dialog" aria-modal="true" className="bg-white w-full max-w-2xl h-full overflow-y-auto animate-in slide-in-from-right-4 duration-200">
+    <div className="fixed inset-0 z-[110] bg-bss-navy/40 backdrop-blur-sm grid place-items-center p-4" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <section role="dialog" aria-modal="true" className="bg-white w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl">
         <header className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-start justify-between gap-3">
           <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Worker documents</p><h2 className="font-semibold text-gray-950 mt-0.5">{worker.name}</h2><p className="text-xs text-gray-500 font-mono mt-0.5">{worker.bssId}</p></div>
-          <button onClick={onClose} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={17}/></button>
+          <button onClick={onClose} aria-label="Close" className="w-9 h-9 grid place-items-center rounded-lg hover:bg-bss-bg text-bss-text-secondary"><X size={18}/></button>
         </header>
         <div className="p-5 space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
