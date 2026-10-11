@@ -79,6 +79,15 @@ function periodMonth(period: string): string {
   return period;
 }
 
+// The current period label for a frequency (fiscal year Apr–Mar), from today.
+function currentPeriod(freq: Frequency, d: Date = new Date()): string {
+  const fi = (d.getMonth() + 9) % 12;   // 0=April … 11=March
+  if (freq === 'Quarterly') return QUARTER_PERIODS[Math.floor(fi / 3)];
+  if (freq === 'Half Yearly') return HALF_PERIODS[Math.floor(fi / 6)];
+  if (freq === 'Yearly') return FINANCIAL_PERIODS[0];
+  return MONTHS[fi];
+}
+
 /** True when a month of the given FY is still in the future — those aren't due
  *  yet, so the tracker shows "Upcoming" instead of "Pending". */
 function isFutureMonth(fy: string, monthName: string): boolean {
@@ -143,7 +152,7 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
   // Default state filters
   const [selectedYear, setSelectedYear] = useState<string>(availableYears[0] || 'FY 2026-27');
   const [freq, setFreq] = useState<Frequency>('Monthly');
-  const [selectedPeriod, setSelectedPeriod] = useState<string>(MONTHS[5]); // Default September
+  const [selectedPeriod, setSelectedPeriod] = useState<string>(() => currentPeriod('Monthly'));
 
   // Show every period of the chosen frequency — the full Apr–Mar month set for
   // Monthly — so all months are visible and selectable in Compliance Records.
@@ -153,7 +162,7 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
   const [siteName, setSiteName] = useState('');
   const [fy, setFy] = useState(availableYears[0] || 'FY 2026-27');
   const [createFreq, setCreateFreq] = useState<Frequency>('Monthly');
-  const [createPeriod, setCreatePeriod] = useState<string>(MONTHS[5]);
+  const [createPeriod, setCreatePeriod] = useState<string>(() => currentPeriod('Monthly'));
   const [viewErrors, setViewErrors] = useState<{ name: string; findings: string[]; uploadId?: number } | null>(null);
 
   const visibleCreatePeriods = useMemo(() => periodsFor(createFreq), [createFreq]);
@@ -854,7 +863,7 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
             {FREQUENCIES.map(f => (
               <button 
                 key={f} 
-                onClick={() => { setFreq(f); setSelectedPeriod(periodsFor(f)[0]); }} 
+                onClick={() => { setFreq(f); setSelectedPeriod(currentPeriod(f)); }} 
                 className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${freq === f ? 'bg-bss-interactive-blue text-white shadow-sm' : 'bg-bss-bg text-bss-text-secondary hover:bg-bss-blue-tint'}`}
               >
                 {f}
@@ -1042,7 +1051,7 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
               </label>
               <label className="block">
                 <span className="text-[11px] font-semibold text-bss-text-secondary">Frequency</span>
-                <select value={createFreq} onChange={e => { const f = e.target.value as Frequency; setCreateFreq(f); setCreatePeriod(periodsFor(f)[0]); }} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-xs bg-white font-medium text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 focus:border-bss-interactive-blue">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select>
+                <select value={createFreq} onChange={e => { const f = e.target.value as Frequency; setCreateFreq(f); setCreatePeriod(currentPeriod(f)); }} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-xs bg-white font-medium text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 focus:border-bss-interactive-blue">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select>
               </label>
             </div>
 

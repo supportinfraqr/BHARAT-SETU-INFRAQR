@@ -334,7 +334,9 @@ def verification_report_html(meta, report):
     logo_img = f"<img src='{logo}' alt='BSS' style='height:44px;width:auto;'>" if logo else ""
     t = report["totals"]
     crit_tone = "ok" if report["verdict"] == "Passed" else ("warn" if report["verdict"].startswith("Passed") else "bad")
-    ai_block = _render_ai(_ai_assessment(meta, report))
+    # The AI "executive assessment" narrative is intentionally not included in the
+    # verification report — the report is data-only (metrics, matrix, file audits).
+    ai_block = ""
 
     param_rows = []
     for p in report["parameters"]:

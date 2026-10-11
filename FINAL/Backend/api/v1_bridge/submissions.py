@@ -556,6 +556,14 @@ def contractor_compliance_batches(request):
         if not state:
             failures.append(f"Site \u201c{site.site_name}\u201d has no state — cannot choose registers.")
             continue
+        # Every BSS ID in this site's rows must be a worker bound to THIS
+        # contractor at THIS site (not any worker, not another site).
+        unlinked = _unlinked_bss_ids(user, site, group_rows)
+        if unlinked:
+            failures.append(f"{len(unlinked)} worker BSS ID(s) in the master for site "
+                            f"\u201c{site.site_name}\u201d are not linked to you at that site "
+                            f"(e.g., {', '.join(unlinked[:5])}).")
+            continue
         # Only generate for a state where the principal employer has adopted the
         # CLRA register forms for its sites.
         adopted_ids = employer_adopted_ids(site.employer, state, site=site) if site.employer_id else set()
@@ -828,6 +836,23 @@ def contractor_submissions_zip(request):
     return response
 
 
+def _unlinked_bss_ids(contractor, site, rows):
+    """BSS IDs in ``rows`` that are NOT an ACCEPTED worker↔contractor binding at
+    ``site``. A BSS ID in a master file must be a worker bound to this contractor
+    **at that site** — not merely any registered worker."""
+    from bss_core.models import WorkerContractorBinding
+    codes = {str(r.get("bssId") or "").strip() for r in rows}
+    codes.discard("")
+    if not codes:
+        return []
+    linked = set(
+        WorkerContractorBinding.objects
+        .filter(contractor=contractor, site=site, binding_status="ACCEPTED",
+                worker__worker_identity__bss_worker_id__in=codes)
+        .values_list("worker__worker_identity__bss_worker_id", flat=True))
+    return sorted(codes - linked)
+
+
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -933,6 +958,28 @@ def contractor_clra_validate(request):
                                        "message": f"{len(unknown)} BSS ID(s) are not registered in BSS (e.g., {', '.join(unknown[:5])})."})
     else:
         report["bss"] = {"checked": 0, "known": 0, "unknown": 0, "unknownSample": []}
+
+    # Each BSS ID must be a worker bound to THIS contractor at the master's site
+    # (not just any registered worker, and not at a different site).
+    label_site = {}
+    for s in Site.objects.filter(id__in=site_ids):
+        for key in (str(s.site_name or "").strip(), str(s.site_code or "").strip()):
+            if key:
+                label_site[key.casefold()] = s
+    by_site: dict = {}
+    for r in rows:
+        if not str(r.get("bssId") or "").strip():
+            continue
+        s = label_site.get(str(r.get("site") or r.get("location") or "").strip().casefold())
+        if s is None:
+            continue
+        by_site.setdefault(s.id, (s, []))[1].append(r)
+    for _sid, (s, srows) in by_site.items():
+        unlinked = _unlinked_bss_ids(user, s, srows)
+        if unlinked:
+            report["errors"].append({"row": 0, "field": "bssId",
+                                     "message": f"{len(unlinked)} worker BSS ID(s) are not linked to you at "
+                                                f"{s.site_name or s.site_code} (e.g., {', '.join(unlinked[:5])})."})
 
     return Response({"data": report}, status=status.HTTP_200_OK)
 

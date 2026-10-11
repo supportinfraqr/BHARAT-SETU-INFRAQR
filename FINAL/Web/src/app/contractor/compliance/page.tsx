@@ -48,6 +48,20 @@ function isFuturePeriod(period: string, year: number): boolean {
   return calYear * 12 + calMonth > now.getFullYear() * 12 + (now.getMonth() + 1);
 }
 
+// The current period label for a frequency (fiscal year Apr–Mar), from today.
+function currentPeriod(freq: Frequency, d: Date = new Date()): string {
+  const fi = (d.getMonth() + 9) % 12;   // 0=April … 11=March
+  if (freq === 'Quarterly') return QUARTER_PERIODS[Math.floor(fi / 3)];
+  if (freq === 'Half Yearly') return HALF_PERIODS[Math.floor(fi / 6)];
+  if (freq === 'Yearly') return FINANCIAL_PERIODS[0];
+  return MONTHS[fi];
+}
+
+// The FY start year for today (Jan–Mar belong to the previous fiscal year).
+function currentFyStartYear(d: Date = new Date()): number {
+  return d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1;
+}
+
 
 
 
@@ -58,14 +72,13 @@ export default function ContractorCompliancePage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   // Master file & CLRA generation state
-  const [yearChoice, setYearChoice] = useState<string>('');
+  const [yearChoice, setYearChoice] = useState<string>(() => String(currentFyStartYear()));
   const [freq, setFreq] = useState<Frequency>('Monthly');
-  const [period, setPeriod] = useState<string>(MONTHS[6]);
+  const [period, setPeriod] = useState<string>(() => currentPeriod('Monthly'));
   const month = periodMonth(period);
   const [siteName, setSiteName] = useState('');
   const [masterFile, setMasterFile] = useState<File | null>(null);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
-  const [includeNonDue, setIncludeNonDue] = useState(false);
   // PAN-India register template library for the selected state.
   const [templates, setTemplates] = useState<Array<{ id:number; state:string; formCode:string; title:string; columns:string[]; fileName:string; hasFile:boolean }>>([]);
 
@@ -232,7 +245,7 @@ export default function ContractorCompliancePage() {
       // Months Jan–Mar belong to the FY that started in the previous calendar year.
       const sendYear = ['January', 'February', 'March'].includes(month) ? String(Number(year) + 1) : year;
       form.set('month', month); form.set('year', sendYear); form.set('frequency', freq);
-      if (includeNonDue || freq !== 'Monthly') form.set('includeNonDue', '1');
+      if (freq !== 'Monthly') form.set('includeNonDue', '1');
       const response = await fetch('/api/portal/compliance-batches', { method: 'POST', body: form });
       const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['complianceBatches']; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error ?? 'Registers could not be generated.');
@@ -354,8 +367,8 @@ export default function ContractorCompliancePage() {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted mb-2">Step 1 · Select period</p>
             <div className="grid sm:grid-cols-3 gap-3">
-              <label className="block"><span className="text-[11px] font-semibold text-bss-text-secondary">Year</span><select value={year} onChange={e => { const y = e.target.value; setYearChoice(y); if (isFuturePeriod(period, Number(y))) setPeriod(periodsFor(freq)[0]); }} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm bg-white font-medium text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 focus:border-bss-interactive-blue transition-shadow">{yearOptions.map(y => <option key={y}>{y}</option>)}</select></label>
-              <label className="block"><span className="text-[11px] font-semibold text-bss-text-secondary">Frequency</span><select value={freq} onChange={e => { const f = e.target.value as Frequency; setFreq(f); setPeriod(periodsFor(f)[0]); }} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm bg-white font-medium text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 focus:border-bss-interactive-blue transition-shadow">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select></label>
+              <label className="block"><span className="text-[11px] font-semibold text-bss-text-secondary">Year</span><select value={year} onChange={e => { const y = e.target.value; setYearChoice(y); if (y === String(currentFyStartYear())) setPeriod(currentPeriod(freq)); else if (isFuturePeriod(period, Number(y))) setPeriod(periodsFor(freq)[0]); }} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm bg-white font-medium text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 focus:border-bss-interactive-blue transition-shadow">{yearOptions.map(y => <option key={y}>{y}</option>)}</select></label>
+              <label className="block"><span className="text-[11px] font-semibold text-bss-text-secondary">Frequency</span><select value={freq} onChange={e => { const f = e.target.value as Frequency; setFreq(f); setPeriod(currentPeriod(f)); }} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm bg-white font-medium text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 focus:border-bss-interactive-blue transition-shadow">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select></label>
               <label className="block"><span className="text-[11px] font-semibold text-bss-text-secondary">Period</span><select value={period} onChange={e => setPeriod(e.target.value)} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm bg-white font-medium text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 focus:border-bss-interactive-blue transition-shadow">{periodsFor(freq).map(p => { const future = isFuturePeriod(p, Number(year)); return <option key={p} value={p} disabled={future}>{p}{future ? ' — not yet due' : ''}</option>; })}</select></label>
             </div>
           </div>
@@ -387,9 +400,8 @@ export default function ContractorCompliancePage() {
               <button onClick={validateMaster} disabled={busy || !masterFile} className="h-9 px-3 rounded-lg border border-bss-border bg-white text-xs font-semibold text-bss-text-primary flex items-center gap-1.5 disabled:opacity-50 hover:bg-bss-bg hover:border-bss-interactive-blue transition-colors shadow-xs"><CheckCircle2 size={14}/>Validate File</button>
               <button onClick={generateRegisters} disabled={busy} className="h-9 px-4 rounded-lg bg-bss-interactive-blue text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-50 hover:bg-bss-deep-navy shadow-sm transition-colors"><Landmark size={14}/>{busy ? 'Generating registers…' : 'Generate CLRA Registers'}</button>
             </div>
-            <label className="flex items-center gap-2 text-[11px] font-semibold text-bss-text-secondary"><input type="checkbox" checked={includeNonDue} onChange={e => setIncludeNonDue(e.target.checked)} className="accent-bss-interactive-blue w-4 h-4"/>Include forms not due this period</label>
           </div>
-          <p className="flex items-start gap-2 text-[11px] text-bss-text-secondary bg-bss-bg rounded-lg px-3 py-2 border border-bss-border"><Info size={14} className="text-bss-interactive-blue mt-0.5 flex-shrink-0"/><span>Pick a <strong className="text-bss-text-primary">Frequency</strong> and <strong className="text-bss-text-primary">Period</strong>. Monthly generates every month; choosing Quarterly / Half-Yearly / Yearly generates only those forms for the selected period (a not-yet-due period is forced). Tick below to also include other forms not due this period.</span></p>
+          <p className="flex items-start gap-2 text-[11px] text-bss-text-secondary bg-bss-bg rounded-lg px-3 py-2 border border-bss-border"><Info size={14} className="text-bss-interactive-blue mt-0.5 flex-shrink-0"/><span>Pick a <strong className="text-bss-text-primary">Frequency</strong> and <strong className="text-bss-text-primary">Period</strong>. Monthly generates every month; choosing Quarterly / Half-Yearly / Yearly generates only those forms for the selected period (a not-yet-due period is forced).</span></p>
           {report && <div className="rounded-xl border border-bss-border overflow-hidden">
             <div className={`px-4 py-2.5 text-xs font-bold flex items-center gap-2 ${report.errors.length ? 'bg-bss-soft-orange text-bss-error' : 'bg-bss-soft-green text-bss-green'}`}>
               {report.errors.length ? <TriangleAlert size={14}/> : <CheckCircle2 size={14}/>}
