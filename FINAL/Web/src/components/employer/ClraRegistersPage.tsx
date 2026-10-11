@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Download, Loader2, Plus, Printer, ShieldCheck, X } from 'lucide-react';
 import { exportMatrixToXlsx } from '@/lib/exportXlsx';
+import { openPrintHtml } from '@/lib/documentEngine/render';
 
 type RegisterForm = {
   id: number; formCode: string; title: string;
@@ -300,7 +301,14 @@ export default function ClraRegistersPage() {
     exportMatrixToXlsx({ filename: `clra-registers-${board.state}-${new Date().toISOString().slice(0, 10)}`, head: ['Form', 'Title', 'Criticality', 'Columns', 'Adoption'], rows, sheetName: 'CLRA registers' });
   }
 
-  function printPdf() { window.print(); }
+  function printPdf() {
+    if (!board) return;
+    const esc = (v: unknown) => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+    const rows = board.forms.map(f => `<tr><td>${esc(f.formCode)}</td><td>${esc(f.title)}</td><td>${esc(f.criticality ?? '')}</td><td>${esc((f.columns ?? []).join(', '))}</td><td>${selected.has(f.id) ? 'Adopted' : 'Not adopted'}</td></tr>`).join('');
+    const extras = extraForms.map(f => `<tr><td>${esc(f.name)}</td><td>${esc(f.frequency)}</td><td>${f.mandatory ? 'Mandatory' : 'Optional'}</td><td>${f.requiresDocument ? 'Document upload' : 'Submission only'}</td></tr>`).join('');
+    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>CLRA Registers — ${esc(board.state)}</title><style>@page{size:A4;margin:12mm;}body{font-family:Arial,Segoe UI,sans-serif;color:#111827;font-size:11px;}h1{font-size:18px;color:#01183A;margin:0 0 4px;}h2{font-size:13px;color:#01183A;margin:14px 0 6px;}p{color:#6b7280;}table{width:100%;border-collapse:collapse;font-size:10px;}th,td{border:1px solid #cbd5e1;padding:3px 6px;text-align:left;}th{background:#eef2f7;}</style></head><body><h1>CLRA Registers — ${esc(board.state)}</h1><p>Generated ${new Date().toLocaleString('en-IN')} · ${selected.size} of ${board.total} adopted</p><h2>Registers</h2><table><thead><tr><th>Form</th><th>Title</th><th>Criticality</th><th>Columns</th><th>Adoption</th></tr></thead><tbody>${rows}</tbody></table>${extras ? `<h2>Additional forms</h2><table><thead><tr><th>Form</th><th>Frequency</th><th>Requirement</th><th>Format</th></tr></thead><tbody>${extras}</tbody></table>` : ''}</body></html>`;
+    openPrintHtml(html, `CLRA Registers — ${board.state}`);
+  }
 
   return <div className="space-y-6 pb-12">
     <header className="flex flex-col sm:flex-row justify-between gap-4">

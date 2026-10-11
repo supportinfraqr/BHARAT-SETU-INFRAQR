@@ -5,6 +5,7 @@ import { Activity, AlertTriangle, Loader2, RefreshCw, ChevronDown, Download, Pri
 import { useEmployer } from '@/contexts/EmployerContext';
 import { BarChart, HBar, Donut } from '@/components/charts';
 import { exportMatrixToXlsx } from '@/lib/exportXlsx';
+import { openPrintHtml } from '@/lib/documentEngine/render';
 import AttendanceDetailDialog from '@/components/attendance/AttendanceDetailDialog';
 import WorkforceExplorer from '@/components/analytics/WorkforceExplorer';
 import type { AttendanceRecord } from '@/types/portal';
@@ -132,7 +133,43 @@ export default function EmployerAnalyticsPage() {
     exportMatrixToXlsx({ filename: `employer-analytics-${tab}-${new Date().toISOString().slice(0, 10)}`, head: ['Metric', 'Value'], rows, sheetName: tab.slice(0, 31) });
   }
 
-  function printPdf() { window.print(); }
+  function printPdf() {
+    if (!data) return;
+    const esc = (v: unknown) => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+    const sections: string[] = [];
+    const bars = (label: string, arr: Array<Record<string, unknown>>) => {
+      const pairs = arr.map(i => ({ label: String(i.label ?? i.site ?? i.contractor ?? i.name ?? ''), value: Number(i.value ?? i.count ?? i.n ?? 0) }));
+      const max = Math.max(1, ...pairs.map(p => p.value));
+      sections.push(`<section><h3>${esc(label)}</h3>${pairs.map(p => `<div class="bar"><span>${esc(p.label)}</span><span class="track"><i style="width:${Math.round(p.value / max * 100)}%"></i></span><b>${p.value.toLocaleString('en-IN')}</b></div>`).join('')}</section>`);
+    };
+    const walk = (label: string, val: unknown) => {
+      if (val === null || val === undefined || val === '') return;
+      if (Array.isArray(val)) {
+        if (!val.length) return;
+        const first = val[0];
+        if (first && typeof first === 'object' && ('value' in first || 'count' in first)) { bars(label, val as Array<Record<string, unknown>>); return; }
+        const keys = Object.keys(first ?? {});
+        sections.push(`<section><h3>${esc(label)}</h3><table><thead><tr>${keys.map(k => `<th>${esc(k)}</th>`).join('')}</tr></thead><tbody>${val.slice(0, 300).map(r => `<tr>${keys.map(k => `<td>${esc((r as Record<string, unknown>)[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></section>`);
+        return;
+      }
+      if (typeof val === 'object') { Object.entries(val as Record<string, unknown>).forEach(([k, v]) => walk(`${label ? `${label} · ` : ''}${k}`, v)); return; }
+      sections.push(`<div class="kv"><span>${esc(label)}</span><b>${esc(val)}</b></div>`);
+    };
+    Object.entries(data).forEach(([k, v]) => walk(k, v));
+    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Workforce Analytics</title><style>
+    @page { size:A4; margin:12mm; }
+    body{font-family:Arial,Segoe UI,sans-serif;color:#111827;font-size:11px;}
+    h1{font-size:18px;color:#01183A;margin:0 0 2px;} .sub{color:#6b7280;font-size:11px;margin-bottom:12px;}
+    h3{font-size:11px;margin:10px 0 4px;color:#1E3A8A;text-transform:capitalize;}
+    .kv{display:flex;justify-content:space-between;border:1px solid #e5e7eb;padding:3px 6px;margin:2px 0;}
+    .bar{display:flex;align-items:center;gap:6px;margin:2px 0;} .bar>span{width:38%;} .bar .track{flex:1;height:9px;background:#eef2f7;border-radius:4px;overflow:hidden;} .bar .track>i{display:block;height:100%;background:#1E3A8A;} .bar>b{width:72px;text-align:right;}
+    table{width:100%;border-collapse:collapse;font-size:10px;} th,td{border:1px solid #cbd5e1;padding:3px 5px;text-align:left;}
+    section{page-break-inside:avoid;}</style></head><body>
+    <h1>Workforce Analytics</h1>
+    <div class="sub">${esc(employer.identity.company)} · ${esc(tab)} tab · generated ${new Date().toLocaleString('en-IN')}</div>
+    ${sections.join('')}</body></html>`;
+    openPrintHtml(html, 'Workforce Analytics');
+  }
 
   return <div className="space-y-5 pb-12">
     <header className="bss-reveal bss-gradient-hero bss-elevated relative overflow-hidden rounded-2xl p-5 sm:p-6 text-white">
