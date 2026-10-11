@@ -146,7 +146,7 @@ export default function OrganizationIdentityCard({
             {/* QR zone — identical geometry, BSS logo overlay (worker parity) */}
             <div className={`${standard ? 'w-[122px]' : 'w-[92px]'} flex-shrink-0 ${standard ? 'flex flex-col justify-end items-center pb-0.5' : 'flex flex-col justify-end items-center'}`}>
               <div className={`relative bg-white p-1 rounded-[6px] shadow-[0_4px_12px_rgba(0,0,0,0.3)] flex items-center justify-center border border-slate-200 ${standard ? 'w-[116px] h-[116px]' : 'w-[84px] h-[84px]'}`}>
-                <WorkerQr bssId={content.entityId} size={standard ? 400 : 256} />
+                <WorkerQr bssId={content.entityId} size={standard ? 400 : 256} margin={1} />
                 <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="w-[13px] h-[13px] bg-white rounded-[3px] grid place-items-center shadow-sm"><img src="/bss-original-logo.png" alt="" className="w-[10px] h-[10px] object-contain" /></span></span>
               </div>
               <p className="text-[5px] text-slate-300 uppercase font-bold tracking-[0.12em] mt-1.5 whitespace-nowrap">Scan to Verify</p>
@@ -187,7 +187,7 @@ export default function OrganizationIdentityCard({
 
             <div className="flex-1 flex flex-col items-center justify-center w-full my-1">
               <div className="relative bg-white p-1.5 rounded-md shadow-lg w-[120px] h-[120px] flex items-center justify-center z-10 border-2 border-slate-300 flex-shrink-0">
-                <WorkerQr bssId={content.entityId} size={320} />
+                <WorkerQr bssId={content.entityId} size={320} margin={1} />
                 <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="w-[22px] h-[22px] bg-white rounded-[4px] grid place-items-center shadow-sm"><img src="/bss-original-logo.png" alt="" className="w-[16px] h-[16px] object-contain" /></span></span>
               </div>
               <p className="text-[7px] font-bold uppercase tracking-widest text-white/90 z-10 mt-1">Scan to Verify</p>
