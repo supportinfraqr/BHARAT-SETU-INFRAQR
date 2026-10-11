@@ -22,6 +22,9 @@ import requests
 GUPSHUP_MSG_URL = "https://api.gupshup.io/wa/api/v1/msg"
 GUPSHUP_TEMPLATE_URL = "https://api.gupshup.io/wa/api/v1/template/msg"
 
+# Approved "bharat_shram_setu_account_created" template (Text, en, no variables).
+DEFAULT_ACCOUNT_CREATED_TEMPLATE_ID = "fff36b04-9d58-42d0-a81a-8a09f7e527e6"
+
 
 def _config():
     return {
@@ -92,15 +95,15 @@ def send_template(mobile, template_id, params):
 
 def send_account_created(mobile):
     """Send the approved 'bharat_shram_setu_account_created' template (Text, en,
-    no variables). The template reference is ``GUPSHUP_ACCOUNT_CREATED_TEMPLATE_ID``
-    falling back to the template name."""
+    no variables). The template id is ``GUPSHUP_ACCOUNT_CREATED_TEMPLATE_ID``
+    (Gupshup temp id), falling back to the shipped id."""
     cfg = _config()
     if not cfg["enabled"]:
         return {"ok": False, "error": "WhatsApp delivery disabled"}
     if not cfg["api_key"]:
         return {"ok": False, "error": "GUPSHUP_API_KEY not configured"}
     template_id = (os.environ.get("GUPSHUP_ACCOUNT_CREATED_TEMPLATE_ID", "").strip()
-                   or "bharat_shram_setu_account_created")
+                   or DEFAULT_ACCOUNT_CREATED_TEMPLATE_ID)
     return send_template(mobile, template_id, [])
 
 
