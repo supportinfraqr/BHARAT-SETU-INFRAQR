@@ -202,7 +202,9 @@ def _refresh_counts(batch, state=None):
     counts = {
         "total": len(rows),
         "ok": sum(1 for r in rows if r.status in ("OK", "MIGRATED")),
+        "failed": sum(1 for r in rows if r.status in ("FLAGGED", "REJECTED")),
         "flagged": sum(1 for r in rows if r.status == "FLAGGED"),
+        "rejected": sum(1 for r in rows if r.status == "REJECTED"),
         "migrated": sum(1 for r in rows if r.status == "MIGRATED"),
         "byEntity": {},
     }
@@ -546,6 +548,78 @@ def admin_onboarding_review(request, batch_id):
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
+def admin_onboarding_import(request):
+    """Admin imports a workbook directly → a new, unique quarantine batch.
+
+    Each upload is its own submission with its own records, so successes and
+    failures are reported per submission."""
+    from django.core.files.base import ContentFile
+    from bss_core.models import OnboardingBatch, OnboardingRecord
+
+    from .admin_console import log_audit
+
+    if request.user.role not in ("bss_admin", "admin", "bss_staff"):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    upload = request.FILES.get("file") or request.FILES.get("master")
+    if upload is None:
+        return Response({"error": "Choose the data file (.xlsx)."}, status=status.HTTP_400_BAD_REQUEST)
+    raw = upload.read()
+    try:
+        grouped = _parse_workbook(raw)
+    except ValueError as exc:
+        return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    grouped = {k: v for k, v in grouped.items() if k in ("EMPLOYER", "CONTRACTOR")}
+    if not grouped:
+        return Response({"error": "No Employers or Contractors sheet found in the file."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    batch = OnboardingBatch(
+        source="ADMIN_UPLOAD", employer=None, submitted_by=request.user, state="SUBMITTED",
+        file_name=os.path.basename(upload.name or "onboarding.xlsx"),
+        file_checksum=hashlib.sha256(raw).hexdigest(),
+        consent_given=True, consent_at=timezone.now(), consent_version="admin",
+        declaration=str(request.data.get("declaration") or "")[:2000])
+    batch.original_file.save(batch.file_name or "onboarding.xlsx", ContentFile(raw), save=False)
+    batch.save()
+    for etype in ("EMPLOYER", "CONTRACTOR"):
+        for idx, row in enumerate(grouped.get(etype, [])):
+            OnboardingRecord.objects.create(batch=batch, entity_type=etype, row_index=idx, raw_data=row)
+    _refresh_counts(batch)
+    log_audit(request.user, "CREATE", "onboarding_batch", batch.id,
+              after={"summary": f"Admin onboarding import #{batch.id} ({batch.counts.get('total', 0)} rows)"})
+    return Response({"data": _batch_detail(batch)}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def admin_onboarding_approve(request, batch_id):
+    """Admin approval — for admin-imported batches (there is no employer).
+
+    Marks the structured batch APPROVED so the pipeline can migrate it."""
+    from .admin_console import log_audit
+
+    if request.user.role not in ("bss_admin", "admin", "bss_staff"):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    batch = _visible_batch(request.user, batch_id)
+    if batch is None:
+        return Response({"error": "Batch not found."}, status=status.HTTP_404_NOT_FOUND)
+    if batch.state not in ("STRUCTURED", "CLEANED"):
+        return Response({"error": f"Batch is {batch.state}; approval needs STRUCTURED."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    batch.employer_reviewed_by = request.user
+    batch.employer_reviewed_at = timezone.now()
+    batch.employer_review_note = str((request.data or {}).get("note") or "")[:2000]
+    batch.state = "APPROVED"
+    batch.save(update_fields=["state", "employer_reviewed_by", "employer_reviewed_at",
+                              "employer_review_note", "updated_at"])
+    log_audit(request.user, "UPDATE", "onboarding_batch", batch.id,
+              after={"summary": f"Admin approved onboarding batch #{batch.id}"})
+    return Response({"data": _batch_detail(batch)}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def admin_onboarding_clean(request, batch_id):
     if request.user.role not in ("bss_admin", "admin", "bss_staff"):
         return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
@@ -638,6 +712,7 @@ __all__ = [
     "employer_onboarding_template",
     "admin_onboarding_batches", "admin_onboarding_review", "admin_onboarding_clean",
     "admin_onboarding_structure", "admin_onboarding_migrate", "onboarding_batch_detail",
+    "admin_onboarding_import", "admin_onboarding_approve",
     "worker_onboarding_status", "worker_onboarding_consent",
     "clean_batch", "structure_batch", "migrate_batch",
 ]

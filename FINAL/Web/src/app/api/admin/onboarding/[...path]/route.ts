@@ -28,9 +28,12 @@ export async function POST(request: Request, context: Context) {
     const { path } = await context.params;
     const session = await requireApiSession('BSS Admin');
     const config = getRuntimeConfig();
-    const body = await readJsonObject(request);
+    const contentType = request.headers.get('content-type') || '';
+    const body = contentType.includes('multipart/form-data')
+      ? await request.formData()
+      : JSON.stringify(await readJsonObject(request));
     const result = await upstreamRequest(config.apiBaseUrl, `/v1/admin/onboarding/${path.join('/')}`, session, {
-      method: 'POST', body: JSON.stringify(body),
+      method: 'POST', body,
     });
     return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) { return apiError(error, 'The onboarding action failed.'); }
