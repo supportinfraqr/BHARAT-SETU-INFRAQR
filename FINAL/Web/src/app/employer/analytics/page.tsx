@@ -1,11 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Activity, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Activity, AlertTriangle, Loader2, RefreshCw, ChevronDown, X } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import { BarChart, HBar, Donut } from '@/components/charts';
+import AttendanceDetailDialog from '@/components/attendance/AttendanceDetailDialog';
+import type { AttendanceRecord } from '@/types/portal';
 
 type Series = { label: string; value: number };
+type WorkerRow = { worker: string; bssId: string; site: string; siteId?: number; contractor: string; status: 'on_site' | 'checked_out' | 'not_arrived'; checkIn?: string; checkOut?: string; lastSource?: string; lastType?: string; lastAt?: string; punches?: number };
+const STATUS_META: Record<WorkerRow['status'], { label: string; cls: string }> = {
+  on_site: { label: 'On site', cls: 'bg-bss-soft-green text-bss-green' },
+  checked_out: { label: 'Checked out', cls: 'bg-bss-blue-tint text-bss-interactive-blue' },
+  not_arrived: { label: 'Not arrived', cls: 'bg-bss-soft-orange text-bss-orange' },
+};
+const E_ATT_STATUS: Record<string, string> = { PRESENT: 'Present', ABSENT: 'Absent', LEAVE: 'Leave', HOLIDAY: 'Holiday', HALF_DAY: 'Half Day', LATE: 'Late', EXPECTED: 'Expected' };
+type EmpAttRow = { id?: string; date: string; worker?: string; bssId?: string; site: string; status?: string; statusCode?: string; source?: string; capture?: string; checkIn?: string; checkOut?: string; events?: Array<Record<string, unknown>> } & Record<string, unknown>;
+function toAttendanceRecord(r: EmpAttRow): AttendanceRecord {
+  return { ...(r as unknown as AttendanceRecord), presence: (E_ATT_STATUS[r.statusCode || r.status || ''] ?? 'Present') as AttendanceRecord['presence'], events: r.events as unknown as AttendanceRecord['events'] };
+}
 type Kpis = {
   workers: number; activeSites: number; contractors: number; attendanceRate: number;
   presentToday: number; absentToday: number; payrollProcessed: number; payrollExceptions: number;
@@ -15,9 +28,10 @@ type Kpis = {
 type LiveData = {
   generatedAt: string; onSiteNow: number; boundWorkers: number;
   today: { present: number; onSite: number; checkedOut: number; notArrived: number };
-  bySite: Array<{ site: string; workers: number; onSite: number; present: number }>;
-  byContractor: Array<{ contractor: string; workers: number; onSite: number; present: number }>;
-  hourlyArrivals: Series[];
+  bySite: Array<{ site: string; workers: number; onSite: number; present: number; workerList?: WorkerRow[] }>;
+  byContractor: Array<{ contractor: string; workers: number; onSite: number; present: number; workerList?: WorkerRow[] }>;
+  workers?: WorkerRow[];
+  hourlyArrivals: Array<Series & { workers?: string[] }>;
   recentEvents: Array<{ worker: string; bssId: string; site: string; source: string; type: string; at: string }>;
 };
 type AnalyticsData = {
@@ -171,7 +185,22 @@ function StatGrid({ items }: { items: Array<{ label: string; value: string | num
   return <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{items.map(i => <Stat key={i.label} {...i}/>)}</div>;
 }
 
-function LiveByTable({ rows, firstLabel }: { rows: Array<{ label: string; workers: number; onSite: number; present: number }>; firstLabel: string }) {
+function WorkerChips({ list, onWorker }: { list: WorkerRow[]; onWorker: (w: WorkerRow) => void }) {
+  if (!list.length) return <p className="text-[11px] text-bss-text-muted px-3 py-2.5">No workers.</p>;
+  return <div className="grid sm:grid-cols-2 gap-1.5 px-3 py-2.5 bg-bss-bg/60">
+    {list.map((w, i) => {
+      const m = STATUS_META[w.status];
+      return <button key={i} type="button" onClick={() => onWorker(w)} className="flex items-center gap-2 rounded-lg border border-bss-border bg-white px-2.5 py-2 text-left hover:border-bss-interactive-blue transition-colors">
+        <span className="w-6 h-6 rounded-full bg-bss-navy text-white grid place-items-center text-[10px] font-bold flex-shrink-0">{w.worker.charAt(0)}</span>
+        <span className="min-w-0 flex-1"><span className="block text-[11px] font-semibold text-bss-text-primary truncate">{w.worker}</span><span className="block text-[10px] font-mono text-bss-text-muted truncate">{w.bssId}</span></span>
+        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${m.cls}`}>{m.label}</span>
+      </button>;
+    })}
+  </div>;
+}
+
+function LiveByTable({ rows, firstLabel, onWorker }: { rows: Array<{ label: string; workers: number; onSite: number; present: number; workerList?: WorkerRow[] }>; firstLabel: string; onWorker: (w: WorkerRow) => void }) {
+  const [open, setOpen] = useState<string | null>(null);
   if (!rows.length) return <p className="text-xs text-bss-text-muted">Nothing in scope.</p>;
   return <div className="overflow-hidden rounded-xl border border-bss-border">
     <table className="w-full text-xs">
@@ -184,21 +213,121 @@ function LiveByTable({ rows, firstLabel }: { rows: Array<{ label: string; worker
         </tr>
       </thead>
       <tbody className="divide-y divide-bss-border">
-        {rows.map((r, i) => <tr key={i}>
-          <td className="px-3 py-2 font-semibold text-bss-text-primary truncate max-w-[180px]">{r.label}</td>
-          <td className="px-2 py-2 text-center text-bss-text-secondary">{r.workers}</td>
-          <td className="px-2 py-2 text-center font-bold text-bss-green">{r.onSite}</td>
-          <td className="px-2 py-2 text-center text-bss-text-secondary">{r.present}</td>
-        </tr>)}
+        {rows.map((r, i) => {
+          const has = (r.workerList?.length ?? 0) > 0;
+          const isOpen = open === r.label;
+          return <Fragment key={i}>
+            <tr onClick={() => has && setOpen(isOpen ? null : r.label)} className={has ? 'cursor-pointer hover:bg-bss-bg/60' : ''}>
+              <td className="px-3 py-2 font-semibold text-bss-text-primary truncate max-w-[180px]">
+                <span className="inline-flex items-center gap-1.5">{has && <ChevronDown size={12} className={`text-bss-text-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} />}{r.label}</span>
+              </td>
+              <td className="px-2 py-2 text-center text-bss-text-secondary">{r.workers}</td>
+              <td className="px-2 py-2 text-center font-bold text-bss-green">{r.onSite}</td>
+              <td className="px-2 py-2 text-center text-bss-text-secondary">{r.present}</td>
+            </tr>
+            {isOpen && has && <tr><td colSpan={4} className="p-0"><WorkerChips list={r.workerList!} onWorker={onWorker} /></td></tr>}
+          </Fragment>;
+        })}
       </tbody>
     </table>
   </div>;
 }
 
+function HourlyChart({ data }: { data: Array<Series & { workers?: string[] }> }) {
+  const [sel, setSel] = useState<string | null>(null);
+  if (!data.length) return <p className="text-xs text-bss-text-muted">No data.</p>;
+  const total = data.reduce((s, d) => s + d.value, 0);
+  const max = Math.max(1, ...data.map(d => d.value));
+  const peak = data.reduce((best, d) => (d.value > best.value ? d : best), data[0]);
+  const selected = sel ? data.find(d => d.label === sel) : null;
+  return <div>
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs mb-3">
+      <span className="text-bss-text-secondary">Total check-ins: <strong className="text-bss-text-primary">{total}</strong></span>
+      {total > 0 && <span className="text-bss-text-secondary">Busiest hour: <strong className="text-bss-text-primary">{peak.label}</strong> ({peak.value})</span>}
+      <span className="text-bss-text-muted">Tap a bar for who checked in</span>
+    </div>
+    <div className="flex items-end gap-0.5 h-40 border-b border-bss-border">
+      {data.map((d, i) => {
+        const active = sel === d.label;
+        return <button key={i} type="button" onClick={() => setSel(active ? null : d.label)} title={`${d.label} · ${d.value} check-in(s)`} className="group flex-1 flex flex-col items-center justify-end h-full">
+          {d.value > 0 && <span className="text-[9px] font-bold text-bss-text-primary leading-none mb-0.5">{d.value}</span>}
+          <span className={`w-full rounded-t transition-all ${d.value === 0 ? 'bg-bss-bg' : active ? 'bg-bss-orange' : d.value === max ? 'bg-bss-green' : 'bg-bss-interactive-blue'}`} style={{ height: `${Math.max(3, (d.value / max) * 100)}%` }} />
+        </button>;
+      })}
+    </div>
+    <div className="flex gap-0.5 mt-1">
+      {data.map((d, i) => <span key={i} className="flex-1 text-center text-[8px] text-bss-text-muted">{i % 3 === 0 ? d.label.slice(0, 2) : ''}</span>)}
+    </div>
+    {selected && <div className="mt-3 rounded-xl border border-bss-border bg-bss-bg p-3 text-xs">
+      <p className="font-semibold text-bss-text-primary">{selected.label} — {selected.value} check-in{selected.value === 1 ? '' : 's'}</p>
+      {selected.workers?.filter(Boolean).length ? <p className="text-bss-text-secondary mt-1">{selected.workers.filter(Boolean).join(', ')}</p> : <p className="text-bss-text-muted mt-1">No check-ins in this hour.</p>}
+    </div>}
+  </div>;
+}
+
+function WorkerDetailDialog({ row, onClose }: { row: WorkerRow; onClose: () => void }) {
+  const [rows, setRows] = useState<EmpAttRow[]>([]);
+  const [busy, setBusy] = useState(true);
+  const [sel, setSel] = useState<AttendanceRecord | null>(null);
+  useEffect(() => {
+    let active = true;
+    const m = new Date().toISOString().slice(0, 7);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- refetch when the worker changes
+    setBusy(true);
+    fetch(`/api/employer/attendance/records?month=${m}`, { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((b: { data?: EmpAttRow[] } | null) => { if (active) setRows((b?.data ?? []).filter(x => x.bssId === row.bssId)); })
+      .catch(() => {})
+      .finally(() => { if (active) setBusy(false); });
+    return () => { active = false; };
+  }, [row.bssId]);
+  const meta = STATUS_META[row.status];
+  const t = (v?: string) => (v ? new Date(v).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—');
+  return <div className="fixed inset-0 z-[130] grid place-items-center bg-bss-navy/40 backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="w-full max-w-lg bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[88vh]" onClick={e => e.stopPropagation()}>
+      <header className="relative overflow-hidden bg-gradient-to-br from-bss-navy via-bss-deep-navy to-bss-interactive-blue text-white px-5 py-4 flex items-start justify-between gap-3">
+        <div className="relative z-10 min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/60">Worker</p>
+          <h3 className="text-lg font-bold mt-0.5 truncate">{row.worker}</h3>
+          <p className="text-[11px] text-white/70 mt-0.5 truncate"><span className="font-mono">{row.bssId}</span>{row.site ? ` · ${row.site}` : ''}{row.contractor ? ` · ${row.contractor}` : ''}</p>
+        </div>
+        <div className="relative z-10 flex items-center gap-2 flex-shrink-0">
+          <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${meta.cls}`}>{meta.label}</span>
+          <button onClick={onClose} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg bg-white/10 hover:bg-white/20"><X size={18}/></button>
+        </div>
+      </header>
+      <div className="p-5 space-y-4 overflow-y-auto">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 rounded-2xl bg-bss-bg border border-bss-border"><span className="text-[10px] uppercase font-bold text-bss-text-muted block">Today in – out</span><span className="text-sm font-bold text-bss-text-primary">{t(row.checkIn)} – {t(row.checkOut)}</span></div>
+          <div className="p-3 rounded-2xl bg-bss-bg border border-bss-border"><span className="text-[10px] uppercase font-bold text-bss-text-muted block">Punches today</span><span className="text-sm font-bold text-bss-text-primary">{row.punches ?? 0}</span></div>
+          <div className="p-3 rounded-2xl bg-bss-bg border border-bss-border"><span className="text-[10px] uppercase font-bold text-bss-text-muted block">Last source</span><span className="text-sm font-bold text-bss-text-primary">{row.lastSource || '—'}{row.lastType ? ` ${row.lastType}` : ''}</span></div>
+          <div className="p-3 rounded-2xl bg-bss-bg border border-bss-border"><span className="text-[10px] uppercase font-bold text-bss-text-muted block">Last punch</span><span className="text-sm font-bold text-bss-text-primary">{t(row.lastAt)}</span></div>
+        </div>
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-bss-text-muted mb-2">Attendance history this month</p>
+          {busy ? <p className="text-xs text-bss-text-muted flex items-center gap-2"><Loader2 size={13} className="animate-spin" />Loading…</p>
+            : rows.length ? <ul className="divide-y divide-bss-border rounded-xl border border-bss-border overflow-hidden">{rows.map((r, i) => {
+                const s = r.statusCode || r.status || '';
+                return <li key={i}><button type="button" onClick={() => setSel(toAttendanceRecord(r))} className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-xs hover:bg-bss-bg">
+                  <span className="font-semibold text-bss-text-primary w-24 text-left">{new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+                  <span className="text-bss-text-secondary flex-1 text-left">{r.checkIn || '—'} – {r.checkOut || '—'}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${s === 'PRESENT' ? 'bg-bss-soft-green text-bss-green' : s === 'ABSENT' ? 'bg-bss-soft-orange text-bss-error' : 'bg-bss-soft-orange text-bss-orange'}`}>{E_ATT_STATUS[s] ?? (s || '—')}</span>
+                  <ChevronDown size={12} className="-rotate-90 text-bss-text-muted" />
+                </button></li>;
+              })}</ul>
+            : <p className="text-xs text-bss-text-muted">No attendance records this month.</p>}
+        </div>
+      </div>
+    </div>
+    {sel && <AttendanceDetailDialog record={sel} subtitle={`${row.worker} · ${row.bssId}`} onClose={() => setSel(null)} />}
+  </div>;
+}
+
 function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n?: number) => string }) {
+  const [drill, setDrill] = useState<WorkerRow | null>(null);
   if (tab === 'live') {
-    const bySite = (data.bySite ?? []) as Array<{ site: string; workers: number; onSite: number; present: number }>;
-    const byContractor = (data.byContractor ?? []) as Array<{ contractor: string; workers: number; onSite: number; present: number }>;
+    const bySite = (data.bySite ?? []) as LiveData['bySite'];
+    const byContractor = (data.byContractor ?? []) as LiveData['byContractor'];
     return <div className="space-y-5">
       <StatGrid items={[
         { label: 'On site now', value: data.onSiteNow ?? 0, tone: 'text-bss-green' },
@@ -209,20 +338,26 @@ function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n
         { label: 'Punches today', value: (data.recentEvents ?? []).length },
       ]}/>
       <div className="grid lg:grid-cols-2 gap-5">
-        <Card title="By site" subtitle="Bound workers · on site now · present today"><LiveByTable firstLabel="Site" rows={bySite.map(s => ({ label: s.site, workers: s.workers, onSite: s.onSite, present: s.present }))}/></Card>
-        <Card title="By contractor" subtitle="Bound workers · on site now · present today"><LiveByTable firstLabel="Contractor" rows={byContractor.map(c => ({ label: c.contractor, workers: c.workers, onSite: c.onSite, present: c.present }))}/></Card>
+        <Card title="By site" subtitle="Tap a site to see its workers"><LiveByTable firstLabel="Site" rows={bySite.map(s => ({ label: s.site, workers: s.workers, onSite: s.onSite, present: s.present, workerList: s.workerList }))} onWorker={setDrill}/></Card>
+        <Card title="By contractor" subtitle="Tap a contractor to see its workers"><LiveByTable firstLabel="Contractor" rows={byContractor.map(c => ({ label: c.contractor, workers: c.workers, onSite: c.onSite, present: c.present, workerList: c.workerList }))} onWorker={setDrill}/></Card>
       </div>
       <Card title="Today's snapshot"><Donut slices={[
         { label: 'On site', value: data.today?.onSite ?? 0, color: '#14843C' },
         { label: 'Checked out', value: data.today?.checkedOut ?? 0, color: '#1E3A8A' },
         { label: 'Not arrived', value: data.today?.notArrived ?? 0, color: '#F59E0B' },
       ]}/></Card>
-      <Card title="Hourly arrivals (check-ins)" subtitle="Today"><BarChart data={data.hourlyArrivals ?? []} color="#1E3A8A"/></Card>
-      <Card title="Live event feed" subtitle="Latest punches — any source">
+      <Card title="Hourly arrivals (check-ins)" subtitle="Today — tap a bar to see who checked in"><HourlyChart data={data.hourlyArrivals ?? []} /></Card>
+      <Card title="Live event feed" subtitle="Latest punches — any source · tap to open the worker">
         {data.recentEvents && data.recentEvents.length
-          ? <ul className="divide-y divide-bss-border">{data.recentEvents.map((e, i) => <li key={i} className="py-2 flex items-center justify-between text-xs"><span className="text-bss-text-secondary"><strong>{e.worker}</strong> · <span className="font-mono text-[11px] text-bss-text-muted">{e.bssId}</span> · {e.site}</span><span className="flex items-center gap-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${e.type === 'IN' ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-blue-tint text-bss-interactive-blue'}`}>{e.source} {e.type}</span><span className="text-bss-text-muted">{e.at ? new Date(e.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}</span></span></li>)}</ul>
+          ? <ul className="divide-y divide-bss-border">{data.recentEvents.map((e, i) => <li key={i}>
+              <button type="button" onClick={() => setDrill({ worker: e.worker, bssId: e.bssId, site: e.site, contractor: '', status: e.type === 'IN' ? 'on_site' : 'checked_out', lastSource: e.source, lastType: e.type, lastAt: e.at })} className="w-full py-2 flex items-center justify-between gap-2 text-xs text-left hover:bg-bss-bg rounded-lg px-2 -mx-2 transition-colors">
+                <span className="text-bss-text-secondary min-w-0 truncate"><strong>{e.worker}</strong> · <span className="font-mono text-[11px] text-bss-text-muted">{e.bssId}</span> · {e.site}</span>
+                <span className="flex items-center gap-2 flex-shrink-0"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${e.type === 'IN' ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-blue-tint text-bss-interactive-blue'}`}>{e.source} {e.type}</span><span className="text-bss-text-muted">{e.at ? new Date(e.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}</span></span>
+              </button>
+            </li>)}</ul>
           : <p className="text-xs text-bss-text-muted">No punches yet today.</p>}
       </Card>
+      {drill && <WorkerDetailDialog row={drill} onClose={() => setDrill(null)} />}
     </div>;
   }
 

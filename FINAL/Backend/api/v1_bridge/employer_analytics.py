@@ -179,9 +179,57 @@ def _live(user, site_id, contractor_id):
             row["onSite"] += 1
 
     hourly = {f"{h:02d}:00": 0 for h in range(24)}
+    hourly_workers = {f"{h:02d}:00": [] for h in range(24)}
+    name_by_worker = {b.worker_id: _worker_name(b.worker) for b in bindings}
     for a in atts:
         if a.check_in_time:
-            hourly[timezone.localtime(a.check_in_time).strftime("%H:00")] += 1
+            k = timezone.localtime(a.check_in_time).strftime("%H:00")
+            hourly[k] += 1
+            hourly_workers[k].append(name_by_worker.get(a.worker_id, ""))
+
+    events_all = list(AttendanceEvent.objects
+                      .filter(worker_id__in=bound_ids, attendance_date=today)
+                      .select_related("worker", "site").order_by("at"))
+    last_event = {}
+    for e in events_all:
+        last_event[e.worker_id] = e
+
+    def status_of(wid):
+        if wid in on_site_ids:
+            return "on_site"
+        if wid in out_ids:
+            return "checked_out"
+        return "not_arrived"
+
+    def worker_row(b):
+        w = b.worker_id
+        a = by_worker.get(w)
+        le = last_event.get(w)
+        return {
+            "worker": _worker_name(b.worker),
+            "bssId": _worker_bss(b.worker),
+            "site": b.site.site_name if b.site else "",
+            "siteId": b.site_id,
+            "contractor": _org(b.contractor),
+            "status": status_of(w),
+            "checkIn": payloads._dts(a.check_in_time) if a and a.check_in_time else "",
+            "checkOut": payloads._dts(a.check_out_time) if a and a.check_out_time else "",
+            "lastSource": le.source if le else "",
+            "lastType": le.event_type if le else "",
+            "lastAt": payloads._dts(le.at) if le else "",
+            "punches": sum(1 for e in events_all if e.worker_id == w),
+        }
+
+    worker_rows = [worker_row(b) for b in bindings]
+
+    by_site_rows, by_con_rows = {}, {}
+    for r in worker_rows:
+        by_site_rows.setdefault(r["site"], []).append(r)
+        by_con_rows.setdefault(r["contractor"], []).append(r)
+    for row in by_site:
+        row["workerList"] = by_site_rows.get(row["site"], [])
+    for row in contractor_map.values():
+        row["workerList"] = by_con_rows.get(row["contractor"], [])
 
     events = (AttendanceEvent.objects
               .filter(worker_id__in=bound_ids, attendance_date=today)
@@ -200,7 +248,8 @@ def _live(user, site_id, contractor_id):
                   "checkedOut": len(out_ids), "notArrived": len(bound_ids) - len(present_ids)},
         "bySite": by_site,
         "byContractor": sorted(contractor_map.values(), key=lambda r: -r["workers"]),
-        "hourlyArrivals": [{"label": k, "value": v} for k, v in hourly.items()],
+        "workers": worker_rows,
+        "hourlyArrivals": [{"label": k, "value": v, "workers": hourly_workers[k]} for k, v in hourly.items()],
         "recentEvents": recent,
     }
 
