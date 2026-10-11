@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { formatDate } from '@/lib/date';
+import UnderDevelopmentBanner from '@/components/worker/UnderDevelopmentBanner';
 import { CheckCircle2, Database, Download, FileSpreadsheet, KeyRound, Loader2, Plus, RefreshCw, Save, Upload, X } from 'lucide-react';
 
 type FieldMapRow = { field: string; label: string; sapFields: string[] };
@@ -158,11 +159,18 @@ export default function SapSettingsPage() {
 
   if (loading) return <p className="flex items-center gap-2 text-sm text-bss-text-muted py-10"><Loader2 size={16} className="animate-spin"/>Loading SAP settings…</p>;
 
-  return <div className="space-y-6 pb-12">
+  return <div className="relative space-y-6 pb-12">
+    <div aria-hidden className="pointer-events-none select-none absolute inset-0 z-[60] overflow-hidden">
+      <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-x-20 gap-y-28 -rotate-[24deg] scale-[1.6]">
+        {Array.from({ length: 14 }).map((_, i) => <span key={i} className="text-2xl sm:text-3xl font-black uppercase tracking-[0.28em] text-black/5 whitespace-nowrap">Under Development</span>)}
+      </div>
+    </div>
+    <div className="relative z-10 space-y-6">
     <header className="flex flex-col sm:flex-row justify-between gap-4">
       <div><p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Integrations</p><h1 className="text-2xl font-bold mt-1">SAP Settings</h1><p className="text-sm text-bss-text-muted mt-1">Connect your SAP so you can populate contractor profiles from your vendor/Business-Partner master. Secrets are stored encrypted.</p></div>
       <a href="/api/employer/sap/setup-document" className="h-10 px-4 rounded-lg border border-bss-border text-sm font-semibold flex items-center gap-2 bg-white hover:bg-bss-bg self-start whitespace-nowrap"><Download size={15}/>Setup &amp; IP-whitelisting doc</a>
     </header>
+    <UnderDevelopmentBanner note="SAP settings is under development. Saved configuration may change." />
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
@@ -272,5 +280,6 @@ export default function SapSettingsPage() {
         </div>
       </div>
     </section>
+    </div>
   </div>;
 }
