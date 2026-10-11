@@ -687,10 +687,63 @@ def admin_onboarding_migrate(request, batch_id):
     batch = _visible_batch(request.user, batch_id)
     if batch is None:
         return Response({"error": "Batch not found."}, status=status.HTTP_404_NOT_FOUND)
+    # Final step: run the onboarding straight from a structured batch.
+    if batch.state in ("CLEANED", "STRUCTURED"):
+        batch.state = "APPROVED"
+        batch.save(update_fields=["state", "updated_at"])
     try:
         migrate_batch(batch)
     except Exception as exc:  # noqa: BLE001
         return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({"data": _batch_detail(batch)}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def admin_onboarding_edit_record(request, batch_id, record_id):
+    """Let the admin correct a cleaned record (e.g. a phone number) before the run.
+
+    Editing is allowed while the batch is SUBMITTED / CLEANED / STRUCTURED —
+    not once it has been migrated."""
+    from bss_core.models import OnboardingRecord
+
+    from .admin_console import log_audit
+
+    if request.user.role not in ("bss_admin", "admin", "bss_staff"):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    batch = _visible_batch(request.user, batch_id)
+    if batch is None:
+        return Response({"error": "Batch not found."}, status=status.HTTP_404_NOT_FOUND)
+    if batch.state not in ("SUBMITTED", "CLEANED", "STRUCTURED"):
+        return Response({"error": f"Batch is {batch.state}; editing is not allowed."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    rec = OnboardingRecord.objects.filter(batch=batch, id=record_id).first()
+    if rec is None:
+        return Response({"error": "Record not found."}, status=status.HTTP_404_NOT_FOUND)
+    body = request.data if isinstance(request.data, dict) else {}
+    incoming = body.get("data") if isinstance(body.get("data"), dict) else {}
+    data = dict(rec.clean_data or rec.raw_data or {})
+    for key, value in incoming.items():
+        if key == "plan":
+            continue
+        data[key] = "" if value is None else str(value).strip()
+    cleaner = _CLEANERS.get(rec.entity_type)
+    if cleaner is not None:
+        clean, issues = cleaner(data)
+    else:
+        clean, issues = data, []
+    rec.clean_data = clean
+    rec.issues = issues
+    rec.status = "FLAGGED" if _has_error(issues) else "OK"
+    rec.save(update_fields=["clean_data", "issues", "status", "updated_at"])
+    # Keep the structure plan in step with the corrected data.
+    if batch.state == "STRUCTURED":
+        structure_batch(batch)
+    else:
+        _refresh_counts(batch)
+    log_audit(request.user, "UPDATE", "onboarding_record", rec.id,
+              after={"summary": f"Edited onboarding batch #{batch.id} record {rec.id}"})
     return Response({"data": _batch_detail(batch)}, status=status.HTTP_200_OK)
 
 
@@ -744,7 +797,7 @@ __all__ = [
     "employer_onboarding_template",
     "admin_onboarding_batches", "admin_onboarding_review", "admin_onboarding_clean",
     "admin_onboarding_structure", "admin_onboarding_migrate", "onboarding_batch_detail",
-    "admin_onboarding_import", "admin_onboarding_approve",
+    "admin_onboarding_import", "admin_onboarding_approve", "admin_onboarding_edit_record",
     "worker_onboarding_status", "worker_onboarding_consent",
     "clean_batch", "structure_batch", "migrate_batch",
 ]

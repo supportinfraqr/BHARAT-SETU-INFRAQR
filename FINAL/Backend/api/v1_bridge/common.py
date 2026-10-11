@@ -466,10 +466,14 @@ def _normalize_mobile(value):
     """Canonical 10-digit mobile, or "" when not a 10-digit number.
 
     Collapses formatting variants so the same real phone cannot be registered
-    twice under different roles: strips non-digits, drops a leading country code
-    (91) or trunk 0, then requires 10 digits.
+    twice under different roles: strips a decimal artifact from Excel numerics
+    ("7827532749.0"), non-digits, a leading country code (91) or trunk 0, then
+    requires 10 digits.
     """
-    digits = "".join(ch for ch in str(value or "") if ch.isdigit())
+    text = str(value or "").strip()
+    if "." in text and text.replace(".", "", 1).isdigit():
+        text = text.split(".", 1)[0]
+    digits = "".join(ch for ch in text if ch.isdigit())
     if len(digits) == 12 and digits.startswith("91"):
         digits = digits[2:]
     elif len(digits) == 11 and digits.startswith("0"):

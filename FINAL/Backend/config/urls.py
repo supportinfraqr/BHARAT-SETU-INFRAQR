@@ -275,6 +275,7 @@ _v1_patterns = _v1(
     ("admin/onboarding/batches/<int:batch_id>/clean", v1_bridge.admin_onboarding_clean, "v1_admin_onboarding_clean"),
     ("admin/onboarding/batches/<int:batch_id>/structure", v1_bridge.admin_onboarding_structure, "v1_admin_onboarding_structure"),
     ("admin/onboarding/batches/<int:batch_id>/migrate", v1_bridge.admin_onboarding_migrate, "v1_admin_onboarding_migrate"),
+    ("admin/onboarding/batches/<int:batch_id>/records/<int:record_id>/edit", v1_bridge.admin_onboarding_edit_record, "v1_admin_onboarding_edit_record"),
     ("worker/onboarding/status", v1_bridge.worker_onboarding_status, "v1_worker_onboarding_status"),
     ("worker/onboarding/consent", v1_bridge.worker_onboarding_consent, "v1_worker_onboarding_consent"),
     ("worker/devices", v1_bridge.user_devices, "v1_worker_devices"),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, ChevronRight, FileSpreadsheet, Loader2, RefreshCw, ShieldCheck, Sparkles, Upload, X, XCircle } from 'lucide-react';
+import { CheckCircle2, ChevronRight, FileSpreadsheet, Loader2, Pencil, RefreshCw, ShieldCheck, Sparkles, Upload, X, XCircle } from 'lucide-react';
 
 type Batch = {
   id: number; source: string; state: string; employer: string; employerId: number | null;
@@ -31,6 +31,8 @@ export default function AdminOnboardingPage() {
   const [notice, setNotice] = useState('');
   const [note, setNote] = useState('');
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [editRow, setEditRow] = useState<Row | null>(null);
+  const [editData, setEditData] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -95,6 +97,31 @@ export default function AdminOnboardingPage() {
     finally { setBusy(false); }
   }
 
+  function openEdit(r: Row) {
+    setEditRow(r);
+    const c: Record<string, string> = {};
+    Object.entries(r.data || {}).forEach(([k, v]) => { if (k !== 'plan') c[k] = v == null ? '' : String(v); });
+    setEditData(c);
+  }
+
+  async function saveEdit() {
+    if (!editRow || !detail) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const res = await fetch(`/api/admin/onboarding/batches/${detail.batch.id}/records/${editRow.id}/edit`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: editData }),
+      });
+      const body = await res.json().catch(() => ({})) as { data?: Batch & { records?: Row[] }; error?: string };
+      if (!res.ok || !body.data) throw new Error(body.error ?? 'The edit failed.');
+      const { records, ...batch } = body.data;
+      setDetail({ batch, records: records ?? [] });
+      setEditRow(null);
+      setNotice('Record updated.');
+    } catch (e) { setError(e instanceof Error ? e.message : 'The edit failed.'); }
+    finally { setBusy(false); }
+  }
+
   const counts = (b: Batch) => b.counts?.byEntity ?? {};
 
   return <div className="space-y-6 pb-12">
@@ -144,27 +171,25 @@ export default function AdminOnboardingPage() {
             <p className="text-xs text-gray-400 mt-0.5">{detail.batch.fileName} · {detail.batch.counts?.total ?? 0} rows · <span className="text-emerald-700 font-semibold">{detail.batch.counts?.ok ?? 0} ok</span> · <span className="text-red-600 font-semibold">{detail.batch.counts?.failed ?? 0} failed</span> · {detail.batch.counts?.migrated ?? 0} migrated · state <strong>{detail.batch.state}</strong>{detail.batch.consentGiven ? ' · consent recorded' : ''}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <input value={note} onChange={e => setNote(e.target.value)} placeholder="Review note (optional)" className="h-9 rounded-lg border border-gray-200 px-3 text-xs w-56"/>
+            <input value={note} onChange={e => setNote(e.target.value)} placeholder="Note (optional)" className="h-9 rounded-lg border border-gray-200 px-3 text-xs w-56"/>
             {detail.batch.state === 'SUBMITTED' && <>
-              <button disabled={busy} onClick={() => void act(detail.batch.id, 'review', { decision: 'approve' })} className="h-9 px-3 rounded-lg bg-emerald-600 text-white text-xs font-bold disabled:opacity-50">Approve → Quarantine</button>
+              <button disabled={busy} onClick={() => void act(detail.batch.id, 'review', { decision: 'approve' })} className="h-9 px-4 rounded-lg bg-emerald-600 text-white text-xs font-bold disabled:opacity-50">Accept</button>
               <button disabled={busy} onClick={() => void act(detail.batch.id, 'review', { decision: 'reject' })} className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold disabled:opacity-50">Reject</button>
             </>}
-            <button disabled={busy || !['QUARANTINED', 'CLEANED'].includes(detail.batch.state)} onClick={() => void act(detail.batch.id, 'clean')} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-bold disabled:opacity-40">Re-run cleaning</button>
             <button disabled={busy || !['CLEANED', 'STRUCTURED'].includes(detail.batch.state)} onClick={() => void act(detail.batch.id, 'structure')} className="h-9 px-3 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-40 flex items-center gap-1.5"><Sparkles size={13}/>Structure</button>
-            <button disabled={busy || !['STRUCTURED', 'CLEANED'].includes(detail.batch.state)} onClick={() => void act(detail.batch.id, 'approve')} className="h-9 px-3 rounded-lg bg-emerald-600 text-white text-xs font-bold disabled:opacity-40 inline-flex items-center gap-1.5"><CheckCircle2 size={13}/>Approve</button>
-            <button disabled={busy || detail.batch.state !== 'APPROVED'} onClick={() => void act(detail.batch.id, 'migrate')} className="h-9 px-3 rounded-lg bg-green-700 text-white text-xs font-bold disabled:opacity-40">Migrate</button>
+            <button disabled={busy || !['CLEANED', 'STRUCTURED'].includes(detail.batch.state)} onClick={() => void act(detail.batch.id, 'migrate')} className="h-9 px-4 rounded-lg bg-green-700 text-white text-xs font-bold disabled:opacity-40">Run onboarding</button>
           </div>
         </header>
 
         <div className="px-5 py-3 text-[11px] text-gray-500 border-b border-gray-100">
-          Flow: Submitted → Admin review → Quarantine → Cleaned → Structured → Employer approval → Accounts + WhatsApp message. Migration runs automatically when the employer approves.
+          Flow: Accept → Structure (cleans phone numbers etc.) → edit any record if needed → Run onboarding (creates accounts + WhatsApp message).
         </div>
 
         {detail.batch.declaration && <div className="px-5 py-3 text-[11px] text-gray-700 border-b border-gray-100 bg-gray-50/60"><strong>Declaration / note:</strong> {detail.batch.declaration}</div>}
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-500 border-b border-gray-100"><tr><th className="px-4 py-2">Entity</th><th className="px-4 py-2">Row</th><th className="px-4 py-2">Status</th><th className="px-4 py-2">Key fields</th><th className="px-4 py-2">Result</th><th className="px-4 py-2">BSS ID</th><th className="px-4 py-2">Issues</th></tr></thead>
+            <thead className="bg-gray-50 text-gray-500 border-b border-gray-100"><tr><th className="px-4 py-2">Entity</th><th className="px-4 py-2">Row</th><th className="px-4 py-2">Status</th><th className="px-4 py-2">Key fields</th><th className="px-4 py-2">Result</th><th className="px-4 py-2">BSS ID</th><th className="px-4 py-2">Issues</th><th className="px-4 py-2">Edit</th></tr></thead>
             <tbody className="divide-y divide-gray-100">{detail.records.map(r => <tr key={r.id} className="align-top hover:bg-gray-50">
               <td className="px-4 py-2 font-semibold text-gray-700">{r.entityType}</td>
               <td className="px-4 py-2 text-gray-400">{r.rowIndex + 1}</td>
@@ -173,10 +198,32 @@ export default function AdminOnboardingPage() {
               <td className={`px-4 py-2 ${r.status === 'REJECTED' ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>{String((r.result as Record<string, unknown>)?.detail ?? '') || (r.status === 'MIGRATED' ? 'Account created' : '—')}</td>
               <td className="px-4 py-2 font-mono text-[11px] text-gray-700">{String((r.result as Record<string, unknown>)?.bssId ?? '') || '—'}</td>
               <td className="px-4 py-2">{(r.issues ?? []).length ? <ul className="space-y-0.5">{(r.issues ?? []).slice(0, 4).map((i, k) => <li key={k} className={i.level === 'error' ? 'text-red-600' : 'text-amber-600'}>{i.message}</li>)}</ul> : <span className="text-gray-300">—</span>}</td>
+              <td className="px-4 py-2">{['SUBMITTED', 'CLEANED', 'STRUCTURED'].includes(detail.batch.state) ? <button type="button" disabled={busy} onClick={() => openEdit(r)} className="h-7 px-2.5 rounded-lg border border-gray-200 text-[11px] font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-40 inline-flex items-center gap-1"><Pencil size={11}/>Edit</button> : <span className="text-gray-300">—</span>}</td>
             </tr>)}</tbody>
           </table>
         </div>
       </section>}
     </div>
+
+    {editRow && <div className="fixed inset-0 z-[90] bg-black/50 grid place-items-center p-4" onMouseDown={e => { if (e.target === e.currentTarget) setEditRow(null); }}>
+      <section role="dialog" aria-modal="true" aria-label="Edit record" className="w-full max-w-lg bg-white rounded-2xl shadow-xl">
+        <header className="p-5 border-b border-gray-100 flex items-start justify-between gap-3">
+          <div><h2 className="font-semibold text-gray-950 flex items-center gap-2"><Pencil size={16} className="text-[#073B67]"/>Edit {editRow.entityType} record</h2><p className="text-xs text-gray-500 mt-1">Fix a value (e.g. a phone number with a stray digit) before running onboarding.</p></div>
+          <button onClick={() => setEditRow(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button>
+        </header>
+        <div className="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
+          {Object.keys(editData).length === 0 ? <p className="text-xs text-gray-400">No fields to edit.</p>
+            : Object.entries(editData).map(([key, value]) => (
+              <label key={key} className="block text-xs font-semibold text-gray-700 capitalize">{key.replace(/_/g, ' ')}
+                <input value={value} onChange={e => setEditData(prev => ({ ...prev, [key]: e.target.value }))} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm bg-white"/>
+              </label>
+            ))}
+        </div>
+        <footer className="p-5 pt-0 flex justify-end gap-2">
+          <button onClick={() => setEditRow(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-sm font-semibold">Cancel</button>
+          <button onClick={() => void saveEdit()} disabled={busy} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-bold disabled:opacity-60">{busy ? 'Saving…' : 'Save'}</button>
+        </footer>
+      </section>
+    </div>}
   </div>;
 }
