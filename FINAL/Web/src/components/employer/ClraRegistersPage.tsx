@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, Loader2, Plus, ShieldCheck, X } from 'lucide-react';
+import { CheckCircle2, Download, Loader2, Plus, Printer, ShieldCheck, X } from 'lucide-react';
+import { exportMatrixToXlsx } from '@/lib/exportXlsx';
 
 type RegisterForm = {
   id: number; formCode: string; title: string;
@@ -293,6 +294,14 @@ export default function ClraRegistersPage() {
     return draft.adds.length > 0 || draft.removes.length > 0 || Object.keys(draft.catalog).length > 0;
   }
 
+  function exportExcel() {
+    if (!board) return;
+    const rows = board.forms.map(f => [f.formCode, f.title, f.criticality ?? '', (f.columns ?? []).join(', '), selected.has(f.id) ? 'Adopted' : 'Not adopted']);
+    exportMatrixToXlsx({ filename: `clra-registers-${board.state}-${new Date().toISOString().slice(0, 10)}`, head: ['Form', 'Title', 'Criticality', 'Columns', 'Adoption'], rows, sheetName: 'CLRA registers' });
+  }
+
+  function printPdf() { window.print(); }
+
   return <div className="space-y-6 pb-12">
     <header className="flex flex-col sm:flex-row justify-between gap-4">
       <div>
@@ -324,7 +333,9 @@ export default function ClraRegistersPage() {
         {board && <section className="bss-card rounded-2xl overflow-hidden">
           <header className="px-5 py-4 border-b border-bss-border flex flex-wrap items-center justify-between gap-3">
             <div><h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><ShieldCheck size={16} className="text-[#01183A]"/>{board.state}</h2><p className="text-xs text-bss-text-muted mt-0.5">Set the registers and additional forms for this state, then hit <strong>Save adoption</strong> to store both together. Contractors at every site in {board.state} see the ticked registers (plus every <span className="font-semibold text-bss-error">Mandatory</span> one) and the forms below.</p></div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={exportExcel} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-semibold text-bss-text-secondary inline-flex items-center gap-1.5"><Download size={13}/>Export Excel</button>
+              <button type="button" onClick={printPdf} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-semibold text-bss-text-secondary inline-flex items-center gap-1.5"><Printer size={13}/>Print / PDF</button>
               <button type="button" onClick={() => selectAll(board.forms)} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-semibold text-bss-text-secondary">Select all</button>
               <button type="button" onClick={clearOptional} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-semibold text-bss-text-secondary">Clear all</button>
               <button type="button" onClick={() => void revokeState()} disabled={busy || !board.gated} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-semibold text-bss-error hover:bg-bss-soft-orange disabled:opacity-40">Remove adoption</button>

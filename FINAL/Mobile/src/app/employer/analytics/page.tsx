@@ -1,9 +1,10 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { Activity, AlertTriangle, Loader2, RefreshCw, ChevronDown, X } from 'lucide-react';
+import { Activity, AlertTriangle, Loader2, RefreshCw, ChevronDown, Download, Printer, X } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import { BarChart, HBar, Donut } from '@/components/charts';
+import { exportMatrixToXlsx } from '@/lib/exportXlsx';
 import AttendanceDetailDialog from '@/components/attendance/AttendanceDetailDialog';
 import WorkforceExplorer from '@/components/analytics/WorkforceExplorer';
 import type { AttendanceRecord } from '@/types/portal';
@@ -118,6 +119,21 @@ export default function EmployerAnalyticsPage() {
     return () => clearInterval(id);
   }, [tab, load]);
 
+  function exportExcel() {
+    if (!data) return;
+    const rows: (string | number)[][] = [];
+    const walk = (value: unknown, label: string) => {
+      if (value === null || value === undefined) return;
+      if (Array.isArray(value)) value.forEach((item, index) => walk(item, `${label} ${index + 1}`.trim()));
+      else if (typeof value === 'object') Object.entries(value as Record<string, unknown>).forEach(([k, v]) => walk(v, `${label ? `${label} · ` : ''}${k}`));
+      else rows.push([label, String(value)]);
+    };
+    walk(data, '');
+    exportMatrixToXlsx({ filename: `employer-analytics-${tab}-${new Date().toISOString().slice(0, 10)}`, head: ['Metric', 'Value'], rows, sheetName: tab.slice(0, 31) });
+  }
+
+  function printPdf() { window.print(); }
+
   return <div className="space-y-5 pb-12">
     <header className="bss-reveal bss-gradient-hero bss-elevated relative overflow-hidden rounded-2xl p-5 sm:p-6 text-white">
       <div className="pointer-events-none absolute -right-16 -top-16 w-56 h-56 rounded-full bg-white/5" />
@@ -128,9 +144,17 @@ export default function EmployerAnalyticsPage() {
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight mt-1">Workforce Analytics</h1>
           <p className="text-sm text-white/70 mt-1 max-w-2xl">Live status and trends across your sites — workforce, attendance, compliance, access and grievances.</p>
         </div>
-        <button type="button" onClick={() => void load()} className="self-start h-10 px-4 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/20 transition-colors backdrop-blur-sm">
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''}/> {updatedAt ? `Updated ${updatedAt}` : 'Refresh'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2 self-start">
+          <button type="button" onClick={exportExcel} disabled={!data} className="h-10 px-4 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/20 transition-colors backdrop-blur-sm disabled:opacity-50">
+            <Download size={14}/> Export Excel
+          </button>
+          <button type="button" onClick={printPdf} className="h-10 px-4 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/20 transition-colors backdrop-blur-sm">
+            <Printer size={14}/> Print / PDF
+          </button>
+          <button type="button" onClick={() => void load()} className="h-10 px-4 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/20 transition-colors backdrop-blur-sm">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''}/> {updatedAt ? `Updated ${updatedAt}` : 'Refresh'}
+          </button>
+        </div>
       </div>
     </header>
 
