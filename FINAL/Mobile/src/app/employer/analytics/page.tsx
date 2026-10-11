@@ -248,6 +248,15 @@ function WorkersTable({ workers, onWorker, pageSize = 10 }: { workers: WorkerRow
 function LiveByTable({ rows, firstLabel, matchKey, allWorkers, onWorker }: { rows: Array<{ label: string; workers: number; onSite: number; present: number }>; firstLabel: string; matchKey: 'site' | 'contractor'; allWorkers: WorkerRow[]; onWorker: (w: WorkerRow) => void }) {
   const [open, setOpen] = useState<string | null>(null);
   const [q, setQ] = useState('');
+  const groups = useMemo(() => {
+    const m = new Map<string, WorkerRow[]>();
+    for (const w of allWorkers) {
+      const k = (matchKey === 'site' ? w.site : w.contractor) || '';
+      const arr = m.get(k);
+      if (arr) arr.push(w); else m.set(k, [w]);
+    }
+    return m;
+  }, [allWorkers, matchKey]);
   if (!rows.length) return <p className="text-xs text-bss-text-muted">Nothing in scope.</p>;
   const filtered = q ? rows.filter(r => r.label.toLowerCase().includes(q.toLowerCase())) : rows;
   return <div className="space-y-2">
@@ -264,7 +273,7 @@ function LiveByTable({ rows, firstLabel, matchKey, allWorkers, onWorker }: { row
           <tbody className="divide-y divide-bss-border">
             {filtered.map((r, i) => {
               const isOpen = open === r.label;
-              const members = allWorkers.filter(w => (matchKey === 'site' ? w.site : w.contractor) === r.label);
+              const members = isOpen ? (groups.get(r.label) ?? []) : [];
               return <Fragment key={i}>
                 <tr onClick={() => setOpen(isOpen ? null : r.label)} className="cursor-pointer hover:bg-bss-bg/60">
                   <td className="px-3 py-2 font-semibold text-bss-text-primary truncate max-w-[180px]"><span className="inline-flex items-center gap-1.5"><ChevronDown size={12} className={`text-bss-text-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} />{r.label}</span></td>

@@ -39,7 +39,8 @@ def _bindings(user, site_id=None, contractor_id=None):
     qs = (WorkerContractorBinding.objects
           .filter(site__employer=user, binding_status="ACCEPTED",
                   contractor_id__in=_contractor_ids(user))
-          .select_related("worker", "contractor", "site"))
+          .select_related("worker", "worker__worker_identity",
+                          "contractor", "contractor__contractor_profile", "site"))
     if site_id:
         qs = qs.filter(site_id=site_id)
     if contractor_id:
@@ -149,6 +150,8 @@ def _live(user, site_id, contractor_id):
     bound_ids = {b.worker_id for b in bindings}
     worker_site = {b.worker_id: b.site_id for b in bindings}
     worker_contractor = {b.worker_id: _org(b.contractor) for b in bindings}
+    name_by_worker = {b.worker_id: _worker_name(b.worker) for b in bindings}
+    bss_by_worker = {b.worker_id: _worker_bss(b.worker) for b in bindings}
 
     atts = list(Attendance.objects.filter(worker_id__in=bound_ids, attendance_date=today)
                 .select_related("site"))
@@ -160,9 +163,12 @@ def _live(user, site_id, contractor_id):
     sites = Site.objects.filter(employer=user)
     if site_id:
         sites = sites.filter(id=site_id)
+    site_ids_map = {}
+    for w, sid in worker_site.items():
+        site_ids_map.setdefault(sid, set()).add(w)
     by_site = []
     for s in sites:
-        ids = {w for w, sid in worker_site.items() if sid == s.id}
+        ids = site_ids_map.get(s.id, set())
         by_site.append({
             "site": s.site_name, "workers": len(ids),
             "onSite": len(ids & on_site_ids), "present": len(ids & present_ids),
@@ -180,7 +186,6 @@ def _live(user, site_id, contractor_id):
 
     hourly = {f"{h:02d}:00": 0 for h in range(24)}
     hourly_workers = {f"{h:02d}:00": [] for h in range(24)}
-    name_by_worker = {b.worker_id: _worker_name(b.worker) for b in bindings}
     for a in atts:
         if a.check_in_time:
             k = timezone.localtime(a.check_in_time).strftime("%H:00")
@@ -191,8 +196,10 @@ def _live(user, site_id, contractor_id):
                       .filter(worker_id__in=bound_ids, attendance_date=today)
                       .select_related("worker", "site").order_by("at"))
     last_event = {}
+    punch_count = {}
     for e in events_all:
         last_event[e.worker_id] = e
+        punch_count[e.worker_id] = punch_count.get(e.worker_id, 0) + 1
 
     def status_of(wid):
         if wid in on_site_ids:
@@ -206,25 +213,25 @@ def _live(user, site_id, contractor_id):
         a = by_worker.get(w)
         le = last_event.get(w)
         return {
-            "worker": _worker_name(b.worker),
-            "bssId": _worker_bss(b.worker),
+            "worker": name_by_worker.get(w, ""),
+            "bssId": bss_by_worker.get(w, ""),
             "site": b.site.site_name if b.site else "",
             "siteId": b.site_id,
-            "contractor": _org(b.contractor),
+            "contractor": worker_contractor.get(w, "—"),
             "status": status_of(w),
             "checkIn": payloads._dts(a.check_in_time) if a and a.check_in_time else "",
             "checkOut": payloads._dts(a.check_out_time) if a and a.check_out_time else "",
             "lastSource": le.source if le else "",
             "lastType": le.event_type if le else "",
             "lastAt": payloads._dts(le.at) if le else "",
-            "punches": sum(1 for e in events_all if e.worker_id == w),
+            "punches": punch_count.get(w, 0),
         }
 
     worker_rows = [worker_row(b) for b in bindings]
 
     events = (AttendanceEvent.objects
               .filter(worker_id__in=bound_ids, attendance_date=today)
-              .select_related("worker", "site").order_by("-at")[:40])
+              .select_related("worker", "worker__worker_identity", "site").order_by("-at")[:40])
     recent = [{
         "worker": _worker_name(e.worker), "bssId": _worker_bss(e.worker),
         "site": e.site.site_name if e.site else "", "source": e.source,
