@@ -6,6 +6,7 @@ import { BarChart, Donut, HBar, Kpi } from '@/components/government/Charts';
 import type { GovWorker } from '@/types/portal';
 import { useGovernment } from '@/contexts/GovernmentContext';
 import { exportMatrixToXlsx } from '@/lib/exportXlsx';
+import WorkforceExplorer from '@/components/analytics/WorkforceExplorer';
 
 const YEARS = [2021, 2022, 2023, 2024, 2025, 2026];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -253,6 +254,11 @@ export default function GovernmentDashboard() {
           <div className="space-y-2">{contractorTop.map(entry => <TopRow key={entry.label} label={entry.label} value={entry.value} detail={money(entry.wage)} width={Math.round((entry.value / topMax) * 100)}/>)}</div>
         </Card>
       </div>
+    </Section>
+
+    {/* 6 — Server-side workforce explorer */}
+    <Section title="Workforce explorer" subtitle="Server-side filters, plots, pagination and exports across the worker registry">
+      <WorkforceExplorer endpoint="/api/government/workforce" showState title="All-India / state workforce" />
     </Section>
 
     {/* 6 — Notes */}

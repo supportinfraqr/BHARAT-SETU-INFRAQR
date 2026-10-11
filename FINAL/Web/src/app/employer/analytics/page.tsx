@@ -5,6 +5,7 @@ import { Activity, AlertTriangle, Loader2, RefreshCw, ChevronDown, X } from 'luc
 import { useEmployer } from '@/contexts/EmployerContext';
 import { BarChart, HBar, Donut } from '@/components/charts';
 import AttendanceDetailDialog from '@/components/attendance/AttendanceDetailDialog';
+import WorkforceExplorer from '@/components/analytics/WorkforceExplorer';
 import type { AttendanceRecord } from '@/types/portal';
 
 type Series = { label: string; value: number };
@@ -483,6 +484,7 @@ function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n
           { label: 'Missing', value: data.documents?.missing ?? 0 },
         ]} color="#1E3A8A"/></Card>
       </div>
+      <WorkforceExplorer endpoint="/api/employer/workforce" showState={false} title="Workforce explorer" />
     </div>;
   }
 
