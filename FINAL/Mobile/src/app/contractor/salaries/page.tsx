@@ -111,6 +111,12 @@ export default function ContractorSalariesPage() {
   }
 
   return <div className="relative space-y-6">
+    <div aria-hidden className="pointer-events-none select-none absolute inset-0 z-[60] overflow-hidden">
+      <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-x-20 gap-y-28 -rotate-[24deg] scale-[1.6]">
+        {Array.from({ length: 14 }).map((_, i) => <span key={i} className="text-2xl sm:text-3xl font-black uppercase tracking-[0.28em] text-black/5 whitespace-nowrap">Under Development</span>)}
+      </div>
+    </div>
+    <div className="relative z-10 space-y-6">
     <header className="flex flex-col sm:flex-row justify-between gap-4"><div><h1 className="text-2xl font-bold">Salary &amp; Wages</h1><p className="text-sm text-bss-text-muted mt-1">Record and submit employer-wise wage details for bound workers.</p></div></header>
     <UnderDevelopmentBanner note="Salary & Wages is under development. The records shown here are provisional and may change." />
     <div className="bg-bss-blue-tint border border-bss-border text-bss-text-primary rounded-xl px-4 py-3 text-xs">Salary details are filled and submitted by the contractor for each bound worker and employer.</div>
@@ -162,6 +168,7 @@ export default function ContractorSalariesPage() {
             </div>}
       </div>
     </section></div>}
+    </div>
   </div>;
 }
 
