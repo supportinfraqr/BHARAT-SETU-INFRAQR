@@ -6,6 +6,7 @@ import GstVerifyCard from "@/components/gst/GstVerifyCard";
 
 type VerificationStatus = {
   applicable: boolean;
+  approved: boolean;
   gstVerified: boolean;
   gstStatus?: string;
   entityLocker: { verified: boolean; declined: boolean };
@@ -128,8 +129,9 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
   const { gstVerified, gstStatus, entityLocker, manual } = status;
   const gstNotApplicable = (gstStatus || "").toUpperCase() === "NOT_APPLICABLE";
   const gstCleared = gstVerified || gstNotApplicable;
-  const done = entityLocker.verified || manual.status === "VERIFIED";
-  if (done) return null;
+  // The portal stays locked until Admin Approval is on (the single approval
+  // switch), regardless of any earlier verification snapshot.
+  if (status.approved) return null;
 
   let title = "Verify your organisation";
   let subtitle = "This step is required to use the portal and can't be skipped.";
@@ -243,14 +245,14 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
       </div>
     );
   } else {
-    title = "Pending approval from BSS admin";
+    title = "Pending Admin Approval";
     body = (
       <div className="space-y-3">
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
           <Clock3 size={18} className="text-amber-600 mt-0.5 flex-shrink-0"/>
           <div>
-            <p className="text-sm font-bold text-amber-800">Pending approval from BSS admin</p>
-            <p className="text-xs text-amber-700 mt-0.5">Your documents are with BSS for review. You&apos;ll be notified once verified.</p>
+            <p className="text-sm font-bold text-amber-800">Pending Admin Approval</p>
+            <p className="text-xs text-amber-700 mt-0.5">Your account is with BSS for review. You&apos;ll get access once Admin Approval is on.</p>
           </div>
         </div>
         {manual.status === "REJECTED" && <p className="text-red-700 font-semibold">Rejected{manual.note ? `: ${manual.note}` : ""} — please re-submit.</p>}

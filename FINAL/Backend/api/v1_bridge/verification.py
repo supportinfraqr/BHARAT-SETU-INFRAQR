@@ -50,6 +50,9 @@ def _documents(user):
 
 def _state(profile, user):
     return {
+        # The portal gate follows the single Admin Approval switch
+        # (``account_active``), not the verification snapshot.
+        "approved": bool(getattr(user, "account_active", False)),
         "gstVerified": str(getattr(profile, "gst_verification_status", "") or "").upper() == "VERIFIED",
         "gstStatus": str(getattr(profile, "gst_verification_status", "") or "PENDING").upper(),
         "entityLocker": {
