@@ -3,14 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Database, Download, FileSpreadsheet, KeyRound, Loader2, ShieldCheck, Upload, X } from 'lucide-react';
 
-type Entity = 'employers' | 'contractors' | 'workers' | 'relations';
+type Entity = 'employers' | 'contractors' | 'workers';
 type ResultRow = { row: string; status: string; detail: string };
 
 const TABS: Array<[Entity, string, string]> = [
   ['employers', 'Bulk register employers', 'Employer name, mobile, CIN/GSTIN/PAN, address…'],
   ['contractors', 'Bulk register contractors', 'Contractor name, mobile, trade, CLRA licence…'],
   ['workers', 'Bulk register workers', 'Worker name, mobile, DOB, Aadhaar, UAN/ESIC…'],
-  ['relations', 'Master relations', 'Link Employer ↔ Contractor ↔ Worker + Site'],
 ];
 
 export default function AdminBulkRegisterPage() {
@@ -82,7 +81,7 @@ export default function AdminBulkRegisterPage() {
     <header>
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">BSS Admin</p>
       <h1 className="text-2xl font-bold mt-1 flex items-center gap-2"><Database size={22} className="text-[#073B67]"/>Bulk Registration</h1>
-      <p className="text-sm text-gray-500 mt-1">Password-protected bulk import of employers, contractors, workers, and the relations master table that links them.</p>
+      <p className="text-sm text-gray-500 mt-1">Password-protected bulk import of employers, contractors and workers.</p>
     </header>
 
     <section className="bg-white border border-gray-200 rounded-2xl p-5">

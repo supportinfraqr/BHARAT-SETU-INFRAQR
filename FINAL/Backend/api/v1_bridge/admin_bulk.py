@@ -1,7 +1,6 @@
 """BSS Admin bulk registration (password-protected).
 
-Four XLSX-driven bulk routes — employers, contractors, workers and the
-relations master table that links them (employer ↔ contractor ↔ worker + site).
+Three XLSX-driven bulk routes — employers, contractors and workers.
 Every request must carry the BSS Admin session AND the bulk-registration
 password (env ``BSS_BULK_REGISTER_PASSWORD``).
 """
@@ -36,6 +35,8 @@ ENTITIES = {
         ("PAN", "pan"), ("UAN", "uan"), ("ESIC IP", "esic"), ("Address", "address"),
         ("District", "district"), ("City", "city"), ("State", "state"), ("PIN", "pincode"),
     ]),
+    # Kept for the onboarding migration pipeline (``onboarding.py``) only — the
+    # admin bulk-register route exposes just employers/contractors/workers.
     "relations": ("Relations", [
         ("Employer Mobile", "employer_mobile"), ("Contractor Mobile", "contractor_mobile"),
         ("Worker Mobile", "worker_mobile"), ("Site Name", "site_name"),
@@ -374,7 +375,6 @@ def _process_workers(rows):
 
 
 def _process_relations(rows):
-    from datetime import datetime
     from django.utils import timezone
     from bss_core.models import (Site, ContractorEmployerBinding, ContractorSiteAllotment,
                                  WorkerContractorBinding)
@@ -431,8 +431,11 @@ def _process_relations(rows):
     return results
 
 
+# The admin bulk-register route exposes exactly these three entities.
+_BULK_ENTITIES = ("employers", "contractors", "workers")
+
 _PROCESSORS = {"employers": _process_employers, "contractors": _process_contractors,
-               "workers": _process_workers, "relations": _process_relations}
+               "workers": _process_workers}
 
 
 @api_view(["GET", "POST"])
@@ -441,7 +444,7 @@ _PROCESSORS = {"employers": _process_employers, "contractors": _process_contract
 def admin_bulk_register(request, entity):
     """Password-protected bulk registration. GET = XLSX template; POST = upload."""
     entity = str(entity or "").strip().lower()
-    if entity not in ENTITIES:
+    if entity not in _BULK_ENTITIES:
         return Response({"error": "Unknown entity."}, status=status.HTTP_404_NOT_FOUND)
     denied = _authorize(request)
     if denied is not None:
