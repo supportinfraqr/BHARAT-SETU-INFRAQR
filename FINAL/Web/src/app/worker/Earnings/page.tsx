@@ -79,7 +79,7 @@ export default function EarningsPage() {
     <DataBadge demo={portal.dataMode === 'demo'} source={wageData.source} syncedAt={wageData.syncedAt} />
     {notice && <p role="status" className="p-3 bg-bss-soft-green border border-bss-border text-bss-green rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16} />{notice}</p>}
     {error && <p role="alert" className="p-3 bg-bss-soft-orange border border-bss-border text-bss-error rounded-xl text-sm font-semibold">{error}</p>}
-    <div className="grid sm:grid-cols-3 gap-3"><Summary label="Selected records" value={money(selected)} /><Summary label="Year-to-date" value={money(selected)} /><Summary label="Last payment" value={last ? `${money(last.net)} · ${last.paidOn}` : 'No payroll record'} /></div>
+    <div className="grid sm:grid-cols-3 gap-3"><Summary label="Selected records" value={money(selected)} /><Summary label="Year-to-date" value={money(selected)} /><Summary label="Last payment" value={last ? `${money(last.net)} · ${formatDate(last.paidOn)}` : 'No payroll record'} /></div>
 
     {/* ── Salary Advance — apply, track, accept, payroll adjustment ── */}
     <section id="advance" className="bss-3d bss-scroll-rise bss-card rounded-2xl overflow-hidden">
@@ -173,7 +173,7 @@ function money(value: number) { return new Intl.NumberFormat('en-IN', { style: '
 function DataBadge({ demo, source, syncedAt }: { demo: boolean; source: string; syncedAt: string | null }) { return <div className="flex flex-wrap justify-between gap-2 text-xs bg-bss-blue-tint border border-bss-border text-bss-text-primary rounded-xl px-4 py-3"><strong>{demo ? 'Demo database records' : 'Connected payroll records'}</strong><span>{source} · Synced {syncedAt ? new Date(syncedAt).toLocaleString('en-IN') : '—'}</span></div> }
 type WageRow = WageRecord;
 const wageColumns: DataColumn<WageRow>[] = [
- { id: 'period', header: 'Period / paid', value: r => `${r.period} ${r.paidOn}`, render: r => <><strong>{r.period}</strong><p className="text-bss-text-muted mt-1">{r.paidOn}</p></> },
+ { id: 'period', header: 'Period / paid', value: r => `${r.period} ${r.paidOn}`, render: r => <><strong>{r.period}</strong><p className="text-bss-text-muted mt-1">{formatDate(r.paidOn)}</p></> },
  { id: 'employer', header: 'Employer / contractor', value: r => `${r.employer} ${r.contractor}`, render: r => <>{r.employer}<p className="text-bss-text-muted mt-1">{r.contractor}</p></> },
  { id: 'site', header: 'Site / basis', value: r => `${r.site} ${r.basis}`, render: r => <>{r.site}<p className="text-bss-text-muted mt-1">{r.basis}</p></> },
  { id: 'gross', header: 'Gross', value: r => r.gross, render: r => money(r.gross) }, { id: 'deductions', header: 'Deductions', value: r => r.deductions, render: r => `− ${money(r.deductions)}` }, { id: 'net', header: 'Net', value: r => r.net, render: r => <strong>{money(r.net)}</strong> },

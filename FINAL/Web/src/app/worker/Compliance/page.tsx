@@ -1,6 +1,7 @@
 "use client";
 
 import { ShieldCheck, HardHat, FileCheck, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { formatDate } from '@/lib/date';
 import { useWorker } from '@/contexts/WorkerContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import PageHero from '@/components/portal/PageHero';
@@ -109,7 +110,7 @@ export default function ComplianceModule() {
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${pass.status === 'Active' ? 'bg-[#14843C] text-white' : pass.status === 'Pending' ? 'bg-[#E45D24] text-white' : 'bg-bss-bg text-bss-text-secondary'}`}>{pass.status}</span>
                     </div>
                     <p className="text-xs font-mono font-semibold text-[#01183A]">{pass.number}</p>
-                    <p className="text-[10px] text-bss-text-muted mt-1">{pass.validFrom ? `Valid: ${pass.validFrom} – ${pass.validTo || '—'}` : `Requested ${pass.requestedAt?.slice(0, 10) || ''}`}</p>
+                    <p className="text-[10px] text-bss-text-muted mt-1">{pass.validFrom ? `Valid: ${formatDate(pass.validFrom)} – ${pass.validTo ? formatDate(pass.validTo) : '—'}` : `Requested ${formatDate(pass.requestedAt)}`}</p>
                     <p className="text-[10px] text-bss-text-muted mt-0.5">{pass.requestedBy ? `Requested by ${pass.requestedBy}` : ''}{pass.approvedBy ? ` · Approved by ${pass.approvedBy}` : pass.status === 'Pending' ? ' · Awaiting employer approval' : ''}</p>
                   </div>
                 ))}
@@ -123,7 +124,7 @@ export default function ComplianceModule() {
       <section className="bss-3d bss-scroll-rise bss-card rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-bss-border"><h2 className="text-sm font-semibold text-bss-text-primary">Historical records</h2><p className="text-xs text-bss-text-muted mt-0.5">Past examinations, trainings, passes and renewals on your record</p></div>
         {records.length ? <div className="overflow-x-auto"><table className="w-full text-left text-xs min-w-[720px]"><thead className="bg-bss-bg border-b text-[11px] text-bss-text-muted uppercase tracking-wider"><tr><th className="px-5 py-3 font-bold">Date</th><th className="px-5 py-3 font-bold">Record</th><th className="px-5 py-3 font-bold">Detail</th><th className="px-5 py-3 font-bold">Authority / Reference</th><th className="px-5 py-3 font-bold">Result</th></tr></thead><tbody className="divide-y divide-bss-border">
-          {records.map((h, i) => <tr key={i} className="hover:bg-bss-bg"><td className="px-5 py-3 whitespace-nowrap">{h.date}</td><td className="px-5 py-3 font-semibold text-bss-text-primary">{h.record}</td><td className="px-5 py-3 text-bss-text-muted">{h.detail}</td><td className="px-5 py-3 font-mono text-[11px] text-[#01183A]">{h.ref || '—'}</td><td className="px-5 py-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${['fit', 'completed', 'active'].includes((h.result || '').toLowerCase()) ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-bss-orange'}`}>{h.result}</span></td></tr>)}
+          {records.map((h, i) => <tr key={i} className="hover:bg-bss-bg"><td className="px-5 py-3 whitespace-nowrap">{formatDate(h.date)}</td><td className="px-5 py-3 font-semibold text-bss-text-primary">{h.record}</td><td className="px-5 py-3 text-bss-text-muted">{h.detail}</td><td className="px-5 py-3 font-mono text-[11px] text-[#01183A]">{h.ref || '—'}</td><td className="px-5 py-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${['fit', 'completed', 'active'].includes((h.result || '').toLowerCase()) ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-bss-orange'}`}>{h.result}</span></td></tr>)}
         </tbody></table></div> : <p className="p-8 text-center text-sm text-bss-text-muted">No compliance history recorded yet.</p>}
       </section>
     </div>

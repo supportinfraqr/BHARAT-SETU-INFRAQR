@@ -1,5 +1,6 @@
 "use client";
 import { useState } from 'react';
+import { formatDate } from '@/lib/date';
 import { History, X } from 'lucide-react';
 
 export type VersionItem = { version: number; isCurrent: boolean; status?: string; date?: string; sub?: string };
@@ -33,7 +34,7 @@ export default function VersionHistory({ versions }: { versions?: VersionItem[] 
                 <li key={v.version} className="flex items-center gap-2 px-2 py-2">
                   <span className="w-7 shrink-0 font-bold text-gray-700">V{v.version}</span>
                   <span className="min-w-0 flex-1 truncate text-gray-500">{v.sub || v.status || ''}</span>
-                  {v.date && <span className="whitespace-nowrap text-gray-400">{v.date}</span>}
+                  {v.date && <span className="whitespace-nowrap text-gray-400">{formatDate(v.date)}</span>}
                   {v.isCurrent
                     ? <span className="shrink-0 rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">Current</span>
                     : <span className="shrink-0 text-[9px] text-gray-400">History</span>}

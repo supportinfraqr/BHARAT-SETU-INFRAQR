@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
+import { formatDate } from '@/lib/date';
 import { Building2, CheckCircle2, ChevronRight, Download, FileSpreadsheet, Loader2, ShieldCheck, Upload, XCircle } from 'lucide-react';
 
 type Batch = {
@@ -148,7 +149,7 @@ export default function EmployerOnboardingPage() {
         {loading ? <p className="px-5 py-8 text-sm text-bss-text-muted flex items-center gap-2"><Loader2 size={15} className="animate-spin"/>Loading…</p>
           : !batches.length ? <div className="px-5 py-8 text-center"><Building2 size={24} className="mx-auto text-bss-text-muted"/><p className="text-xs text-bss-text-muted mt-2">No submissions yet.</p></div>
           : <div className="divide-y divide-bss-border max-h-[60vh] overflow-y-auto">{batches.map(b => <button key={b.id} onClick={() => void openDetail(b.id)} className={`w-full text-left px-5 py-3 flex items-center justify-between gap-2 hover:bg-bss-bg ${detail?.batch.id === b.id ? 'bg-[#01183A]/5' : ''}`}>
-            <div className="min-w-0"><p className="text-sm font-semibold text-bss-text-primary">#{b.id} · {b.fileName || 'file'}</p><p className="text-[11px] text-bss-text-muted">{b.counts?.total ?? 0} rows · {b.createdAt?.slice(0, 10)}</p></div>
+            <div className="min-w-0"><p className="text-sm font-semibold text-bss-text-primary">#{b.id} · {b.fileName || 'file'}</p><p className="text-[11px] text-bss-text-muted">{b.counts?.total ?? 0} rows · {formatDate(b.createdAt)}</p></div>
             <span className="flex items-center gap-2 shrink-0"><span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${STATE_TONE[b.state] ?? 'bg-bss-bg text-bss-text-secondary border-bss-border'}`}>{b.state}</span><ChevronRight size={14} className="text-bss-text-muted"/></span>
           </button>)}</div>}
       </section>

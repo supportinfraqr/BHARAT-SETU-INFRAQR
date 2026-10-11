@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
+import { formatDate } from '@/lib/date';
 import { Building2, CheckCircle2, ChevronRight, Download, FileSpreadsheet, Loader2, ShieldCheck, Upload, XCircle } from 'lucide-react';
 
 type Batch = {
@@ -11,14 +12,14 @@ type Batch = {
 type Rec = { id: number; entityType: string; rowIndex: number; data: Record<string, unknown>; issues: Array<{ level?: string; message: string }>; status: string };
 
 const STATE_TONE: Record<string, string> = {
-  SUBMITTED: 'bg-amber-50 text-amber-700 border-amber-200',
-  QUARANTINED: 'bg-blue-50 text-blue-700 border-blue-200',
-  CLEANED: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  STRUCTURED: 'bg-purple-50 text-purple-700 border-purple-200',
-  APPROVED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  MIGRATED: 'bg-green-50 text-green-700 border-green-200',
-  REJECTED: 'bg-red-50 text-red-700 border-red-200',
-  FAILED: 'bg-red-50 text-red-700 border-red-200',
+  SUBMITTED: 'bg-bss-soft-orange text-bss-orange border-bss-border',
+  QUARANTINED: 'bg-bss-blue-tint text-bss-interactive-blue border-bss-border',
+  CLEANED: 'bg-bss-blue-tint text-bss-interactive-blue border-bss-border',
+  STRUCTURED: 'bg-bss-blue-tint text-bss-interactive-blue border-bss-border',
+  APPROVED: 'bg-bss-soft-green text-bss-green border-bss-border',
+  MIGRATED: 'bg-bss-soft-green text-bss-green border-bss-border',
+  REJECTED: 'bg-bss-soft-orange text-bss-error border-bss-border',
+  FAILED: 'bg-bss-soft-orange text-bss-error border-bss-border',
 };
 
 export default function EmployerOnboardingPage() {
@@ -115,60 +116,60 @@ export default function EmployerOnboardingPage() {
 
   return <div className="space-y-6 pb-12">
     <header>
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Secure data onboarding</p>
-      <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Onboarding</h1>
-      <p className="text-sm text-gray-500 mt-1">Submit your historical worker, contractor and site data over a secure channel. BSS reviews and quarantines it; you then approve the verified data before accounts are created.</p>
+      <p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Secure data onboarding</p>
+      <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-bss-text-primary mt-1">Onboarding</h1>
+      <p className="text-sm text-bss-text-muted mt-1">Submit your historical worker, contractor and site data over a secure channel. BSS reviews and quarantines it; you then approve the verified data before accounts are created.</p>
     </header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
 
-    <section className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
+    <section className="bss-card rounded-2xl p-5 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h2 className="text-sm font-semibold text-gray-950 flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#073B67]"/>Submit historical data</h2><p className="text-xs text-gray-400 mt-0.5">One workbook with any of the sheets: Employers, Contractors, Workers, Relations.</p></div>
-        <button onClick={() => void downloadTemplate()} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Download template</button>
+        <div><h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#01183A]"/>Submit historical data</h2><p className="text-xs text-bss-text-muted mt-0.5">One workbook with any of the sheets: Employers, Contractors, Workers, Relations.</p></div>
+        <button onClick={() => void downloadTemplate()} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Download template</button>
       </div>
-      <label className="flex items-center gap-2 border border-dashed border-gray-300 rounded-xl bg-slate-50 px-3 py-2.5 text-xs font-semibold text-gray-600 cursor-pointer hover:border-[#073B67]">
-        <Upload size={16} className="text-[#073B67]"/>{file ? file.name : 'Choose data file (.xlsx)'}
+      <label className="flex items-center gap-2 border border-dashed border-bss-border rounded-xl bg-bss-bg px-3 py-2.5 text-xs font-semibold text-bss-text-secondary cursor-pointer hover:border-[#01183A]">
+        <Upload size={16} className="text-[#01183A]"/>{file ? file.name : 'Choose data file (.xlsx)'}
         <input type="file" accept=".xlsx" className="hidden" onChange={e => setFile(e.target.files?.[0] ?? null)}/>
       </label>
-      <label className="flex items-start gap-2 text-xs text-gray-700">
-        <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="accent-[#073B67] w-4 h-4 mt-0.5"/>
+      <label className="flex items-start gap-2 text-xs text-bss-text-primary">
+        <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="accent-[#01183A] w-4 h-4 mt-0.5"/>
         <span>I confirm I am authorised to share this data with BSS and that it is accurate. I understand the data stays in quarantine and is not part of BSS data assets until I verify it.</span>
       </label>
-      <label className="block text-xs font-semibold text-gray-700">Declaration / note (optional)
-        <input value={declaration} onChange={e => setDeclaration(e.target.value)} placeholder="e.g. Historical payroll for FY 2025-26" className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm"/>
+      <label className="block text-xs font-semibold text-bss-text-primary">Declaration / note (optional)
+        <input value={declaration} onChange={e => setDeclaration(e.target.value)} placeholder="e.g. Historical payroll for FY 2025-26" className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm"/>
       </label>
-      <button onClick={() => void submit()} disabled={busy || !file} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-50 inline-flex items-center gap-1.5"><ShieldCheck size={14}/>{busy ? 'Submitting…' : 'Submit securely'}</button>
+      <button onClick={() => void submit()} disabled={busy || !file} className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-xs font-bold disabled:opacity-50 inline-flex items-center gap-1.5"><ShieldCheck size={14}/>{busy ? 'Submitting…' : 'Submit securely'}</button>
     </section>
 
     <div className="grid lg:grid-cols-[360px_1fr] gap-5">
-      <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden h-fit">
-        <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Your submissions</h2></header>
-        {loading ? <p className="px-5 py-8 text-sm text-gray-500 flex items-center gap-2"><Loader2 size={15} className="animate-spin"/>Loading…</p>
-          : !batches.length ? <div className="px-5 py-8 text-center"><Building2 size={24} className="mx-auto text-gray-300"/><p className="text-xs text-gray-400 mt-2">No submissions yet.</p></div>
-          : <div className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">{batches.map(b => <button key={b.id} onClick={() => void openDetail(b.id)} className={`w-full text-left px-5 py-3 flex items-center justify-between gap-2 hover:bg-gray-50 ${detail?.batch.id === b.id ? 'bg-[#073B67]/5' : ''}`}>
-            <div className="min-w-0"><p className="text-sm font-semibold text-gray-800">#{b.id} · {b.fileName || 'file'}</p><p className="text-[11px] text-gray-400">{b.counts?.total ?? 0} rows · {b.createdAt?.slice(0, 10)}</p></div>
-            <span className="flex items-center gap-2 shrink-0"><span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${STATE_TONE[b.state] ?? 'bg-gray-50 text-gray-600 border-gray-200'}`}>{b.state}</span><ChevronRight size={14} className="text-gray-300"/></span>
+      <section className="bss-card rounded-2xl overflow-hidden h-fit">
+        <header className="px-5 py-4 border-b border-bss-border"><h2 className="text-sm font-semibold text-bss-text-primary">Your submissions</h2></header>
+        {loading ? <p className="px-5 py-8 text-sm text-bss-text-muted flex items-center gap-2"><Loader2 size={15} className="animate-spin"/>Loading…</p>
+          : !batches.length ? <div className="px-5 py-8 text-center"><Building2 size={24} className="mx-auto text-bss-text-muted"/><p className="text-xs text-bss-text-muted mt-2">No submissions yet.</p></div>
+          : <div className="divide-y divide-bss-border max-h-[60vh] overflow-y-auto">{batches.map(b => <button key={b.id} onClick={() => void openDetail(b.id)} className={`w-full text-left px-5 py-3 flex items-center justify-between gap-2 hover:bg-bss-bg ${detail?.batch.id === b.id ? 'bg-[#01183A]/5' : ''}`}>
+            <div className="min-w-0"><p className="text-sm font-semibold text-bss-text-primary">#{b.id} · {b.fileName || 'file'}</p><p className="text-[11px] text-bss-text-muted">{b.counts?.total ?? 0} rows · {formatDate(b.createdAt)}</p></div>
+            <span className="flex items-center gap-2 shrink-0"><span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${STATE_TONE[b.state] ?? 'bg-bss-bg text-bss-text-secondary border-bss-border'}`}>{b.state}</span><ChevronRight size={14} className="text-bss-text-muted"/></span>
           </button>)}</div>}
       </section>
 
-      {detail && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <header className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
-          <div><h2 className="text-sm font-semibold text-gray-950 flex items-center gap-2"><ShieldCheck size={16} className="text-[#073B67]"/>Batch #{detail.batch.id}</h2><p className="text-xs text-gray-400 mt-0.5">{detail.batch.fileName} · {detail.batch.counts?.total ?? 0} rows · state <strong>{detail.batch.state}</strong></p></div>
+      {detail && <section className="bss-card rounded-2xl overflow-hidden">
+        <header className="px-5 py-4 border-b border-bss-border flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><ShieldCheck size={16} className="text-[#01183A]"/>Batch #{detail.batch.id}</h2><p className="text-xs text-bss-text-muted mt-0.5">{detail.batch.fileName} · {detail.batch.counts?.total ?? 0} rows · state <strong>{detail.batch.state}</strong></p></div>
           {detail.batch.state === 'STRUCTURED' && <div className="flex items-center gap-2">
-            <input value={note} onChange={e => setNote(e.target.value)} placeholder="Note (optional)" className="h-9 rounded-lg border border-gray-200 px-3 text-xs w-48"/>
-            <button disabled={busy} onClick={() => void review(detail.batch.id, 'approve')} className="h-9 px-3 rounded-lg bg-emerald-600 text-white text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50"><CheckCircle2 size={13}/>Approve (verifies authenticity)</button>
-            <button disabled={busy} onClick={() => void review(detail.batch.id, 'reject')} className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50"><XCircle size={13}/>Reject</button>
+            <input value={note} onChange={e => setNote(e.target.value)} placeholder="Note (optional)" className="h-9 rounded-lg border border-bss-border px-3 text-xs w-48"/>
+            <button disabled={busy} onClick={() => void review(detail.batch.id, 'approve')} className="h-9 px-3 rounded-lg bg-bss-green text-white text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50"><CheckCircle2 size={13}/>Approve (verifies authenticity)</button>
+            <button disabled={busy} onClick={() => void review(detail.batch.id, 'reject')} className="h-9 px-3 rounded-lg border border-bss-border text-bss-error text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50"><XCircle size={13}/>Reject</button>
           </div>}
         </header>
-        {detail.batch.state !== 'STRUCTURED' && <p className="px-5 py-3 text-[11px] text-gray-500 border-b border-gray-100">
+        {detail.batch.state !== 'STRUCTURED' && <p className="px-5 py-3 text-[11px] text-bss-text-muted border-b border-bss-border">
           {detail.batch.state === 'SUBMITTED' ? 'Awaiting BSS review.' : detail.batch.state === 'MIGRATED' || detail.batch.state === 'APPROVED' ? 'Accounts created — the introductory SMS was sent to the workers/contractors.' : detail.batch.state === 'REJECTED' ? 'This submission was rejected.' : 'BSS is processing this submission; you will be asked to approve once it is structured.'}
         </p>}
         <div className="max-h-[60vh] overflow-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-500 border-b border-gray-100 sticky top-0"><tr><th className="px-4 py-2">Entity</th><th className="px-4 py-2">Row</th><th className="px-4 py-2">Status</th><th className="px-4 py-2">Details</th></tr></thead>
-            <tbody className="divide-y divide-gray-100">{detail.records.map(r => <tr key={r.id} className="align-top"><td className="px-4 py-2 font-semibold text-gray-700">{r.entityType}</td><td className="px-4 py-2 text-gray-400">{r.rowIndex + 1}</td><td className="px-4 py-2"><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-50 text-gray-600">{r.status}</span></td><td className="px-4 py-2 text-gray-600">{Object.entries(r.data || {}).filter(([k, v]) => ['name','mobile','employer_mobile','contractor_mobile','worker_mobile','site_name'].includes(k) && v).map(([k, v]) => `${k}: ${v}`).join(' · ') || '—'}{(r.issues ?? []).length ? <span className="text-amber-600"> · {r.issues.length} issue(s)</span> : null}</td></tr>)}</tbody>
+            <thead className="bg-bss-bg text-bss-text-muted border-b border-bss-border sticky top-0"><tr><th className="px-4 py-2">Entity</th><th className="px-4 py-2">Row</th><th className="px-4 py-2">Status</th><th className="px-4 py-2">Details</th></tr></thead>
+            <tbody className="divide-y divide-bss-border">{detail.records.map(r => <tr key={r.id} className="align-top"><td className="px-4 py-2 font-semibold text-bss-text-primary">{r.entityType}</td><td className="px-4 py-2 text-bss-text-muted">{r.rowIndex + 1}</td><td className="px-4 py-2"><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-bss-bg text-bss-text-secondary">{r.status}</span></td><td className="px-4 py-2 text-bss-text-secondary">{Object.entries(r.data || {}).filter(([k, v]) => ['name','mobile','employer_mobile','contractor_mobile','worker_mobile','site_name'].includes(k) && v).map(([k, v]) => `${k}: ${v}`).join(' · ') || '—'}{(r.issues ?? []).length ? <span className="text-bss-orange"> · {r.issues.length} issue(s)</span> : null}</td></tr>)}</tbody>
           </table>
         </div>
       </section>}

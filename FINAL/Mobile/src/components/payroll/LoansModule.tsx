@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { formatDate } from '@/lib/date';
 import { Banknote, HandCoins, Landmark, Plus } from 'lucide-react';
 import { Empty, Field, Modal, Section, StatusPill, inputClass, money, primaryBtn, secondaryBtn } from '@/components/payroll/common';
 import { loanRemaining, today } from '@/lib/payroll/payrollService';
@@ -72,7 +73,7 @@ export default function LoansModule({ store }: { store: PayrollStore }) {
 
     {loans.some(l => l.repayments.length > 0) && <Section title="Recent repayments" subtitle="Repayment history — date, mode, account, reference and who recorded it.">
       <div className="divide-y divide-gray-100">{loans.filter(l => l.repayments.length > 0).flatMap(l => l.repayments.map(rp => (
-        <div key={rp.id} className="px-5 py-3 flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-semibold text-gray-800">{l.worker} · {l.id}</p><p className="text-[11px] text-gray-400">{rp.date} · {rp.mode}{rp.reference ? ` · ${rp.reference}` : ''} · by {rp.by}</p></div><strong className="text-xs text-gray-900">{money(rp.amount)}</strong></div>
+        <div key={rp.id} className="px-5 py-3 flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-semibold text-gray-800">{l.worker} · {l.id}</p><p className="text-[11px] text-gray-400">{formatDate(rp.date)} · {rp.mode}{rp.reference ? ` · ${rp.reference}` : ''} · by {rp.by}</p></div><strong className="text-xs text-gray-900">{money(rp.amount)}</strong></div>
       )))}</div>
     </Section>}
 

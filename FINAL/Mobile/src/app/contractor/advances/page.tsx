@@ -1,5 +1,6 @@
 "use client";
 import { useState } from 'react';
+import { formatDate } from '@/lib/date';
 import { CheckCircle2, HandCoins, XCircle } from 'lucide-react';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorAdvance } from '@/types/portal';
@@ -59,7 +60,7 @@ export default function ContractorAdvancesPage() {
               <td className="px-4 py-3"><strong className="text-bss-text-primary">{row.worker}</strong><p className="font-mono text-[10px] text-bss-text-muted mt-0.5">{row.id} · {row.workerId}</p></td>
               <td className="px-4 py-3 font-semibold text-bss-text-primary">{money(row.amount)}</td>
               <td className="px-4 py-3 text-bss-text-secondary">{row.reason || '—'}</td>
-              <td className="px-4 py-3 text-bss-text-muted">{row.requestedOn}</td>
+              <td className="px-4 py-3 text-bss-text-muted">{formatDate(row.requestedOn)}</td>
               <td className="px-4 py-3"><span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${chip(row.status)}`}>{row.status}</span></td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">

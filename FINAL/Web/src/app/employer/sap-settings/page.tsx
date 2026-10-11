@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
+import { formatDate } from '@/lib/date';
 import { CheckCircle2, Database, Download, FileSpreadsheet, KeyRound, Loader2, Plus, RefreshCw, Save, Upload, X } from 'lucide-react';
 
 type FieldMapRow = { field: string; label: string; sapFields: string[] };
@@ -267,7 +268,7 @@ export default function SapSettingsPage() {
 
         <div className="rounded-xl border border-bss-border overflow-hidden">
           <div className="px-3 py-2 bg-bss-bg text-[11px] font-semibold text-bss-text-secondary">Contractor SAP status ({bulkRows.length})</div>
-          <div className="max-h-72 overflow-y-auto"><table className="w-full text-[11px] text-left"><thead className="bg-bss-bg text-bss-text-muted"><tr><th className="px-3 py-1.5">BSS ID</th><th className="px-3 py-1.5">Contractor</th><th className="px-3 py-1.5">SAP ID</th><th className="px-3 py-1.5">Status</th><th className="px-3 py-1.5">Last synced</th><th className="px-3 py-1.5">Detail</th></tr></thead><tbody className="divide-y divide-bss-border">{bulkRows.map(r => <tr key={r.id}><td className="px-3 py-1.5 font-mono">{r.bssId}</td><td className="px-3 py-1.5">{r.name}</td><td className="px-3 py-1.5 font-mono">{r.sapId || '—'}</td><td className="px-3 py-1.5"><span className={r.status === 'SYNCED' ? 'text-bss-green font-semibold' : r.status === 'FAILED' ? 'text-bss-error font-semibold' : r.status === 'PENDING' ? 'text-bss-orange font-semibold' : 'text-bss-text-muted'}>{BULK_STATUS_LABEL[r.status]}</span></td><td className="px-3 py-1.5 text-bss-text-muted">{r.lastSyncedAt ? r.lastSyncedAt.slice(0, 10) : '—'}</td><td className="px-3 py-1.5 text-bss-text-muted">{r.lastStatus || '—'}</td></tr>)}</tbody></table></div>
+          <div className="max-h-72 overflow-y-auto"><table className="w-full text-[11px] text-left"><thead className="bg-bss-bg text-bss-text-muted"><tr><th className="px-3 py-1.5">BSS ID</th><th className="px-3 py-1.5">Contractor</th><th className="px-3 py-1.5">SAP ID</th><th className="px-3 py-1.5">Status</th><th className="px-3 py-1.5">Last synced</th><th className="px-3 py-1.5">Detail</th></tr></thead><tbody className="divide-y divide-bss-border">{bulkRows.map(r => <tr key={r.id}><td className="px-3 py-1.5 font-mono">{r.bssId}</td><td className="px-3 py-1.5">{r.name}</td><td className="px-3 py-1.5 font-mono">{r.sapId || '—'}</td><td className="px-3 py-1.5"><span className={r.status === 'SYNCED' ? 'text-bss-green font-semibold' : r.status === 'FAILED' ? 'text-bss-error font-semibold' : r.status === 'PENDING' ? 'text-bss-orange font-semibold' : 'text-bss-text-muted'}>{BULK_STATUS_LABEL[r.status]}</span></td><td className="px-3 py-1.5 text-bss-text-muted">{formatDate(r.lastSyncedAt)}</td><td className="px-3 py-1.5 text-bss-text-muted">{r.lastStatus || '—'}</td></tr>)}</tbody></table></div>
         </div>
       </div>
     </section>

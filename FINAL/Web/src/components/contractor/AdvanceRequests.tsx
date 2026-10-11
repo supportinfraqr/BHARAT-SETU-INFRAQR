@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { formatDate } from '@/lib/date';
 import { Banknote, CheckCircle2, HandCoins, Landmark, Send, Wallet, X } from 'lucide-react';
 import { useContractor } from '@/contexts/ContractorContext';
 
@@ -91,7 +92,7 @@ export default function AdvanceRequests() {
               <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_META[item.status].tone}`}>{STATUS_META[item.status].label}</span>
             </div>
             <p className="text-sm font-semibold text-bss-text-primary mt-1">{money(item.amount)} · {item.worker} ({item.workerId}) · {item.reason}</p>
-            <p className="text-[11px] text-bss-text-muted mt-0.5">{item.site} · {item.employer} · Requested {item.requestedOn}{item.approvedOn && ` · Approved ${item.approvedOn}`}{item.disbursedOn && ` · Disbursed ${item.disbursedOn} (${item.mode}${item.reference ? ` · ${item.reference}` : ''})`}{item.payrollPeriod && ` · Recovered in ${item.payrollPeriod} payroll`}</p>
+            <p className="text-[11px] text-bss-text-muted mt-0.5">{item.site} · {item.employer} · Requested {formatDate(item.requestedOn)}{item.approvedOn && ` · Approved ${formatDate(item.approvedOn)}`}{item.disbursedOn && ` · Disbursed ${formatDate(item.disbursedOn)} (${item.mode}${item.reference ? ` · ${item.reference}` : ''})`}{item.payrollPeriod && ` · Recovered in ${item.payrollPeriod} payroll`}</p>
             {item.status === 'Disbursed' && <p className="text-[11px] text-purple-700 mt-1 flex items-center gap-1.5"><HandCoins size={12}/>Worker must accept in the BSS app — acceptance automatically queues the advance recovery in the next Payroll run.</p>}
             {item.status === 'Adjusted' && <p className="text-[11px] text-bss-green mt-1 flex items-center gap-1.5"><Landmark size={12}/>Shown as an advance-recovery deduction on the worker&apos;s Payroll record for {item.payrollPeriod}.</p>}
           </div>

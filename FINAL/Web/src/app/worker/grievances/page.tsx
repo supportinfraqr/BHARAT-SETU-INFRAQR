@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { formatDate } from '@/lib/date';
 import { 
   Mic, Square, Play, RotateCcw, Send, CheckCircle2, 
   MessageSquareWarning, Volume2, Globe, Clock, FileAudio,
@@ -480,7 +481,7 @@ export default function GrievancePage() {
             </div>
             <div className="flex justify-between items-center border-b border-bss-border pb-2">
               <span className="text-xs font-bold text-bss-text-muted uppercase tracking-wider">Raised Date & Time</span>
-              <span className="font-semibold text-bss-text-primary">{submittedGrievance.date}</span>
+              <span className="font-semibold text-bss-text-primary">{formatDate(submittedGrievance.date)}</span>
             </div>
             <div className="flex justify-between items-center border-b border-bss-border pb-2">
               <span className="text-xs font-bold text-bss-text-muted uppercase tracking-wider">Raised By</span>

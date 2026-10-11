@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Building2, CheckCircle2, Clock3, MoreVertical, Plus, ShieldAlert, UserRound, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useEmployer } from '@/contexts/EmployerContext';
+import { formatDate } from '@/lib/date';
 import type { EmployerContractor } from '@/types/portal';
 
 const columns: DataColumn<EmployerContractor>[] = [
@@ -12,8 +13,7 @@ const columns: DataColumn<EmployerContractor>[] = [
   { id:'contact', header:'Contact', value:row => row.contact, render:row => <div><span>{row.contact}</span><p className="text-[11px] text-bss-text-muted mt-0.5">{row.email}</p></div> },
   { id:'sites', header:'Sites', value:row => (row.sites?.length ? row.sites.join(', ') : String(row.siteIds.length)), export:{split:','} },
   { id:'workers', header:'Workers', value:row => row.workers },
-  { id:'compliance', header:'Compliance', value:row => row.compliance, render:row => <span className={row.compliance >= 90 ? 'text-bss-green' : 'text-bss-orange'}>{row.compliance}%</span> },
-  { id:'onboarding', header:'Connected since', value:row => row.onboardingDate },
+  { id:'onboarding', header:'Connected since', value:row => row.onboardingDate, render:row => formatDate(row.onboardingDate) },
   { id:'status', header:'Status', value:row => row.status, render:row => <Status value={row.status}/> },
 ];
 
@@ -84,9 +84,8 @@ export default function EmployerContractorsPage() {
               <Info label="Contractor ID" value={profileView.bssId}/>
               <Info label="Contact" value={profileView.contact || '—'}/>
               <Info label="Email" value={profileView.email || '—'}/>
-              <Info label="Connected since" value={profileView.onboardingDate || '—'}/>
+              <Info label="Connected since" value={formatDate(profileView.onboardingDate)}/>
               <Info label="Workers" value={String(profileView.workers ?? 0)}/>
-              <Info label="Compliance" value={`${profileView.compliance ?? 0}%`}/>
             </dl>
             <div className="rounded-xl border border-bss-border p-4">
               <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted mb-2">Sites</p>

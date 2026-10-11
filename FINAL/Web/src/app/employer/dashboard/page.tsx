@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { AlertTriangle, ArrowRight, Banknote, Building2, CheckCircle2, ClipboardCheck, Clock3, FileWarning, HardHat, MapPin, ShieldCheck, Users } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Banknote, Building2, CheckCircle2, ClipboardCheck, Clock3, FileWarning, HardHat, MapPin, Users } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { CopyButton } from '@/components/ui/CopyButton';
@@ -25,7 +25,6 @@ export default function EmployerDashboardPage() {
     { label:t('ui.contractors'), value:employer.stats.totalContractors, icon:Building2, tone:'bg-bss-blue-tint text-bss-interactive-blue' },
     { label:t('ui.connectedWorkers'), value:employer.stats.totalWorkers, icon:Users, tone:'bg-bss-soft-orange text-bss-orange' },
     { label:t('ui.activeSites'), value:employer.stats.activeSites, icon:MapPin, tone:'bg-bss-soft-green text-bss-green' },
-    { label:t('ui.complianceScore'), value:`${employer.stats.complianceScore}%`, icon:ShieldCheck, tone:'bg-bss-blue-tint text-bss-interactive-blue' },
   ];
 
   const actions = [
@@ -58,7 +57,7 @@ export default function EmployerDashboardPage() {
       </div>
     </header>
 
-    <section className="bss-reveal bss-kpi-grid grid grid-cols-2 md:grid-cols-4 gap-3" aria-label="Employer key metrics" style={{ ['--bss-delay' as string]: '80ms' }}>
+    <section className="bss-reveal bss-kpi-grid grid grid-cols-2 md:grid-cols-3 gap-3" aria-label="Employer key metrics" style={{ ['--bss-delay' as string]: '80ms' }}>
       {metrics.map(metric => <article key={metric.label} className="bss-kpi-card bss-hover-lift">
         <div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-bss-text-muted">{metric.label}</span><span className={`bss-kpi-icon ${metric.tone}`}><metric.icon size={16}/></span></div>
         <strong>{metric.value}</strong>
