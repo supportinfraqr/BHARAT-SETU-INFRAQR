@@ -1,11 +1,13 @@
 """BSS Admin — account status switches.
 
-Two independent switches on every user:
+There are exactly two switches per user:
 
-* ``account_active`` — the "active / approved" flag. Default ON for workers;
-  contractors & employers start OFF (Pending) until the admin turns it ON. A
-  GSTIN may be active on only one account (enforced here and in the GST flow).
-* ``is_active`` — the "login allowed / disable account" flag. Changing it is a
+* ``account_active`` — the admin-approval switch. Default ON for workers;
+  contractors & employers start OFF (Pending) until the admin turns it ON.
+  Turning it ON approves the organisation AND clears its portal verification
+  gate; turning it OFF returns it to Pending and re-blocks the portal. A GSTIN
+  may be active on only one account (enforced here and in the GST flow).
+* ``is_active`` — the "login allowed / disable account" switch. Changing it is a
   high-privilege action gated by a system password (env ``BSS_SYSTEM_PASSWORD``).
 
 Route: GET /v1/admin/accounts, POST /v1/admin/accounts/status.
@@ -82,8 +84,11 @@ def admin_account_status(request):
     value = bool(body.get("value"))
 
     if field == "account":
-        # Active/approved switch. Turning it ON must not put a second active
-        # account on the same GSTIN.
+        # The single admin-approval switch. Turning it ON approves the
+        # employer/contractor account *and* clears the portal verification gate
+        # (the org can use the portal); turning it OFF returns them to Pending
+        # and re-blocks it. Turning it ON must not put a second active account
+        # on the same GSTIN.
         prof = _profile(user)
         gstin = (getattr(prof, "gstin", "") or "") if prof else ""
         if value and gstin:
@@ -94,12 +99,17 @@ def admin_account_status(request):
         user.account_active = value
         fields = ["account_active"]
         if prof is not None:
-            # Keep the profile approval in step with the switch.
+            # Keep the profile approval + identity-verification state in step
+            # with the switch, so this one control is the whole story.
             if value:
                 prof.approval_status = "APPROVED"
-            elif getattr(prof, "approval_status", "") == "APPROVED":
-                prof.approval_status = "PENDING"
-            prof.save(update_fields=["approval_status"])
+                prof.manual_verification_status = "VERIFIED"
+            else:
+                if getattr(prof, "approval_status", "") == "APPROVED":
+                    prof.approval_status = "PENDING"
+                if getattr(prof, "manual_verification_status", "") == "VERIFIED":
+                    prof.manual_verification_status = "PENDING"
+            prof.save(update_fields=["approval_status", "manual_verification_status"])
         user.save(update_fields=fields)
         return Response({"data": {"userId": user.id, "accountActive": value}},
                         status=status.HTTP_200_OK)

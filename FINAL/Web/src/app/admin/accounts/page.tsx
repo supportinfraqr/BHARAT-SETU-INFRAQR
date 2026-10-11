@@ -78,7 +78,7 @@ export default function AdminAccountsPage() {
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Users &amp; Access</p>
         <h1 className="text-2xl font-bold mt-1">Accounts</h1>
-        <p className="text-sm text-gray-500 mt-1">Two switches per account — <strong>Active</strong> (approval; workers on by default) and <strong>Login</strong> (password-protected disable).</p>
+        <p className="text-sm text-gray-500 mt-1">Two switches per account — <strong>Active</strong> (admin approval: unlocks the portal; workers on by default) and <strong>Login</strong> (password-protected sign-in).</p>
       </div>
       <label className="text-xs font-semibold text-gray-600 self-start">
         Role
