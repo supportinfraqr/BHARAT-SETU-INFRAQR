@@ -85,28 +85,58 @@ def _series(qs, field):
             for r in qs.values(field).annotate(n=Count("id")).order_by("-n") if r[field]]
 
 
-def _summary(filtered):
-    from bss_core.models import Attendance, WorkerGatePass, WorkerGrievance
+def _summary(filtered, scope):
+    from bss_core.models import (Attendance, ComplianceBatch, CourseEnrollment, GatePassScan,
+                                 LeaveRequest, SalaryAdvance, WorkerComplianceChecklist,
+                                 WorkerContractorBinding, WorkerGatePass, WorkerGrievance)
     worker_ids = list(filtered.values_list("worker_id", flat=True))
-    att = [{"label": payloads._d(r["status"]) or "Unknown", "value": r["n"]}
-           for r in Attendance.objects.filter(worker_id__in=worker_ids).values("status").annotate(n=Count("id")).order_by("-n")]
-    gv = [{"label": payloads._d(r["status"]) or "Unknown", "value": r["n"]}
-          for r in WorkerGrievance.objects.filter(worker_id__in=worker_ids).values("status").annotate(n=Count("id")).order_by("-n")]
-    gp = [{"label": payloads._d(r["status"]) or "Unknown", "value": r["n"]}
-          for r in WorkerGatePass.objects.filter(worker_id__in=worker_ids).values("status").annotate(n=Count("id")).order_by("-n")]
+    contractor_ids = list(set(scope.values_list("contractor_id", flat=True)))
+    site_ids = list(set(scope.values_list("site_id", flat=True)))
+
+    def grp(model, field, **f):
+        return [{"label": payloads._d(r[field]) or "Unknown", "value": r["n"]}
+                for r in model.objects.filter(**f).values(field).annotate(n=Count("id")).order_by("-n")]
+
+    def cnt(model, **f):
+        try:
+            return model.objects.filter(**f).count()
+        except Exception:  # noqa: BLE001
+            return 0
+
+    scans = grp(GatePassScan, "result", gate_pass__worker_id__in=worker_ids)
     return {
         "byState": _series(filtered, "site__state"),
+        "bySite": _series(filtered, "site__site_name"),
         "byGender": _series(filtered, "worker__worker_identity__gender"),
         "byCategory": _series(filtered, "worker__classification__worker_category"),
         "byOccupation": _series(filtered, "worker__classification__occupation"),
         "byEmployer": _series(filtered, "site__employer__employer_profile__employer_name"),
         "byContractor": _series(filtered, "contractor__contractor_profile__contractor_name"),
-        "attendance": att,
-        "grievances": gv,
-        "gatePasses": gp,
+        "attendance": grp(Attendance, "status", worker_id__in=worker_ids),
+        "grievances": grp(WorkerGrievance, "status", worker_id__in=worker_ids),
+        "gatePasses": grp(WorkerGatePass, "status", worker_id__in=worker_ids),
+        "scans": scans,
+        "activities": {
+            "worker": [
+                {"label": "Attendance marks", "value": cnt(Attendance, worker_id__in=worker_ids)},
+                {"label": "Grievances", "value": cnt(WorkerGrievance, worker_id__in=worker_ids)},
+                {"label": "Leave requests", "value": cnt(LeaveRequest, worker_id__in=worker_ids)},
+                {"label": "Salary advances", "value": cnt(SalaryAdvance, worker_id__in=worker_ids)},
+                {"label": "Gate passes", "value": cnt(WorkerGatePass, worker_id__in=worker_ids)},
+                {"label": "Courses", "value": cnt(CourseEnrollment, worker_id__in=worker_ids)},
+                {"label": "Compliance checklists", "value": cnt(WorkerComplianceChecklist, worker_id__in=worker_ids)},
+            ],
+            "contractor": [
+                {"label": "Workers bound", "value": cnt(WorkerContractorBinding, contractor_id__in=contractor_ids, binding_status="ACCEPTED")},
+                {"label": "Compliance batches", "value": cnt(ComplianceBatch, contractor_id__in=contractor_ids)},
+                {"label": "Gate passes (sites)", "value": cnt(WorkerGatePass, site_id__in=site_ids)},
+                {"label": "Grievances handled", "value": cnt(WorkerGrievance, contractor_id__in=contractor_ids)},
+            ],
+        },
         "workerTotal": len(worker_ids),
-        "grievanceTotal": sum(r["value"] for r in gv),
-        "gatePassTotal": sum(r["value"] for r in gp),
+        "grievanceTotal": cnt(WorkerGrievance, worker_id__in=worker_ids),
+        "gatePassTotal": cnt(WorkerGatePass, worker_id__in=worker_ids),
+        "scanTotal": sum(r["value"] for r in scans),
     }
 
 
@@ -195,7 +225,7 @@ def workforce_explorer(request, employer=None):
     filtered = _apply_filters(scope, p)
     total = filtered.count()
 
-    if (p.get("format") or "").lower() == "csv":
+    if (p.get("export") or "").lower() == "csv":
         from django.http import StreamingHttpResponse
 
         def stream():
@@ -223,7 +253,7 @@ def workforce_explorer(request, employer=None):
         "states": list(payloads.GEOGRAPHY.keys()),
         "total": total, "page": page, "pageSize": page_size,
         "facets": facets,
-        "summary": _summary(filtered),
+        "summary": _summary(filtered, scope),
         "workers": _rows(page_bindings),
     })
 

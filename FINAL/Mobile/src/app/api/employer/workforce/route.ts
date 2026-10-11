@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     const params = new URL(request.url).searchParams;
     const query = params.toString();
     const path = `/v1/employer/workforce${query ? `?${query}` : ''}`;
-    if (params.get('format') === 'csv') {
+    if (params.get('export') === 'csv') {
       const upstream = await upstreamStream(config.apiBaseUrl, path, session);
       const headers = new Headers();
       for (const name of ['Content-Type', 'Content-Disposition']) {

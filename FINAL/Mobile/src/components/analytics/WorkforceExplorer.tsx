@@ -14,6 +14,7 @@ type Row = {
 type Facet = { value: string; label: string; count: number };
 type Summary = {
   byState: Array<{ label: string; value: number }>;
+  bySite: Array<{ label: string; value: number }>;
   byGender: Array<{ label: string; value: number }>;
   byCategory: Array<{ label: string; value: number }>;
   byOccupation: Array<{ label: string; value: number }>;
@@ -22,7 +23,9 @@ type Summary = {
   attendance: Array<{ label: string; value: number }>;
   grievances: Array<{ label: string; value: number }>;
   gatePasses: Array<{ label: string; value: number }>;
-  workerTotal: number; grievanceTotal: number; gatePassTotal: number;
+  scans: Array<{ label: string; value: number }>;
+  activities: { worker: Array<{ label: string; value: number }>; contractor: Array<{ label: string; value: number }> };
+  workerTotal: number; grievanceTotal: number; gatePassTotal: number; scanTotal: number;
 };
 type Payload = {
   total: number; page: number; pageSize: number;
@@ -74,7 +77,7 @@ export default function WorkforceExplorer({ endpoint, showState = true, title = 
   const exportCsv = () => {
     const p = new URLSearchParams();
     for (const [k, v] of Object.entries(applied)) if (v) p.set(k, v);
-    p.set('format', 'csv');
+    p.set('export', 'csv');
     window.open(`${endpoint}?${p.toString()}`, '_blank');
   };
 
@@ -137,11 +140,17 @@ export default function WorkforceExplorer({ endpoint, showState = true, title = 
     {/* Plots (from server aggregates) */}
     {data && <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-4">
       <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">By state</h3><HBar data={data.summary.byState} color="#1E3A8A" /></div>
+      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">By site</h3><HBar data={data.summary.bySite} color="#0F62A8" /></div>
       <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">By employer</h3><HBar data={data.summary.byEmployer} color="#14843C" /></div>
       <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">By contractor</h3><HBar data={data.summary.byContractor} color="#E45D24" /></div>
       <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">By gender</h3><Donut slices={data.summary.byGender.map((s, i) => ({ ...s, color: ['#1E3A8A', '#14843C', '#E45D24', '#7C3AED'][i % 4] }))} /></div>
       <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">Attendance status</h3><Donut slices={data.summary.attendance.map((s, i) => ({ ...s, color: ['#14843C', '#E45D24', '#DC2626', '#1E3A8A'][i % 4] }))} /></div>
-      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">Grievances by status</h3><BarChart data={data.summary.grievances} color="#E45D24" /></div>
+      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">By category</h3><HBar data={data.summary.byCategory} color="#7C3AED" /></div>
+      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">By occupation</h3><HBar data={data.summary.byOccupation} color="#0F62A8" /></div>
+      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">Gate passes by status</h3><BarChart data={data.summary.gatePasses} color="#14843C" /></div>
+      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">Gate scans (allow / deny)</h3>{data.summary.scans.length ? <Donut slices={data.summary.scans.map((s, i) => ({ ...s, color: ['#14843C', '#DC2626', '#E45D24', '#1E3A8A'][i % 4] }))} /> : <p className="text-xs text-bss-text-muted">No gate scans.</p>}</div>
+      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">Worker activity</h3><HBar data={data.summary.activities.worker} color="#1E3A8A" /></div>
+      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">Contractor activity</h3><HBar data={data.summary.activities.contractor} color="#E45D24" /></div>
     </div>}
 
     {/* Table + exports */}
