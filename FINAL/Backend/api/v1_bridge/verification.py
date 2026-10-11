@@ -31,6 +31,20 @@ def _profile_for(user):
     return None
 
 
+def _bss_id(user):
+    """The entity's BSS ID: worker id, contractor code or employer code."""
+    role = getattr(user, "role", "")
+    if role == "worker":
+        wi = getattr(user, "worker_identity", None)
+        return getattr(wi, "bss_worker_id", "") or ""
+    prof = _profile_for(user)
+    if role == "contractor":
+        return (getattr(prof, "contractor_code", "") or "") if prof else ""
+    if role == "employer":
+        return (getattr(prof, "employer_code", "") or "") if prof else ""
+    return ""
+
+
 def _entitylocker_verified(user):
     from bss_core.models import EntityLockerAuth
 
@@ -197,6 +211,7 @@ def admin_verification_queue(request):
                 "userId": profile.user_id, "role": role,
                 "name": (profile.employer_name if role == "employer" else profile.contractor_name) or user.username,
                 "username": user.username,
+                "bssId": _bss_id(user),
                 "gstin": profile.gstin or "", "legalName": profile.gst_legal_name or "",
                 "gstNotApplicable": gst_not_applicable,
                 "stage": stage, "manualStatus": manual,

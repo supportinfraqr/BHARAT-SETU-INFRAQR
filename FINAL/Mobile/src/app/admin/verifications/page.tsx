@@ -5,7 +5,7 @@ import { CheckCircle2, Download, Loader2, ShieldCheck, XCircle } from 'lucide-re
 
 type Doc = { id: number; docType: string; fileName: string; uploadedAt: string };
 type Row = {
-  userId: number; role: string; name: string; username: string; gstin: string; legalName: string;
+  userId: number; role: string; name: string; username: string; bssId: string; gstin: string; legalName: string;
   gstNotApplicable?: boolean;
   stage: 'PENDING' | 'AWAITING_GST' | 'AWAITING_DOCUMENTS' | 'AWAITING_ENTITYLOCKER';
   manualStatus: string; declined: boolean; documents: Doc[];
@@ -82,7 +82,7 @@ export default function AdminVerificationsPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-bold text-gray-900">{row.name}</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">{row.role} · account <span className="font-mono">{row.username}</span> · {row.gstNotApplicable ? 'No GST — Not applicable' : `GSTIN ${row.gstin || '—'}${row.legalName ? ` · ${row.legalName}` : ''}`}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{row.role} · BSS ID <span className="font-mono">{row.bssId || '—'}</span> · account <span className="font-mono">{row.username}</span> · {row.gstNotApplicable ? 'No GST — Not applicable' : `GSTIN ${row.gstin || '—'}${row.legalName ? ` · ${row.legalName}` : ''}`}</p>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-1 rounded-full border whitespace-nowrap ${STAGE[row.stage].tone}`}>{STAGE[row.stage].label}</span>
               </div>

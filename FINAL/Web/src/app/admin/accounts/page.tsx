@@ -5,7 +5,7 @@ import { Loader2, Lock, LockOpen, ShieldCheck, UserCheck, UserX } from 'lucide-r
 
 type Account = {
   userId: number; username: string; role: string; name: string;
-  gstin: string; approval: string; accountActive: boolean; loginActive: boolean;
+  bssId: string; gstin: string; approval: string; accountActive: boolean; loginActive: boolean;
 };
 
 const ROLE_LABEL: Record<string, string> = {
@@ -99,6 +99,7 @@ export default function AdminAccountsPage() {
           <thead className="bg-gray-50 text-[11px] uppercase tracking-wider text-gray-500">
             <tr>
               <th className="text-left px-4 py-2.5">Account</th>
+              <th className="text-left px-4 py-2.5">BSS ID</th>
               <th className="text-left px-4 py-2.5">Role</th>
               <th className="text-left px-4 py-2.5">GSTIN</th>
               <th className="text-center px-4 py-2.5">Admin Approval</th>
@@ -108,6 +109,7 @@ export default function AdminAccountsPage() {
           <tbody className="divide-y divide-gray-100">
             {rows.map(row => <tr key={row.userId}>
               <td className="px-4 py-2.5"><p className="font-semibold text-gray-900">{row.name}</p><p className="text-[11px] text-gray-400">{row.username}</p></td>
+              <td className="px-4 py-2.5 font-mono text-[11px] text-gray-600">{row.bssId || '—'}</td>
               <td className="px-4 py-2.5 text-gray-600">{ROLE_LABEL[row.role] ?? row.role}</td>
               <td className="px-4 py-2.5 font-mono text-[11px] text-gray-500">{row.gstin || '—'}</td>
               <td className="px-4 py-2.5 text-center">

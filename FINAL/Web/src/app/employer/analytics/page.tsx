@@ -7,6 +7,7 @@ import { BarChart, HBar, Donut } from '@/components/charts';
 import { exportMatrixToXlsx } from '@/lib/exportXlsx';
 import { openPrintHtml } from '@/lib/documentEngine/render';
 import AttendanceDetailDialog from '@/components/attendance/AttendanceDetailDialog';
+import { SignOutButton } from '@/components/auth/SignOutButton';
 import WorkforceExplorer from '@/components/analytics/WorkforceExplorer';
 import type { AttendanceRecord } from '@/types/portal';
 
@@ -191,6 +192,7 @@ export default function EmployerAnalyticsPage() {
           <button type="button" onClick={() => void load()} className="h-10 px-4 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/20 transition-colors backdrop-blur-sm">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''}/> {updatedAt ? `Updated ${updatedAt}` : 'Refresh'}
           </button>
+          <SignOutButton label="Sign out" className="h-10 px-4 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/20 transition-colors backdrop-blur-sm" />
         </div>
       </div>
     </header>

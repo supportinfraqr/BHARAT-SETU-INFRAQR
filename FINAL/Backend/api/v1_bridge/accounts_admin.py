@@ -32,6 +32,20 @@ def _profile(user):
             or getattr(user, "employer_profile", None))
 
 
+def _bss_id(user):
+    """The entity's BSS ID: worker id, contractor code or employer code."""
+    role = getattr(user, "role", "")
+    if role == "worker":
+        wi = getattr(user, "worker_identity", None)
+        return getattr(wi, "bss_worker_id", "") or ""
+    prof = _profile(user)
+    if role == "contractor":
+        return (getattr(prof, "contractor_code", "") or "") if prof else ""
+    if role == "employer":
+        return (getattr(prof, "employer_code", "") or "") if prof else ""
+    return ""
+
+
 def _account_row(user):
     prof = _profile(user)
     role = user.role
@@ -45,6 +59,7 @@ def _account_row(user):
     return {
         "userId": user.id, "username": user.username, "role": role,
         "name": name or getattr(user, "full_name", "") or user.username,
+        "bssId": _bss_id(user),
         "gstin": (getattr(prof, "gstin", "") or "") if prof else "",
         "approval": (getattr(prof, "approval_status", "") or "") if prof else "",
         "accountActive": bool(user.account_active),
