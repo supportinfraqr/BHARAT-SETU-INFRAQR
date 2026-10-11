@@ -52,6 +52,7 @@ def _batch_row(b):
         "employerId": b.employer_id,
         "submittedBy": payloads._party_name(b.submitted_by) if b.submitted_by_id else "",
         "fileName": b.file_name, "consentGiven": b.consent_given,
+        "declaration": b.declaration or "",
         "counts": b.counts or {},
         "reviewNote": b.review_note, "employerReviewNote": b.employer_review_note,
         "reviewedAt": payloads._dts(b.reviewed_at), "employerReviewedAt": payloads._dts(b.employer_reviewed_at),

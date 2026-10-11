@@ -6,7 +6,7 @@ import { Building2, CheckCircle2, ChevronRight, Download, FileSpreadsheet, Loade
 
 type Batch = {
   id: number; source: string; state: string; employer: string; fileName: string;
-  consentGiven: boolean; counts: { total?: number; ok?: number; flagged?: number; migrated?: number; byEntity?: Record<string, number> };
+  consentGiven: boolean; declaration?: string; counts: { total?: number; ok?: number; flagged?: number; migrated?: number; byEntity?: Record<string, number> };
   reviewNote: string; employerReviewNote: string; createdAt: string;
 };
 type Rec = { id: number; entityType: string; rowIndex: number; data: Record<string, unknown>; issues: Array<{ level?: string; message: string }>; status: string };
@@ -166,6 +166,7 @@ export default function EmployerOnboardingPage() {
             <button disabled={busy} onClick={() => void review(detail.batch.id, 'reject')} className="h-9 px-3 rounded-lg border border-bss-border text-bss-error text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50"><XCircle size={13}/>Reject</button>
           </div>}
         </header>
+        {detail.batch.declaration && <p className="px-5 py-3 text-[11px] text-bss-text-secondary border-b border-bss-border"><strong>Declaration / note:</strong> {detail.batch.declaration}</p>}
         {detail.batch.state !== 'STRUCTURED' && <p className="px-5 py-3 text-[11px] text-bss-text-muted border-b border-bss-border">
           {detail.batch.state === 'SUBMITTED' ? 'Awaiting BSS review.' : detail.batch.state === 'MIGRATED' || detail.batch.state === 'APPROVED' ? 'Accounts created — the account-created WhatsApp message was sent.' : detail.batch.state === 'REJECTED' ? 'This submission was rejected.' : 'BSS is processing this submission; you will be asked to approve once it is structured.'}
         </p>}

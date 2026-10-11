@@ -7,7 +7,7 @@ type Batch = {
   id: number; source: string; state: string; employer: string; employerId: number | null;
   submittedBy: string; fileName: string; consentGiven: boolean;
   counts: { total?: number; ok?: number; failed?: number; rejected?: number; flagged?: number; migrated?: number; byEntity?: Record<string, number> };
-  reviewNote: string; employerReviewNote: string; createdAt: string;
+  reviewNote: string; employerReviewNote: string; declaration?: string; createdAt: string;
 };
 type Row = { id: number; entityType: string; rowIndex: number; data: Record<string, unknown>; issues: Array<{ field?: string; level?: string; message: string }>; status: string; result: Record<string, unknown> };
 
@@ -159,6 +159,8 @@ export default function AdminOnboardingPage() {
         <div className="px-5 py-3 text-[11px] text-gray-500 border-b border-gray-100">
           Flow: Submitted → Admin review → Quarantine → Cleaned → Structured → Employer approval → Accounts + WhatsApp message. Migration runs automatically when the employer approves.
         </div>
+
+        {detail.batch.declaration && <div className="px-5 py-3 text-[11px] text-gray-700 border-b border-gray-100 bg-gray-50/60"><strong>Declaration / note:</strong> {detail.batch.declaration}</div>}
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
