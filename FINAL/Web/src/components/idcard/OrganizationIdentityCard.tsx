@@ -144,9 +144,9 @@ export default function OrganizationIdentityCard({
             </div>
 
             {/* QR zone — identical geometry, BSS logo overlay (worker parity) */}
-            <div className={`w-[92px] flex-shrink-0 ${standard ? 'flex flex-col justify-end items-center pb-0.5' : 'flex flex-col justify-end items-center'}`}>
-              <div className="relative bg-white p-1 rounded-[6px] shadow-[0_4px_12px_rgba(0,0,0,0.3)] w-[84px] h-[84px] flex items-center justify-center border border-slate-200">
-                <WorkerQr bssId={content.entityId} size={256} />
+            <div className={`${standard ? 'w-[106px]' : 'w-[92px]'} flex-shrink-0 ${standard ? 'flex flex-col justify-end items-center pb-0.5' : 'flex flex-col justify-end items-center'}`}>
+              <div className={`relative bg-white p-1 rounded-[6px] shadow-[0_4px_12px_rgba(0,0,0,0.3)] flex items-center justify-center border border-slate-200 ${standard ? 'w-[100px] h-[100px]' : 'w-[84px] h-[84px]'}`}>
+                <WorkerQr bssId={content.entityId} size={standard ? 340 : 256} />
                 <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="w-[13px] h-[13px] bg-white rounded-[3px] grid place-items-center shadow-sm"><img src="/bss-original-logo.png" alt="" className="w-[10px] h-[10px] object-contain" /></span></span>
               </div>
               <p className="text-[5px] text-slate-300 uppercase font-bold tracking-[0.12em] mt-1.5 whitespace-nowrap">Scan to Verify</p>
@@ -161,10 +161,10 @@ export default function OrganizationIdentityCard({
                 {content.validTill && <div><p className="text-[5.5px] text-slate-300 uppercase tracking-[0.16em] font-bold mb-1">Valid Till</p><p className="text-[9px] font-bold tracking-[0.08em] text-white leading-none">{content.validTill}</p></div>}
               </div>
               <p className="text-[6px] text-slate-200 font-bold tracking-[0.12em] uppercase">BSS Card · National ID</p>
-              <div className="w-[92px]" aria-hidden="true" />
+              <div className={standard ? 'w-[106px]' : 'w-[92px]'} aria-hidden="true" />
             </div>
           ) : (
-            <div className="flex justify-between items-center relative z-10 mt-2"><div className="flex gap-5"><div><p className="text-[5.5px] text-slate-300 uppercase tracking-[0.16em] font-bold">Issue Date</p><p className="text-[9px] font-bold text-white">{content.issueDate}</p></div>{content.validTill && <div><p className="text-[5.5px] text-slate-300 uppercase tracking-[0.16em] font-bold">Valid Till</p><p className="text-[9px] font-bold text-white">{content.validTill}</p></div>}</div><div className="w-[92px]"/></div>
+            <div className="flex justify-between items-center relative z-10 mt-2"><div className="flex gap-5"><div><p className="text-[5.5px] text-slate-300 uppercase tracking-[0.16em] font-bold">Issue Date</p><p className="text-[9px] font-bold text-white">{content.issueDate}</p></div>{content.validTill && <div><p className="text-[5.5px] text-slate-300 uppercase tracking-[0.16em] font-bold">Valid Till</p><p className="text-[9px] font-bold text-white">{content.validTill}</p></div>}</div><div className={standard ? 'w-[106px]' : 'w-[92px]'}/></div>
           )}
         </div>
 
