@@ -126,7 +126,7 @@ export default function EmployerOnboardingPage() {
 
     <section className="bss-card rounded-2xl p-5 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#01183A]"/>Submit historical data</h2><p className="text-xs text-bss-text-muted mt-0.5">Two templates: <strong>Worker</strong> and <strong>Contractor</strong>. Download, fill the sheet, and submit the .xlsx here.</p></div>
+        <div><h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#01183A]"/>Submit historical data</h2><p className="text-xs text-bss-text-muted mt-0.5">Two templates: <strong>Worker</strong> and <strong>Contractor</strong>. Each asks only the <strong>mobile number</strong> — the rest is completed when the user signs in.</p></div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => void downloadTemplate('workers')} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Worker template</button>
           <button onClick={() => void downloadTemplate('contractors')} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Contractor template</button>

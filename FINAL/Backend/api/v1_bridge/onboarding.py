@@ -32,6 +32,17 @@ ENTITY_MAP = {
 }
 MIGRATION_ORDER = ["EMPLOYER", "CONTRACTOR", "WORKER", "RELATION"]
 
+# Employer onboarding asks for the phone number only — every other field is
+# completed by the user after they sign in.
+ONBOARDING_ENTITIES = {
+    "workers": ("Workers", [("Mobile", "mobile")]),
+    "contractors": ("Contractors", [("Mobile", "mobile")]),
+}
+_ONBOARDING_SHEET = {  # entity_type → (sheet title, columns)
+    "WORKER": ONBOARDING_ENTITIES["workers"],
+    "CONTRACTOR": ONBOARDING_ENTITIES["contractors"],
+}
+
 
 # ── serialization ────────────────────────────────────────────────────────────
 def _batch_row(b):
@@ -73,14 +84,14 @@ def _has_error(issues):
 
 
 # ── parsing ──────────────────────────────────────────────────────────────────
-def _sheet_rows(ws, entity):
+def _sheet_rows(ws, columns):
     data = list(ws.iter_rows(values_only=True))
     if not data:
         return []
     file_header = [str(c or "").strip().lower().replace(" ", "") for c in data[0]]
-    keys = [k for _, k in ENTITIES[entity][1]]
+    keys = [k for _, k in columns]
     index = {}
-    for pos, (label, _key) in enumerate(ENTITIES[entity][1]):
+    for pos, (label, _key) in enumerate(columns):
         norm = label.lower().replace(" ", "")
         index[pos] = file_header.index(norm) if norm in file_header else pos
     out = []
@@ -96,17 +107,18 @@ def _sheet_rows(ws, entity):
 
 
 def _parse_workbook(raw):
-    """Return {entity_type: [row, ...]} for whichever entity sheets are present."""
+    """Return {entity_type: [row, ...]} for whichever onboarding sheets are present.
+
+    Only Workers and Contractors — each sheet carries just the phone number."""
     from openpyxl import load_workbook
     try:
         wb = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
     except Exception as exc:  # noqa: BLE001
         raise ValueError(f"Could not read the workbook: {exc}") from exc
     grouped = {}
-    for etype, (ent, _proc) in ENTITY_MAP.items():
-        title = ENTITIES[ent][0]
+    for etype, (title, columns) in _ONBOARDING_SHEET.items():
         if title in wb.sheetnames:
-            rows = _sheet_rows(wb[title], ent)
+            rows = _sheet_rows(wb[title], columns)
             if rows:
                 grouped[etype] = rows
     return grouped
@@ -428,7 +440,7 @@ def employer_onboarding_template(request):
     wb.remove(wb.active)
     fill = PatternFill("solid", fgColor="0A192F")
     for ent in entities:
-        title, columns = ENTITIES[ent]
+        title, columns = ONBOARDING_ENTITIES[ent]
         ws = wb.create_sheet(title)
         for col, (label, _key) in enumerate(columns, start=1):
             cell = ws.cell(row=1, column=col, value=label)
