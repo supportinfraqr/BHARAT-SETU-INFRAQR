@@ -167,29 +167,28 @@ def _admin_only(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_verification_queue(request):
-    """GST-verified employers/contractors that are not yet identity-verified.
+    """Every employer/contractor awaiting Admin Approval (the single channel).
 
-    Each row carries its stage so the admin knows whether it is awaiting the
-    EntityLocker answer, awaiting documents, or ready to review."""
+    Lists all accounts whose Admin Approval switch is off, regardless of their
+    verification progress. The stage is informational so the admin knows what
+    the entity still has to do before approval."""
     from bss_core.models import ContractorProfile, EmployerProfile
 
     if not _admin_only(request):
         return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
     rows = []
     for model, role in ((EmployerProfile, "employer"), (ContractorProfile, "contractor")):
-        # Include contractors who declared "no GST" — their GST fields are NA
-        # and require no admin input at approval.
-        for profile in model.objects.filter(
-                gst_verification_status__in=("VERIFIED", "NOT_APPLICABLE")).select_related("user"):
+        # Admin Approval off == pending admin approval. No other filtering.
+        for profile in model.objects.filter(user__account_active=False).select_related("user"):
             user = profile.user
-            el_verified = _entitylocker_verified(user)
             manual = profile.manual_verification_status or "NOT_SUBMITTED"
-            if el_verified or manual == "VERIFIED":
-                continue  # already verified
-            gst_not_applicable = str(
-                getattr(profile, "gst_verification_status", "") or "").upper() == "NOT_APPLICABLE"
-            if manual == "PENDING":
-                stage = "PENDING"           # documents submitted, admin review due
+            gst_status = str(
+                getattr(profile, "gst_verification_status", "") or "PENDING").upper()
+            gst_not_applicable = gst_status == "NOT_APPLICABLE"
+            if manual in ("PENDING", "VERIFIED"):
+                stage = "PENDING"           # ready to review — only Admin Approval left
+            elif gst_status not in ("VERIFIED", "NOT_APPLICABLE"):
+                stage = "AWAITING_GST"
             elif profile.entity_locker_declined or gst_not_applicable:
                 stage = "AWAITING_DOCUMENTS"
             else:
@@ -241,23 +240,20 @@ def admin_verification_review(request):
             setattr(profile, field, str(body.get(key) or "")[:limit])
             fields.append(field)
     if decision == "VERIFIED":
-        # Approving the account makes its GSTIN valid — a GSTIN may be held by
-        # only one *active* account (contractor or employer).
+        # Admin Approval on. A GSTIN may be held by only one account — conflict
+        # if another account already holds it (either switch on).
         from .gst import active_gstin_holder, gstin_conflict_message
         clash = active_gstin_holder(profile.gstin, exclude_user_id=profile.user_id)
         if clash is not None:
             return Response({"error": gstin_conflict_message(clash)},
                             status=status.HTTP_409_CONFLICT)
-        # Completing identity verification IS the account approval — no separate
-        # admin approval step exists, so reflect it on the profile and activate
-        # the account (uniqueness applies to active accounts only).
         profile.approval_status = "APPROVED"
         fields.append("approval_status")
         user = profile.user
         if not user.account_active:
+            # Only the Admin Approval switch — never touch is_Active here.
             user.account_active = True
-            user.is_active = True
-            user.save(update_fields=["account_active", "is_active"])
+            user.save(update_fields=["account_active"])
     if decision == "REJECTED":
         # Send the entity back to the "EntityLocker or manual documents?" choice
         # so they can redo it (they are asked again on their next visit).
