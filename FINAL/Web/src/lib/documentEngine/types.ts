@@ -63,6 +63,8 @@ export type TemplateStyles = {
   brandTagline?: string;
   /** Per-part wordmark colours (e.g. one part red, another green). */
   brandColors?: string[];
+  /** A fully custom pass colour (hex) that overrides the preset theme. */
+  themeColor?: string;
   /** A simple free-form HTML block rendered into the document (script tags stripped). */
   customHtml?: string;
   footerText: string;

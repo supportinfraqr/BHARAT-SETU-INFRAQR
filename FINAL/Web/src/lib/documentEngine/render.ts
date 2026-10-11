@@ -14,6 +14,16 @@ function esc(value: unknown): string {
   return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/** Light tint of a hex colour (mix ~90% toward white) for header backgrounds. */
+function tint(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim());
+  if (!m) return '#F0F4FA';
+  const n = parseInt(m[1], 16);
+  const mix = (c: number) => Math.round(c + (255 - c) * 0.9);
+  const r = mix((n >> 16) & 255), g = mix((n >> 8) & 255), b = mix(n & 255);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
 /** Replace tokens with resolved values; unresolved tokens render as readable chips. */
 function smartContent(content: string, tokens: Record<string, string>): string {
   let out = '';
@@ -67,7 +77,9 @@ function sectionHtml(section: TemplateSection, tokens: Record<string, string>, w
 export type RenderTarget = { template: TemplateConfig; tokens: Record<string, string>; workerRows?: Array<Record<string, string>> };
 
 function cssFor(template: TemplateConfig): string {
-  const colors = THEME_COLORS[template.styles.theme] ?? THEME_COLORS['bss-navy'];
+  const base = THEME_COLORS[template.styles.theme] ?? THEME_COLORS['bss-navy'];
+  const custom = template.styles.themeColor?.trim();
+  const colors = custom ? { primary: custom, accent: custom, light: tint(custom) } : base;
   const fontSize = template.styles.fontSize || 12;
   const isGateCard = template.pageFormat === 'PGP';
   // Gate passes expose a single "text colour" control for the body; headings
@@ -80,15 +92,15 @@ function cssFor(template: TemplateConfig): string {
   const gatePassHeading = template.documentType === 'permanent-gate-pass' ? '#15803D'
     : template.documentType === 'temporary-gate-pass' ? '#B91C1C'
     : null;
-  const headingColor = gatePassHeading ?? colors.primary;
+  const headingColor = (gatePass && custom) ? custom : (gatePassHeading ?? colors.primary);
   return `
   @page { size: ${isGateCard ? '85.6mm 53.98mm landscape' : 'A4 portrait'}; margin: ${isGateCard ? '0' : '12mm 14mm'}; }
   * { box-sizing: border-box; }
   body { margin:0; background:#fff; font-family: ${template.styles.fontFamily}; color:${textColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .doc-page { width:794px; margin:0 auto; padding: ${isGateCard ? '0' : '8px 4px 16px'}; position:relative; }
-  .doc-logo-row { display:flex; align-items:center; gap:12px; border-bottom:3px solid #073B67; padding:0 0 10px; margin-bottom:10px; }
+  .doc-logo-row { display:flex; align-items:center; gap:12px; border-bottom:3px solid ${colors.primary}; padding:0 0 10px; margin-bottom:10px; }
   .doc-logo { height:36px; width:auto; }
-  .doc-brand strong { display:block; color:#073B67; font-size:17px; letter-spacing:.3px; font-weight:800; }
+  .doc-brand strong { display:block; color:${colors.primary}; font-size:17px; letter-spacing:.3px; font-weight:800; }
   .doc-brand span { font-size:9px; color:#6b7280; letter-spacing:1.6px; text-transform:uppercase; }
   .doc-heading { text-align:center; color:${headingColor}; font-size:${fontSize + 5}px; margin:12px 0 8px; letter-spacing:1.4px; border-bottom:2px double ${gatePass ? headingColor : colors.accent}; padding-bottom:7px; text-transform:uppercase; font-weight:800; }
   .doc-subheading { color:${headingColor}; font-size:${fontSize + 1}px; margin:14px 0 5px; border-bottom:1px solid #d1d5db; padding-bottom:4px; font-weight:700; }
