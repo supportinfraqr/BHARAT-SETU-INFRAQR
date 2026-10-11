@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Eye, FileText, ShieldCheck } from 'lucide-react';
+import { CalendarDays, ChevronLeft, Download, Eye, FileText, MapPin, ShieldCheck } from 'lucide-react';
 import { useWorker } from '@/contexts/WorkerContext';
 import PageHero from '@/components/portal/PageHero';
 import { GatePassViewer } from '@/components/documentEngine/GatePassViewer';
@@ -41,42 +41,69 @@ export default function IssuedLettersPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 lg:p-6 max-w-6xl mx-auto space-y-6">
       <PageHero
+        eyebrow="Documents"
         title="My Issued Letters"
         subtitle="Letters and passes issued to you by your principal employer. They are generated automatically and cannot be uploaded or edited."
         actions={<Link href="/worker/Profile" className="w-10 h-10 grid place-items-center rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors" aria-label="Go back"><ChevronLeft size={18} /></Link>}
       />
 
-      <section className="bss-3d bss-scroll-rise rounded-2xl border border-bss-border bg-white p-5">
-        <h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><ShieldCheck size={16} className="text-[#01183A]"/>Gate Passes</h2>
+      <section className="bss-card bss-scroll-rise rounded-2xl p-5">
+        <header className="flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-xl bg-bss-blue-tint text-bss-interactive-blue grid place-items-center"><ShieldCheck size={17} /></span>
+          <div><h2 className="text-sm font-semibold text-bss-text-primary">Gate Passes</h2><p className="text-xs text-bss-text-muted mt-0.5">Site access permits issued for your current engagement.</p></div>
+        </header>
         {gatePasses.length ? <div className="mt-4 grid sm:grid-cols-2 gap-3">
-          {gatePasses.map(pass => (
-            <div key={String(pass.id)} className="rounded-xl border border-bss-border p-4">
-              <div className="flex items-center justify-between gap-2"><strong className="text-sm text-bss-text-primary">{pass.type} Gate Pass</strong><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${pass.status === 'Blocked' ? 'bg-bss-bg text-bss-text-secondary' : pass.status === 'Approved' ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-bss-orange'}`}>{pass.status}</span></div>
-              <p className="text-[11px] font-mono text-[#01183A] mt-1">{pass.number}</p>
-              <p className="text-[11px] text-bss-text-muted mt-0.5">{pass.site} · {pass.validFrom || '—'} → {pass.validTo || '—'}</p>
-              <button disabled={pass.blocked} onClick={() => { void viewPass(pass); }} className="mt-3 h-8 px-3 rounded-lg bg-[#01183A] text-white text-[11px] font-semibold inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"><Eye size={12}/>View pass</button>
-            </div>
-          ))}
-        </div> : <p className="text-sm text-bss-text-muted mt-3">No gate pass issued yet. Your contractor requests one and the principal employer approves.</p>}
+          {gatePasses.map(pass => {
+            const tone = pass.status === 'Blocked' ? 'bg-bss-bg text-bss-text-secondary' : pass.status === 'Approved' ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-bss-orange';
+            return (
+              <article key={String(pass.id)} className="rounded-2xl border border-bss-border bg-white p-4 flex flex-col hover:border-bss-interactive-blue/40 transition-colors">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="w-10 h-10 rounded-xl bg-bss-blue-tint text-bss-interactive-blue grid place-items-center"><ShieldCheck size={18} /></span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tone}`}>{pass.status}</span>
+                </div>
+                <strong className="text-sm font-semibold text-bss-text-primary mt-3">{pass.type} Gate Pass</strong>
+                <code className="text-[11px] font-mono text-bss-interactive-blue mt-0.5">{pass.number}</code>
+                <p className="text-[11px] text-bss-text-muted mt-2 flex items-center gap-1.5"><MapPin size={12} className="shrink-0" />{pass.site || '—'}</p>
+                <p className="text-[11px] text-bss-text-muted mt-0.5 flex items-center gap-1.5"><CalendarDays size={12} className="shrink-0" />{pass.validFrom || '—'} → {pass.validTo || '—'}</p>
+                <button disabled={pass.blocked} onClick={() => { void viewPass(pass); }} className="mt-4 h-9 w-full rounded-lg bg-bss-navy text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-bss-deep-navy transition-colors disabled:opacity-40 disabled:cursor-not-allowed"><Eye size={13} />View pass</button>
+              </article>
+            );
+          })}
+        </div> : <EmptyState icon={ShieldCheck} text="No gate pass issued yet. Your contractor requests one and the principal employer approves." />}
       </section>
 
-      <section className="bss-3d bss-scroll-rise rounded-2xl border border-bss-border bg-white p-5">
-        <h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><FileText size={16} className="text-[#01183A]"/>Current Letters</h2>
-        <p className="text-[11px] text-bss-text-muted mt-1">Letters from your current engagement. These are fixed PDF copies — later site changes never alter them.</p>
+      <section className="bss-card bss-scroll-rise rounded-2xl p-5">
+        <header className="flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-xl bg-bss-soft-green text-bss-green grid place-items-center"><FileText size={17} /></span>
+          <div><h2 className="text-sm font-semibold text-bss-text-primary">Current Letters</h2><p className="text-xs text-bss-text-muted mt-0.5">Letters from your current engagement — fixed PDF copies that later site changes never alter.</p></div>
+        </header>
         {currentLetters.length ? <div className="mt-4 grid sm:grid-cols-2 gap-3">
           {currentLetters.map((letter, index) => (
-            <div key={`cur-${letter.id}-${letter.date ?? index}`} className="rounded-xl border border-bss-border p-4">
-              <div className="flex items-center justify-between gap-2"><strong className="text-sm text-bss-text-primary">{letter.name}</strong><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-bss-soft-green text-bss-green">Issued</span></div>
-              <p className="text-[11px] text-bss-text-muted mt-0.5">Issued {letter.date ? new Date(letter.date).toLocaleDateString('en-IN') : '—'}</p>
-              {letter.downloadUrl && <a href={letter.downloadUrl} target="_blank" rel="noopener noreferrer" className="mt-3 h-8 px-3 rounded-lg bg-[#01183A] text-white text-[11px] font-semibold inline-flex items-center gap-1"><Eye size={12}/>View letter</a>}
-            </div>
+            <article key={`cur-${letter.id}-${letter.date ?? index}`} className="rounded-2xl border border-bss-border bg-white p-4 flex flex-col hover:border-bss-interactive-blue/40 transition-colors">
+              <div className="flex items-start justify-between gap-2">
+                <span className="w-10 h-10 rounded-xl bg-bss-soft-green text-bss-green grid place-items-center"><FileText size={18} /></span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-bss-soft-green text-bss-green">Issued</span>
+              </div>
+              <strong className="text-sm font-semibold text-bss-text-primary mt-3">{letter.name}</strong>
+              <p className="text-[11px] text-bss-text-muted mt-1 flex items-center gap-1.5"><CalendarDays size={12} className="shrink-0" />Issued {letter.date ? new Date(letter.date).toLocaleDateString('en-IN') : '—'}</p>
+              {letter.downloadUrl
+                ? <a href={letter.downloadUrl} target="_blank" rel="noopener noreferrer" className="mt-4 h-9 rounded-lg bg-bss-navy text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-bss-deep-navy transition-colors"><Download size={13} />View letter</a>
+                : <span className="mt-4 h-9 rounded-lg bg-bss-bg text-bss-text-muted text-xs font-semibold inline-flex items-center justify-center gap-1.5">Not available</span>}
+            </article>
           ))}
-        </div> : <p className="text-sm text-bss-text-muted mt-3">Appointment and releasing letters for your current engagement appear here automatically.</p>}
+        </div> : <EmptyState icon={FileText} text="Appointment and releasing letters for your current engagement appear here automatically." />}
       </section>
 
       {preview && <GatePassViewer html={preview.html} title={preview.title} onClose={() => setPreview(null)} />}
     </div>
   );
+}
+
+function EmptyState({ icon: Icon, text }: { icon: typeof FileText; text: string }) {
+  return <div className="mt-4 rounded-2xl border border-dashed border-bss-border bg-bss-bg/50 py-10 px-6 text-center">
+    <span className="mx-auto w-12 h-12 rounded-2xl bg-bss-bg border border-bss-border grid place-items-center text-bss-text-muted"><Icon size={22} /></span>
+    <p className="text-sm text-bss-text-muted mt-3 max-w-md mx-auto">{text}</p>
+  </div>;
 }
