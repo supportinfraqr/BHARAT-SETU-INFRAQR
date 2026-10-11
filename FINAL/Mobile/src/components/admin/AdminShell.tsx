@@ -35,12 +35,11 @@ const mappingsGroup = { key: 'Mappings', icon: Link2, items: [
   ['Employer Register Mapping', '/admin/mappings/employer-register'],
 ] as const };
 const accessGroup = { key: 'Users & Access', icon: Users, items: [
-  ['User Registration', '/admin/users'],
   ['Permission Page', '/admin/permissions'],
   ['Onboarding', '/admin/onboarding'],
   ['Identity Verifications', '/admin/verifications'],
   ['GST Claims', '/admin/gst-claims'],
-  ['Accounts', '/admin/accounts'],
+  ['Users & Accounts', '/admin/accounts'],
 ] as const };
 const auditOpsGroup = { key: 'Audit & Reports', icon: BookOpenCheck, items: [
   ['Courses & Skills', '/admin/courses'],
@@ -65,11 +64,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       <div className="bss-shell-bar w-full max-w-[1536px] mx-auto px-3 md:px-6 h-16 flex items-center justify-between gap-2">
         <Link href="/admin" className="flex items-center gap-1.5 shrink-0"><Image src="/bss-original-logo.png" width={154} height={40} className="h-7 md:h-8 w-auto" alt="Bharat Shram Setu"/><BrandText className="hidden 2xl:block text-base"/></Link>
         <nav aria-label="Admin navigation" className="bss-desktop-nav flex-1 items-center justify-center gap-0.5 xl:gap-1 px-1">
-          <Link href="/admin" aria-current={pathname === '/admin' ? 'page' : undefined} className={`px-2 xl:px-2.5 py-1 rounded-full text-xs xl:text-[13px] font-medium whitespace-nowrap ${pathname === '/admin' ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>Overview</Link>
-          <Link href="/admin/payroll" aria-current={itemActive('/admin/payroll') ? 'page' : undefined} className={`px-2 xl:px-2.5 py-1 rounded-full text-xs xl:text-[13px] font-medium whitespace-nowrap inline-flex items-center gap-1 ${itemActive('/admin/payroll') ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}><Banknote size={13}/>Payroll</Link>
+          <Link href="/admin" aria-current={pathname === '/admin' ? 'page' : undefined} className={`px-2 xl:px-2.5 py-1 rounded-full text-xs xl:text-[13px] font-medium whitespace-nowrap ${pathname === '/admin' ? 'bg-bss-navy text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>Overview</Link>
+          <Link href="/admin/payroll" aria-current={itemActive('/admin/payroll') ? 'page' : undefined} className={`px-2 xl:px-2.5 py-1 rounded-full text-xs xl:text-[13px] font-medium whitespace-nowrap inline-flex items-center gap-1 ${itemActive('/admin/payroll') ? 'bg-bss-navy text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}><Banknote size={13}/>Payroll</Link>
           {groups.map((group, idx) => (
             <div key={group.key} className="relative">
-              <button type="button" aria-haspopup="menu" aria-expanded={openMenu === group.key} onClick={() => setOpenMenu(openMenu === group.key ? null : group.key)} className={`px-2 xl:px-2.5 py-1 rounded-full text-xs xl:text-[13px] font-medium flex items-center gap-0.5 whitespace-nowrap ${group.items.some(item => itemActive(item[1])) || openMenu === group.key ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>{t(group.key)}<ChevronDown size={11} className={`transition-transform ${openMenu === group.key ? 'rotate-180' : ''}`}/></button>
+              <button type="button" aria-haspopup="menu" aria-expanded={openMenu === group.key} onClick={() => setOpenMenu(openMenu === group.key ? null : group.key)} className={`px-2 xl:px-2.5 py-1 rounded-full text-xs xl:text-[13px] font-medium flex items-center gap-0.5 whitespace-nowrap ${group.items.some(item => itemActive(item[1])) || openMenu === group.key ? 'bg-bss-navy text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>{t(group.key)}<ChevronDown size={11} className={`transition-transform ${openMenu === group.key ? 'rotate-180' : ''}`}/></button>
               {openMenu === group.key && (
                 <div role="menu" className={`absolute top-full pt-2 w-60 z-50 ${idx >= groups.length - 2 ? 'right-0' : 'left-0'}`}>
                   <div className="bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-900/5 p-1.5">
@@ -85,9 +84,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <div className="hidden sm:block shrink-0"><LanguageSelect compact/></div>
           <div className="relative shrink-0">
-            <button type="button" onClick={() => setProfile(v => !v)} aria-expanded={profile} className="h-8 px-2 flex items-center gap-1.5 rounded-full transition-colors duration-150 hover:bg-gray-100 bg-slate-50 border border-slate-200">
-              <span className="w-6 h-6 rounded-full bg-[#073B67] text-white flex items-center justify-center font-bold text-[11px]">A</span>
-              <span className="hidden 2xl:block text-xs font-semibold text-slate-800">BSS Admin</span>
+            <button type="button" onClick={() => setProfile(v => !v)} aria-expanded={profile} className="h-8 px-2 flex items-center gap-1.5 rounded-full transition-colors duration-150 hover:bg-bss-blue-tint/60 bg-white border border-bss-border">
+              <span className="w-6 h-6 rounded-full bg-bss-navy text-white flex items-center justify-center font-bold text-[11px]">A</span>
+              <span className="hidden 2xl:block text-xs font-semibold text-bss-navy">BSS Admin</span>
               <ChevronDown size={12} className="text-slate-500"/>
             </button>
             {profile && (
@@ -105,7 +104,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       </div>
       {mobile && <nav aria-label="Mobile navigation" className="bss-mobile-menu absolute top-16 w-full bg-white border-b shadow-xl p-4">
         <Link href="/admin" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-50">Overview</Link>
-        <Link href="/admin/payroll" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm font-semibold text-[#073B67] hover:bg-gray-50">Payroll</Link>
+        <Link href="/admin/payroll" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm font-semibold text-bss-interactive-blue hover:bg-bss-bg">Payroll</Link>
         {flat.map(item => <Link key={`${item[0]}-${item[1]}`} href={item[1]} onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-gray-50">{item[0]}</Link>)}
         <Link href="/admin/activity" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-50">Activity Report</Link>
         <SignOutButton className="w-full flex items-center gap-2 px-4 py-3 text-red-600"/>

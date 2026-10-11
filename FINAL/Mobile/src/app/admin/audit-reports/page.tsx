@@ -1,11 +1,9 @@
 import { FileBarChart2, Sparkles, Wrench } from 'lucide-react';
+import AdminPageHero from '@/components/admin/AdminPageHero';
 
 export default function AdminAuditReportsPage() {
   return <div className="space-y-6">
-    <header>
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Compliance governance</p>
-      <h1 className="text-2xl font-bold mt-1 flex items-center gap-2"><FileBarChart2 size={22} className="text-[#073B67]" />Audit &amp; Verification Reports</h1>
-    </header>
+    <AdminPageHero eyebrow="Compliance governance" title="Audit & Verification Reports" icon={<FileBarChart2 size={14}/>} />
 
     <section className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
       <span className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 grid place-items-center mx-auto"><Wrench size={30} /></span>

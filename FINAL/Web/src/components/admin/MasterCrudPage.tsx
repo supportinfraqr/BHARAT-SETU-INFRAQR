@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Loader2, Pencil, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
+import AdminPageHero from '@/components/admin/AdminPageHero';
 import { MASTER_BY_KEY, type AdminField, type AdminRow, type MasterConfig } from '@/data/adminMasters';
 
 const input = 'mt-1 w-full h-10 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/20';
@@ -237,10 +238,13 @@ export default function MasterCrudPage({ configKey }: { configKey: string }) {
   }
 
   return <div className="space-y-6 pb-10">
-    <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-      <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">BSS Admin · Masters</p><h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">{config.title}</h1><p className="text-sm text-gray-500 mt-1">{config.description}</p></div>
-      {!config.readOnly && <button onClick={() => { setModal('add'); setEditing(null); setError(''); setDirty(false); setPendingFileRemoval(false); }} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black"><Plus size={16}/>Add record</button>}
-    </header>
+    <AdminPageHero
+      eyebrow="BSS Admin · Masters"
+      title={config.title}
+      description={config.description}
+      icon={<ShieldCheck size={14}/>}
+      actions={!config.readOnly ? <button onClick={() => { setModal('add'); setEditing(null); setError(''); setDirty(false); setPendingFileRemoval(false); }} className="h-10 px-4 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/20 transition-colors backdrop-blur-sm"><Plus size={15}/>Add record</button> : undefined}
+    />
 
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}

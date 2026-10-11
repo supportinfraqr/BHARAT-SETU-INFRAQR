@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Download, Loader2, ShieldCheck, XCircle } from 'lucide-react';
+import AdminPageHero from '@/components/admin/AdminPageHero';
 
 type Doc = { id: number; docType: string; fileName: string; uploadedAt: string };
 type Row = {
@@ -63,11 +64,7 @@ export default function AdminVerificationsPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Admin</p>
-        <h1 className="text-2xl font-bold mt-1">Identity Verifications</h1>
-        <p className="text-sm text-gray-500 mt-1">Every employer / contractor pending <strong>Admin Approval</strong>. Review the documents, then Approve or Reject.</p>
-      </header>
+      <AdminPageHero eyebrow="Users & Access" title="Identity Verifications" description="Every employer / contractor pending Admin Approval. Review the documents, then Approve or Reject." icon={<ShieldCheck size={14}/>} />
 
       {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
 

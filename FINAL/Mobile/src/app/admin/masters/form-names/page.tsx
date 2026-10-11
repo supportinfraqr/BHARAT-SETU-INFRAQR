@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Copy, Loader2, Plus, X } from 'lucide-react';
+import AdminPageHero from '@/components/admin/AdminPageHero';
 import { INDIA_STATES } from '@/data/indiaStates';
 
 type Checkpoint = { key?: string; type: string; label: string; value?: string; required?: boolean };
@@ -104,11 +105,7 @@ export default function AdminFormNamesPage() {
   }
 
   return <div className="space-y-6 pb-12">
-    <header>
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">BSS Admin · Masters</p>
-      <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Additional Forms</h1>
-      <p className="text-sm text-gray-500 mt-1">A per-state <strong>catalog</strong> of form names with <strong>no register template</strong> — contractors submit them directly. Catalog forms are always <strong>non-mandatory</strong>; each employer selects which apply and marks mandatory on their CLRA Registers page.</p>
-    </header>
+    <AdminPageHero eyebrow="BSS Admin · Masters" title="Additional Forms" description="A per-state catalog of form names with no register template — contractors submit them directly. Catalog forms are always non-mandatory; each employer selects which apply and marks mandatory on their CLRA Registers page." />
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
     {notice && <p role="status" className="bss-alert bss-alert-success">{notice}</p>}

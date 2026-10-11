@@ -24,7 +24,9 @@ def _admin_only(request):
 
 
 def _system_password():
-    return os.environ.get("BSS_SYSTEM_PASSWORD") or "bss-system-2026"
+    # One shared "admin password" for both the account switches here and the
+    # onboarding run — same value as the onboarding password.
+    return os.environ.get("BSS_ONBOARDING_PASSWORD") or os.environ.get("BSS_SYSTEM_PASSWORD") or "123456"
 
 
 def _profile(user):
@@ -49,19 +51,23 @@ def _bss_id(user):
 def _account_row(user):
     prof = _profile(user)
     role = user.role
+    wi = getattr(user, "worker_identity", None)
     if role == "contractor":
         name = getattr(prof, "contractor_name", "") or ""
     elif role == "employer":
         name = getattr(prof, "employer_name", "") or ""
     else:
-        wi = getattr(user, "worker_identity", None)
         name = getattr(wi, "name", "") or ""
     return {
         "userId": user.id, "username": user.username, "role": role,
         "name": name or getattr(user, "full_name", "") or user.username,
         "bssId": _bss_id(user),
+        "mobile": (getattr(wi, "mobile_number", "") or "") if wi else (getattr(prof, "mobile", "") or ""),
+        "email": (getattr(wi, "email", "") or "") if wi else (getattr(prof, "email", "") or ""),
         "gstin": (getattr(prof, "gstin", "") or "") if prof else "",
         "approval": (getattr(prof, "approval_status", "") or "") if prof else "",
+        "aadhaarVerified": bool(str(getattr(wi, "aadhaar", "") or "").strip()) if wi else False,
+        "gstVerified": (str(getattr(prof, "gst_verification_status", "") or "").upper() == "VERIFIED") if prof else False,
         "accountActive": bool(user.account_active),
         "loginActive": bool(user.is_active),
     }

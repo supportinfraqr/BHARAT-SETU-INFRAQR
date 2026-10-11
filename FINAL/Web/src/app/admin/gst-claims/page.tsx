@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { BadgeCheck, CheckCircle2, Loader2, ShieldCheck, XCircle } from 'lucide-react';
+import AdminPageHero from '@/components/admin/AdminPageHero';
 
 type Holder = {
   userId: number; role: string; name: string; username: string;
@@ -56,11 +57,7 @@ export default function AdminGstClaimsPage() {
   }
 
   return <div className="space-y-6 pb-12">
-    <header>
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Users &amp; Access</p>
-      <h1 className="text-2xl font-bold mt-1">GST Ownership Claims</h1>
-      <p className="text-sm text-gray-500 mt-1">A GSTIN stays on an account until both <strong>Admin Approval</strong> and <strong>is_Active</strong> are off. Pick the rightful owner and the other accounts are deactivated.</p>
-    </header>
+    <AdminPageHero eyebrow="Users & Access" title="GST Ownership Claims" description="A GSTIN stays on an account until both Admin Approval and is_Active are off. Pick the rightful owner and the other accounts are deactivated." icon={<BadgeCheck size={14}/>} />
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
     {notice && <p role="status" className="bss-alert bss-alert-success">{notice}</p>}

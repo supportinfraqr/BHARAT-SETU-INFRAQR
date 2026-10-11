@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { BookOpenCheck, CheckCircle2, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
+import AdminPageHero from '@/components/admin/AdminPageHero';
 
 type Lesson = { id?: number; title: string; duration?: string; youtubeUrl?: string };
 type Reading = { id?: number; title: string; body?: string; resourceUrl?: string; duration?: string };
@@ -224,14 +225,13 @@ export default function AdminCoursesPage() {
   const setQuestion = (i: number, j: number, q: number, patch: Partial<Question>) => setDraft(d => d ? { ...d, modules: d.modules.map((m, k) => k === i ? { ...m, assignments: m.assignments.map((a, x) => x === j ? { ...a, questions: a.questions.map((qq, y) => y === q ? { ...qq, ...patch } : qq) } : a) } : m) } : d);
 
   return <div className="space-y-6 pb-12">
-    <header className="flex flex-col sm:flex-row justify-between gap-3">
-      <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Skilling · Audit &amp; Reports</p>
-        <h1 className="text-2xl font-bold mt-1">Courses &amp; Skills</h1>
-        <p className="text-sm text-gray-500 mt-1">Build full learning tracks — lessons, readings, quizzes and assignments — and review learner progress and submissions here.</p>
-      </div>
-      {tab === 'courses' && <button onClick={() => { setDraft(emptyDraft()); setError(''); setNotice(''); }} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1.5 self-start"><Plus size={14}/>New course</button>}
-    </header>
+    <AdminPageHero
+      eyebrow="Skilling · Audit & Reports"
+      title="Courses & Skills"
+      description="Build full learning tracks — lessons, readings, quizzes and assignments — and review learner progress and submissions here."
+      icon={<BookOpenCheck size={14}/>}
+      actions={tab === 'courses' ? <button onClick={() => { setDraft(emptyDraft()); setError(''); setNotice(''); }} className="h-10 px-4 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/20 transition-colors backdrop-blur-sm"><Plus size={15}/>New course</button> : undefined}
+    />
 
     <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
       {(['courses', 'reports'] as const).map(t => <button key={t} onClick={() => setTab(t)} className={`h-8 px-4 rounded-md text-xs font-bold ${tab === t ? 'bg-[#073B67] text-white' : 'text-gray-600 hover:bg-gray-50'}`}>{t === 'courses' ? 'Courses' : 'Reports & Grading'}</button>)}

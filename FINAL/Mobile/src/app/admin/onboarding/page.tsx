@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { CheckCircle2, ChevronRight, Download, FileSpreadsheet, Loader2, Pencil, RefreshCw, ShieldCheck, Sparkles, Upload, X, XCircle } from 'lucide-react';
+import AdminPageHero from '@/components/admin/AdminPageHero';
 
 type Batch = {
   id: number; source: string; state: string; employer: string; employerId: number | null;
@@ -158,14 +159,13 @@ export default function AdminOnboardingPage() {
   const counts = (b: Batch) => b.counts?.byEntity ?? {};
 
   return <div className="space-y-6 pb-12">
-    <header className="flex flex-col sm:flex-row justify-between gap-3">
-      <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Data governance</p>
-        <h1 className="text-2xl font-bold mt-1">Onboarding — Quarantine</h1>
-        <p className="text-sm text-gray-500 mt-1">Employer submissions held in quarantine. Review → clean → structure → the employer approves → accounts are created and the WhatsApp “account created” message is sent.</p>
-      </div>
-      <button onClick={() => void load()} disabled={busy} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold inline-flex items-center gap-1.5 self-start disabled:opacity-60"><RefreshCw size={14}/>Refresh</button>
-    </header>
+    <AdminPageHero
+      eyebrow="Data governance"
+      title="Onboarding"
+      description="Employer submissions held in quarantine. Accept → Structure → edit a record if needed → Run onboarding (creates accounts + WhatsApp message)."
+      icon={<FileSpreadsheet size={14}/>}
+      actions={<button onClick={() => void load()} disabled={busy} className="h-10 px-4 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/20 transition-colors backdrop-blur-sm disabled:opacity-60"><RefreshCw size={14}/>Refresh</button>}
+    />
 
     <section className="bg-white border border-gray-200 rounded-2xl p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -226,7 +226,7 @@ export default function AdminOnboardingPage() {
               <button disabled={busy} onClick={() => void act(detail.batch.id, 'review', { decision: 'reject' })} className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold disabled:opacity-50">Reject</button>
             </>}
             <button disabled={busy || !['CLEANED', 'STRUCTURED'].includes(detail.batch.state)} onClick={() => void act(detail.batch.id, 'structure')} className="h-9 px-3 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-40 flex items-center gap-1.5"><Sparkles size={13}/>Structure</button>
-            <input type="password" value={onboardPassword} onChange={e => setOnboardPassword(e.target.value)} placeholder="Onboarding password" className="h-9 w-44 rounded-lg border border-gray-200 px-3 text-xs bg-white"/>
+            <input type="password" value={onboardPassword} onChange={e => setOnboardPassword(e.target.value)} placeholder="Admin password" className="h-9 w-44 rounded-lg border border-gray-200 px-3 text-xs bg-white"/>
             <button disabled={busy || !onboardPassword || !['CLEANED', 'STRUCTURED'].includes(detail.batch.state)} onClick={() => void act(detail.batch.id, 'migrate', { password: onboardPassword })} className="h-9 px-4 rounded-lg bg-green-700 text-white text-xs font-bold disabled:opacity-40">Run onboarding</button>
           </div>
         </header>
