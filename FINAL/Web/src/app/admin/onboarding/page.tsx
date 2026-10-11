@@ -83,7 +83,7 @@ export default function AdminOnboardingPage() {
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Data governance</p>
         <h1 className="text-2xl font-bold mt-1">Onboarding — Quarantine</h1>
-        <p className="text-sm text-gray-500 mt-1">Employer submissions held in quarantine. Review → clean → structure → the employer approves → accounts are created and the introductory SMS is sent.</p>
+        <p className="text-sm text-gray-500 mt-1">Employer submissions held in quarantine. Review → clean → structure → the employer approves → accounts are created and the WhatsApp “account created” message is sent.</p>
       </div>
       <button onClick={() => void load()} disabled={busy} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold inline-flex items-center gap-1.5 self-start disabled:opacity-60"><RefreshCw size={14}/>Refresh</button>
     </header>
@@ -124,7 +124,7 @@ export default function AdminOnboardingPage() {
         </header>
 
         <div className="px-5 py-3 text-[11px] text-gray-500 border-b border-gray-100">
-          Flow: Submitted → Admin review → Quarantine → Cleaned → Structured → Employer approval → Accounts + intro SMS. Migration runs automatically when the employer approves.
+          Flow: Submitted → Admin review → Quarantine → Cleaned → Structured → Employer approval → Accounts + WhatsApp message. Migration runs automatically when the employer approves.
         </div>
 
         <div className="overflow-x-auto">

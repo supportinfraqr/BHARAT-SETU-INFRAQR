@@ -49,15 +49,15 @@ export default function EmployerOnboardingPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
   useEffect(() => { void load(); }, [load]);
 
-  async function downloadTemplate() {
+  async function downloadTemplate(entity: 'employers' | 'contractors') {
     setError(''); setNotice('');
     try {
-      const res = await fetch('/api/employer/onboarding/template');
+      const res = await fetch(`/api/employer/onboarding/template?entity=${entity}`);
       if (!res.ok) throw new Error('The template could not be downloaded.');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = 'bss-onboarding-template.xlsx';
+      a.href = url; a.download = `bss-onboarding-${entity}.xlsx`;
       document.body.appendChild(a); a.click(); a.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
     } catch (e) { setError(e instanceof Error ? e.message : 'The template could not be downloaded.'); }
@@ -118,7 +118,7 @@ export default function EmployerOnboardingPage() {
     <header>
       <p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Secure data onboarding</p>
       <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-bss-text-primary mt-1">Onboarding</h1>
-      <p className="text-sm text-bss-text-muted mt-1">Submit your historical worker, contractor and site data over a secure channel. BSS reviews and quarantines it; you then approve the verified data before accounts are created.</p>
+      <p className="text-sm text-bss-text-muted mt-1">Submit employer and contractor data over a secure channel. BSS reviews and quarantines it; you then approve the verified data before accounts are created.</p>
     </header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
@@ -126,8 +126,11 @@ export default function EmployerOnboardingPage() {
 
     <section className="bss-card rounded-2xl p-5 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#01183A]"/>Submit historical data</h2><p className="text-xs text-bss-text-muted mt-0.5">One workbook with any of the sheets: Employers, Contractors, Workers, Relations.</p></div>
-        <button onClick={() => void downloadTemplate()} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Download template</button>
+        <div><h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#01183A]"/>Submit historical data</h2><p className="text-xs text-bss-text-muted mt-0.5">Two templates: <strong>Employer</strong> and <strong>Contractor</strong>. Download, fill the sheet, and submit the .xlsx here.</p></div>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => void downloadTemplate('employers')} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Employer template</button>
+          <button onClick={() => void downloadTemplate('contractors')} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Contractor template</button>
+        </div>
       </div>
       <label className="flex items-center gap-2 border border-dashed border-bss-border rounded-xl bg-bss-bg px-3 py-2.5 text-xs font-semibold text-bss-text-secondary cursor-pointer hover:border-[#01183A]">
         <Upload size={16} className="text-[#01183A]"/>{file ? file.name : 'Choose data file (.xlsx)'}
@@ -164,7 +167,7 @@ export default function EmployerOnboardingPage() {
           </div>}
         </header>
         {detail.batch.state !== 'STRUCTURED' && <p className="px-5 py-3 text-[11px] text-bss-text-muted border-b border-bss-border">
-          {detail.batch.state === 'SUBMITTED' ? 'Awaiting BSS review.' : detail.batch.state === 'MIGRATED' || detail.batch.state === 'APPROVED' ? 'Accounts created — the introductory SMS was sent to the workers/contractors.' : detail.batch.state === 'REJECTED' ? 'This submission was rejected.' : 'BSS is processing this submission; you will be asked to approve once it is structured.'}
+          {detail.batch.state === 'SUBMITTED' ? 'Awaiting BSS review.' : detail.batch.state === 'MIGRATED' || detail.batch.state === 'APPROVED' ? 'Accounts created — the account-created WhatsApp message was sent.' : detail.batch.state === 'REJECTED' ? 'This submission was rejected.' : 'BSS is processing this submission; you will be asked to approve once it is structured.'}
         </p>}
         <div className="max-h-[60vh] overflow-auto">
           <table className="w-full text-left text-xs">

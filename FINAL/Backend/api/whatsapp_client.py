@@ -90,6 +90,20 @@ def send_template(mobile, template_id, params):
     return _dispatch(GUPSHUP_TEMPLATE_URL, cfg, data)
 
 
+def send_account_created(mobile):
+    """Send the approved 'bharat_shram_setu_account_created' template (Text, en,
+    no variables). The template reference is ``GUPSHUP_ACCOUNT_CREATED_TEMPLATE_ID``
+    falling back to the template name."""
+    cfg = _config()
+    if not cfg["enabled"]:
+        return {"ok": False, "error": "WhatsApp delivery disabled"}
+    if not cfg["api_key"]:
+        return {"ok": False, "error": "GUPSHUP_API_KEY not configured"}
+    template_id = (os.environ.get("GUPSHUP_ACCOUNT_CREATED_TEMPLATE_ID", "").strip()
+                   or "bharat_shram_setu_account_created")
+    return send_template(mobile, template_id, [])
+
+
 def send_otp(mobile, otp, ttl_minutes=5):
     """Send an OTP over WhatsApp. Uses the configured template when available,
     otherwise falls back to a free-text message (/msg)."""

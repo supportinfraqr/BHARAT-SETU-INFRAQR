@@ -282,6 +282,24 @@ def _send_intro_sms(mobile, name):
     return result
 
 
+def _send_account_created(mobile, name):
+    """Send the WhatsApp 'bharat_shram_setu_account_created' template (no vars)."""
+    from .. import whatsapp_client
+    from bss_core.models import SmsOtp
+    otp = SmsOtp.objects.create(mobile=mobile, purpose="INTRO", otp_hash=make_password(""),
+                                expires_at=timezone.now())
+    try:
+        result = whatsapp_client.send_account_created(mobile)
+    except Exception as exc:  # noqa: BLE001 — messaging must never block migration
+        result = {"ok": False, "error": str(exc)}
+    otp.delivery_channel = "whatsapp" if result.get("ok") else "none"
+    otp.delivery_status = "sent" if result.get("ok") else "failed"
+    otp.delivery_error = (result.get("error") or result.get("body") or "")[:1000]
+    otp.delivered_at = timezone.now() if result.get("ok") else None
+    otp.save(update_fields=["delivery_channel", "delivery_status", "delivery_error", "delivered_at"])
+    return result
+
+
 def migrate_batch(batch):
     """Create live accounts + bindings from the structured batch, then intro SMS."""
     if batch.state != "APPROVED":
@@ -303,12 +321,13 @@ def migrate_batch(batch):
                 rec.status = "REJECTED"
                 rec.issues = list(rec.issues or []) + [_issue("migrate", "error", res.get("detail", "migration failed"))]
             rec.save(update_fields=["result", "status", "issues", "updated_at"])
-    # Introductory SMS to newly created workers + contractors.
-    for rec in batch.records.filter(entity_type__in=["WORKER", "CONTRACTOR"], status="MIGRATED"):
+    # WhatsApp "account created" template to every newly created account.
+    for rec in batch.records.filter(
+            entity_type__in=["EMPLOYER", "CONTRACTOR", "WORKER"], status="MIGRATED"):
         data = rec.clean_data or {}
         mobile = data.get("mobile")
         if mobile:
-            _send_intro_sms(mobile, data.get("name", ""))
+            _send_account_created(mobile, data.get("name", ""))
     _refresh_counts(batch, state="MIGRATED")
     from .admin_console import log_audit
     if batch.submitted_by_id:
@@ -354,8 +373,10 @@ def employer_onboarding_submit(request):
         grouped = _parse_workbook(raw)
     except ValueError as exc:
         return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    # Employer onboarding carries exactly two entities: employers + contractors.
+    grouped = {k: v for k, v in grouped.items() if k in ("EMPLOYER", "CONTRACTOR")}
     if not grouped:
-        return Response({"error": "No Employers/Contractors/Workers/Relations sheet found in the file."},
+        return Response({"error": "No Employers or Contractors sheet found in the file."},
                         status=status.HTTP_400_BAD_REQUEST)
 
     batch = OnboardingBatch(
@@ -367,7 +388,7 @@ def employer_onboarding_submit(request):
     batch.original_file.save(batch.file_name or "onboarding.xlsx", ContentFile(raw), save=False)
     batch.save()
 
-    order = ["EMPLOYER", "CONTRACTOR", "WORKER", "RELATION"]
+    order = ["EMPLOYER", "CONTRACTOR"]
     for etype in order:
         for idx, row in enumerate(grouped.get(etype, [])):
             OnboardingRecord.objects.create(batch=batch, entity_type=etype, row_index=idx, raw_data=row)
@@ -381,16 +402,30 @@ def employer_onboarding_submit(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def employer_onboarding_template(request):
-    """Download the onboarding workbook template (Employers/Contractors/Workers/Relations)."""
+    """Download the onboarding workbook template.
+
+    Employers get exactly two templates: **Employers** and **Contractors**.
+    ``?entity=employers|contractors`` returns a single-sheet workbook; with no
+    param both sheets are returned in one workbook.
+    """
     from django.http import HttpResponse
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
     if request.user.role != "employer":
         return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
+    allowed = ("employers", "contractors")
+    requested = str(request.query_params.get("entity") or "").strip().lower()
+    if requested:
+        if requested not in allowed:
+            return Response({"error": "entity must be employers or contractors."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        entities = [requested]
+    else:
+        entities = list(allowed)
     wb = Workbook()
     wb.remove(wb.active)
     fill = PatternFill("solid", fgColor="0A192F")
-    for _etype, (ent, _proc) in ENTITY_MAP.items():
+    for ent in entities:
         title, columns = ENTITIES[ent]
         ws = wb.create_sheet(title)
         for col, (label, _key) in enumerate(columns, start=1):
@@ -402,7 +437,8 @@ def employer_onboarding_template(request):
     wb.save(out)
     resp = HttpResponse(out.getvalue(),
                         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    resp["Content-Disposition"] = 'attachment; filename="bss-onboarding-template.xlsx"'
+    name = f"bss-onboarding-{requested}.xlsx" if requested else "bss-onboarding-template.xlsx"
+    resp["Content-Disposition"] = f'attachment; filename="{name}"'
     return resp
 
 
