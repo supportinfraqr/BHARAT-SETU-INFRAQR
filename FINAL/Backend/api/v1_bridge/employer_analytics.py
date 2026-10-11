@@ -222,15 +222,6 @@ def _live(user, site_id, contractor_id):
 
     worker_rows = [worker_row(b) for b in bindings]
 
-    by_site_rows, by_con_rows = {}, {}
-    for r in worker_rows:
-        by_site_rows.setdefault(r["site"], []).append(r)
-        by_con_rows.setdefault(r["contractor"], []).append(r)
-    for row in by_site:
-        row["workerList"] = by_site_rows.get(row["site"], [])
-    for row in contractor_map.values():
-        row["workerList"] = by_con_rows.get(row["contractor"], [])
-
     events = (AttendanceEvent.objects
               .filter(worker_id__in=bound_ids, attendance_date=today)
               .select_related("worker", "site").order_by("-at")[:40])

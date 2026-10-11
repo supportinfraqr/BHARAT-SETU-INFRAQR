@@ -185,51 +185,100 @@ function StatGrid({ items }: { items: Array<{ label: string; value: string | num
   return <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{items.map(i => <Stat key={i.label} {...i}/>)}</div>;
 }
 
-function WorkerChips({ list, onWorker }: { list: WorkerRow[]; onWorker: (w: WorkerRow) => void }) {
-  if (!list.length) return <p className="text-[11px] text-bss-text-muted px-3 py-2.5">No workers.</p>;
-  return <div className="grid sm:grid-cols-2 gap-1.5 px-3 py-2.5 bg-bss-bg/60">
-    {list.map((w, i) => {
-      const m = STATUS_META[w.status];
-      return <button key={i} type="button" onClick={() => onWorker(w)} className="flex items-center gap-2 rounded-lg border border-bss-border bg-white px-2.5 py-2 text-left hover:border-bss-interactive-blue transition-colors">
-        <span className="w-6 h-6 rounded-full bg-bss-navy text-white grid place-items-center text-[10px] font-bold flex-shrink-0">{w.worker.charAt(0)}</span>
-        <span className="min-w-0 flex-1"><span className="block text-[11px] font-semibold text-bss-text-primary truncate">{w.worker}</span><span className="block text-[10px] font-mono text-bss-text-muted truncate">{w.bssId}</span></span>
-        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${m.cls}`}>{m.label}</span>
-      </button>;
-    })}
+function WorkersTable({ workers, onWorker, pageSize = 10 }: { workers: WorkerRow[]; onWorker: (w: WorkerRow) => void; pageSize?: number }) {
+  const [q, setQ] = useState('');
+  const [status, setStatus] = useState<'all' | WorkerRow['status']>('all');
+  const [page, setPage] = useState(1);
+  const counts = {
+    all: workers.length,
+    on_site: workers.filter(w => w.status === 'on_site').length,
+    checked_out: workers.filter(w => w.status === 'checked_out').length,
+    not_arrived: workers.filter(w => w.status === 'not_arrived').length,
+  };
+  const filtered = workers.filter(w =>
+    (status === 'all' || w.status === status) &&
+    (!q || `${w.worker} ${w.bssId}`.toLowerCase().includes(q.toLowerCase())));
+  const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const cur = Math.min(page, pages);
+  const slice = filtered.slice((cur - 1) * pageSize, cur * pageSize);
+  const t = (v?: string) => (v ? new Date(v).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—');
+  const chips: Array<['all' | WorkerRow['status'], string, number]> = [
+    ['all', 'All', counts.all], ['on_site', 'On site', counts.on_site],
+    ['checked_out', 'Checked out', counts.checked_out], ['not_arrived', 'Not arrived', counts.not_arrived],
+  ];
+  return <div className="space-y-2">
+    <div className="flex flex-wrap items-center gap-1.5">
+      <input value={q} onChange={e => { setQ(e.target.value); setPage(1); }} placeholder="Search worker or BSS ID" className="h-8 rounded-lg border border-bss-border px-2.5 text-xs flex-1 min-w-[150px]" />
+      {chips.map(([v, l, n]) => <button key={v} type="button" onClick={() => { setStatus(v); setPage(1); }} className={`h-8 px-2.5 rounded-lg text-[11px] font-semibold border transition-colors ${status === v ? 'bg-bss-navy text-white border-bss-navy' : 'border-bss-border text-bss-text-secondary hover:bg-bss-bg'}`}>{l} {n}</button>)}
+    </div>
+    {slice.length ? <div className="overflow-hidden rounded-xl border border-bss-border">
+      <table className="w-full text-xs">
+        <thead className="bg-bss-bg text-[10px] uppercase tracking-wide text-bss-text-muted"><tr>
+          <th className="text-left px-3 py-2 font-semibold">Worker</th>
+          <th className="text-left px-2 py-2 font-semibold hidden sm:table-cell">Site</th>
+          <th className="text-left px-2 py-2 font-semibold hidden md:table-cell">Contractor</th>
+          <th className="px-2 py-2 font-semibold text-center">In–Out</th>
+          <th className="px-2 py-2 font-semibold text-center">Status</th>
+        </tr></thead>
+        <tbody className="divide-y divide-bss-border">
+          {slice.map((w, i) => {
+            const m = STATUS_META[w.status];
+            return <tr key={i} onClick={() => onWorker(w)} className="cursor-pointer hover:bg-bss-bg/60">
+              <td className="px-3 py-2"><span className="block font-semibold text-bss-text-primary truncate max-w-[150px]">{w.worker}</span><span className="block text-[10px] font-mono text-bss-text-muted truncate">{w.bssId}</span></td>
+              <td className="px-2 py-2 text-bss-text-secondary truncate max-w-[120px] hidden sm:table-cell">{w.site || '—'}</td>
+              <td className="px-2 py-2 text-bss-text-secondary truncate max-w-[150px] hidden md:table-cell">{w.contractor || '—'}</td>
+              <td className="px-2 py-2 text-center text-bss-text-secondary whitespace-nowrap">{t(w.checkIn)} – {t(w.checkOut)}</td>
+              <td className="px-2 py-2 text-center"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${m.cls}`}>{m.label}</span></td>
+            </tr>;
+          })}
+        </tbody>
+      </table>
+    </div> : <p className="text-xs text-bss-text-muted px-1 py-3">No workers match.</p>}
+    {pages > 1 && <div className="flex items-center justify-between text-[11px] text-bss-text-muted">
+      <span>{filtered.length} worker{filtered.length === 1 ? '' : 's'}</span>
+      <span className="flex items-center gap-1.5">
+        <button type="button" disabled={cur <= 1} onClick={() => setPage(cur - 1)} className="h-7 px-2 rounded-lg border border-bss-border disabled:opacity-40 hover:bg-bss-bg">Prev</button>
+        <span>Page {cur} / {pages}</span>
+        <button type="button" disabled={cur >= pages} onClick={() => setPage(cur + 1)} className="h-7 px-2 rounded-lg border border-bss-border disabled:opacity-40 hover:bg-bss-bg">Next</button>
+      </span>
+    </div>}
   </div>;
 }
 
-function LiveByTable({ rows, firstLabel, onWorker }: { rows: Array<{ label: string; workers: number; onSite: number; present: number; workerList?: WorkerRow[] }>; firstLabel: string; onWorker: (w: WorkerRow) => void }) {
+function LiveByTable({ rows, firstLabel, matchKey, allWorkers, onWorker }: { rows: Array<{ label: string; workers: number; onSite: number; present: number }>; firstLabel: string; matchKey: 'site' | 'contractor'; allWorkers: WorkerRow[]; onWorker: (w: WorkerRow) => void }) {
   const [open, setOpen] = useState<string | null>(null);
+  const [q, setQ] = useState('');
   if (!rows.length) return <p className="text-xs text-bss-text-muted">Nothing in scope.</p>;
-  return <div className="overflow-hidden rounded-xl border border-bss-border">
-    <table className="w-full text-xs">
-      <thead className="bg-bss-bg text-[10px] uppercase tracking-wide text-bss-text-muted">
-        <tr>
-          <th className="text-left px-3 py-2 font-semibold">{firstLabel}</th>
-          <th className="px-2 py-2 font-semibold text-center">Workers</th>
-          <th className="px-2 py-2 font-semibold text-center text-bss-green">On site</th>
-          <th className="px-2 py-2 font-semibold text-center">Present</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-bss-border">
-        {rows.map((r, i) => {
-          const has = (r.workerList?.length ?? 0) > 0;
-          const isOpen = open === r.label;
-          return <Fragment key={i}>
-            <tr onClick={() => has && setOpen(isOpen ? null : r.label)} className={has ? 'cursor-pointer hover:bg-bss-bg/60' : ''}>
-              <td className="px-3 py-2 font-semibold text-bss-text-primary truncate max-w-[180px]">
-                <span className="inline-flex items-center gap-1.5">{has && <ChevronDown size={12} className={`text-bss-text-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} />}{r.label}</span>
-              </td>
-              <td className="px-2 py-2 text-center text-bss-text-secondary">{r.workers}</td>
-              <td className="px-2 py-2 text-center font-bold text-bss-green">{r.onSite}</td>
-              <td className="px-2 py-2 text-center text-bss-text-secondary">{r.present}</td>
-            </tr>
-            {isOpen && has && <tr><td colSpan={4} className="p-0"><WorkerChips list={r.workerList!} onWorker={onWorker} /></td></tr>}
-          </Fragment>;
-        })}
-      </tbody>
-    </table>
+  const filtered = q ? rows.filter(r => r.label.toLowerCase().includes(q.toLowerCase())) : rows;
+  return <div className="space-y-2">
+    <input value={q} onChange={e => setQ(e.target.value)} placeholder={`Search ${firstLabel.toLowerCase()}`} className="h-8 w-full rounded-lg border border-bss-border px-2.5 text-xs" />
+    <div className="overflow-hidden rounded-xl border border-bss-border">
+      <div className="max-h-80 overflow-y-auto">
+        <table className="w-full text-xs">
+          <thead className="bg-bss-bg text-[10px] uppercase tracking-wide text-bss-text-muted sticky top-0 z-10"><tr>
+            <th className="text-left px-3 py-2 font-semibold">{firstLabel}</th>
+            <th className="px-2 py-2 font-semibold text-center">Workers</th>
+            <th className="px-2 py-2 font-semibold text-center text-bss-green">On site</th>
+            <th className="px-2 py-2 font-semibold text-center">Present</th>
+          </tr></thead>
+          <tbody className="divide-y divide-bss-border">
+            {filtered.map((r, i) => {
+              const isOpen = open === r.label;
+              const members = allWorkers.filter(w => (matchKey === 'site' ? w.site : w.contractor) === r.label);
+              return <Fragment key={i}>
+                <tr onClick={() => setOpen(isOpen ? null : r.label)} className="cursor-pointer hover:bg-bss-bg/60">
+                  <td className="px-3 py-2 font-semibold text-bss-text-primary truncate max-w-[180px]"><span className="inline-flex items-center gap-1.5"><ChevronDown size={12} className={`text-bss-text-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} />{r.label}</span></td>
+                  <td className="px-2 py-2 text-center text-bss-text-secondary">{r.workers}</td>
+                  <td className="px-2 py-2 text-center font-bold text-bss-green">{r.onSite}</td>
+                  <td className="px-2 py-2 text-center text-bss-text-secondary">{r.present}</td>
+                </tr>
+                {isOpen && <tr><td colSpan={4} className="p-3 bg-bss-bg/60"><WorkersTable workers={members} onWorker={onWorker} pageSize={6} /></td></tr>}
+              </Fragment>;
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>;
 }
 
@@ -338,9 +387,12 @@ function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n
         { label: 'Punches today', value: (data.recentEvents ?? []).length },
       ]}/>
       <div className="grid lg:grid-cols-2 gap-5">
-        <Card title="By site" subtitle="Tap a site to see its workers"><LiveByTable firstLabel="Site" rows={bySite.map(s => ({ label: s.site, workers: s.workers, onSite: s.onSite, present: s.present, workerList: s.workerList }))} onWorker={setDrill}/></Card>
-        <Card title="By contractor" subtitle="Tap a contractor to see its workers"><LiveByTable firstLabel="Contractor" rows={byContractor.map(c => ({ label: c.contractor, workers: c.workers, onSite: c.onSite, present: c.present, workerList: c.workerList }))} onWorker={setDrill}/></Card>
+        <Card title="By site" subtitle="Search · tap a site to see its workers"><LiveByTable firstLabel="Site" matchKey="site" allWorkers={data.workers ?? []} rows={bySite.map(s => ({ label: s.site, workers: s.workers, onSite: s.onSite, present: s.present }))} onWorker={setDrill}/></Card>
+        <Card title="By contractor" subtitle="Search · tap a contractor to see its workers"><LiveByTable firstLabel="Contractor" matchKey="contractor" allWorkers={data.workers ?? []} rows={byContractor.map(c => ({ label: c.contractor, workers: c.workers, onSite: c.onSite, present: c.present }))} onWorker={setDrill}/></Card>
       </div>
+      <Card title={`All workers (${(data.workers ?? []).length})`} subtitle="Search, filter by status, page through — tap a worker for full details">
+        <WorkersTable workers={data.workers ?? []} onWorker={setDrill} pageSize={12} />
+      </Card>
       <Card title="Today's snapshot"><Donut slices={[
         { label: 'On site', value: data.today?.onSite ?? 0, color: '#14843C' },
         { label: 'Checked out', value: data.today?.checkedOut ?? 0, color: '#1E3A8A' },
