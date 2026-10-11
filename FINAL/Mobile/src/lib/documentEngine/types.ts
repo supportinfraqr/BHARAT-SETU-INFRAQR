@@ -8,7 +8,7 @@ export type DocumentType = 'appointment-letter' | 'experience-letter' | 'permane
 export const DOCUMENT_TYPES: Array<{ id: DocumentType; label: string; short: string; format: 'A4' | 'PGP' | 'A4-LANDSCAPE'; roles?: Array<'employer' | 'contractor'> }> = [
   { id: 'appointment-letter', label: 'Appointment Letter', short: 'Appointment Letter', format: 'A4' },
   { id: 'experience-letter', label: 'Experience Letter', short: 'Experience Letter', format: 'A4' },
-  { id: 'permanent-gate-pass', label: 'Permanent Gate Pass', short: 'Permanent Gate Pass', format: 'PGP', roles: ['employer'] },
+  { id: 'permanent-gate-pass', label: 'Permanent Gate Pass', short: 'Permanent Gate Pass', format: 'A4', roles: ['employer'] },
   { id: 'temporary-gate-pass', label: 'Temporary Gate Pass', short: 'Temporary Gate Pass', format: 'A4', roles: ['employer'] },
 ];
 export const docTypeLabel = (id: DocumentType) => DOCUMENT_TYPES.find(item => item.id === id)?.short ?? id;
