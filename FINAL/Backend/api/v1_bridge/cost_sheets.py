@@ -800,7 +800,14 @@ def org_cost_sheet_preview(request, template_id):
     if request.user.role not in ("contractor", "employer"):
         return Response({"error": "not authorized"}, status=status.HTTP_403_FORBIDDEN)
     t = CostSheetTemplate.objects.filter(pk=template_id).first()
-    if t is None or t.owner_id not in (None, request.user.id):
+    if t is None:
+        return Response({"error": "Template not found."}, status=status.HTTP_404_NOT_FOUND)
+    # Published templates (owner None) and the org's own templates are always
+    # viewable; an employer may also preview its engaged contractors' templates.
+    owner_ok = t.owner_id in (None, request.user.id)
+    if not owner_ok and request.user.role == "employer":
+        owner_ok = t.owner_id in _employer_engaged_contractor_ids(request.user)
+    if not owner_ok:
         return Response({"error": "Template not found."}, status=status.HTTP_404_NOT_FOUND)
     body = request.data if isinstance(request.data, dict) else {}
     overrides = body.get("overrides") if isinstance(body.get("overrides"), dict) else None
