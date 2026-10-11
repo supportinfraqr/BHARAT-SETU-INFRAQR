@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Lock, LockOpen, ShieldCheck, UserCheck, UserX } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Loader2, Lock, LockOpen, Search, ShieldCheck, UserCheck, UserX } from 'lucide-react';
 
 type Account = {
   userId: number; username: string; role: string; name: string;
@@ -16,6 +16,7 @@ const ROLE_LABEL: Record<string, string> = {
 export default function AdminAccountsPage() {
   const [rows, setRows] = useState<Account[]>([]);
   const [role, setRole] = useState('');
+  const [query, setQuery] = useState('');
   const [busy, setBusy] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,6 +40,14 @@ export default function AdminAccountsPage() {
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
   useEffect(() => { void load(); }, [load]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(r =>
+      [r.name, r.username, r.bssId, r.gstin, ROLE_LABEL[r.role] ?? r.role]
+        .some(v => (v || '').toLowerCase().includes(q)));
+  }, [rows, query]);
 
   async function setAccountActive(row: Account, value: boolean) {
     setBusy(row.userId); setError(''); setNotice('');
@@ -80,20 +89,29 @@ export default function AdminAccountsPage() {
         <h1 className="text-2xl font-bold mt-1">Accounts</h1>
         <p className="text-sm text-gray-500 mt-1">Two switches per account — <strong>Admin Approval</strong> (workers approved by default) and <strong>is_Active</strong> (password-protected sign-in).</p>
       </div>
-      <label className="text-xs font-semibold text-gray-600 self-start">
-        Role
-        <select value={role} onChange={e => setRole(e.target.value)} className="ml-2 h-9 border border-gray-200 rounded-lg px-2 text-sm bg-white">
-          <option value="">All</option>
-          {Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-      </label>
+      <div className="flex flex-col sm:flex-row sm:items-end gap-3 self-start">
+        <label className="text-xs font-semibold text-gray-600">
+          Search
+          <span className="relative mt-1 block">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
+            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Name, BSS ID, GSTIN, username…" className="w-full sm:w-72 h-9 border border-gray-200 rounded-lg pl-9 pr-3 text-sm bg-white"/>
+          </span>
+        </label>
+        <label className="text-xs font-semibold text-gray-600">
+          Role
+          <select value={role} onChange={e => setRole(e.target.value)} className="mt-1 h-9 border border-gray-200 rounded-lg px-2 text-sm bg-white">
+            <option value="">All</option>
+            {Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        </label>
+      </div>
     </header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
     {notice && <p role="status" className="bss-alert bss-alert-success">{notice}</p>}
 
     {loading ? <p className="flex items-center gap-2 text-sm text-gray-500 py-8"><Loader2 size={15} className="animate-spin"/>Loading accounts…</p>
-      : !rows.length ? <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center"><ShieldCheck size={26} className="mx-auto text-gray-300"/><p className="text-sm text-gray-500 mt-3">No accounts.</p></div>
+      : !filtered.length ? <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center"><ShieldCheck size={26} className="mx-auto text-gray-300"/><p className="text-sm text-gray-500 mt-3">{rows.length ? 'No accounts match your search.' : 'No accounts.'}</p></div>
       : <div className="bg-white border border-gray-200 rounded-2xl overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-[11px] uppercase tracking-wider text-gray-500">
@@ -107,7 +125,7 @@ export default function AdminAccountsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {rows.map(row => <tr key={row.userId}>
+            {filtered.map(row => <tr key={row.userId}>
               <td className="px-4 py-2.5"><p className="font-semibold text-gray-900">{row.name}</p><p className="text-[11px] text-gray-400">{row.username}</p></td>
               <td className="px-4 py-2.5 font-mono text-[11px] text-gray-600">{row.bssId || '—'}</td>
               <td className="px-4 py-2.5 text-gray-600">{ROLE_LABEL[row.role] ?? row.role}</td>
