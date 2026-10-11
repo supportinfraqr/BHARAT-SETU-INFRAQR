@@ -1,8 +1,9 @@
-"""BSS Admin bulk registration (password-protected).
+"""Shared XLSX column schemas + per-entity migration processors.
 
-Three XLSX-driven bulk routes — employers, contractors and workers.
-Every request must carry the BSS Admin session AND the bulk-registration
-password (env ``BSS_BULK_REGISTER_PASSWORD``).
+The employer/admin onboarding pipeline (``onboarding.py``) reuses these:
+``ENTITIES`` (column schemas) and the ``_process_employers`` /
+``_process_contractors`` / ``_process_workers`` / ``_process_relations``
+processors that create the live accounts.
 """
 
 # ruff: noqa: F401,F403
@@ -43,22 +44,6 @@ ENTITIES = {
         ("Site Code", "site_code"), ("Designation", "designation"), ("Wage", "wage"),
     ]),
 }
-
-
-def _bulk_password():
-    return os.environ.get("BSS_BULK_REGISTER_PASSWORD") or "bss-bulk-2026"
-
-
-def _authorize(request):
-    """Return an error Response, or None when authorised."""
-    user = request.user
-    if user.role != "bss_admin":
-        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
-    supplied = str(request.data.get("password") or request.query_params.get("password") or "")
-    if supplied != _bulk_password():
-        return Response({"error": "Invalid bulk-registration password."},
-                        status=status.HTTP_403_FORBIDDEN)
-    return None
 
 
 def _as_date(value):
@@ -138,37 +123,6 @@ def _conflict(model, field, value, exclude_user_id=None, label=""):
     if not who:
         who = getattr(obj, "name", "") or getattr(obj, "contractor_name", "") or getattr(obj, "employer_name", "") or ""
     return f"{label} already registered{(' to ' + str(who)) if who else ''}."
-
-
-def _template_response(entity):
-    from django.http import HttpResponse
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill
-    title, columns = ENTITIES[entity]
-    wb = Workbook()
-    ws = wb.active
-    ws.title = title
-    fill = PatternFill("solid", fgColor="0A192F")
-    for col, (label, _key) in enumerate(columns, start=1):
-        cell = ws.cell(row=1, column=col, value=label)
-        cell.fill = fill
-        cell.font = Font(bold=True, color="FFFFFF")
-        ws.column_dimensions[cell.column_letter].width = max(14, len(label) + 4)
-    info = wb.create_sheet("Instructions")
-    for i, line in enumerate([
-        f"BSS Admin — Bulk register {title}", "",
-        "Fill one row per record and save as .xlsx, then upload with the password.",
-        "Mobile is the login id (10 digits). Existing mobiles are updated, not duplicated.",
-        "Relations sheet links Employer Mobile ↔ Contractor Mobile ↔ Worker Mobile + Site.",
-    ], start=1):
-        info.cell(row=i, column=1, value=line)
-    info.column_dimensions["A"].width = 110
-    out = io.BytesIO()
-    wb.save(out)
-    resp = HttpResponse(out.getvalue(),
-                        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    resp["Content-Disposition"] = f'attachment; filename="bss-bulk-{entity}.xlsx"'
-    return resp
 
 
 # ── per-entity processors ────────────────────────────────────────────────────
@@ -431,46 +385,9 @@ def _process_relations(rows):
     return results
 
 
-# The admin bulk-register route exposes exactly these three entities.
-_BULK_ENTITIES = ("employers", "contractors", "workers")
-
+# entity key → migration processor (used by the onboarding pipeline).
 _PROCESSORS = {"employers": _process_employers, "contractors": _process_contractors,
                "workers": _process_workers}
 
 
-@api_view(["GET", "POST"])
-@authentication_classes([BssSessionAuthentication])
-@permission_classes([IsAuthenticated])
-def admin_bulk_register(request, entity):
-    """Password-protected bulk registration. GET = XLSX template; POST = upload."""
-    entity = str(entity or "").strip().lower()
-    if entity not in _BULK_ENTITIES:
-        return Response({"error": "Unknown entity."}, status=status.HTTP_404_NOT_FOUND)
-    denied = _authorize(request)
-    if denied is not None:
-        return denied
-    if request.method == "GET":
-        return _template_response(entity)
-    upload = request.FILES.get("file") or request.FILES.get("master")
-    if upload is None:
-        return Response({"error": "Upload the filled .xlsx file."},
-                        status=status.HTTP_400_BAD_REQUEST)
-    try:
-        rows = _rows(upload, entity)
-    except Exception as exc:  # noqa: BLE001
-        return Response({"error": f"Could not read the file: {exc}"},
-                        status=status.HTTP_400_BAD_REQUEST)
-    if not rows:
-        return Response({"error": "No data rows found in the file."},
-                        status=status.HTTP_400_BAD_REQUEST)
-    try:
-        results = _PROCESSORS[entity](rows)
-    except Exception as exc:  # noqa: BLE001
-        return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-    summary = {"total": len(results), "ok": 0, "failed": 0}
-    for r in results:
-        summary[r["status"]] = summary.get(r["status"], 0) + 1
-    return Response({"data": {"results": results, "summary": summary}}, status=status.HTTP_200_OK)
-
-
-__all__ = ["admin_bulk_register"]
+__all__: list[str] = []

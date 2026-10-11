@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { CheckCircle2, ChevronRight, FileSpreadsheet, Loader2, Pencil, RefreshCw, ShieldCheck, Sparkles, Upload, X, XCircle } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Download, FileSpreadsheet, Loader2, Pencil, RefreshCw, ShieldCheck, Sparkles, Upload, X, XCircle } from 'lucide-react';
 
 type Batch = {
   id: number; source: string; state: string; employer: string; employerId: number | null;
@@ -32,7 +32,8 @@ export default function AdminOnboardingPage() {
   const [notice, setNotice] = useState('');
   const [note, setNote] = useState('');
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [importPreview, setImportPreview] = useState<{ workers: number; contractors: number; sheets: string[] } | null>(null);
+  const [importPreview, setImportPreview] = useState<{ employers: number; workers: number; contractors: number; sheets: string[] } | null>(null);
+  const [onboardPassword, setOnboardPassword] = useState('');
   const [editRow, setEditRow] = useState<Row | null>(null);
   const [editData, setEditData] = useState<Record<string, string>>({});
 
@@ -92,11 +93,25 @@ export default function AdminOnboardingPage() {
       if (!res.ok || !body.data) throw new Error(body.error ?? 'The import failed.');
       const { records, ...batch } = body.data;
       setDetail({ batch, records: records ?? [] });
-      setImportFile(null);
+      setImportFile(null); setImportPreview(null);
       setNotice(`Imported submission #${batch.id} — ${batch.counts?.total ?? 0} row(s).`);
       void load();
     } catch (e) { setError(e instanceof Error ? e.message : 'The import failed.'); }
     finally { setBusy(false); }
+  }
+
+  async function downloadTemplate(entity: 'employers' | 'workers' | 'contractors') {
+    setError(''); setNotice('');
+    try {
+      const res = await fetch(`/api/admin/onboarding/template?entity=${entity}`);
+      if (!res.ok) throw new Error('The template could not be downloaded.');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `bss-onboarding-${entity}.xlsx`;
+      document.body.appendChild(a); a.click(); a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch (e) { setError(e instanceof Error ? e.message : 'The template could not be downloaded.'); }
   }
 
   function openEdit(r: Row) {
@@ -136,8 +151,8 @@ export default function AdminOnboardingPage() {
         const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false }) as unknown[][];
         return aoa.slice(1).filter(r => Array.isArray(r) && r.some(c => String(c ?? '').trim() !== '')).length;
       };
-      setImportPreview({ workers: count('Workers'), contractors: count('Contractors'), sheets: wb.SheetNames });
-    } catch { setImportPreview({ workers: 0, contractors: 0, sheets: [] }); }
+      setImportPreview({ employers: count('Employers'), workers: count('Workers'), contractors: count('Contractors'), sheets: wb.SheetNames });
+    } catch { setImportPreview({ employers: 0, workers: 0, contractors: 0, sheets: [] }); }
   }
 
   const counts = (b: Batch) => b.counts?.byEntity ?? {};
@@ -154,24 +169,30 @@ export default function AdminOnboardingPage() {
 
     <section className="bg-white border border-gray-200 rounded-2xl p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h2 className="text-sm font-semibold text-gray-950 flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#073B67]"/>Import rows</h2><p className="text-xs text-gray-400 mt-0.5">Upload a Workers / Contractors workbook. Each upload is a new submission with its own records, successes and failures.</p></div>
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-2 h-10 px-3 rounded-lg border border-dashed border-gray-300 text-xs font-semibold text-gray-600 cursor-pointer hover:bg-gray-50">
-            <Upload size={14} className="text-[#073B67]"/>{importFile ? importFile.name : 'Choose file (.xlsx)'}
-            <input type="file" accept=".xlsx" className="hidden" onChange={e => void onImportFile(e.target.files?.[0] ?? null)}/>
-          </label>
-          <button onClick={() => void importRows()} disabled={busy || !importFile || (importPreview ? importPreview.workers + importPreview.contractors === 0 : false)} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5">{busy ? <Loader2 size={14} className="animate-spin"/> : <Upload size={14}/>}Import rows</button>
+        <div><h2 className="text-sm font-semibold text-gray-950 flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#073B67]"/>Import rows</h2><p className="text-xs text-gray-400 mt-0.5">Templates ask only the mobile number. Upload an Employers / Workers / Contractors workbook — each upload is a new submission.</p></div>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => void downloadTemplate('employers')} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Employer template</button>
+          <button onClick={() => void downloadTemplate('workers')} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Worker template</button>
+          <button onClick={() => void downloadTemplate('contractors')} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Contractor template</button>
         </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-2 h-10 px-3 rounded-lg border border-dashed border-gray-300 text-xs font-semibold text-gray-600 cursor-pointer hover:bg-gray-50">
+          <Upload size={14} className="text-[#073B67]"/>{importFile ? importFile.name : 'Choose file (.xlsx)'}
+          <input type="file" accept=".xlsx" className="hidden" onChange={e => void onImportFile(e.target.files?.[0] ?? null)}/>
+        </label>
+        <button onClick={() => void importRows()} disabled={busy || !importFile || (importPreview ? importPreview.employers + importPreview.workers + importPreview.contractors === 0 : false)} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5">{busy ? <Loader2 size={14} className="animate-spin"/> : <Upload size={14}/>}Import rows</button>
       </div>
       {importPreview && <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-3">
         <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">This file will create</p>
         <div className="mt-2 flex flex-wrap gap-2">
+          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${importPreview.employers ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-gray-500 border-gray-200'}`}>Employers × {importPreview.employers}</span>
           <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${importPreview.workers ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-gray-500 border-gray-200'}`}>Workers × {importPreview.workers}</span>
           <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${importPreview.contractors ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-gray-500 border-gray-200'}`}>Contractors × {importPreview.contractors}</span>
         </div>
-        {importPreview.workers + importPreview.contractors === 0
-          ? <p className="text-[11px] text-red-600 mt-2">No recognised sheet — name the tabs exactly <strong>Workers</strong> and/or <strong>Contractors</strong>.</p>
-          : <p className="text-[11px] text-gray-500 mt-2">Recognised: {importPreview.sheets.filter(s => s === 'Workers' || s === 'Contractors').join(', ')}.{importPreview.sheets.some(s => s !== 'Workers' && s !== 'Contractors') ? ` Ignored: ${importPreview.sheets.filter(s => s !== 'Workers' && s !== 'Contractors').join(', ')}.` : ''}</p>}
+        {importPreview.employers + importPreview.workers + importPreview.contractors === 0
+          ? <p className="text-[11px] text-red-600 mt-2">No recognised sheet — name the tabs exactly <strong>Employers</strong>, <strong>Workers</strong> and/or <strong>Contractors</strong>.</p>
+          : <p className="text-[11px] text-gray-500 mt-2">Recognised: {importPreview.sheets.filter(s => ['Employers', 'Workers', 'Contractors'].includes(s)).join(', ')}.{importPreview.sheets.some(s => !['Employers', 'Workers', 'Contractors'].includes(s)) ? ` Ignored: ${importPreview.sheets.filter(s => !['Employers', 'Workers', 'Contractors'].includes(s)).join(', ')}.` : ''}</p>}
       </div>}
     </section>
 
@@ -205,7 +226,8 @@ export default function AdminOnboardingPage() {
               <button disabled={busy} onClick={() => void act(detail.batch.id, 'review', { decision: 'reject' })} className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold disabled:opacity-50">Reject</button>
             </>}
             <button disabled={busy || !['CLEANED', 'STRUCTURED'].includes(detail.batch.state)} onClick={() => void act(detail.batch.id, 'structure')} className="h-9 px-3 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-40 flex items-center gap-1.5"><Sparkles size={13}/>Structure</button>
-            <button disabled={busy || !['CLEANED', 'STRUCTURED'].includes(detail.batch.state)} onClick={() => void act(detail.batch.id, 'migrate')} className="h-9 px-4 rounded-lg bg-green-700 text-white text-xs font-bold disabled:opacity-40">Run onboarding</button>
+            <input type="password" value={onboardPassword} onChange={e => setOnboardPassword(e.target.value)} placeholder="Onboarding password" className="h-9 w-44 rounded-lg border border-gray-200 px-3 text-xs bg-white"/>
+            <button disabled={busy || !onboardPassword || !['CLEANED', 'STRUCTURED'].includes(detail.batch.state)} onClick={() => void act(detail.batch.id, 'migrate', { password: onboardPassword })} className="h-9 px-4 rounded-lg bg-green-700 text-white text-xs font-bold disabled:opacity-40">Run onboarding</button>
           </div>
         </header>
 

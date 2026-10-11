@@ -35,13 +35,19 @@ MIGRATION_ORDER = ["EMPLOYER", "CONTRACTOR", "WORKER", "RELATION"]
 # Employer onboarding asks for the phone number only — every other field is
 # completed by the user after they sign in.
 ONBOARDING_ENTITIES = {
+    "employers": ("Employers", [("Mobile", "mobile")]),
     "workers": ("Workers", [("Mobile", "mobile")]),
     "contractors": ("Contractors", [("Mobile", "mobile")]),
 }
 _ONBOARDING_SHEET = {  # entity_type → (sheet title, columns)
+    "EMPLOYER": ONBOARDING_ENTITIES["employers"],
     "WORKER": ONBOARDING_ENTITIES["workers"],
     "CONTRACTOR": ONBOARDING_ENTITIES["contractors"],
 }
+
+
+def _onboarding_password():
+    return os.environ.get("BSS_ONBOARDING_PASSWORD") or "bss-onboarding-2026"
 
 
 # ── serialization ────────────────────────────────────────────────────────────
@@ -408,9 +414,9 @@ def employer_onboarding_submit(request):
     except ValueError as exc:
         return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     # Employer onboarding carries exactly two entities: workers + contractors.
-    grouped = {k: v for k, v in grouped.items() if k in ("WORKER", "CONTRACTOR")}
+    grouped = {k: v for k, v in grouped.items() if k in ("EMPLOYER", "WORKER", "CONTRACTOR")}
     if not grouped:
-        return Response({"error": "No Workers or Contractors sheet found in the file."},
+        return Response({"error": "No Employers, Workers or Contractors sheet found in the file."},
                         status=status.HTTP_400_BAD_REQUEST)
 
     batch = OnboardingBatch(
@@ -422,7 +428,7 @@ def employer_onboarding_submit(request):
     batch.original_file.save(batch.file_name or "onboarding.xlsx", ContentFile(raw), save=False)
     batch.save()
 
-    order = ["WORKER", "CONTRACTOR"]
+    order = ["EMPLOYER", "WORKER", "CONTRACTOR"]
     for etype in order:
         for idx, row in enumerate(grouped.get(etype, [])):
             OnboardingRecord.objects.create(batch=batch, entity_type=etype, row_index=idx, raw_data=row)
@@ -432,30 +438,9 @@ def employer_onboarding_submit(request):
     return Response({"data": _batch_detail(batch)}, status=status.HTTP_201_CREATED)
 
 
-@api_view(["GET"])
-@authentication_classes([BssSessionAuthentication])
-@permission_classes([IsAuthenticated])
-def employer_onboarding_template(request):
-    """Download the onboarding workbook template.
-
-    Employers get exactly two templates: **Workers** and **Contractors**.
-    ``?entity=workers|contractors`` returns a single-sheet workbook; with no
-    param both sheets are returned in one workbook.
-    """
-    from django.http import HttpResponse
+def _build_onboarding_workbook(entities):
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
-    if request.user.role != "employer":
-        return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
-    allowed = ("workers", "contractors")
-    requested = str(request.query_params.get("entity") or "").strip().lower()
-    if requested:
-        if requested not in allowed:
-            return Response({"error": "entity must be workers or contractors."},
-                            status=status.HTTP_400_BAD_REQUEST)
-        entities = [requested]
-    else:
-        entities = list(allowed)
     wb = Workbook()
     wb.remove(wb.active)
     fill = PatternFill("solid", fgColor="0A192F")
@@ -467,6 +452,12 @@ def employer_onboarding_template(request):
             cell.fill = fill
             cell.font = Font(bold=True, color="FFFFFF")
             ws.column_dimensions[cell.column_letter].width = max(14, len(label) + 4)
+    return wb
+
+
+def _workbook_response(entities, requested=""):
+    from django.http import HttpResponse
+    wb = _build_onboarding_workbook(entities)
     out = io.BytesIO()
     wb.save(out)
     resp = HttpResponse(out.getvalue(),
@@ -474,6 +465,49 @@ def employer_onboarding_template(request):
     name = f"bss-onboarding-{requested}.xlsx" if requested else "bss-onboarding-template.xlsx"
     resp["Content-Disposition"] = f'attachment; filename="{name}"'
     return resp
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def employer_onboarding_template(request):
+    """Download the onboarding workbook template.
+
+    Exactly three templates: **Employers**, **Workers** and **Contractors**.
+    ``?entity=employers|workers|contractors`` returns a single-sheet workbook;
+    with no param all three sheets are returned in one workbook.
+    """
+    if request.user.role != "employer":
+        return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
+    allowed = ("employers", "workers", "contractors")
+    requested = str(request.query_params.get("entity") or "").strip().lower()
+    if requested:
+        if requested not in allowed:
+            return Response({"error": "entity must be employers, workers or contractors."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        entities = [requested]
+    else:
+        entities = list(allowed)
+    return _workbook_response(entities, requested)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def admin_onboarding_template(request):
+    """Admin downloads an onboarding template (Employers / Workers / Contractors)."""
+    if request.user.role not in ("bss_admin", "admin", "bss_staff"):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    allowed = ("employers", "workers", "contractors")
+    requested = str(request.query_params.get("entity") or "").strip().lower()
+    if requested:
+        if requested not in allowed:
+            return Response({"error": "entity must be employers, workers or contractors."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        entities = [requested]
+    else:
+        entities = list(allowed)
+    return _workbook_response(entities, requested)
 
 
 @api_view(["GET"])
@@ -600,9 +634,9 @@ def admin_onboarding_import(request):
         grouped = _parse_workbook(raw)
     except ValueError as exc:
         return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-    grouped = {k: v for k, v in grouped.items() if k in ("WORKER", "CONTRACTOR")}
+    grouped = {k: v for k, v in grouped.items() if k in ("EMPLOYER", "WORKER", "CONTRACTOR")}
     if not grouped:
-        return Response({"error": "No Workers or Contractors sheet found in the file."},
+        return Response({"error": "No Employers, Workers or Contractors sheet found in the file."},
                         status=status.HTTP_400_BAD_REQUEST)
     batch = OnboardingBatch(
         source="ADMIN_UPLOAD", employer=None, submitted_by=request.user, state="SUBMITTED",
@@ -612,7 +646,7 @@ def admin_onboarding_import(request):
         declaration=str(request.data.get("declaration") or "")[:2000])
     batch.original_file.save(batch.file_name or "onboarding.xlsx", ContentFile(raw), save=False)
     batch.save()
-    for etype in ("WORKER", "CONTRACTOR"):
+    for etype in ("EMPLOYER", "WORKER", "CONTRACTOR"):
         for idx, row in enumerate(grouped.get(etype, [])):
             OnboardingRecord.objects.create(batch=batch, entity_type=etype, row_index=idx, raw_data=row)
     _refresh_counts(batch)
@@ -684,6 +718,9 @@ def admin_onboarding_structure(request, batch_id):
 def admin_onboarding_migrate(request, batch_id):
     if request.user.role not in ("bss_admin", "admin"):
         return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    supplied = str(request.data.get("password") or request.query_params.get("password") or "")
+    if supplied != _onboarding_password():
+        return Response({"error": "Invalid onboarding password."}, status=status.HTTP_403_FORBIDDEN)
     batch = _visible_batch(request.user, batch_id)
     if batch is None:
         return Response({"error": "Batch not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -798,6 +835,7 @@ __all__ = [
     "admin_onboarding_batches", "admin_onboarding_review", "admin_onboarding_clean",
     "admin_onboarding_structure", "admin_onboarding_migrate", "onboarding_batch_detail",
     "admin_onboarding_import", "admin_onboarding_approve", "admin_onboarding_edit_record",
+    "admin_onboarding_template",
     "worker_onboarding_status", "worker_onboarding_consent",
     "clean_batch", "structure_batch", "migrate_batch",
 ]
