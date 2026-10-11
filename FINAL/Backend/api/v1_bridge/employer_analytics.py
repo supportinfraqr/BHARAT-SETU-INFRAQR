@@ -189,11 +189,11 @@ def _live(user, site_id, contractor_id):
     recent = [{
         "worker": _worker_name(e.worker), "bssId": _worker_bss(e.worker),
         "site": e.site.site_name if e.site else "", "source": e.source,
-        "type": e.event_type, "at": _dts(e.at),
+        "type": e.event_type, "at": payloads._dts(e.at),
     } for e in events]
 
     return {
-        "generatedAt": _dts(timezone.now()),
+        "generatedAt": payloads._dts(timezone.now()),
         "onSiteNow": len(on_site_ids),
         "boundWorkers": len(bound_ids),
         "today": {"present": len(present_ids), "onSite": len(on_site_ids),
@@ -223,8 +223,8 @@ def _kpis(user, worker_ids, start, end, site_id):
     gate = _gate_agg(user)
     grievances = _grievance_rows(user)
     from bss_core.models import WorkerDocument
-    docs = WorkerDocument.objects.filter(worker_id__in=worker_ids)
-    expiring = sum(1 for d in docs if str(d.status).upper() in ("EXPIRING", "MISSING", "PENDING"))
+    docs = WorkerDocument.objects.filter(user_id__in=worker_ids)
+    expiring = sum(1 for d in docs if str(d.status).upper() in ("EXPIRED", "MISSING", "REJECTED"))
     return {
         "workers": workers, "activeSites": sites, "contractors": contractors,
         "attendanceRate": rate,
@@ -391,14 +391,14 @@ def _workforce(user, site_id, contractor_id, start, end):
         base = base.filter(contractor_id=contractor_id)
     joiners = base.filter(accepted_at__date__gte=start, accepted_at__date__lte=end).count()
     exits = base.filter(unbound_at__date__gte=start, unbound_at__date__lte=end).count()
-    docs = list(WorkerDocument.objects.filter(worker_id__in=worker_ids))
+    docs = list(WorkerDocument.objects.filter(user_id__in=worker_ids))
     doc_status = {"valid": 0, "expiring": 0, "missing": 0}
     for d in docs:
         st = str(d.status).upper()
-        if st in ("EXPIRING", "PENDING"):
-            doc_status["expiring"] += 1
-        elif st in ("MISSING", "REJECTED", "EXPIRED"):
+        if st in ("MISSING", "REJECTED"):
             doc_status["missing"] += 1
+        elif st == "EXPIRED":
+            doc_status["expiring"] += 1
         else:
             doc_status["valid"] += 1
     idcard_expiring = 0
