@@ -1,8 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
-import { Download, Share2, ChevronLeft, Home } from 'lucide-react';
-import Link from 'next/link';
+import { useState, useRef } from 'react';
 import { useContractor } from '@/contexts/ContractorContext';
 import OrganizationIdentityCard, { entityInitials, formatCardDate, type OrganizationCardContent } from '@/components/idcard/OrganizationIdentityCard';
 import CredentialQrPanel from '@/components/idcard/CredentialQrPanel';
@@ -10,11 +8,6 @@ import CredentialQrPanel from '@/components/idcard/CredentialQrPanel';
 export default function ContractorIdentityCardPage() {
   const { contractor: portal } = useContractor();
   const [isFlipped, setIsFlipped] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportError, setExportError] = useState('');
-  const [exportNotice, setExportNotice] = useState('');
-
-  const cardRef = useRef<HTMLDivElement>(null);
   const frontRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLDivElement>(null);
 
@@ -47,142 +40,6 @@ export default function ContractorIdentityCardPage() {
     ],
   };
 
-  const handleDownload = async () => {
-    if (!frontRef.current || !backRef.current || isExporting) return;
-    const preview = window.open('about:blank', '_blank');
-    if (preview) {
-      preview.opener = null;
-      preview.document.title = 'Preparing BSS Contractor ID Card…';
-      preview.document.body.innerHTML = '<main style="font:14px system-ui;padding:32px;color:#334155">Preparing your print-ready BSS ID Card…</main>';
-    }
-    setIsExporting(true);
-    setExportError('');
-    setExportNotice('');
-    try {
-      await document.fonts.ready;
-      const [{ toPng }, { jsPDF }] = await Promise.all([import('html-to-image'), import('jspdf')]);
-      const captureOptions = {
-        width: 400,
-        height: 252,
-        pixelRatio: 4,
-        cacheBust: true,
-        backgroundColor: '#0A192F',
-        style: {
-          position: 'relative',
-          inset: 'auto',
-          width: '400px',
-          height: '252px',
-          transform: 'none',
-          backfaceVisibility: 'visible',
-          WebkitBackfaceVisibility: 'visible',
-          opacity: '1',
-          boxShadow: 'none',
-        },
-      } as const;
-      const [frontImage, backImage] = await Promise.all([
-        toPng(frontRef.current, captureOptions),
-        toPng(backRef.current, captureOptions),
-      ]);
-      const cardWidth = 85.6;
-      const cardHeight = 53.98;
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [cardWidth, cardHeight], compress: true, precision: 16 });
-      pdf.setProperties({ title: `BSS Contractor ID Card - ${entityId}`, subject: 'Print-ready ISO/IEC 7810 ID-1 contractor organization identity card', author: 'Bharat Shram Setu' });
-      pdf.addImage(frontImage, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
-      pdf.addPage([cardWidth, cardHeight], 'landscape');
-      pdf.addImage(backImage, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
-      const pdfUrl = URL.createObjectURL(pdf.output('blob'));
-      if (preview && !preview.closed) {
-        preview.location.replace(pdfUrl);
-      } else {
-        const download = document.createElement('a');
-        download.href = pdfUrl;
-        download.download = `BSS-Contractor-ID-${entityId}.pdf`;
-        download.rel = 'noopener';
-        document.body.appendChild(download);
-        download.click();
-        download.remove();
-        setExportNotice('Your browser blocked the preview tab, so the PDF was downloaded instead.');
-      }
-      window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 60_000);
-    } catch (error) {
-      if (preview && !preview.closed) preview.close();
-      console.error('ID card PDF export failed', error);
-      setExportError('The print-ready PDF could not be created. Please ensure card images have loaded and try again.');
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleShare = async () => {
-    if (!frontRef.current || !backRef.current || isExporting) return;
-    setIsExporting(true);
-    setExportError('');
-    setExportNotice('');
-    try {
-      await document.fonts.ready;
-      const [{ toPng }, { jsPDF }] = await Promise.all([import('html-to-image'), import('jspdf')]);
-      const captureOptions = {
-        width: 400,
-        height: 252,
-        pixelRatio: 4,
-        cacheBust: true,
-        backgroundColor: '#0A192F',
-        style: {
-          position: 'relative',
-          inset: 'auto',
-          width: '400px',
-          height: '252px',
-          transform: 'none',
-          backfaceVisibility: 'visible',
-          WebkitBackfaceVisibility: 'visible',
-          opacity: '1',
-          boxShadow: 'none',
-        },
-      } as const;
-      const [frontImage, backImage] = await Promise.all([
-        toPng(frontRef.current, captureOptions),
-        toPng(backRef.current, captureOptions),
-      ]);
-      const cardWidth = 85.6;
-      const cardHeight = 53.98;
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [cardWidth, cardHeight], compress: true, precision: 16 });
-      pdf.setProperties({ title: `BSS Contractor ID Card - ${entityId}`, subject: 'Contractor organization identity card', author: 'Bharat Shram Setu', creator: 'Bharat Shram Setu Contractor Portal' });
-      pdf.addImage(frontImage, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
-      pdf.addPage([cardWidth, cardHeight], 'landscape');
-      pdf.addImage(backImage, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
-
-      const blob = pdf.output('blob');
-      const fileName = `BSS-Contractor-ID-${entityId}.pdf`;
-      const file = new File([blob], fileName, { type: 'application/pdf' });
-      const verifyUrl = `${window.location.origin}/verify/${encodeURIComponent(entityId)}`;
-      const shareText = `${portal.identity.company} · ${entityId}\nVerify: ${verifyUrl}`;
-
-      if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'BSS Contractor ID Card', text: shareText, url: verifyUrl });
-        setExportNotice('BSS ID card shared.');
-      } else {
-        const url = URL.createObjectURL(blob);
-        const download = document.createElement('a');
-        download.href = url;
-        download.download = fileName;
-        download.rel = 'noopener';
-        document.body.appendChild(download);
-        download.click();
-        download.remove();
-        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-        if (navigator.share) await navigator.share({ title: 'BSS Contractor ID', text: shareText });
-        else await navigator.clipboard.writeText(verifyUrl);
-        setExportNotice('ID card downloaded — file sharing isn’t supported here, so the verification link was shared instead.');
-      }
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') return;
-      console.error('ID card share failed', error);
-      setExportError('The ID card could not be shared. Please try again.');
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -200,24 +57,9 @@ export default function ContractorIdentityCardPage() {
         </div>
       </div>
 
-      <div ref={cardRef}>
-        <OrganizationIdentityCard content={content} frontRef={frontRef} backRef={backRef} isFlipped={isFlipped} onToggleFlip={() => setIsFlipped(v => !v)} />
-      </div>
+      <OrganizationIdentityCard content={content} frontRef={frontRef} backRef={backRef} isFlipped={isFlipped} onToggleFlip={() => setIsFlipped(v => !v)} />
 
       <CredentialQrPanel bssId={entityId} name={portal.identity.company} idLabel="contractor" />
-
-      <div className="flex gap-3 pt-2">
-        <button disabled title="ID Card PDF download option is disabled" className="flex-1 bg-bss-surface opacity-60 cursor-not-allowed text-white px-4 py-3 rounded-[12px] font-bold text-sm shadow-sm flex justify-center items-center gap-2">
-          <Download size={18} /> View / Download Print-Ready PDF
-        </button>
-        <button disabled title="Share Digital ID option is disabled" className="bg-bss-bg border border-bss-border text-bss-text-muted opacity-60 cursor-not-allowed px-4 py-3 rounded-[12px] font-bold text-sm shadow-sm flex justify-center items-center gap-2">
-          <Share2 size={18} /> Share Digital ID
-        </button>
-      </div>
-      <p className="text-center text-xs text-bss-text-muted mt-4">ISO/IEC 7810 ID-1 · 85.60 × 53.98 mm · front and back · 4× raster capture</p>
-
-      {exportError && <p role="alert" className="text-sm text-bss-error bg-bss-soft-orange border border-bss-border rounded-lg p-3">{exportError}</p>}
-      {exportNotice && <p role="status" className="text-sm text-bss-interactive-blue bg-bss-blue-tint border border-bss-border rounded-lg p-3">{exportNotice}</p>}
     </div>
   );
 }
