@@ -48,11 +48,11 @@ export default function AdminAccountsPage() {
         body: JSON.stringify({ userId: row.userId, field: 'account', value }),
       });
       const body = await response.json().catch(() => ({})) as { error?: string };
-      if (!response.ok) throw new Error(body.error || 'Could not change the switch.');
-      setNotice(`${row.name} is now ${value ? 'Active' : 'Inactive'}.`);
+      if (!response.ok) throw new Error(body.error || 'Could not change Admin Approval.');
+      setNotice(`${row.name} — Admin Approval is now ${value ? 'on' : 'off'}.`);
       await load();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not change the switch.');
+      setError(reason instanceof Error ? reason.message : 'Could not change Admin Approval.');
     } finally { setBusy(null); }
   }
 
@@ -64,12 +64,12 @@ export default function AdminAccountsPage() {
         body: JSON.stringify({ userId: row.userId, field: 'login', value, password: pwd }),
       });
       const body = await response.json().catch(() => ({})) as { error?: string };
-      if (!response.ok) throw new Error(body.error || 'Could not change login access.');
-      setNotice(`Login ${value ? 'enabled' : 'disabled'} for ${row.name}.`);
+      if (!response.ok) throw new Error(body.error || 'Could not change is_Active.');
+      setNotice(`${row.name} — is_Active is now ${value ? 'on' : 'off'}.`);
       setAuth(null); setPassword('');
       await load();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not change login access.');
+      setError(reason instanceof Error ? reason.message : 'Could not change is_Active.');
     } finally { setBusy(null); }
   }
 
@@ -78,7 +78,7 @@ export default function AdminAccountsPage() {
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Users &amp; Access</p>
         <h1 className="text-2xl font-bold mt-1">Accounts</h1>
-        <p className="text-sm text-gray-500 mt-1">Two switches per account — <strong>Active</strong> (admin approval: unlocks the portal; workers on by default) and <strong>Login</strong> (password-protected sign-in).</p>
+        <p className="text-sm text-gray-500 mt-1">Two switches per account — <strong>Admin Approval</strong> (workers approved by default) and <strong>is_Active</strong> (password-protected sign-in).</p>
       </div>
       <label className="text-xs font-semibold text-gray-600 self-start">
         Role
@@ -101,8 +101,8 @@ export default function AdminAccountsPage() {
               <th className="text-left px-4 py-2.5">Account</th>
               <th className="text-left px-4 py-2.5">Role</th>
               <th className="text-left px-4 py-2.5">GSTIN</th>
-              <th className="text-center px-4 py-2.5">Active</th>
-              <th className="text-center px-4 py-2.5">Login</th>
+              <th className="text-center px-4 py-2.5">Admin Approval</th>
+              <th className="text-center px-4 py-2.5">is_Active</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -111,10 +111,10 @@ export default function AdminAccountsPage() {
               <td className="px-4 py-2.5 text-gray-600">{ROLE_LABEL[row.role] ?? row.role}</td>
               <td className="px-4 py-2.5 font-mono text-[11px] text-gray-500">{row.gstin || '—'}</td>
               <td className="px-4 py-2.5 text-center">
-                <button type="button" disabled={busy === row.userId} onClick={() => void setAccountActive(row, !row.accountActive)} className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[11px] font-bold border transition-colors disabled:opacity-50 ${row.accountActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'}`}>{row.accountActive ? <UserCheck size={13}/> : <UserX size={13}/>}{row.accountActive ? 'Active' : 'Inactive'}</button>
+                <button type="button" disabled={busy === row.userId} onClick={() => void setAccountActive(row, !row.accountActive)} className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[11px] font-bold border transition-colors disabled:opacity-50 ${row.accountActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'}`}>{row.accountActive ? <UserCheck size={13}/> : <UserX size={13}/>}{row.accountActive ? 'Approved' : 'Not approved'}</button>
               </td>
               <td className="px-4 py-2.5 text-center">
-                <button type="button" disabled={busy === row.userId} onClick={() => { setAuth({ row, next: !row.loginActive }); setPassword(''); setError(''); }} className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[11px] font-bold border transition-colors disabled:opacity-50 ${row.loginActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'}`}>{row.loginActive ? <LockOpen size={13}/> : <Lock size={13}/>}{row.loginActive ? 'Enabled' : 'Disabled'}</button>
+                <button type="button" disabled={busy === row.userId} onClick={() => { setAuth({ row, next: !row.loginActive }); setPassword(''); setError(''); }} className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[11px] font-bold border transition-colors disabled:opacity-50 ${row.loginActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'}`}>{row.loginActive ? <LockOpen size={13}/> : <Lock size={13}/>}{row.loginActive ? 'On' : 'Off'}</button>
               </td>
             </tr>)}
           </tbody>
@@ -123,8 +123,8 @@ export default function AdminAccountsPage() {
 
     {auth && <div className="fixed inset-0 z-[120] grid place-items-center bg-black/50 p-4" role="presentation" onClick={() => setAuth(null)}>
       <section role="dialog" aria-modal="true" className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-5 space-y-3" onClick={e => e.stopPropagation()}>
-        <h2 className="font-bold text-gray-900 flex items-center gap-2"><Lock size={16}/>{auth.next ? 'Enable' : 'Disable'} login — {auth.row.name}</h2>
-        <p className="text-xs text-gray-500">Changing login access requires the system password.</p>
+        <h2 className="font-bold text-gray-900 flex items-center gap-2"><Lock size={16}/>{auth.next ? 'Turn on' : 'Turn off'} is_Active — {auth.row.name}</h2>
+        <p className="text-xs text-gray-500">Changing is_Active requires the system password.</p>
         <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="System password" autoFocus className="w-full h-10 border border-gray-200 rounded-lg px-3 text-sm"/>
         {error && <p role="alert" className="text-xs text-rose-700">{error}</p>}
         <div className="flex justify-end gap-2">

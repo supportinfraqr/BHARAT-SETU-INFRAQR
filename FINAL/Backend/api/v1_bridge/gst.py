@@ -37,17 +37,20 @@ def _legal_name_attr(profile):
 
 
 def active_gstin_holder(gstin, exclude_user_id=None):
-    """An contractor/employer profile already **active** on this GSTIN.
+    """An account already holding this GSTIN, unless both switches are off.
 
-    Uniqueness is enforced on the ``account_active`` switch only (the
-    approved/active flag): a GSTIN may be held by one active account. Returns
-    the clashing profile or None."""
+    A GSTIN leaves the count only when **both** switches are off — while either
+    ``account_active`` (Admin Approval) or ``is_active`` is on, the account still
+    holds it. Returns the clashing profile or None."""
+    from django.db.models import Q
+
     from bss_core.models import ContractorProfile, EmployerProfile
     value = str(gstin or "").strip().upper()
     if not value:
         return None
     for model in (ContractorProfile, EmployerProfile):
-        qs = model.objects.filter(gstin__iexact=value, user__account_active=True)
+        qs = model.objects.filter(gstin__iexact=value).filter(
+            Q(user__account_active=True) | Q(user__is_active=True))
         if exclude_user_id:
             qs = qs.exclude(user_id=exclude_user_id)
         obj = qs.select_related("user").first()
@@ -353,7 +356,8 @@ def _gst_holders(gstin):
                 "gstStatus": p.gst_verification_status,
                 "isActive": bool(user.is_active),
                 "accountActive": bool(user.account_active),
-                "active": bool(user.is_active and user.account_active),
+                # Held (counted) until BOTH switches are off.
+                "active": bool(user.is_active or user.account_active),
             })
     rows.sort(key=lambda r: (not r["active"], r["name"] or ""))
     return rows

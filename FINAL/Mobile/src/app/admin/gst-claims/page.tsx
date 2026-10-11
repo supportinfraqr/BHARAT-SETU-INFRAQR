@@ -59,7 +59,7 @@ export default function AdminGstClaimsPage() {
     <header>
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Users &amp; Access</p>
       <h1 className="text-2xl font-bold mt-1">GST Ownership Claims</h1>
-      <p className="text-sm text-gray-500 mt-1">A GSTIN is unique among <strong>active</strong> accounts. Pick the rightful owner and the other account is deactivated.</p>
+      <p className="text-sm text-gray-500 mt-1">A GSTIN stays on an account until both <strong>Admin Approval</strong> and <strong>is_Active</strong> are off. Pick the rightful owner and the other accounts are deactivated.</p>
     </header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
