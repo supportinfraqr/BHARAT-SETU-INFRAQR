@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Building2, CheckCircle2, Clock3, MoreVertical, Plus, ShieldAlert, UserRound, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
@@ -65,15 +65,15 @@ export default function EmployerContractorsPage() {
 
     {/* Contractor full profile — opened from the row's three-dot menu */}
     {profileView && (
-      <div className="fixed inset-0 z-[96] bg-black/50 flex justify-end" role="presentation" onClick={() => setProfileView(null)}>
-        <section role="dialog" aria-modal="true" aria-label="Contractor profile" className="bg-white w-full max-w-md h-full overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="fixed inset-0 z-[96] bg-bss-navy/40 backdrop-blur-sm grid place-items-center p-4" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setProfileView(null); }}>
+        <section role="dialog" aria-modal="true" aria-label="Contractor profile" className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl">
           <header className="sticky top-0 bg-white border-b border-bss-border px-5 py-4 flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted">Contractor profile</p>
               <h2 className="font-semibold text-bss-text-primary mt-0.5">{profileView.name}</h2>
               <p className="text-xs text-bss-text-muted font-mono mt-0.5">{profileView.bssId}</p>
             </div>
-            <button onClick={() => setProfileView(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-bss-bg"><X size={16}/></button>
+            <button onClick={() => setProfileView(null)} aria-label="Close" className="w-9 h-9 grid place-items-center rounded-lg hover:bg-bss-bg text-bss-text-secondary"><X size={18}/></button>
           </header>
           <div className="p-5 space-y-5">
             <div className="flex items-center gap-2">
@@ -109,41 +109,45 @@ function Metric({ label, value, icon:Icon, tone }: { label:string; value:number;
 function Field({ name, label, type = 'text', pattern, placeholder }: { name:string; label:string; type?:string; pattern?:string; placeholder?:string }) { return <label className="text-xs font-semibold text-bss-text-primary">{label}<input required name={name} type={type} pattern={pattern} placeholder={placeholder} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm"/></label>; }
 function Info({ label, value }: { label:string; value:string }) { return <div className="rounded-lg border border-bss-border p-2.5"><dt className="text-bss-text-muted text-[10px]">{label}</dt><dd className="font-semibold text-bss-text-primary mt-0.5">{value}</dd></div>; }
 function ActionMenu({ open, onToggle, onViewProfile }: { open: boolean; onToggle: () => void; onViewProfile: () => void }) {
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [anchor, setAnchor] = useState<{ top?: number; bottom?: number; right: number; maxHeight: number } | null>(null);
-
   useEffect(() => {
     if (!open) return;
-    const update = () => {
-      const rect = btnRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const right = Math.max(8, window.innerWidth - rect.right);
-      const spaceBelow = window.innerHeight - rect.bottom - 12;
-      const spaceAbove = rect.top - 12;
-      const menuHeight = menuRef.current?.offsetHeight || 180;
-      if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
-        setAnchor({ bottom: window.innerHeight - rect.top + 4, right, maxHeight: Math.max(120, spaceAbove) });
-      } else {
-        setAnchor({ top: rect.bottom + 4, right, maxHeight: Math.max(120, spaceBelow) });
-      }
-    };
-    update();
-    window.addEventListener('scroll', update, true);
-    window.addEventListener('resize', update);
-    return () => {
-      window.removeEventListener('scroll', update, true);
-      window.removeEventListener('resize', update);
-    };
-  }, [open]);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onToggle(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onToggle]);
 
-  return <>
-    <button ref={btnRef} onClick={onToggle} aria-label="Contractor actions" aria-expanded={open} className="w-8 h-8 grid place-items-center rounded-lg hover:bg-bss-bg text-bss-text-muted"><MoreVertical size={16}/></button>
-    {open && anchor && createPortal(<>
-      <div className="fixed inset-0 z-[110]" onClick={onToggle} />
-      <div ref={menuRef} role="menu" className="fixed z-[120] w-52 bg-white border border-bss-border rounded-xl shadow-xl shadow-gray-900/5 p-1.5 overflow-y-auto" style={{ top: anchor.top, bottom: anchor.bottom, right: anchor.right, maxHeight: anchor.maxHeight }}>
-        <button role="menuitem" onClick={onViewProfile} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-bss-bg text-left"><UserRound size={14} className="text-bss-text-muted"/>View Profile</button>
-      </div>
-    </>, document.body)}
-  </>;
+  const run = (fn: () => void) => () => { onToggle(); fn(); };
+
+  const action = (icon: ReactNode, title: string, description: string, onClick: () => void) => (
+    <button role="menuitem" onClick={run(onClick)} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left hover:bg-bss-bg transition-colors">
+      <span className="w-10 h-10 rounded-lg bg-bss-bg text-bss-interactive-blue grid place-items-center flex-shrink-0">{icon}</span>
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-bss-text-primary">{title}</span>
+        <span className="block text-xs text-bss-text-muted mt-0.5">{description}</span>
+      </span>
+    </button>
+  );
+
+  return (
+    <>
+      <button onClick={onToggle} aria-label="Contractor actions" aria-expanded={open} aria-haspopup="dialog" className={`w-8 h-8 grid place-items-center rounded-lg transition-colors ${open ? 'bg-bss-blue-tint text-bss-interactive-blue' : 'text-bss-text-muted hover:bg-bss-bg'}`}><MoreVertical size={16}/></button>
+      {open && createPortal(
+        <div className="fixed inset-0 z-[120] bg-bss-navy/40 backdrop-blur-sm grid place-items-center p-4" onMouseDown={e => { if (e.target === e.currentTarget) onToggle(); }}>
+          <section role="dialog" aria-modal="true" aria-label="Contractor actions" className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <header className="px-5 py-4 border-b border-bss-border flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted">Contractor actions</p>
+                <h2 className="text-sm font-semibold text-bss-text-primary mt-0.5">Choose an action</h2>
+              </div>
+              <button onClick={onToggle} aria-label="Close" className="w-9 h-9 grid place-items-center rounded-lg hover:bg-bss-bg text-bss-text-secondary"><X size={18}/></button>
+            </header>
+            <div className="p-2 space-y-1">
+              {action(<UserRound size={18}/>, 'View Profile', 'Full contractor profile and sites', onViewProfile)}
+            </div>
+          </section>
+        </div>,
+        document.body,
+      )}
+    </>
+  );
 }
