@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Building2, CheckCircle2, Clock3, MoreVertical, Plus, ShieldAlert, UserRound, X } from 'lucide-react';
+import { Building2, CheckCircle2, Clock3, MoreVertical, ShieldAlert, UserRound, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useEmployer } from '@/contexts/EmployerContext';
 import { formatDate } from '@/lib/date';
@@ -49,7 +49,7 @@ export default function EmployerContractorsPage() {
   const attention = employer.contractors.filter(item => item.compliance < 90).length;
 
   return <div className="space-y-6">
-    <header className="flex flex-col sm:flex-row justify-between gap-4"><div><p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Workforce network</p><h1 className="text-2xl font-bold mt-1">Connected Contractors</h1><p className="text-sm text-bss-text-muted mt-1">Contractors bound to your organisation, sites, and worker population.</p></div><button onClick={() => setOpen(true)} className="h-10 px-4 rounded-lg bg-bss-navy text-white text-sm font-semibold flex items-center justify-center gap-2"><Plus size={16}/>Connect contractor</button></header>
+    <header className="flex flex-col sm:flex-row justify-between gap-4"><div><p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Workforce network</p><h1 className="text-2xl font-bold mt-1">Connected Contractors</h1><p className="text-sm text-bss-text-muted mt-1">Contractors bound to your organisation, sites, and worker population.</p></div></header>
     <div className="grid grid-cols-3 gap-3"><Metric label="Active" value={active} icon={CheckCircle2} tone="bg-bss-soft-green text-bss-green"/><Metric label="Pending review" value={pending} icon={Clock3} tone="bg-bss-soft-orange text-bss-orange"/><Metric label="Needs attention" value={attention} icon={ShieldAlert} tone="bg-bss-soft-orange text-bss-error"/></div>
     <EnterpriseDataTable title="Contractor directory" rows={employer.contractors} columns={[...columns, { id:'actions', header:'Actions', filterable:false, value:row => row.id, render:row => <ActionMenu open={openMenuFor === row.id} onToggle={() => setOpenMenuFor(openMenuFor === row.id ? '' : row.id)} onViewProfile={() => { setProfileView(row); setOpenMenuFor(''); }} /> }]} rowKey={row => row.id} filename="employer-contractors"/>
 

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Camera } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
-import VideoAttendancePanel from '@/components/attendance/VideoAttendancePanel';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import AttendanceDetailDialog from '@/components/attendance/AttendanceDetailDialog';
 import type { AttendanceRecord } from '@/types/portal';
@@ -87,7 +86,7 @@ export default function EmployerAttendancePage() {
       <h1 className="text-2xl font-bold mt-1 flex items-center gap-2"><Camera size={22} /> Attendance</h1>
       <p className="text-sm text-bss-text-muted mt-1">
         View your workers&apos; attendance month-wise and per site — every source (QR, RFID, CCTV, Self GPS, uploaded
-        sheet) with full detail — and run video attendance from your site cameras.
+        sheet) with full detail — CCTV attendance control is now on the CCTV Control page.
       </p>
     </header>
 
@@ -102,8 +101,6 @@ export default function EmployerAttendancePage() {
         <EnterpriseDataTable title="Attendance records" rows={recRows} columns={recColumns} rowKey={r => r.id} filename={`attendance-records-${recMonth}`} />
       </div>
     </section>
-
-    <VideoAttendancePanel sites={sites} />
 
     {recSelected && (
       <AttendanceDetailDialog
