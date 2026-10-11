@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Building2, CalendarDays, Camera, MapPin, Plus, QrCode, ShieldCheck, Star, Users, X } from 'lucide-react';
+import { ArrowRight, Building2, CalendarDays, MapPin, Plus, QrCode, ShieldCheck, Star, Users, X } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerSite } from '@/types/portal';
 import SiteCreateForm from '@/components/employer/SiteCreateForm';
@@ -18,28 +18,6 @@ export default function EmployerSitesPage() {
   const [defaultBusy, setDefaultBusy] = useState(false);
   const [defaultNotice, setDefaultNotice] = useState('');
   const [defaultError, setDefaultError] = useState('');
-  const [camState, setCamState] = useState<Record<string, boolean>>({});
-  const [camBusyId, setCamBusyId] = useState<string | null>(null);
-
-  async function toggleCamera(site: EmployerSite) {
-    setCamBusyId(site.id);
-    setDefaultError('');
-    try {
-      const running = !!camState[site.id];
-      const response = await fetch('/api/employer/attendance/camera', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siteId: Number(site.id), action: running ? 'stop' : 'start' }),
-      });
-      const body = await response.json().catch(() => ({})) as { data?: { running: boolean; siteName: string }; error?: string };
-      if (!response.ok || !body.data) throw new Error(body.error ?? 'Camera action failed.');
-      setCamState(prev => ({ ...prev, [site.id]: body.data!.running }));
-      setDefaultNotice(body.data.running
-        ? `CCTV attendance started for ${body.data.siteName}.`
-        : `CCTV attendance stopped for ${body.data.siteName}.`);
-    } catch (reason) {
-      setDefaultError(reason instanceof Error ? reason.message : 'Camera action failed.');
-    } finally { setCamBusyId(null); }
-  }
 
   async function setDefaultSite(siteId: string) {
     setDefaultBusy(true);
@@ -69,31 +47,30 @@ export default function EmployerSitesPage() {
   }
 
   return <div className="space-y-6">
-    <header className="flex flex-col sm:flex-row justify-between gap-4"><div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Project network</p><h1 className="text-2xl font-bold mt-1">Sites</h1><p className="text-sm text-gray-500 mt-1">Projects linking your contractors, workers, and compliance records.</p></div><button onClick={() => setOpen(true)} className="h-10 px-4 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center justify-center gap-2"><Plus size={16}/>Add site</button></header>
+    <header className="flex flex-col sm:flex-row justify-between gap-4"><div><p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Project network</p><h1 className="text-2xl font-bold mt-1">Sites</h1><p className="text-sm text-bss-text-muted mt-1">Projects linking your contractors, workers, and compliance records.</p></div><button onClick={() => setOpen(true)} className="h-10 px-4 rounded-lg bg-bss-navy text-white text-sm font-semibold flex items-center justify-center gap-2"><Plus size={16}/>Add site</button></header>
 
-    <section className="bg-white border border-gray-200 rounded-2xl p-5">
-      <div className="flex items-center gap-2"><Star size={16} className="text-[#F47A32]"/><h2 className="font-semibold text-sm">Default site for contractor allotments</h2></div>
-      <p className="text-xs text-gray-500 mt-1 mb-3">Pre-selected when you allot sites to a contractor. You can still change it per allotment.</p>
-      <select value={employer.defaultSite?.id ?? (employer.sites[0]?.id ?? '')} onChange={e => void setDefaultSite(e.target.value)} disabled={defaultBusy || !employer.sites.length} className="w-full sm:w-96 h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white disabled:opacity-60">
+    <section className="bss-card rounded-2xl p-5">
+      <div className="flex items-center gap-2"><Star size={16} className="text-[#E45D24]"/><h2 className="font-semibold text-sm">Default site for contractor allotments</h2></div>
+      <p className="text-xs text-bss-text-muted mt-1 mb-3">Pre-selected when you allot sites to a contractor. You can still change it per allotment.</p>
+      <select value={employer.defaultSite?.id ?? (employer.sites[0]?.id ?? '')} onChange={e => void setDefaultSite(e.target.value)} disabled={defaultBusy || !employer.sites.length} className="w-full sm:w-96 h-10 rounded-lg border border-bss-border px-3 text-sm bg-white disabled:opacity-60">
         {employer.sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` (${s.code})` : ''}</option>)}
       </select>
-      {!employer.sites.length && <p className="mt-2 text-xs text-gray-400">Add a site first — the first site becomes the default automatically.</p>}
-      {defaultNotice && <p role="status" className="mt-2 text-xs text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">{defaultNotice}</p>}
-      {defaultError && <p role="alert" className="mt-2 text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{defaultError}</p>}
+      {!employer.sites.length && <p className="mt-2 text-xs text-bss-text-muted">Add a site first — the first site becomes the default automatically.</p>}
+      {defaultNotice && <p role="status" className="mt-2 text-xs text-bss-green bg-bss-soft-green border border-bss-border rounded-lg px-3 py-2">{defaultNotice}</p>}
+      {defaultError && <p role="alert" className="mt-2 text-xs text-bss-error bg-bss-soft-orange border border-bss-border rounded-lg px-3 py-2">{defaultError}</p>}
     </section>
 
     <section className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
       {employer.sites.map(site => {
         const isDefault = String(employer.defaultSite?.id) === String(site.id);
-        return <article key={site.id} className={`bg-white border rounded-2xl overflow-hidden ${isDefault ? 'border-[#F47A32] ring-1 ring-[#F47A32]/20' : 'border-gray-200'}`}>
-        <div className="p-5 border-b border-gray-100"><div className="flex items-start justify-between gap-3"><span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 grid place-items-center"><Building2 size={19}/></span><div className="flex items-center gap-1.5">{isDefault && <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#F47A32] bg-orange-50 px-2 py-1 rounded"><Star size={11}/>Default</span>}<span className={`text-[10px] font-bold px-2 py-1 rounded ${site.status === 'Active' ? 'bg-green-50 text-green-700' : site.status === 'Planned' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{site.status}</span></div></div><h2 className="font-semibold text-gray-950 mt-4">{site.name}</h2><p className="font-mono text-[11px] text-gray-400 mt-1">{site.bssId ? `${site.bssId} · ` : ''}{site.code}</p><p className="text-xs text-gray-500 flex items-center gap-1 mt-3"><MapPin size={12}/>{site.location}, {site.state}</p></div>
-        <div className="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100"><SmallMetric icon={Users} value={site.workers} label="Workers"/><SmallMetric icon={Building2} value={site.contractorIds.length} label="Contractors"/><SmallMetric icon={ShieldCheck} value={`${site.compliance}%`} label="Compliance"/></div>
-        <div className="p-4 text-[11px] text-gray-500 flex items-center gap-2"><CalendarDays size={13}/><span>{formatDate(site.startDate)}</span><span>to</span><span>{formatDate(site.endDate)}</span></div>
-        <div className="grid grid-cols-4 divide-x divide-gray-100 border-t border-gray-100">
-          <Link href={`/employer/sites/${site.id}`} className="h-9 bg-gray-50 text-[11px] font-semibold text-[#073B67] flex items-center justify-center gap-1 hover:bg-gray-100">View <ArrowRight size={13}/></Link>
-          <button type="button" disabled={camBusyId === site.id} onClick={() => void toggleCamera(site)} className={`h-9 text-[11px] font-bold flex items-center justify-center gap-1 disabled:opacity-60 ${camState[site.id] ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'}`}><Camera size={13}/>{camState[site.id] ? 'Stop CCTV' : 'Start CCTV'}</button>
-          <button type="button" onClick={() => setQrSite(site)} disabled={!site.qrToken} className="h-9 bg-gray-50 text-[11px] font-semibold text-[#073B67] flex items-center justify-center gap-1 hover:bg-gray-100 disabled:opacity-50"><QrCode size={13}/>QR</button>
-          <button type="button" onClick={() => void setDefaultSite(site.id)} disabled={defaultBusy || isDefault} className={`h-9 text-[11px] font-semibold flex items-center justify-center gap-1 disabled:opacity-70 ${isDefault ? 'bg-orange-50 text-[#F47A32]' : 'bg-gray-50 text-[#073B67] hover:bg-gray-100'}`}><Star size={13}/>{isDefault ? 'Default' : 'Default'}</button>
+        return <article key={site.id} className={`bg-white border rounded-2xl overflow-hidden ${isDefault ? 'border-[#E45D24] ring-1 ring-[#E45D24]/20' : 'border-bss-border'}`}>
+        <div className="p-5 border-b border-bss-border"><div className="flex items-start justify-between gap-3"><span className="w-10 h-10 rounded-xl bg-bss-blue-tint text-bss-interactive-blue grid place-items-center"><Building2 size={19}/></span><div className="flex items-center gap-1.5">{isDefault && <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#E45D24] bg-bss-soft-orange px-2 py-1 rounded"><Star size={11}/>Default</span>}<span className={`text-[10px] font-bold px-2 py-1 rounded ${site.status === 'Active' ? 'bg-bss-soft-green text-bss-green' : site.status === 'Planned' ? 'bg-bss-blue-tint text-bss-interactive-blue' : 'bg-bss-bg text-bss-text-secondary'}`}>{site.status}</span></div></div><h2 className="font-semibold text-bss-text-primary mt-4">{site.name}</h2><p className="font-mono text-[11px] text-bss-text-muted mt-1">{site.bssId ? `${site.bssId} · ` : ''}{site.code}</p><p className="text-xs text-bss-text-muted flex items-center gap-1 mt-3"><MapPin size={12}/>{site.location}, {site.state}</p></div>
+        <div className="grid grid-cols-3 divide-x divide-bss-border border-b border-bss-border"><SmallMetric icon={Users} value={site.workers} label="Workers"/><SmallMetric icon={Building2} value={site.contractorIds.length} label="Contractors"/><SmallMetric icon={ShieldCheck} value={`${site.compliance}%`} label="Compliance"/></div>
+        <div className="p-4 text-[11px] text-bss-text-muted flex items-center gap-2"><CalendarDays size={13}/><span>{formatDate(site.startDate)}</span><span>to</span><span>{formatDate(site.endDate)}</span></div>
+        <div className="grid grid-cols-3 divide-x divide-bss-border border-t border-bss-border">
+          <Link href={`/employer/sites/${site.id}`} className="h-9 bg-bss-bg text-[11px] font-semibold text-[#01183A] flex items-center justify-center gap-1 hover:bg-bss-bg">View <ArrowRight size={13}/></Link>
+          <button type="button" onClick={() => setQrSite(site)} disabled={!site.qrToken} className="h-9 bg-bss-bg text-[11px] font-semibold text-[#01183A] flex items-center justify-center gap-1 hover:bg-bss-bg disabled:opacity-50"><QrCode size={13}/>QR</button>
+          <button type="button" onClick={() => void setDefaultSite(site.id)} disabled={defaultBusy || isDefault} className={`h-9 text-[11px] font-semibold flex items-center justify-center gap-1 disabled:opacity-70 ${isDefault ? 'bg-bss-soft-orange text-[#E45D24]' : 'bg-bss-bg text-[#01183A] hover:bg-bss-bg'}`}><Star size={13}/>{isDefault ? 'Default' : 'Default'}</button>
         </div>
       </article>;
       })}
@@ -104,12 +81,12 @@ export default function EmployerSitesPage() {
     {qrSite && (
       <div className="fixed inset-0 z-[90] bg-black/55 backdrop-blur-sm grid place-items-center p-4" role="dialog" aria-modal="true" aria-label="Site QR">
         <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
-          <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900">Site QR</h2>
-            <button onClick={() => setQrSite(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:bg-gray-100"><X size={16}/></button>
+          <header className="px-5 py-4 border-b border-bss-border flex items-center justify-between">
+            <h2 className="font-semibold text-bss-text-primary">Site QR</h2>
+            <button onClick={() => setQrSite(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-full text-bss-text-muted hover:bg-bss-bg"><X size={16}/></button>
           </header>
           <div className="p-5">
-            {qrSite.qrToken ? <SiteQrPanel siteToken={qrSite.qrToken} siteCode={qrSite.code} bssId={qrSite.bssId} name={qrSite.name}/> : <p className="text-sm text-gray-500">No QR token for this site yet.</p>}
+            {qrSite.qrToken ? <SiteQrPanel siteToken={qrSite.qrToken} siteCode={qrSite.code} bssId={qrSite.bssId} name={qrSite.name}/> : <p className="text-sm text-bss-text-muted">No QR token for this site yet.</p>}
           </div>
         </div>
       </div>
@@ -117,4 +94,4 @@ export default function EmployerSitesPage() {
   </div>;
 }
 
-function SmallMetric({ icon:Icon, value, label }: { icon:typeof Users; value:string | number; label:string }) { return <div className="p-3 text-center"><Icon size={13} className="mx-auto text-gray-400"/><strong className="block text-sm mt-1">{value}</strong><span className="text-[9px] uppercase tracking-wider text-gray-400">{label}</span></div>; }
+function SmallMetric({ icon:Icon, value, label }: { icon:typeof Users; value:string | number; label:string }) { return <div className="p-3 text-center"><Icon size={13} className="mx-auto text-bss-text-muted"/><strong className="block text-sm mt-1">{value}</strong><span className="text-[9px] uppercase tracking-wider text-bss-text-muted">{label}</span></div>; }

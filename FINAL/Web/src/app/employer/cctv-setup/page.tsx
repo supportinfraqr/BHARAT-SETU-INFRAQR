@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Camera, CheckCircle2, Loader2, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import CameraPreview from '@/components/employer/CameraPreview';
+import VideoAttendancePanel from '@/components/attendance/VideoAttendancePanel';
 
 type CameraRow = {
   id: number;
@@ -166,6 +167,8 @@ export default function CctvSetupPage() {
           <Plus size={16} /> Add camera
         </button>
       </header>
+
+      <VideoAttendancePanel sites={sites} />
 
       <div className="bss-card rounded-2xl p-4">
         <label className={label}>Site</label>

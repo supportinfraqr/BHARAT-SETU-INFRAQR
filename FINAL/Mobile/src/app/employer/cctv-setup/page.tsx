@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Camera, CheckCircle2, Loader2, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import CameraPreview from '@/components/employer/CameraPreview';
+import VideoAttendancePanel from '@/components/attendance/VideoAttendancePanel';
 
 type CameraRow = {
   id: number;
@@ -147,48 +148,50 @@ export default function CctvSetupPage() {
 
   const siteName = useMemo(() => sites.find(s => String(s.id) === effectiveSite)?.name ?? '', [sites, effectiveSite]);
 
-  const input = 'w-full h-10 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200';
-  const label = 'text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1 block';
+  const input = 'w-full h-10 rounded-lg border border-bss-border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200';
+  const label = 'text-[11px] font-bold uppercase tracking-wider text-bss-text-muted mb-1 block';
 
   return (
     <div className="space-y-6 pb-12">
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Principal employer · Operations</p>
+          <p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Principal employer · Operations</p>
           <h1 className="text-2xl font-bold mt-1 flex items-center gap-2"><Camera size={22} /> CCTV Setup</h1>
-          <p className="text-sm text-gray-500 mt-1">Add the CCTV cameras installed at each site. Attendance is captured from these feeds only — no laptop/mobile camera.</p>
+          <p className="text-sm text-bss-text-muted mt-1">Add the CCTV cameras installed at each site. Attendance is captured from these feeds only — no laptop/mobile camera.</p>
         </div>
         <button
           type="button"
           onClick={() => { setForm({ ...EMPTY }); setTestResult(null); }}
-          className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black self-start sm:self-auto"
+          className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black self-start sm:self-auto"
         >
           <Plus size={16} /> Add camera
         </button>
       </header>
 
-      <div className="bg-white border border-gray-200 rounded-2xl p-4">
+      <VideoAttendancePanel sites={sites} />
+
+      <div className="bss-card rounded-2xl p-4">
         <label className={label}>Site</label>
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
           <select value={effectiveSite} onChange={e => { setSiteId(e.target.value); setForm(null); }} className={`${input} sm:max-w-md`}>
             {sites.length === 0 && <option value="">No sites available</option>}
             {sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` · ${s.code}` : ''}</option>)}
           </select>
-          <button type="button" onClick={() => void load()} className="h-10 px-3 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 flex items-center gap-1.5 hover:bg-gray-50">
+          <button type="button" onClick={() => void load()} className="h-10 px-3 rounded-lg border border-bss-border text-sm font-semibold text-bss-text-secondary flex items-center gap-1.5 hover:bg-bss-bg">
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
-          {siteName && <span className="text-xs text-gray-400">Configuring: <strong className="text-gray-700">{siteName}</strong></span>}
+          {siteName && <span className="text-xs text-bss-text-muted">Configuring: <strong className="text-bss-text-primary">{siteName}</strong></span>}
         </div>
       </div>
 
-      {notice && <p className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-lg p-3">{notice}</p>}
-      {error && <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg p-3">{error}</p>}
+      {notice && <p className="text-sm text-bss-green bg-bss-soft-green border border-bss-border rounded-lg p-3">{notice}</p>}
+      {error && <p className="text-sm text-bss-error bg-bss-soft-orange border border-bss-border rounded-lg p-3">{error}</p>}
 
       {form && (
-        <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-gray-900">{form.id ? 'Edit camera' : 'Add a camera'}</h2>
-            <button type="button" onClick={() => { setForm(null); setTestResult(null); }} className="w-8 h-8 grid place-items-center rounded-full hover:bg-gray-100"><X size={16} /></button>
+        <section className="bss-card rounded-2xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-bss-border flex items-center justify-between">
+            <h2 className="text-sm font-bold text-bss-text-primary">{form.id ? 'Edit camera' : 'Add a camera'}</h2>
+            <button type="button" onClick={() => { setForm(null); setTestResult(null); }} className="w-8 h-8 grid place-items-center rounded-full hover:bg-bss-bg"><X size={16} /></button>
           </div>
           <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div><label className={label}>Camera name *</label><input value={form.label} onChange={e => setForm({ ...form, label: e.target.value })} placeholder="e.g. Main Gate" className={input} /></div>
@@ -211,7 +214,7 @@ export default function CctvSetupPage() {
                 <div>
                   <label className={label}>Password</label>
                   <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value, clearPassword: false })} placeholder={form.hasPassword ? '•••••• (leave blank to keep)' : 'password'} className={input} />
-                  {form.hasPassword && <button type="button" onClick={() => setForm({ ...form, password: '', clearPassword: true })} className="mt-1 text-[11px] text-gray-400 hover:text-red-600">Remove stored password</button>}
+                  {form.hasPassword && <button type="button" onClick={() => setForm({ ...form, password: '', clearPassword: true })} className="mt-1 text-[11px] text-bss-text-muted hover:text-bss-error">Remove stored password</button>}
                 </div>
               </>
             )}
@@ -220,51 +223,51 @@ export default function CctvSetupPage() {
             )}
             <div className="flex items-center gap-2 pt-1">
               <input id="cam-enabled" type="checkbox" checked={form.enabled} onChange={e => setForm({ ...form, enabled: e.target.checked })} className="w-4 h-4" />
-              <label htmlFor="cam-enabled" className="text-sm text-gray-600">Enabled (used for attendance)</label>
+              <label htmlFor="cam-enabled" className="text-sm text-bss-text-secondary">Enabled (used for attendance)</label>
             </div>
           </div>
-          {testResult && <p className={`px-4 pb-2 text-sm ${testResult.ok ? 'text-green-700' : 'text-rose-700'}`}>{testResult.ok ? '✓ ' : '✕ '}{testResult.text}</p>}
-          <div className="px-4 py-3 border-t border-gray-100 flex flex-wrap justify-end gap-2">
-            <button type="button" onClick={() => void test()} disabled={busy} className="h-10 px-4 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 flex items-center gap-2 hover:bg-gray-50 disabled:opacity-50">
+          {testResult && <p className={`px-4 pb-2 text-sm ${testResult.ok ? 'text-bss-green' : 'text-bss-error'}`}>{testResult.ok ? '✓ ' : '✕ '}{testResult.text}</p>}
+          <div className="px-4 py-3 border-t border-bss-border flex flex-wrap justify-end gap-2">
+            <button type="button" onClick={() => void test()} disabled={busy} className="h-10 px-4 rounded-lg border border-bss-border text-sm font-semibold text-bss-text-primary flex items-center gap-2 hover:bg-bss-bg disabled:opacity-50">
               {busy ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />} Test connection
             </button>
-            <button type="button" onClick={() => void save()} disabled={busy} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black disabled:opacity-50">
+            <button type="button" onClick={() => void save()} disabled={busy} className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black disabled:opacity-50">
               <Save size={15} /> {form.id ? 'Save changes' : 'Add camera'}
             </button>
           </div>
         </section>
       )}
 
-      <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100">
-          <h2 className="text-sm font-bold text-gray-900">Cameras at this site</h2>
-          <p className="text-[11px] text-gray-400 mt-0.5">{cameras.length} camera{cameras.length === 1 ? '' : 's'} configured</p>
+      <section className="bss-card rounded-2xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-bss-border">
+          <h2 className="text-sm font-bold text-bss-text-primary">Cameras at this site</h2>
+          <p className="text-[11px] text-bss-text-muted mt-0.5">{cameras.length} camera{cameras.length === 1 ? '' : 's'} configured</p>
         </div>
         {loading ? (
-          <p className="p-6 text-sm text-gray-500 flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Loading…</p>
+          <p className="p-6 text-sm text-bss-text-muted flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Loading…</p>
         ) : cameras.length === 0 ? (
-          <p className="p-6 text-sm text-gray-500">No cameras yet. Use “Add camera” to configure this site&apos;s CCTV feeds.</p>
+          <p className="p-6 text-sm text-bss-text-muted">No cameras yet. Use “Add camera” to configure this site&apos;s CCTV feeds.</p>
         ) : (
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-bss-border">
             {cameras.map(c => (
               <li key={c.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <CameraPreview cameraId={c.id} label={c.label} />
                   <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-gray-900">{c.label || '(unnamed)'}</span>
-                    {c.area && c.area !== c.label && <span className="text-[11px] text-gray-500">· {c.area}</span>}
+                    <span className="text-sm font-semibold text-bss-text-primary">{c.label || '(unnamed)'}</span>
+                    {c.area && c.area !== c.label && <span className="text-[11px] text-bss-text-muted">· {c.area}</span>}
                     {c.enabled
-                      ? (c.configured ? <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-700 bg-green-50 border border-green-100 rounded-full px-2 py-0.5"><CheckCircle2 size={11}/>Ready</span>
-                                       : <span className="text-[10px] font-bold text-orange-600 bg-orange-50 border border-orange-100 rounded-full px-2 py-0.5">Incomplete</span>)
-                      : <span className="text-[10px] font-bold text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">Disabled</span>}
+                      ? (c.configured ? <span className="inline-flex items-center gap-1 text-[10px] font-bold text-bss-green bg-bss-soft-green border border-bss-border rounded-full px-2 py-0.5"><CheckCircle2 size={11}/>Ready</span>
+                                       : <span className="text-[10px] font-bold text-bss-orange bg-bss-soft-orange border border-bss-border rounded-full px-2 py-0.5">Incomplete</span>)
+                      : <span className="text-[10px] font-bold text-bss-text-muted bg-bss-bg rounded-full px-2 py-0.5">Disabled</span>}
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-1 font-mono truncate">{c.feed || c.sourceType}</p>
+                  <p className="text-[11px] text-bss-text-muted mt-1 font-mono truncate">{c.feed || c.sourceType}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <button type="button" onClick={() => { setForm(toForm(c)); setTestResult(null); }} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50">Edit</button>
-                  <button type="button" onClick={() => void remove(c)} disabled={busy} className="h-9 w-9 rounded-lg border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 grid place-items-center disabled:opacity-50" aria-label="Delete camera"><Trash2 size={15}/></button>
+                  <button type="button" onClick={() => { setForm(toForm(c)); setTestResult(null); }} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-semibold text-bss-text-primary hover:bg-bss-bg">Edit</button>
+                  <button type="button" onClick={() => void remove(c)} disabled={busy} className="h-9 w-9 rounded-lg border border-bss-border text-bss-text-muted hover:text-bss-error hover:border-bss-border grid place-items-center disabled:opacity-50" aria-label="Delete camera"><Trash2 size={15}/></button>
                 </div>
               </li>
             ))}

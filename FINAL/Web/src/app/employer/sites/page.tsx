@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Building2, CalendarDays, Camera, MapPin, Plus, QrCode, ShieldCheck, Star, Users, X } from 'lucide-react';
+import { ArrowRight, Building2, CalendarDays, MapPin, Plus, QrCode, ShieldCheck, Star, Users, X } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerSite } from '@/types/portal';
 import SiteCreateForm from '@/components/employer/SiteCreateForm';
@@ -18,28 +18,6 @@ export default function EmployerSitesPage() {
   const [defaultBusy, setDefaultBusy] = useState(false);
   const [defaultNotice, setDefaultNotice] = useState('');
   const [defaultError, setDefaultError] = useState('');
-  const [camState, setCamState] = useState<Record<string, boolean>>({});
-  const [camBusyId, setCamBusyId] = useState<string | null>(null);
-
-  async function toggleCamera(site: EmployerSite) {
-    setCamBusyId(site.id);
-    setDefaultError('');
-    try {
-      const running = !!camState[site.id];
-      const response = await fetch('/api/employer/attendance/camera', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siteId: Number(site.id), action: running ? 'stop' : 'start' }),
-      });
-      const body = await response.json().catch(() => ({})) as { data?: { running: boolean; siteName: string }; error?: string };
-      if (!response.ok || !body.data) throw new Error(body.error ?? 'Camera action failed.');
-      setCamState(prev => ({ ...prev, [site.id]: body.data!.running }));
-      setDefaultNotice(body.data.running
-        ? `CCTV attendance started for ${body.data.siteName}.`
-        : `CCTV attendance stopped for ${body.data.siteName}.`);
-    } catch (reason) {
-      setDefaultError(reason instanceof Error ? reason.message : 'Camera action failed.');
-    } finally { setCamBusyId(null); }
-  }
 
   async function setDefaultSite(siteId: string) {
     setDefaultBusy(true);
@@ -89,9 +67,8 @@ export default function EmployerSitesPage() {
         <div className="p-5 border-b border-bss-border"><div className="flex items-start justify-between gap-3"><span className="w-10 h-10 rounded-xl bg-bss-blue-tint text-bss-interactive-blue grid place-items-center"><Building2 size={19}/></span><div className="flex items-center gap-1.5">{isDefault && <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#E45D24] bg-bss-soft-orange px-2 py-1 rounded"><Star size={11}/>Default</span>}<span className={`text-[10px] font-bold px-2 py-1 rounded ${site.status === 'Active' ? 'bg-bss-soft-green text-bss-green' : site.status === 'Planned' ? 'bg-bss-blue-tint text-bss-interactive-blue' : 'bg-bss-bg text-bss-text-secondary'}`}>{site.status}</span></div></div><h2 className="font-semibold text-bss-text-primary mt-4">{site.name}</h2><p className="font-mono text-[11px] text-bss-text-muted mt-1">{site.bssId ? `${site.bssId} · ` : ''}{site.code}</p><p className="text-xs text-bss-text-muted flex items-center gap-1 mt-3"><MapPin size={12}/>{site.location}, {site.state}</p></div>
         <div className="grid grid-cols-3 divide-x divide-bss-border border-b border-bss-border"><SmallMetric icon={Users} value={site.workers} label="Workers"/><SmallMetric icon={Building2} value={site.contractorIds.length} label="Contractors"/><SmallMetric icon={ShieldCheck} value={`${site.compliance}%`} label="Compliance"/></div>
         <div className="p-4 text-[11px] text-bss-text-muted flex items-center gap-2"><CalendarDays size={13}/><span>{formatDate(site.startDate)}</span><span>to</span><span>{formatDate(site.endDate)}</span></div>
-        <div className="grid grid-cols-4 divide-x divide-bss-border border-t border-bss-border">
+        <div className="grid grid-cols-3 divide-x divide-bss-border border-t border-bss-border">
           <Link href={`/employer/sites/${site.id}`} className="h-9 bg-bss-bg text-[11px] font-semibold text-[#01183A] flex items-center justify-center gap-1 hover:bg-bss-bg">View <ArrowRight size={13}/></Link>
-          <button type="button" disabled={camBusyId === site.id} onClick={() => void toggleCamera(site)} className={`h-9 text-[11px] font-bold flex items-center justify-center gap-1 disabled:opacity-60 ${camState[site.id] ? 'bg-bss-soft-orange text-bss-error hover:bg-bss-soft-orange' : 'bg-bss-soft-green text-bss-green hover:bg-bss-soft-green'}`}><Camera size={13}/>{camState[site.id] ? 'Stop CCTV' : 'Start CCTV'}</button>
           <button type="button" onClick={() => setQrSite(site)} disabled={!site.qrToken} className="h-9 bg-bss-bg text-[11px] font-semibold text-[#01183A] flex items-center justify-center gap-1 hover:bg-bss-bg disabled:opacity-50"><QrCode size={13}/>QR</button>
           <button type="button" onClick={() => void setDefaultSite(site.id)} disabled={defaultBusy || isDefault} className={`h-9 text-[11px] font-semibold flex items-center justify-center gap-1 disabled:opacity-70 ${isDefault ? 'bg-bss-soft-orange text-[#E45D24]' : 'bg-bss-bg text-[#01183A] hover:bg-bss-bg'}`}><Star size={13}/>{isDefault ? 'Default' : 'Default'}</button>
         </div>
