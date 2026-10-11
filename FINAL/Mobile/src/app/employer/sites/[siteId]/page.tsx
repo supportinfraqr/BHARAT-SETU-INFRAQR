@@ -8,6 +8,7 @@ import { ArrowLeft, Building2, History, MapPin, Pencil, QrCode, Save, Trash2, Us
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerSite } from '@/types/portal';
 import { parseCoordinate } from '@/components/employer/siteGeo';
+import { formatDate } from '@/lib/date';
 import { SiteQr, SiteQrPanel } from '@/components/qr/WorkerQr';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { tabs, type Tab, TAB_FIELDS, LABELS, FIELD_DEFS } from '@/components/site/siteDetailFields';
@@ -82,10 +83,11 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
     }
   }
 
-  function fieldValue(name: string): string {
+  function fieldValue(name: string, isDate = false): string {
     const v = data[name];
     if (v === null || v === undefined || v === '') return '—';
     if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+    if (isDate) return formatDate(String(v));
     return String(v);
   }
 
@@ -126,8 +128,8 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
               <input type={def.type === 'date' ? 'date' : def.type === 'number' ? 'number' : 'text'} step={def.type === 'number' ? 'any' : undefined} value={draft[name] == null ? '' : String(draft[name])} onChange={e => setDraft(d => ({ ...d, [name]: e.target.value }))} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm text-bss-text-primary"/>
             )
           ) : isColour ? (
-            <dd className="text-sm font-medium mt-1 text-bss-text-primary flex items-center gap-2"><span className="inline-block w-5 h-5 rounded border border-bss-border" style={{ background: data[name] ? String(data[name]) : '#E45D24' }}/>{fieldValue(name)}</dd>
-          ) : <dd className="text-sm font-medium mt-1 text-bss-text-primary break-words">{fieldValue(name)}</dd>}
+            <dd className="text-sm font-medium mt-1 text-bss-text-primary flex items-center gap-2"><span className="inline-block w-5 h-5 rounded border border-bss-border" style={{ background: data[name] ? String(data[name]) : '#E45D24' }}/>{fieldValue(name, def.type === 'date')}</dd>
+          ) : <dd className="text-sm font-medium mt-1 text-bss-text-primary break-words">{fieldValue(name, def.type === 'date')}</dd>}
         </div>;
       })}</dl>
 
@@ -221,4 +223,3 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
 }
 
 function Status({ value }: { value:string }) { const tone = value === 'Active' ? 'bg-bss-soft-green text-bss-green' : value === 'Planned' ? 'bg-bss-blue-tint text-bss-interactive-blue' : 'bg-bss-bg text-bss-text-secondary'; return <span className={`text-[10px] font-bold px-2 py-1 rounded ${tone}`}>{value}</span>; }
-function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('en-IN', { day:'2-digit', month:'short', year:'numeric' }).format(date); }

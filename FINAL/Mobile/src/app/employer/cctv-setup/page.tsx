@@ -63,7 +63,7 @@ export default function CctvSetupPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [form, setForm] = useState<FormState | null>(null);
+  const [form, setForm] = useState<FormState | null>({ ...EMPTY });
   const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -74,6 +74,8 @@ export default function CctvSetupPage() {
       const body = await response.json().catch(() => ({})) as { data?: { cameras: CameraRow[] }; error?: string };
       if (!response.ok || !body.data) throw new Error(body.error ?? 'Could not load cameras.');
       setCameras(body.data.cameras);
+      // No cameras for this site yet — open the config form so the IP/feed fields are immediately available.
+      if (!body.data.cameras.length) setForm(current => current ?? { ...EMPTY });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not load cameras.');
     } finally { setLoading(false); }
