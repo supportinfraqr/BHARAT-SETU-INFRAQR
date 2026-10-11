@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Database, Download, Loader2, QrCode, Upload, X } from 'lucide-react';
 import WorkerQr from '@/components/qr/WorkerQr';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
-import UnderDevelopmentBanner from '@/components/worker/UnderDevelopmentBanner';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerContractor } from '@/types/portal';
 
@@ -59,15 +58,8 @@ export default function EmployerQrContractorsPage() {
     { id:'sap', header:'SAP', filterable:false, value:row => row.id, render:row => <button onClick={() => openSap(row)} className="inline-flex gap-1 text-bss-green font-semibold hover:underline"><Database size={14}/>Populate from SAP</button> },
   ];
 
-  return <div className="relative space-y-6">
-    <div aria-hidden className="pointer-events-none select-none absolute inset-0 z-[60] overflow-hidden">
-      <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-x-20 gap-y-28 -rotate-[24deg] scale-[1.6]">
-        {Array.from({ length: 14 }).map((_, i) => <span key={i} className="text-2xl sm:text-3xl font-black uppercase tracking-[0.28em] text-black/5 whitespace-nowrap">Under Development</span>)}
-      </div>
-    </div>
-    <div className="relative z-10 space-y-6">
+  return <div className="space-y-6">
     <header><p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">QR system</p><h1 className="text-2xl font-bold mt-1">My Contractors</h1><p className="text-sm text-bss-text-muted mt-1">Contractors bound to your organisation with their site assignments and QR identity. Pull a contractor&apos;s master data from SAP straight into their profile.</p></header>
-    <UnderDevelopmentBanner note="This QR & SAP contractors view is under development. Data shown is provisional and may change." />
     <EnterpriseDataTable title="Bound contractor identities" rows={employer.contractors} columns={columns} rowKey={row => row.id} filename="employer-contractor-qr"/>
 
     {selected && <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4"><section role="dialog" aria-modal="true" className="bg-white rounded-2xl p-6 w-full max-w-sm text-center relative"><button onClick={() => setSelected(null)} aria-label="Close" className="absolute right-4 top-4"><X/></button><h2 className="font-semibold">{selected.name}</h2><p className="text-xs font-mono text-bss-text-muted">{selected.bssId}</p><div className="relative w-56 h-56 mx-auto mt-5"><WorkerQr bssId={selected.bssId} className="w-full h-full"/><span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="w-[44px] h-[44px] bg-white rounded-[8px] grid place-items-center shadow-sm"><img src="/bss-original-logo.png" alt="" className="w-[34px] h-[34px] object-contain"/></span></span></div><p className="text-xs text-bss-text-muted mt-4">Verification still applies server-side disclosure rules.</p></section></div>}
@@ -93,6 +85,5 @@ export default function EmployerQrContractorsPage() {
         </div> : null}
       </div>
     </section></div>}
-    </div>
   </div>;
 }
