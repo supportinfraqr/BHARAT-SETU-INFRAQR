@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { formatDate } from '@/lib/date';
 import { Building2, CheckCircle2, ChevronRight, Download, FileSpreadsheet, Loader2, ShieldCheck, Upload, XCircle } from 'lucide-react';
 
@@ -33,6 +34,25 @@ export default function EmployerOnboardingPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [note, setNote] = useState('');
+  const [preview, setPreview] = useState<{ workers: number; contractors: number; sheets: string[] } | null>(null);
+
+  async function onFile(f: File | null) {
+    setFile(f);
+    setPreview(null);
+    if (!f) return;
+    try {
+      const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
+      const count = (name: string) => {
+        const ws = wb.Sheets[name];
+        if (!ws) return 0;
+        const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false }) as unknown[][];
+        return aoa.slice(1).filter(r => Array.isArray(r) && r.some(c => String(c ?? '').trim() !== '')).length;
+      };
+      setPreview({ workers: count('Workers'), contractors: count('Contractors'), sheets: wb.SheetNames });
+    } catch {
+      setPreview({ workers: 0, contractors: 0, sheets: [] });
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -134,8 +154,18 @@ export default function EmployerOnboardingPage() {
       </div>
       <label className="flex items-center gap-2 border border-dashed border-bss-border rounded-xl bg-bss-bg px-3 py-2.5 text-xs font-semibold text-bss-text-secondary cursor-pointer hover:border-[#01183A]">
         <Upload size={16} className="text-[#01183A]"/>{file ? file.name : 'Choose data file (.xlsx)'}
-        <input type="file" accept=".xlsx" className="hidden" onChange={e => setFile(e.target.files?.[0] ?? null)}/>
+        <input type="file" accept=".xlsx" className="hidden" onChange={e => void onFile(e.target.files?.[0] ?? null)}/>
       </label>
+      {preview && <div className="rounded-xl border border-bss-border bg-bss-bg px-3 py-3">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-bss-text-muted">This file will create</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border border-bss-border ${preview.workers ? 'bg-bss-soft-green text-bss-green' : 'bg-white text-bss-text-muted'}`}>Workers × {preview.workers}</span>
+          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border border-bss-border ${preview.contractors ? 'bg-bss-soft-green text-bss-green' : 'bg-white text-bss-text-muted'}`}>Contractors × {preview.contractors}</span>
+        </div>
+        {preview.workers + preview.contractors === 0
+          ? <p className="text-[11px] text-bss-error mt-2">No recognised sheet — name the tabs exactly <strong>Workers</strong> and/or <strong>Contractors</strong>.</p>
+          : <p className="text-[11px] text-bss-text-muted mt-2">Recognised: {preview.sheets.filter(s => s === 'Workers' || s === 'Contractors').join(', ')}.{preview.sheets.some(s => s !== 'Workers' && s !== 'Contractors') ? ` Ignored: ${preview.sheets.filter(s => s !== 'Workers' && s !== 'Contractors').join(', ')}.` : ''}</p>}
+      </div>}
       <label className="flex items-start gap-2 text-xs text-bss-text-primary">
         <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="accent-[#01183A] w-4 h-4 mt-0.5"/>
         <span>I confirm I am authorised to share this data with BSS and that it is accurate. I understand the data stays in quarantine and is not part of BSS data assets until I verify it.</span>
@@ -143,7 +173,7 @@ export default function EmployerOnboardingPage() {
       <label className="block text-xs font-semibold text-bss-text-primary">Declaration / note (optional)
         <input value={declaration} onChange={e => setDeclaration(e.target.value)} placeholder="e.g. Historical payroll for FY 2025-26" className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm"/>
       </label>
-      <button onClick={() => void submit()} disabled={busy || !file} className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-xs font-bold disabled:opacity-50 inline-flex items-center gap-1.5"><ShieldCheck size={14}/>{busy ? 'Submitting…' : 'Submit securely'}</button>
+      <button onClick={() => void submit()} disabled={busy || !file || (preview ? preview.workers + preview.contractors === 0 : false)} className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-xs font-bold disabled:opacity-50 inline-flex items-center gap-1.5"><ShieldCheck size={14}/>{busy ? 'Submitting…' : 'Submit securely'}</button>
     </section>
 
     <div className="grid lg:grid-cols-[360px_1fr] gap-5">
