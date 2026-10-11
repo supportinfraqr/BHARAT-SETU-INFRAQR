@@ -47,7 +47,7 @@ _ONBOARDING_SHEET = {  # entity_type → (sheet title, columns)
 
 
 def _onboarding_password():
-    return os.environ.get("BSS_ONBOARDING_PASSWORD") or "bss-onboarding-2026"
+    return os.environ.get("BSS_ONBOARDING_PASSWORD") or "123456"
 
 
 # ── serialization ────────────────────────────────────────────────────────────
