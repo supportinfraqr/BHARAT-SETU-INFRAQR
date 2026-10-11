@@ -45,7 +45,10 @@ export function autoPassNo(bssId: string): string {
 function generatedStamp(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, '0');
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  const hours24 = d.getHours();
+  const ampm = hours24 >= 12 ? 'pm' : 'am';
+  const hours12 = hours24 % 12 || 12;
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(hours12)}:${p(d.getMinutes())} ${ampm}`;
 }
 
 /** ISO `YYYY-MM-DD` (or any parseable date) → `DD/MM/YYYY` for display. */

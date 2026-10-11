@@ -167,6 +167,22 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
             fail('Dates must be in YYYY-MM-DD format.');
           }
         }
+      } else if (body.dispatched !== undefined) {
+        // Dispatch to the worker — a visibility flag, not an approval status.
+        if (role === 'Employer') {
+          if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > 100
+            || body.ids.some(id => (typeof id !== 'string' && typeof id !== 'number') || !String(id).trim())) {
+            fail('Select one or more valid gate passes.');
+          }
+        } else {
+          requiredString(body, 'id', 120);
+        }
+        if (typeof body.dispatched !== 'boolean') fail('Dispatched must be true or false.');
+      } else if (body.action !== undefined) {
+        // renew / revoke — handled by the backend; no approval status needed.
+        requiredString(body, 'id', 120);
+        if (!['renew', 'revoke'].includes(String(body.action))) fail('Unknown gate-pass action.');
+        if (body.action === 'revoke' && !String(body.reason ?? '').trim()) fail('A revocation reason is required.');
       } else {
         if (role === 'Employer') {
           if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > 100

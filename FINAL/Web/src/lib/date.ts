@@ -29,9 +29,12 @@ export function formatDate(value?: string | Date | null, fallback = '—'): stri
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
 
-/** `DD/MM/YYYY HH:mm` — returns `fallback` for empty/invalid input. */
+/** `DD/MM/YYYY hh:mm am/pm` — 12-hour clock — returns `fallback` for empty/invalid input. */
 export function formatDateTime(value?: string | Date | null, fallback = '—'): string {
   const d = toDate(value);
   if (!d) return fallback;
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const hours24 = d.getHours();
+  const ampm = hours24 >= 12 ? 'pm' : 'am';
+  const hours12 = hours24 % 12 || 12;
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(hours12)}:${pad(d.getMinutes())} ${ampm}`;
 }
