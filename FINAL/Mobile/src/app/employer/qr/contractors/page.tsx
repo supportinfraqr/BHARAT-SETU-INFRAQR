@@ -55,7 +55,7 @@ export default function EmployerQrContractorsPage() {
     { id:'workers', header:'Workers', value:row => row.workers },
     { id:'status', header:'Status', value:row => row.status },
     { id:'qr', header:'QR', filterable:false, value:row => row.bssId, render:row => <button onClick={() => setSelected(row)} className="inline-flex gap-1 text-bss-interactive-blue font-semibold"><QrCode size={15}/>View QR</button> },
-    { id:'sap', header:'SAP', filterable:false, value:row => row.id, render:row => <button onClick={() => openSap(row)} className="inline-flex gap-1 text-bss-green font-semibold hover:underline"><Database size={14}/>Populate from SAP</button> },
+    { id:'sap', header:'SAP', filterable:false, value:row => row.id, render:row => <button type="button" disabled title="Under development" onClick={() => openSap(row)} className="inline-flex items-center gap-1 text-bss-text-muted opacity-60 cursor-not-allowed font-semibold"><Database size={14}/>Populate from SAP <span className="text-[10px] font-bold text-bss-orange">(Under Development)</span></button> },
   ];
 
   return <div className="space-y-6">
