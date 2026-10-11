@@ -61,7 +61,7 @@ export default function EmployerWorkersPage() {
     {docsWorker && <WorkerDocumentsDrawer owner={docCtx.owner} view={docCtx.view} worker={{ id: docsWorker.id, name: docsWorker.name, bssId: docsWorker.bssId, site: docsWorker.site, siteId: docsWorker.siteId, employer: employer.identity.company, contractor: docsWorker.contractor, contractorId: docsWorker.contractorId, designation: docsWorker.designation, doj: docsWorker.doj, status: docsWorker.status, verified: docsWorker.verified }} onClose={() => setDocsWorker(null)}/>}
 
     {/* Worker profile drawer */}
-    {profileView && <div className="fixed inset-0 z-[90] bg-black/50 flex justify-end" role="presentation"><section role="dialog" aria-modal="true" aria-label="Worker profile" className="bg-white w-full max-w-md h-full overflow-y-auto animate-in slide-in-from-right-4 duration-200">
+    {profileView && <div className="fixed inset-0 z-[90] bg-bss-navy/40 backdrop-blur-sm grid place-items-center p-4" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setProfileView(null); }}><section role="dialog" aria-modal="true" aria-label="Worker profile" className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl">
       <header className="sticky top-0 bg-white border-b border-bss-border px-5 py-4 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           {profileView.photoUrl && profileView.photoUrl !== '/worker-profile.png' ? (
@@ -73,7 +73,7 @@ export default function EmployerWorkersPage() {
           )}
           <div><h2 className="font-semibold text-bss-text-primary">{profileView.name}</h2><p className="text-xs text-bss-text-muted font-mono mt-0.5">{profileView.bssId}</p></div>
         </div>
-        <button onClick={() => setProfileView(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-bss-bg"><X size={16}/></button>
+        <button onClick={() => setProfileView(null)} aria-label="Close" className="w-9 h-9 grid place-items-center rounded-lg hover:bg-bss-bg text-bss-text-secondary"><X size={18}/></button>
       </header>
       <div className="p-5 space-y-4 text-xs">
         <div className="flex flex-wrap gap-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${profileView.status === 'Active' ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-bss-error'}`}>{profileView.status}</span></div>
