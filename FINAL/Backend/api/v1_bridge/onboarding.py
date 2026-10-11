@@ -375,10 +375,10 @@ def employer_onboarding_submit(request):
         grouped = _parse_workbook(raw)
     except ValueError as exc:
         return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-    # Employer onboarding carries exactly two entities: employers + contractors.
-    grouped = {k: v for k, v in grouped.items() if k in ("EMPLOYER", "CONTRACTOR")}
+    # Employer onboarding carries exactly two entities: workers + contractors.
+    grouped = {k: v for k, v in grouped.items() if k in ("WORKER", "CONTRACTOR")}
     if not grouped:
-        return Response({"error": "No Employers or Contractors sheet found in the file."},
+        return Response({"error": "No Workers or Contractors sheet found in the file."},
                         status=status.HTTP_400_BAD_REQUEST)
 
     batch = OnboardingBatch(
@@ -390,7 +390,7 @@ def employer_onboarding_submit(request):
     batch.original_file.save(batch.file_name or "onboarding.xlsx", ContentFile(raw), save=False)
     batch.save()
 
-    order = ["EMPLOYER", "CONTRACTOR"]
+    order = ["WORKER", "CONTRACTOR"]
     for etype in order:
         for idx, row in enumerate(grouped.get(etype, [])):
             OnboardingRecord.objects.create(batch=batch, entity_type=etype, row_index=idx, raw_data=row)
@@ -406,8 +406,8 @@ def employer_onboarding_submit(request):
 def employer_onboarding_template(request):
     """Download the onboarding workbook template.
 
-    Employers get exactly two templates: **Employers** and **Contractors**.
-    ``?entity=employers|contractors`` returns a single-sheet workbook; with no
+    Employers get exactly two templates: **Workers** and **Contractors**.
+    ``?entity=workers|contractors`` returns a single-sheet workbook; with no
     param both sheets are returned in one workbook.
     """
     from django.http import HttpResponse
@@ -415,11 +415,11 @@ def employer_onboarding_template(request):
     from openpyxl.styles import Font, PatternFill
     if request.user.role != "employer":
         return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
-    allowed = ("employers", "contractors")
+    allowed = ("workers", "contractors")
     requested = str(request.query_params.get("entity") or "").strip().lower()
     if requested:
         if requested not in allowed:
-            return Response({"error": "entity must be employers or contractors."},
+            return Response({"error": "entity must be workers or contractors."},
                             status=status.HTTP_400_BAD_REQUEST)
         entities = [requested]
     else:
@@ -568,9 +568,9 @@ def admin_onboarding_import(request):
         grouped = _parse_workbook(raw)
     except ValueError as exc:
         return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-    grouped = {k: v for k, v in grouped.items() if k in ("EMPLOYER", "CONTRACTOR")}
+    grouped = {k: v for k, v in grouped.items() if k in ("WORKER", "CONTRACTOR")}
     if not grouped:
-        return Response({"error": "No Employers or Contractors sheet found in the file."},
+        return Response({"error": "No Workers or Contractors sheet found in the file."},
                         status=status.HTTP_400_BAD_REQUEST)
     batch = OnboardingBatch(
         source="ADMIN_UPLOAD", employer=None, submitted_by=request.user, state="SUBMITTED",
@@ -580,7 +580,7 @@ def admin_onboarding_import(request):
         declaration=str(request.data.get("declaration") or "")[:2000])
     batch.original_file.save(batch.file_name or "onboarding.xlsx", ContentFile(raw), save=False)
     batch.save()
-    for etype in ("EMPLOYER", "CONTRACTOR"):
+    for etype in ("WORKER", "CONTRACTOR"):
         for idx, row in enumerate(grouped.get(etype, [])):
             OnboardingRecord.objects.create(batch=batch, entity_type=etype, row_index=idx, raw_data=row)
     _refresh_counts(batch)

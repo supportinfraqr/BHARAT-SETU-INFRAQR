@@ -109,7 +109,7 @@ export default function AdminOnboardingPage() {
 
     <section className="bg-white border border-gray-200 rounded-2xl p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h2 className="text-sm font-semibold text-gray-950 flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#073B67]"/>Import rows</h2><p className="text-xs text-gray-400 mt-0.5">Upload an Employers / Contractors workbook. Each upload is a new submission with its own records, successes and failures.</p></div>
+        <div><h2 className="text-sm font-semibold text-gray-950 flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#073B67]"/>Import rows</h2><p className="text-xs text-gray-400 mt-0.5">Upload a Workers / Contractors workbook. Each upload is a new submission with its own records, successes and failures.</p></div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-2 h-10 px-3 rounded-lg border border-dashed border-gray-300 text-xs font-semibold text-gray-600 cursor-pointer hover:bg-gray-50">
             <Upload size={14} className="text-[#073B67]"/>{importFile ? importFile.name : 'Choose file (.xlsx)'}

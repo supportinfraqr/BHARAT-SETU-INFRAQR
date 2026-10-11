@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ClipboardCheck, FileText, LayoutDashboard, Menu, Network, Settings, ShieldCheck, X, Banknote, Calculator, Activity } from 'lucide-react';
+import { ChevronDown, ClipboardCheck, FileSpreadsheet, FileText, LayoutDashboard, Menu, Network, Settings, ShieldCheck, X, Banknote, Calculator, Activity } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import BrandText from '@/components/BrandText';
@@ -112,6 +112,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
             {profile && <div className="absolute right-0 top-full mt-2 w-60 bg-white border border-bss-border rounded-xl shadow-xl p-1">
               <div className="p-3 border-b border-bss-border"><p className="font-semibold text-sm">{employer.identity.company}</p><p className="text-xs text-bss-text-muted font-mono mt-0.5">{employer.identity.bssId}</p></div>
               <Link href="/employer/profile" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><Settings size={16}/>{t('nav.profile')}</Link>
+              <Link href="/employer/onboarding" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><FileSpreadsheet size={16}/>Onboarding</Link>
               <Link href="/employer/analytics" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><Activity size={16}/>Analytics</Link>
               <Link href="/employer/clra-registers" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><ClipboardCheck size={16}/>Registers Adoption</Link>
               <Link href="/employer/cost-sheets" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><Calculator size={16}/>Cost Sheet Adoption</Link>
@@ -126,6 +127,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
       {mobile && <nav aria-label={t('nav.mobile')} className="bss-mobile-menu absolute top-16 w-full bg-white border-b border-bss-border shadow-xl p-4">
         {mobileItems.map(item => <Link key={`${item[0]}-${item[1]}`} href={item[1]} onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t(item[0])}</Link>)}
         <Link href="/employer/profile" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t('nav.profile')}</Link>
+        <Link href="/employer/onboarding" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">Onboarding</Link>
         <Link href="/employer/analytics" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">Analytics</Link>
         <Link href="/employer/clra-registers" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">Registers Adoption</Link>
         <Link href="/employer/templates" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t('nav.templates')}</Link>

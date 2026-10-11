@@ -49,7 +49,7 @@ export default function EmployerOnboardingPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
   useEffect(() => { void load(); }, [load]);
 
-  async function downloadTemplate(entity: 'employers' | 'contractors') {
+  async function downloadTemplate(entity: 'workers' | 'contractors') {
     setError(''); setNotice('');
     try {
       const res = await fetch(`/api/employer/onboarding/template?entity=${entity}`);
@@ -118,7 +118,7 @@ export default function EmployerOnboardingPage() {
     <header>
       <p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Secure data onboarding</p>
       <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-bss-text-primary mt-1">Onboarding</h1>
-      <p className="text-sm text-bss-text-muted mt-1">Submit employer and contractor data over a secure channel. BSS reviews and quarantines it; you then approve the verified data before accounts are created.</p>
+      <p className="text-sm text-bss-text-muted mt-1">Submit worker and contractor data over a secure channel. BSS reviews and quarantines it; you then approve the verified data before accounts are created.</p>
     </header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
@@ -126,9 +126,9 @@ export default function EmployerOnboardingPage() {
 
     <section className="bss-card rounded-2xl p-5 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#01183A]"/>Submit historical data</h2><p className="text-xs text-bss-text-muted mt-0.5">Two templates: <strong>Employer</strong> and <strong>Contractor</strong>. Download, fill the sheet, and submit the .xlsx here.</p></div>
+        <div><h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#01183A]"/>Submit historical data</h2><p className="text-xs text-bss-text-muted mt-0.5">Two templates: <strong>Worker</strong> and <strong>Contractor</strong>. Download, fill the sheet, and submit the .xlsx here.</p></div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => void downloadTemplate('employers')} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Employer template</button>
+          <button onClick={() => void downloadTemplate('workers')} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Worker template</button>
           <button onClick={() => void downloadTemplate('contractors')} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Contractor template</button>
         </div>
       </div>
