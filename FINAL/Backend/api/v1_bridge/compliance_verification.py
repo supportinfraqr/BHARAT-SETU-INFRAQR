@@ -157,8 +157,12 @@ def _counts_for(rows, classifier, package_class=C6):
         for row in rows:
             counts[classifier(row)] += 1
     verified = applicable - counts[C6] - counts[C7]
+    # Compliance is measured over the *applicable* population (N/A excluded), so
+    # pending C6 items count against it instead of being dropped from the
+    # denominator. N/A (C7) must never add to the score.
+    scored = applicable - counts[C7]
     exception = counts[C3] + counts[C4] + counts[C5] + counts[C8]
-    score = sum(_SCORE[code] * n for code, n in counts.items())
+    score = sum(_SCORE[code] * n for code, n in counts.items() if code != C7)
     return {
         "applicable": applicable,
         "verified": max(0, verified),
@@ -167,7 +171,7 @@ def _counts_for(rows, classifier, package_class=C6):
         "exception": round((exception / verified * 100) if verified else 0, 1),
         "critical": round((counts[C5] / verified * 100) if verified else 0, 1),
         "pending": round((counts[C6] / applicable * 100) if applicable else 0, 1),
-        "compliance": round((score / verified * 100) if verified else 0, 1),
+        "compliance": round((score / scored * 100) if scored else 0, 1),
     }
 
 
@@ -201,8 +205,10 @@ def build_verification_report(rows, meta=None, batches=None, files=None):
 
     keys = ("applicable", "verified", "coverage", "exception", "critical", "pending", "compliance")
     agg = {k: sum(p[k] for p in parameters) for k in ("applicable", "verified")}
-    total_scores = sum(_SCORE[code] * p["counts"][code] for p in parameters for code, *_ in CLASSIFICATION)
+    total_scores = sum(_SCORE[code] * p["counts"][code]
+                       for p in parameters for code, *_ in CLASSIFICATION if code != C7)
     totals_counts = {code: sum(p["counts"][code] for p in parameters) for code, *_ in CLASSIFICATION}
+    scored = agg["applicable"] - totals_counts[C7]
     totals = {
         "applicable": agg["applicable"], "verified": agg["verified"],
         "counts": totals_counts,
@@ -211,7 +217,7 @@ def build_verification_report(rows, meta=None, batches=None, files=None):
                            / agg["verified"] * 100, 1) if agg["verified"] else 0,
         "critical": round(totals_counts[C5] / agg["verified"] * 100, 1) if agg["verified"] else 0,
         "pending": round(totals_counts[C6] / agg["applicable"] * 100, 1) if agg["applicable"] else 0,
-        "compliance": round(total_scores / agg["verified"] * 100, 1) if agg["verified"] else 0,
+        "compliance": round(total_scores / scored * 100, 1) if scored else 0,
     }
     critical = totals_counts[C5]
     high = totals_counts[C4]
@@ -370,7 +376,7 @@ def verification_report_html(meta, report):
 
     metrics = [
         ("Verification Coverage", f"{t['coverage']}%", "Verified / Applicable"),
-        ("Overall Compliance", f"{t['compliance']}%", "Classification-weighted"),
+        ("Overall Compliance", f"{t['compliance']}%", "Classification-weighted over applicable"),
         ("Exception Rate", f"{t['exception']}%", "(C3+C4+C5+C8) / Verified"),
         ("Critical Rate", f"{t['critical']}%", "C5 / Verified"),
         ("Pending Rate", f"{t['pending']}%", "C6 / Applicable"),
