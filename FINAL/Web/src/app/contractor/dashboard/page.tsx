@@ -95,7 +95,7 @@ export default function ContractorDashboardPage() {
       </header>
 
       {/* Contractor identity + Principal Employer */}
-      <section className="bss-card rounded-2xl overflow-hidden">
+      <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
         <div className="grid md:grid-cols-[1fr_1.4fr] divide-y md:divide-y-0 md:divide-x divide-bss-border">
           <div className="p-4 sm:p-5 flex items-center gap-4">
             {contractor.identity.photoUrl ? <img src={contractor.identity.photoUrl} alt={contractor.identity.company} className="w-14 h-14 rounded-xl object-cover border border-bss-border flex-shrink-0"/> : <span className="w-14 h-14 rounded-xl bg-bss-blue-tint text-bss-navy grid place-items-center text-xl font-bold flex-shrink-0">{contractor.identity.company.charAt(0)}</span>}
@@ -158,8 +158,7 @@ export default function ContractorDashboardPage() {
         {kpis.map((kpi, i) => {
           const inner = (
             <>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-bss-text-secondary">{kpi.label}</span>
+              <div className="flex items-center gap-2">
                 <span className={`bss-kpi-icon ${
                   kpi.tone === 'blue' ? 'bg-bss-blue-tint text-bss-interactive-blue' :
                   kpi.tone === 'orange' ? 'bg-bss-soft-orange text-bss-orange' :
@@ -168,6 +167,7 @@ export default function ContractorDashboardPage() {
                 }`}>
                   <kpi.icon size={16} />
                 </span>
+                <span className="text-xs font-medium text-bss-text-secondary">{kpi.label}</span>
               </div>
               <strong>{kpi.value}</strong>
               {kpi.action && <p className={kpi.tone === 'red' && openGrievances > 0 ? 'font-semibold text-bss-error' : 'font-semibold text-bss-text-secondary'}>{kpi.action}</p>}
@@ -180,7 +180,7 @@ export default function ContractorDashboardPage() {
       </section>
 
       {/* Action Required */}
-      <section className="bss-card rounded-2xl overflow-hidden">
+      <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-bss-border">
           <h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2">
             <AlertCircle size={16} className="text-bss-error" /> {t('ui.actionRequired')}
@@ -201,12 +201,10 @@ export default function ContractorDashboardPage() {
         <HealthStat label="Expiring Compliance" value={expiringCompliance} total={Math.max(1, compliances.length)} tone="bg-bss-error" />
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6 items-start">
-        {/* Main Column */}
-        <div className="lg:col-span-2 space-y-5">
+      <div className="bss-masonry">
 
           {/* Site-wise Workers */}
-          <section className="bss-card rounded-2xl overflow-hidden">
+          <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-bss-border flex justify-between items-center">
               <h2 className="text-sm font-semibold text-bss-text-primary">{t('ui.sites')} · Site-wise Workers</h2>
               <Link href="/contractor/qr/sites" className="text-xs font-medium text-bss-interactive-blue hover:underline">{t('ui.viewAll')}</Link>
@@ -247,7 +245,7 @@ export default function ContractorDashboardPage() {
           </section>
 
           {/* Workforce Growth Trend */}
-          <section className="bss-card rounded-2xl p-5">
+          <section className="bss-card bss-3d bss-scroll-rise rounded-2xl p-5">
             <div className="flex justify-between items-center">
               <div><h2 className="text-sm font-semibold text-bss-text-primary">Workforce Growth Trend</h2><p className="text-xs text-bss-text-muted mt-0.5">Active workers · last 6 months</p></div>
               <div className="flex gap-1">
@@ -267,7 +265,7 @@ export default function ContractorDashboardPage() {
           </section>
 
           {/* Applicability */}
-          <section className="bss-card rounded-2xl overflow-hidden">
+          <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-bss-border"><h2 className="text-sm font-semibold text-bss-text-primary">Applicability</h2></div>
             <ul className="divide-y divide-bss-border">{contractor.applicability.map(a => (
               <li key={a.act} className="px-5 py-3 flex items-start justify-between gap-4">
@@ -278,7 +276,7 @@ export default function ContractorDashboardPage() {
           </section>
 
           {/* Compliance Submissions */}
-          <section className="bss-card rounded-2xl overflow-hidden">
+          <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-bss-border flex justify-between items-center">
               <h2 className="text-sm font-semibold text-bss-text-primary">Compliance Submission List</h2>
               <Link href="/contractor/compliance" className="text-xs font-medium text-bss-interactive-blue hover:underline">{t('ui.viewAll')}</Link>
@@ -309,13 +307,9 @@ export default function ContractorDashboardPage() {
               ))}
             </div>
           </section>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-5">
 
           {/* Payroll summary */}
-          <section className="bss-card rounded-2xl overflow-hidden">
+          <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-bss-border flex justify-between items-center">
               <h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><Banknote size={15} className="text-bss-green"/>Payroll</h2>
               <Link href="/contractor/payroll" className="text-xs font-semibold text-bss-interactive-blue">View Payroll &rarr;</Link>
@@ -329,7 +323,7 @@ export default function ContractorDashboardPage() {
           </section>
 
           {/* Binding highlights */}
-          <section className="bss-card rounded-2xl overflow-hidden">
+          <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-bss-border flex justify-between items-center">
               <h2 className="text-sm font-semibold text-bss-text-primary">Worker Highlights</h2>
               <Link href="/contractor/qr/requests" className="text-xs font-semibold text-bss-interactive-blue">View all</Link>
@@ -346,7 +340,7 @@ export default function ContractorDashboardPage() {
           </section>
 
           {/* Worker Verified Documents */}
-          <section className="bss-card rounded-2xl overflow-hidden">
+          <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-bss-border flex justify-between items-center">
               <h2 className="text-sm font-semibold text-bss-text-primary">Worker Verified Documents</h2>
               <Link href="/contractor/workers" className="text-xs font-semibold text-bss-interactive-blue">Workers &rarr;</Link>
@@ -363,7 +357,7 @@ export default function ContractorDashboardPage() {
           </section>
 
           {/* Worker Compliance Overview */}
-          <section className="bss-card rounded-2xl overflow-hidden">
+          <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-bss-border"><h2 className="text-sm font-semibold text-bss-text-primary">Welfare &amp; Safety Overview</h2></div>
             <div className="grid grid-cols-3 divide-x divide-bss-border">
               {(['gatePass', 'medical', 'healthSafety'] as const).map(key => {
@@ -383,7 +377,7 @@ export default function ContractorDashboardPage() {
           </section>
 
           {/* Recent Activity — timeline */}
-          <section className="bss-card rounded-2xl overflow-hidden">
+          <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-bss-border"><h2 className="text-sm font-semibold text-bss-text-primary">{t('ui.recentActivity')}</h2></div>
             <ul className="px-5 py-4">
               {(contractor.recentActivities && contractor.recentActivities.length > 0 ? contractor.recentActivities : [
@@ -417,7 +411,7 @@ export default function ContractorDashboardPage() {
           </section>
 
           {/* Rozgar snapshot — mini dashboard */}
-          <section className="bss-card rounded-2xl overflow-hidden">
+          <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-bss-border flex justify-between items-center"><h2 className="text-sm font-semibold text-bss-text-primary">Rozgar Setu</h2><Link href="/contractor/rozgar" className="text-xs font-semibold text-bss-interactive-blue">Manage &rarr;</Link></div>
             {totalJobs === 0 && totalApplications === 0 && totalHires === 0 ? (
               <div className="px-5 py-6 text-center">
@@ -435,7 +429,6 @@ export default function ContractorDashboardPage() {
             )}
             {openGrievances > 0 && <Link href="/contractor/grievances" className="mx-4 mb-4 flex items-center gap-2 text-xs font-semibold text-bss-error bg-bss-soft-orange border border-bss-border rounded-xl px-3 py-2.5"><AlertCircle size={14}/>{openGrievances} grievance(s) need attention</Link>}
           </section>
-        </div>
       </div>
     </div>
   );
@@ -457,7 +450,7 @@ function HealthBar({ label, value, total, tone }: { label:string; value:number; 
 }
 function HealthStat({ label, value, total, tone }: { label:string; value:number; total:number; tone:string }) {
   const pct = Math.round((value / total) * 100);
-  return <div className="bss-card rounded-2xl p-4">
+  return <div className="bss-card bss-3d bss-scroll-rise rounded-2xl p-4">
     <div className="flex items-baseline justify-between">
       <span className="text-xs font-medium text-bss-text-secondary">{label}</span>
       <span className="text-2xl font-bold text-bss-text-primary leading-none">{value}</span>

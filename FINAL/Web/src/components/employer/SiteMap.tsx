@@ -14,7 +14,7 @@ export type { SiteGeo } from "./siteGeo";
 function pinIcon() {
   return L.divIcon({
     className: "",
-    html: '<svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg"><path d="M15 0C6.7 0 0 6.7 0 15c0 11.3 12.8 24.2 13.9 25.4a1.6 1.6 0 0 0 2.2 0C17.2 39.2 30 26.3 30 15 30 6.7 23.3 0 15 0Z" fill="#073B67"/><circle cx="15" cy="15" r="6.2" fill="#fff"/><circle cx="15" cy="15" r="3.1" fill="#F47A32"/></svg>',
+    html: '<svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg"><path d="M15 0C6.7 0 0 6.7 0 15c0 11.3 12.8 24.2 13.9 25.4a1.6 1.6 0 0 0 2.2 0C17.2 39.2 30 26.3 30 15 30 6.7 23.3 0 15 0Z" fill="#01183A"/><circle cx="15" cy="15" r="6.2" fill="#fff"/><circle cx="15" cy="15" r="3.1" fill="#E45D24"/></svg>',
     iconSize: [30, 42],
     iconAnchor: [15, 40],
     popupAnchor: [0, -34],
@@ -190,38 +190,38 @@ export default function SiteMapPicker({
             onChange={event => { const value = event.target.value; setQuery(value); if (value.trim().length < 3) setResults([]); }}
             onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); void runSearch(); } }}
             placeholder="Search site location — project, landmark, city or PIN…"
-            className="w-full h-10 rounded-lg border border-gray-200 px-3 pr-9 text-sm"
+            className="w-full h-10 rounded-lg border border-bss-border px-3 pr-9 text-sm"
           />
         </label>
-        <button type="button" onClick={() => void runSearch()} disabled={searching} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-semibold disabled:opacity-50">
+        <button type="button" onClick={() => void runSearch()} disabled={searching} className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-sm font-semibold disabled:opacity-50">
           {searching ? "Searching…" : "Search"}
         </button>
-        <button type="button" onClick={locateMe} className="h-10 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5 hover:bg-gray-50" title="Use my current location">
+        <button type="button" onClick={locateMe} className="h-10 px-3 rounded-lg border border-bss-border text-xs font-semibold flex items-center gap-1.5 hover:bg-bss-bg" title="Use my current location">
           Use my location
         </button>
       </div>
 
       {results.length > 0 && (
-        <ul className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-44 overflow-y-auto divide-y divide-gray-100">
+        <ul className="bg-white border border-bss-border rounded-xl shadow-lg overflow-hidden max-h-44 overflow-y-auto divide-y divide-bss-border">
           {results.map((place, index) => (
             <li key={index}>
-              <button type="button" onClick={() => chooseResult(place)} className="w-full text-left px-3 py-2 hover:bg-gray-50">
-                <strong className="block text-xs text-gray-900">{place.label}</strong>
-                <span className="block text-[10px] text-gray-500 truncate">{place.address}</span>
+              <button type="button" onClick={() => chooseResult(place)} className="w-full text-left px-3 py-2 hover:bg-bss-bg">
+                <strong className="block text-xs text-bss-text-primary">{place.label}</strong>
+                <span className="block text-[10px] text-bss-text-muted truncate">{place.address}</span>
               </button>
             </li>
           ))}
         </ul>
       )}
 
-      <div ref={containerRef} className="w-full rounded-xl overflow-hidden border border-gray-200 z-0" style={{ height }} aria-label="OpenStreetMap site location picker" />
-      {notice && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2" role="status">{notice}</p>}
+      <div ref={containerRef} className="w-full rounded-xl overflow-hidden border border-bss-border z-0" style={{ height }} aria-label="OpenStreetMap site location picker" />
+      {notice && <p className="text-xs text-bss-orange bg-bss-soft-orange border border-bss-border rounded-lg px-3 py-2" role="status">{notice}</p>}
 
       {picked && (
-        <div className="rounded-xl border border-green-100 bg-green-50/60 px-3 py-2 text-xs text-gray-700">
-          <span className="font-bold text-[#073B67]">{picked.label}</span>
-          <p className="text-[11px] text-gray-500 mt-0.5">{picked.address}</p>
-          <p className="text-[11px] text-gray-500 mt-0.5">
+        <div className="rounded-xl border border-bss-border bg-bss-soft-green/60 px-3 py-2 text-xs text-bss-text-primary">
+          <span className="font-bold text-[#01183A]">{picked.label}</span>
+          <p className="text-[11px] text-bss-text-muted mt-0.5">{picked.address}</p>
+          <p className="text-[11px] text-bss-text-muted mt-0.5">
             {formatLatitude(picked.lat)} · {formatLongitude(picked.lng)}
             {picked.city ? ` · ${picked.city}` : ""}{picked.district ? `, ${picked.district}` : ""}{picked.state ? `, ${picked.state}` : ""}{picked.pin ? ` · PIN ${picked.pin}` : ""}
           </p>
@@ -254,12 +254,12 @@ export function SiteMapView({ lat, lng, name = "Works site" }: { lat: number | n
 
   return (
     <div>
-      <div ref={containerRef} className="w-full rounded-xl overflow-hidden border border-gray-200" style={{ height: 220 }} aria-label={`OpenStreetMap preview for ${name}`} />
+      <div ref={containerRef} className="w-full rounded-xl overflow-hidden border border-bss-border" style={{ height: 220 }} aria-label={`OpenStreetMap preview for ${name}`} />
       <a
         href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-2 inline-flex text-[11px] font-semibold text-[#073B67] hover:underline"
+        className="mt-2 inline-flex text-[11px] font-semibold text-[#01183A] hover:underline"
       >
         Open in OpenStreetMap ↗
       </a>

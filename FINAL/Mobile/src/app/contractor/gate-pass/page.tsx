@@ -72,7 +72,7 @@ export default function ContractorGatePassPage() {
 
     <EnterpriseDataTable title="Gate pass register" rows={gatePasses} columns={columns} rowKey={r => r.id} filename="gate-passes"/>
 
-    <details className="bss-card rounded-2xl p-4">
+    <details className="bss-card bss-3d bss-scroll-rise rounded-2xl p-4">
       <summary className="list-none flex items-center justify-between cursor-pointer text-xs font-semibold text-bss-interactive-blue select-none"><span className="flex items-center gap-2"><ShieldCheck size={15}/>Eligibility criteria — when a pass is issued</span><span className="text-bss-text-muted">▾</span></summary>
       <div className="mt-4 space-y-2 text-xs text-bss-text-secondary">
         <p><strong className="text-bss-text-primary">Temporary Gate Pass</strong> — issued once Medical and Health &amp; Safety (safety kit + training + site induction) are done.</p>
@@ -109,4 +109,4 @@ function EligibilityDrawer({ bssId, name, eligibility, onClose }: { bssId:string
 }
 
 function Dot({ label, ok, title }: { label:string; ok:boolean; title:string }) { return <span title={title} className={`inline-flex items-center justify-center min-w-6 h-5 px-1 rounded text-[9px] font-semibold ${ok ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-bss-error'}`}>{label}{ok ? '✓' : '✗'}</span>; }
-function Metric({ label, value, icon:Icon, tone }: { label:string; value:number; icon:typeof Clock; tone:string }) { return <div className="bg-white border border-bss-border rounded-xl p-4 shadow-sm"><Icon size={18} className={tone}/><strong className="block text-2xl mt-2 text-bss-text-primary">{value}</strong><p className="text-xs text-bss-text-secondary">{label}</p></div>; }
+function Metric({ label, value, icon:Icon, tone }: { label:string; value:number; icon:typeof Clock; tone:string }) { return <div className="bss-3d bss-scroll-rise bg-white border border-bss-border rounded-xl p-4 shadow-sm"><Icon size={18} className={tone}/><strong className="block text-2xl mt-2 text-bss-text-primary">{value}</strong><p className="text-xs text-bss-text-secondary">{label}</p></div>; }

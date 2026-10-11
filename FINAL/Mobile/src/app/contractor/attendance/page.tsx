@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, CheckCircle2, Download, FileSpreadsheet, Upload, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
+import AttendanceDetailDialog from '@/components/attendance/AttendanceDetailDialog';
+import type { AttendanceRecord } from '@/types/portal';
 import { useContractor } from '@/contexts/ContractorContext';
 
 type AttendanceRow = {
@@ -19,6 +21,15 @@ const STATUS_LABEL: Record<string, string> = {
   PRESENT: 'Present', ABSENT: 'Absent', LEAVE: 'Leave', HOLIDAY: 'Holiday',
   HALF_DAY: 'Half Day', LATE: 'Late', EXPECTED: 'Expected',
 };
+
+// Map the contractor records row onto the shared worker AttendanceRecord shape.
+function toRecord(r: AttendanceRow): AttendanceRecord {
+  return {
+    ...(r as unknown as AttendanceRecord),
+    presence: (STATUS_LABEL[r.statusCode || r.status || ''] ?? 'Present') as AttendanceRecord['presence'],
+    events: r.events as unknown as AttendanceRecord['events'],
+  };
+}
 
 function isoDate(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -124,13 +135,13 @@ export default function ContractorAttendancePage() {
 
     {/* Stat cards */}
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <div className="bss-card rounded-2xl p-4"><span className="bss-kpi-icon bg-bss-blue-tint text-bss-interactive-blue"><CalendarDays size={16}/></span><strong className="block text-2xl font-bold text-bss-text-primary mt-2">{recRows.length}</strong><p className="text-xs text-bss-text-secondary mt-1">Total entries</p></div>
-      <div className="bss-card rounded-2xl p-4"><span className="bss-kpi-icon bg-bss-soft-green text-bss-green"><CheckCircle2 size={16}/></span><strong className="block text-2xl font-bold text-bss-green mt-2">{presentCount}</strong><p className="text-xs text-bss-text-secondary mt-1">Present this month</p></div>
-      <div className="bss-card rounded-2xl p-4"><span className="bss-kpi-icon bg-bss-soft-orange text-bss-orange"><FileSpreadsheet size={16}/></span><strong className="block text-2xl font-bold text-bss-text-primary mt-2">{sites.length}</strong><p className="text-xs text-bss-text-secondary mt-1">Sites</p></div>
-      <div className="bss-card rounded-2xl p-4"><span className="bss-kpi-icon bg-bss-blue-tint text-bss-interactive-blue"><Upload size={16}/></span><strong className="block text-2xl font-bold text-bss-text-primary mt-2">{result ? result.workers : '—'}</strong><p className="text-xs text-bss-text-secondary mt-1">Last upload syncs</p></div>
+      <div className="bss-card bss-3d bss-scroll-rise rounded-2xl p-4"><span className="bss-kpi-icon bg-bss-blue-tint text-bss-interactive-blue"><CalendarDays size={16}/></span><strong className="block text-2xl font-bold text-bss-text-primary mt-2">{recRows.length}</strong><p className="text-xs text-bss-text-secondary mt-1">Total entries</p></div>
+      <div className="bss-card bss-3d bss-scroll-rise rounded-2xl p-4"><span className="bss-kpi-icon bg-bss-soft-green text-bss-green"><CheckCircle2 size={16}/></span><strong className="block text-2xl font-bold text-bss-green mt-2">{presentCount}</strong><p className="text-xs text-bss-text-secondary mt-1">Present this month</p></div>
+      <div className="bss-card bss-3d bss-scroll-rise rounded-2xl p-4"><span className="bss-kpi-icon bg-bss-soft-orange text-bss-orange"><FileSpreadsheet size={16}/></span><strong className="block text-2xl font-bold text-bss-text-primary mt-2">{sites.length}</strong><p className="text-xs text-bss-text-secondary mt-1">Sites</p></div>
+      <div className="bss-card bss-3d bss-scroll-rise rounded-2xl p-4"><span className="bss-kpi-icon bg-bss-blue-tint text-bss-interactive-blue"><Upload size={16}/></span><strong className="block text-2xl font-bold text-bss-text-primary mt-2">{result ? result.workers : '—'}</strong><p className="text-xs text-bss-text-secondary mt-1">Last upload syncs</p></div>
     </div>
 
-    <section className="bss-card rounded-2xl overflow-hidden">
+    <section className="bss-card bss-scroll-rise rounded-2xl overflow-hidden">
       <header className="px-5 py-4 border-b border-bss-border flex items-center gap-2"><span className="bss-kpi-icon bg-bss-blue-tint text-bss-interactive-blue"><CalendarDays size={16}/></span><div><h2 className="text-sm font-semibold text-bss-text-primary">Attendance records</h2><p className="text-xs text-bss-text-muted mt-0.5">{recRows.length} entr{recRows.length === 1 ? 'y' : 'ies'} · {presentCount} present this month</p></div></header>
       <div className="p-5 space-y-4">
         <div className="grid sm:grid-cols-2 gap-3">
@@ -142,7 +153,7 @@ export default function ContractorAttendancePage() {
       </div>
     </section>
 
-    <section className="bss-card rounded-2xl overflow-hidden">
+    <section className="bss-card bss-scroll-rise rounded-2xl overflow-hidden">
       <header className="px-5 py-4 border-b border-bss-border flex items-center gap-2"><span className="bss-kpi-icon bg-bss-blue-tint text-bss-interactive-blue"><FileSpreadsheet size={16}/></span><div><h2 className="text-sm font-semibold text-bss-text-primary">Upload attendance sheet</h2><p className="text-xs text-bss-text-muted mt-0.5">Choose the site and date range, download the CSV, fill it and upload it back.</p></div></header>
       <div className="p-5 space-y-4">
         <div className="grid sm:grid-cols-3 gap-3">
@@ -162,60 +173,11 @@ export default function ContractorAttendancePage() {
     </section>
 
     {recSelected && (
-      <div className="fixed inset-0 z-[120] grid place-items-center bg-bss-navy/40 backdrop-blur-sm p-4" onClick={() => setRecSelected(null)}>
-        <div className="w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-          <header className="flex items-center justify-between px-5 py-4 border-b border-bss-border">
-            <div>
-              <p className="text-[10px] font-bold text-bss-text-muted uppercase">Attendance Detail</p>
-              <h3 className="text-sm font-semibold text-bss-text-primary mt-0.5">{displayDate(recSelected.date)} · {recSelected.worker}</h3>
-            </div>
-            <button type="button" onClick={() => setRecSelected(null)} aria-label="Close" className="w-9 h-9 grid place-items-center rounded-lg text-bss-text-secondary hover:bg-bss-bg"><X size={18}/></button>
-          </header>
-          <div className="p-5 space-y-2 text-xs">
-            <Detail label="BSS ID" value={recSelected.bssId || '—'} mono />
-            <Detail label="Site" value={recSelected.site || '—'} />
-            <Detail label="Status" value={STATUS_LABEL[recSelected.statusCode || recSelected.status || ''] ?? (recSelected.statusCode || recSelected.status || '—')} />
-            <Detail label="Source" value={recSelected.source || recSelected.capture || '—'} />
-            <Detail label="Verification" value={recSelected.verification || '—'} />
-            <div className="grid grid-cols-2 gap-2">
-              <Detail label="Check In" value={recSelected.checkIn || '—'} />
-              <Detail label="Check Out" value={recSelected.checkOut || '—'} />
-            </div>
-            {recSelected.camera && <Detail label="CCTV Camera" value={`${recSelected.camera}${recSelected.cameraArea && recSelected.cameraArea !== recSelected.camera ? ` · ${recSelected.cameraArea}` : ''}`} />}
-            {(recSelected.geofenceOk !== undefined && recSelected.geofenceOk !== null) && (
-              <Detail label="Geo-fence" value={`${recSelected.geofenceOk ? 'Within site' : 'Flagged outside'}${recSelected.distanceM != null ? ` · ${recSelected.distanceM} m` : ''}`} />
-            )}
-            {recSelected.gpsAddress && <Detail label="Location" value={recSelected.gpsAddress} />}
-            {recSelected.matchStatus && <Detail label="Verification" value={recSelected.matchStatus} />}
-            {recSelected.events && recSelected.events.length > 0 && (
-              <div className="p-3 rounded-2xl bg-bss-bg border border-bss-border">
-                <span className="text-[10px] text-bss-text-muted font-semibold uppercase block mb-2">Source records ({recSelected.events.length})</span>
-                <ul className="space-y-1.5">
-                  {recSelected.events.map((ev, i) => (
-                    <li key={i} className="flex items-center justify-between text-[11px]">
-                      <span className="text-bss-text-secondary">{ev.sourceLabel || ev.source} · {ev.typeLabel || ev.type}</span>
-                      <span className="text-bss-text-primary font-semibold">{ev.at ? new Date(ev.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {recSelected.remarks && <Detail label="Remarks" value={recSelected.remarks} />}
-          </div>
-          <div className="p-5 pt-0">
-            <button type="button" onClick={() => setRecSelected(null)} className="w-full h-10 rounded-lg bg-bss-interactive-blue text-white text-sm font-semibold hover:bg-bss-deep-navy transition-colors">Close</button>
-          </div>
-        </div>
-      </div>
+      <AttendanceDetailDialog
+        record={toRecord(recSelected)}
+        subtitle={`${recSelected.worker ?? ''}${recSelected.bssId ? ` · ${recSelected.bssId}` : ''}`}
+        onClose={() => setRecSelected(null)}
+      />
     )}
   </div>;
-}
-
-function Detail({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-bss-bg border border-bss-border">
-      <span className="text-bss-text-muted font-semibold">{label}</span>
-      <span className={`font-semibold text-bss-text-primary text-right ${mono ? 'font-mono' : ''}`}>{value}</span>
-    </div>
-  );
 }

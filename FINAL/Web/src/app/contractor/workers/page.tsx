@@ -169,7 +169,7 @@ export default function WorkerMasterPage() {
       <article className="bss-kpi-card bss-hover-lift"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-bss-text-muted">Inactive</span><span className="bss-kpi-icon bg-bss-bg text-bss-text-muted"><X size={16}/></span></div><strong>{inactive}</strong><p>Rejected / cancelled</p></article>
     </section>
 
-    <div className="bss-reveal" style={{ ['--bss-delay' as string]: '180ms' }}>
+    <div className="bss-3d bss-scroll-rise">
     <EnterpriseDataTable
       title="Workforce directory"
       rows={scopedRows}

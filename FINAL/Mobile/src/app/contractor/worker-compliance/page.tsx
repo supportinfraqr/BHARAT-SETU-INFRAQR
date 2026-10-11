@@ -65,7 +65,7 @@ export default function ContractorWorkerCompliancePage() {
       {notice && <p className="p-3 bg-bss-soft-green border border-bss-border text-bss-green rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>{notice}</p>}
       {error && !editing && <p className="p-3 bg-bss-soft-orange border border-bss-border text-bss-error rounded-xl text-sm font-semibold">{error}</p>}
 
-      <section className="bss-card rounded-2xl overflow-hidden">
+      <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
         <div className="overflow-x-auto"><table className="w-full min-w-[820px] text-left text-xs">
           <thead className="bg-bss-bg border-b border-bss-border text-[11px] uppercase tracking-wider text-bss-text-muted"><tr><th className="px-4 py-3">Worker</th><th className="px-4 py-3">Site</th><th className="px-4 py-3">Medical</th><th className="px-4 py-3">Health &amp; Safety</th><th className="px-4 py-3">Gate Pass</th><th className="px-4 py-3">Action</th></tr></thead>
           <tbody className="divide-y divide-bss-border">

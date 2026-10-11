@@ -413,7 +413,12 @@ def _attendance_events(a):
             "area": e.camera_area or "",
             "confidence": (float(e.confidence) if e.confidence is not None else None),
             "address": e.gps_address or "",
+            "gpsLat": (float(e.gps_lat) if e.gps_lat is not None else None),
+            "gpsLong": (float(e.gps_long) if e.gps_long is not None else None),
+            "accuracyM": (float(e.gps_accuracy_m) if e.gps_accuracy_m is not None else None),
+            "distanceM": (float(e.distance_m) if e.distance_m is not None else None),
             "geofenceOk": e.is_geofence_ok,
+            "remarks": e.remarks or "",
         })
     return rows
 

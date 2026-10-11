@@ -59,7 +59,7 @@ export default function ContractorLeavePage() {
         ))}
       </div>
 
-      <section className="bss-card rounded-2xl overflow-hidden">
+      <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
         <h2 className="p-4 border-b border-bss-border font-semibold text-sm text-bss-text-primary">Requests</h2>
         {rows.length ? rows.map(r => (
           <article key={`${r.kind}-${r.id}`} className="p-4 border-b border-bss-border flex flex-wrap justify-between gap-3 hover:bg-bss-bg/60">

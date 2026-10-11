@@ -19,7 +19,7 @@ export default function ScanFrame({ active, className = "" }: { active: boolean;
       <div className="relative h-48 w-48 sm:h-56 sm:w-56 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]">
         {/* corner brackets */}
         <div className="absolute inset-0">
-          {corners.map(c => <span key={c} className={`absolute h-7 w-7 sm:h-8 sm:w-8 border-[#F47A32] ${c}`} />)}
+          {corners.map(c => <span key={c} className={`bss-glow absolute h-7 w-7 sm:h-8 sm:w-8 border-[#F47A32] ${c}`} />)}
         </div>
         {/* animated scan line bounded inside window. The keyframes animate `top`
             (percentage of the window); horizontal centring uses Tailwind

@@ -134,7 +134,7 @@ export default function ContractorRozgarPage() {
       <button onClick={() => setTab('available')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'available' ? 'border-bss-interactive-blue text-bss-interactive-blue' : 'border-transparent text-bss-text-muted'}`}>Available Workers ({contractor.availableWorkers?.length ?? 0})</button>
     </div>
 
-    {tab === 'jobs' && <section className="bss-card rounded-2xl overflow-hidden">
+    {tab === 'jobs' && <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
       <header className="px-5 py-4 border-b border-bss-border flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-sm font-semibold text-bss-text-primary">Job History</h2><p className="text-xs text-bss-text-muted mt-0.5">Posted jobs with state, city, designation, experience and application tracking.</p></div>
         <div className="flex flex-wrap gap-2">{(Object.entries({ status: jobStatuses, state: jobStates, city: jobCities, site: jobSites }) as Array<[keyof typeof jobFilter, string[]]>).map(([key, options]) => <select key={key} value={jobFilter[key]} onChange={e => setJobFilter(current => ({ ...current, [key]: e.target.value }))} aria-label={`Filter by ${key}`} className="h-9 rounded-lg border border-bss-border px-2 pr-6 text-xs bg-white"><option value="All">{key === 'status' ? 'Status' : key === 'state' ? 'State' : key === 'city' ? 'City' : 'Site'}: All</option>{options.filter(option => option !== 'All').map(option => <option key={option}>{option}</option>)}</select>)}</div>
       </header>
@@ -166,7 +166,7 @@ export default function ContractorRozgarPage() {
           <h2 className="font-semibold mt-2">{app.workerName}</h2><p className="text-xs text-bss-text-muted mt-1">{app.trade} · {app.location} · Applied {app.dateApplied}</p>
         </button>) : <p className="p-8 bg-white border rounded-xl text-center text-sm text-bss-text-muted">No matching applications.</p>}
       </section>
-      <section className="md:col-span-7">{selected ? <div className="bg-white border rounded-2xl overflow-hidden">
+      <section className="md:col-span-7">{selected ? <div className="bss-3d bss-scroll-rise bg-white border rounded-2xl overflow-hidden">
         <header className="bg-[#022B5E] text-white p-6"><h2 className="text-xl font-bold">{selected.workerName}</h2><p className="font-mono text-sm text-white/70">{selected.workerId}</p></header>
         <div className="p-6 grid grid-cols-2 gap-5">
           <Fact label="Trade" value={selected.trade} icon={UserRound}/><Fact label="Location" value={selected.location} icon={MapPin}/><Fact label="Experience" value={selected.experience}/><Fact label="Expected wage" value={money.format(selected.expectedWage)}/><Fact label="Applied" value={selected.dateApplied}/><Fact label="Match score" value={selected.matchScore + '%'}/>
@@ -175,7 +175,7 @@ export default function ContractorRozgarPage() {
       </div> : <div className="bg-white border rounded-2xl p-10 text-center"><Briefcase className="mx-auto text-bss-text-muted"/><p className="mt-3 text-sm text-bss-text-muted">Select an application.</p></div>}</section>
     </div>}
 
-    {tab === 'available' && <section className="bss-card rounded-2xl overflow-hidden">
+    {tab === 'available' && <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
       <header className="px-5 py-4 border-b border-bss-border"><h2 className="text-sm font-semibold text-bss-text-primary">Workers available for work</h2><p className="text-xs text-bss-text-muted mt-0.5">Workers who turned on Rozgar Setu availability. Send a binding request to engage them at your default site.</p>{!(contractor.sites?.length) && <p className="text-[11px] text-bss-orange mt-2">You have no allotted site yet — a principal employer must allot a site before you can bind workers.</p>}</header>
       <div className="divide-y divide-bss-border">
         {(contractor.availableWorkers ?? []).length ? (contractor.availableWorkers ?? []).map(worker => (

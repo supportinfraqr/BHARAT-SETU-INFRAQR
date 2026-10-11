@@ -297,7 +297,14 @@ export default function ContractorBindingRequestsPage() {
   const pending = rows.filter(r => r.status === 'Pending').length;
 
   return <div className="space-y-6">
-    <header><p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">QR system</p><h1 className="text-2xl font-bold mt-1">Binding Requests</h1><p className="text-sm text-bss-text-muted mt-1">Contractor ↔ Worker and Contractor ↔ Employer binding requests. Approval is never automatic — both parties must accept before binding is complete.</p></header>
+    <header className="relative overflow-hidden rounded-3xl bss-anim-gradient bg-gradient-to-br from-bss-navy via-bss-deep-navy to-bss-interactive-blue text-white p-5 sm:p-6 shadow-lg">
+      <div aria-hidden className="absolute -right-8 -top-10 w-44 h-44 rounded-full bg-white/5 blur-2xl" />
+      <div className="relative z-10">
+        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">QR system · Two-way consent</p>
+        <h1 className="text-2xl md:text-3xl font-bold mt-1">Binding Requests</h1>
+        <p className="text-sm text-white/75 mt-1 max-w-2xl">Contractor ↔ Worker and Contractor ↔ Employer binding requests. Approval is never automatic — both parties must accept before binding is complete.</p>
+      </div>
+    </header>
 
     {/* How binding works — reuses Worker portal pattern */}
     <section className="rounded-xl border border-bss-border bg-bss-blue-tint/60 p-4 flex flex-col sm:flex-row sm:items-center gap-4">
@@ -316,7 +323,9 @@ export default function ContractorBindingRequestsPage() {
     {error && <p role="alert" className="text-sm text-bss-error bg-bss-soft-orange border border-bss-border rounded-xl p-3">{error}</p>}
     {notice && <p role="status" className="text-sm text-bss-green bg-bss-soft-green border border-bss-border rounded-xl p-3">{notice}</p>}
 
+    <div className="bss-scroll-rise">
     <EnterpriseDataTable title="Binding request register" rows={rows} columns={columns} rowKey={r => r.id} filename="contractor-binding-requests" showDownload={false}/>
+    </div>
 
     {otpFor && (
       <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4">

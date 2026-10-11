@@ -101,17 +101,17 @@ export default function EmployerIdentityCardPage() {
   }
 
   return <div className="max-w-2xl mx-auto space-y-6">
-    <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"><div><h1 className="text-2xl font-bold text-[#062D4F]">Employer Identity Card</h1><p className="text-sm text-gray-500 mt-1">Your official BSS digital credential as a registered principal employer organization.</p></div></header>
+    <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"><div><h1 className="text-2xl font-bold text-[#022B5E]">Employer Identity Card</h1><p className="text-sm text-bss-text-muted mt-1">Your official BSS digital credential as a registered principal employer organization.</p></div></header>
 
-    <div className="flex justify-center mb-6"><div className="bg-gray-100 p-1 rounded-xl flex gap-1 shadow-inner"><button onClick={() => setIsFlipped(false)} className={`px-6 py-1.5 rounded-lg text-sm font-bold transition-all ${!isFlipped ? 'bg-white text-[#073B67] shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>Front Side</button><button onClick={() => setIsFlipped(true)} className={`px-6 py-1.5 rounded-lg text-sm font-bold transition-all ${isFlipped ? 'bg-white text-[#073B67] shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>Back Side</button></div></div>
+    <div className="flex justify-center mb-6"><div className="bg-bss-bg p-1 rounded-xl flex gap-1 shadow-inner"><button onClick={() => setIsFlipped(false)} className={`px-6 py-1.5 rounded-lg text-sm font-bold transition-all ${!isFlipped ? 'bg-white text-[#01183A] shadow-sm' : 'text-bss-text-muted hover:text-bss-text-primary'}`}>Front Side</button><button onClick={() => setIsFlipped(true)} className={`px-6 py-1.5 rounded-lg text-sm font-bold transition-all ${isFlipped ? 'bg-white text-[#01183A] shadow-sm' : 'text-bss-text-muted hover:text-bss-text-primary'}`}>Back Side</button></div></div>
 
     <OrganizationIdentityCard content={content} frontRef={frontRef} backRef={backRef} isFlipped={isFlipped} onToggleFlip={() => setIsFlipped(v => !v)} />
 
     <CredentialQrPanel bssId={entityId} name={employer.identity.company} idLabel="employer" />
 
-    <div className="flex gap-3"><button disabled title="ID Card PDF download option is disabled" className="flex-1 bg-gray-400 opacity-60 cursor-not-allowed text-white px-4 py-3 rounded-[12px] font-bold text-sm flex justify-center items-center gap-2"><Download size={18}/>View / Download Print-Ready PDF</button><button disabled title="Share Digital ID option is disabled" className="bg-gray-100 border border-gray-200 text-gray-400 opacity-60 cursor-not-allowed px-4 py-3 rounded-[12px] font-bold text-sm flex justify-center items-center gap-2"><Share2 size={18}/>Share Digital ID</button></div>
-    <p className="text-center text-xs text-gray-500 mt-4">ISO/IEC 7810 ID-1 · 85.60 × 53.98 mm · front and back · 4× raster capture</p>
-    {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{error}</p>}
-    {notice && <p role="status" className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg p-3">{notice}</p>}
+    <div className="flex gap-3"><button disabled title="ID Card PDF download option is disabled" className="flex-1 bg-bss-surface opacity-60 cursor-not-allowed text-white px-4 py-3 rounded-[12px] font-bold text-sm flex justify-center items-center gap-2"><Download size={18}/>View / Download Print-Ready PDF</button><button disabled title="Share Digital ID option is disabled" className="bg-bss-bg border border-bss-border text-bss-text-muted opacity-60 cursor-not-allowed px-4 py-3 rounded-[12px] font-bold text-sm flex justify-center items-center gap-2"><Share2 size={18}/>Share Digital ID</button></div>
+    <p className="text-center text-xs text-bss-text-muted mt-4">ISO/IEC 7810 ID-1 · 85.60 × 53.98 mm · front and back · 4× raster capture</p>
+    {error && <p role="alert" className="text-sm text-bss-error bg-bss-soft-orange border border-bss-border rounded-lg p-3">{error}</p>}
+    {notice && <p role="status" className="text-sm text-bss-interactive-blue bg-bss-blue-tint border border-bss-border rounded-lg p-3">{notice}</p>}
   </div>;
 }

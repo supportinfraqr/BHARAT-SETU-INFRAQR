@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Building2, CheckCircle2, Clock3, Handshake, History, Home, Link2, MapPin, QrCode, Search, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useWorker } from '@/contexts/WorkerContext';
+import PageHero from '@/components/portal/PageHero';
 import RebindAuthModal from '@/components/worker/RebindAuthModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import BindingHistoryDialog, { type BindingHistoryEvent } from '@/components/ui/BindingHistoryDialog';
@@ -170,14 +171,14 @@ export default function BindingRequestsPage() {
 
   const badge = (status: string) => {
     const map: Record<string, string> = {
-      Pending: 'bg-orange-100 text-orange-700',
-      Accepted: 'bg-green-100 text-green-700',
-      Rejected: 'bg-red-100 text-red-700',
-      Expired: 'bg-gray-100 text-gray-500',
-      Cancelled: 'bg-slate-100 text-slate-600',
+      Pending: 'bg-bss-soft-orange text-bss-orange',
+      Accepted: 'bg-bss-soft-green text-bss-green',
+      Rejected: 'bg-bss-soft-orange text-bss-error',
+      Expired: 'bg-bss-bg text-bss-text-muted',
+      Cancelled: 'bg-bss-bg text-bss-text-secondary',
       'Site Changed': 'bg-sky-100 text-sky-700',
     };
-    return <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${map[status] ?? 'bg-gray-100 text-gray-600'}`}>{status}</span>;
+    return <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${map[status] ?? 'bg-bss-bg text-bss-text-secondary'}`}>{status}</span>;
   };
 
   const q = query.trim().toLowerCase();
@@ -196,29 +197,27 @@ export default function BindingRequestsPage() {
   const tabCount = (t: 'action' | 'active' | 'all') => requests.filter(r => t === 'all' ? true : t === 'active' ? r.status === 'Accepted' : r.status === 'Pending').length;
 
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
-    <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
-      <div>
-        <h1 className="text-2xl font-bold text-[#062D4F]">Binding Requests</h1>
-        <p className="text-sm text-gray-500 mt-1">Connect a worker with a contractor. Both parties must approve before binding is complete.</p>
-      </div>
-      <div className="flex items-center gap-2">
-        <Link href="/worker/EmploymentHistory" className="h-10 px-3 rounded-full bg-white border border-gray-200 text-[#073B67] text-xs font-bold inline-flex items-center gap-1.5 hover:border-[#073B67] transition-all shadow-sm" title="Trace in employment history"><History size={15}/>History trace</Link>
-        <Link href="/worker" className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-600 hover:text-[#073B67] hover:border-[#073B67] transition-all shadow-sm" title="Go to Dashboard"><Home size={18}/></Link>
-      </div>
-    </div>
+    <PageHero
+      title="Binding Requests"
+      subtitle="Connect a worker with a contractor. Both parties must approve before binding is complete."
+      actions={<>
+        <Link href="/worker/EmploymentHistory" className="bg-white/10 border border-white/20 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-white/20 transition-colors inline-flex items-center gap-1.5" title="Trace in employment history"><History size={15}/>History trace</Link>
+        <Link href="/worker" className="w-10 h-10 grid place-items-center rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors" title="Go to Dashboard"><Home size={18}/></Link>
+      </>}
+    />
 
-    {notice && <p role="status" className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>{notice}</p>}
-    {error && <p role="alert" className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm font-semibold">{error}</p>}
+    {notice && <p role="status" className="p-3 bg-bss-soft-green border border-bss-border text-bss-green rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>{notice}</p>}
+    {error && <p role="alert" className="p-3 bg-bss-soft-orange border border-bss-border text-bss-error rounded-xl text-sm font-semibold">{error}</p>}
 
     {/* How binding works */}
-    <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-      <span className="w-11 h-11 rounded-xl bg-white border border-blue-100 text-[#073B67] flex items-center justify-center flex-shrink-0"><Handshake size={20}/></span>
-      <div className="flex-1"><h2 className="text-sm font-semibold text-gray-900">How binding works</h2><p className="text-xs text-gray-500 mt-0.5">You can start a binding request by scanning a Contractor QR code. The contractor must approve it, and you must accept — only then are you bound and can start work at the site.</p></div>
-      <Link href="/worker/scan" className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-semibold flex items-center gap-2 hover:bg-[#062D4F] flex-shrink-0"><QrCode size={16}/>Scan contractor QR</Link>
+    <section className="rounded-xl border border-bss-border bg-bss-blue-tint/60 p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+      <span className="w-11 h-11 rounded-xl bg-white border border-bss-border text-[#01183A] flex items-center justify-center flex-shrink-0"><Handshake size={20}/></span>
+      <div className="flex-1"><h2 className="text-sm font-semibold text-bss-text-primary">How binding works</h2><p className="text-xs text-bss-text-muted mt-0.5">You can start a binding request by scanning a Contractor QR code. The contractor must approve it, and you must accept — only then are you bound and can start work at the site.</p></div>
+      <Link href="/worker/scan" className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-[#022B5E] flex-shrink-0"><QrCode size={16}/>Scan contractor QR</Link>
     </section>
 
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {[{l:'Pending',v:requests.filter(r=>r.status==='Pending').length,t:'text-orange-600'},{l:'Active binding',v:requests.filter(r=>r.status==='Accepted').length,t:'text-green-700'},{l:'Declined',v:requests.filter(r=>r.status==='Rejected').length,t:'text-red-600'},{l:'Total requests',v:requests.length,t:'text-gray-800'}].map(s=><div key={s.l} className="bg-white border border-gray-200 rounded-xl p-4"><strong className={`block text-xl ${s.t}`}>{s.v}</strong><span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">{s.l}</span></div>)}
+      {[{l:'Pending',v:requests.filter(r=>r.status==='Pending').length,t:'text-bss-orange'},{l:'Active binding',v:requests.filter(r=>r.status==='Accepted').length,t:'text-bss-green'},{l:'Declined',v:requests.filter(r=>r.status==='Rejected').length,t:'text-bss-error'},{l:'Total requests',v:requests.length,t:'text-bss-text-primary'}].map(s=><div key={s.l} className="bss-3d bss-scroll-rise bss-card rounded-2xl p-4"><strong className={`block text-xl ${s.t}`}>{s.v}</strong><span className="text-[11px] font-semibold uppercase tracking-wider text-bss-text-muted">{s.l}</span></div>)}
     </div>
 
     <div className="flex flex-wrap items-center gap-2">
@@ -228,51 +227,51 @@ export default function BindingRequestsPage() {
             key={key}
             type="button"
             onClick={() => setTab(key)}
-            className={`h-9 px-3.5 rounded-full text-xs font-bold border transition-colors ${tab === key ? 'bg-[#073B67] text-white border-[#073B67]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+            className={`h-9 px-3.5 rounded-full text-xs font-bold border transition-colors ${tab === key ? 'bg-[#01183A] text-white border-[#01183A]' : 'bg-white text-bss-text-secondary border-bss-border hover:bg-bss-bg'}`}
           >
-            {label}<span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${tab === key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>{tabCount(key)}</span>
+            {label}<span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${tab === key ? 'bg-white/20 text-white' : 'bg-bss-bg text-bss-text-secondary'}`}>{tabCount(key)}</span>
           </button>
         ))}
       </div>
       <div className="relative w-full sm:ml-auto sm:w-64">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search contractor, site, ref…" className="w-full h-9 rounded-full border border-gray-200 bg-white pl-9 pr-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#073B67]/20" />
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-bss-text-muted" />
+        <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search contractor, site, ref…" className="w-full h-9 rounded-full border border-bss-border bg-white pl-9 pr-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#01183A]/20" />
       </div>
     </div>
 
-    {filtered.length === 0 && <p className="text-sm text-gray-500 text-center py-10">No binding requests match{query ? ` “${query}”` : ''}.</p>}
+    {filtered.length === 0 && <p className="text-sm text-bss-text-muted text-center py-10">No binding requests match{query ? ` “${query}”` : ''}.</p>}
 
     <div className="grid gap-4 xl:grid-cols-2">
       {filtered.map(req => (
-        <article key={req.id} className="flex h-full min-w-0 flex-col bg-white border border-gray-200 rounded-2xl p-5">
+        <article key={req.id} className="bss-3d bss-scroll-rise flex h-full min-w-0 flex-col bss-card rounded-2xl p-5">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
             <div className="flex gap-3 min-w-0">
-              <span className="w-11 h-11 rounded-xl bg-gray-50 border border-gray-100 text-[#073B67] flex items-center justify-center flex-shrink-0"><Building2 size={20}/></span>
+              <span className="w-11 h-11 rounded-xl bg-bss-blue-tint border border-bss-border text-bss-interactive-blue flex items-center justify-center flex-shrink-0"><Building2 size={20}/></span>
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-bold text-gray-950">{req.contractor}</h3>{badge(req.status)}</div>
-                <p className="text-xs text-gray-500 mt-0.5 font-mono">{req.contractorCode} · {req.lin}</p>
+                <div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-bold text-bss-text-primary">{req.contractor}</h3>{badge(req.status)}</div>
+                <p className="text-xs text-bss-text-muted mt-0.5 font-mono">{req.contractorCode} · {req.lin}</p>
               </div>
             </div>
-            <div className="text-left sm:text-right flex-shrink-0 text-xs text-gray-500"><p>Requested {formatApprovalDate(req.requestedOn) || '—'}</p>{req.startDate && <p className="mt-0.5 font-semibold text-green-700">Start {formatApprovalDate(req.startDate)}</p>}{req.endDate && <p className="mt-0.5 font-semibold text-gray-600">End {formatApprovalDate(req.endDate)}</p>}<p className="font-mono text-[11px] text-gray-400 mt-0.5">{req.ref}</p><p className="mt-0.5">Initiated by {req.initiatedBy || '—'}{req.acceptedBy ? ` · Accepted by ${req.acceptedBy}` : ''}</p><button onClick={() => setHistoryFor(req)} className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[#073B67] hover:underline"><History size={12}/>History</button></div>
+            <div className="text-left sm:text-right flex-shrink-0 text-xs text-bss-text-muted"><p>Requested {formatApprovalDate(req.requestedOn) || '—'}</p>{req.startDate && <p className="mt-0.5 font-semibold text-bss-green">Start {formatApprovalDate(req.startDate)}</p>}{req.endDate && <p className="mt-0.5 font-semibold text-bss-text-secondary">End {formatApprovalDate(req.endDate)}</p>}<p className="font-mono text-[11px] text-bss-text-muted mt-0.5">{req.ref}</p><p className="mt-0.5">Initiated by {req.initiatedBy || '—'}{req.acceptedBy ? ` · Accepted by ${req.acceptedBy}` : ''}</p><button onClick={() => setHistoryFor(req)} className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[#01183A] hover:underline"><History size={12}/>History</button></div>
           </div>
 
           <dl className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-            <div className="min-w-0"><dt className="text-gray-400">Principal employer</dt><dd className="mt-0.5 break-words font-semibold text-gray-800">{req.employer}</dd></div>
-            <div className="min-w-0"><dt className="text-gray-400">Site</dt><dd className="mt-0.5 flex items-center gap-1 font-semibold text-gray-800"><MapPin size={11} className="shrink-0 text-gray-400"/><span className="break-words min-w-0">{req.site}</span></dd></div>
-            <div className="min-w-0"><dt className="text-gray-400">Designation</dt><dd className="mt-0.5 break-words font-semibold text-gray-800">{req.designation}</dd></div>
-            <div className="min-w-0"><dt className="text-gray-400">Cost sheet</dt><dd className="mt-0.5 break-all font-semibold text-green-700">{req.costSheetName || req.wage || '—'}</dd></div>
-            {req.joiningDate && <div className="min-w-0"><dt className="text-gray-400">Date of joining</dt><dd className="mt-0.5 break-words font-semibold text-gray-800">{formatApprovalDate(req.joiningDate)}</dd></div>}
+            <div className="min-w-0"><dt className="text-bss-text-muted">Principal employer</dt><dd className="mt-0.5 break-words font-semibold text-bss-text-primary">{req.employer}</dd></div>
+            <div className="min-w-0"><dt className="text-bss-text-muted">Site</dt><dd className="mt-0.5 flex items-center gap-1 font-semibold text-bss-text-primary"><MapPin size={11} className="shrink-0 text-bss-text-muted"/><span className="break-words min-w-0">{req.site}</span></dd></div>
+            <div className="min-w-0"><dt className="text-bss-text-muted">Designation</dt><dd className="mt-0.5 break-words font-semibold text-bss-text-primary">{req.designation}</dd></div>
+            <div className="min-w-0"><dt className="text-bss-text-muted">Cost sheet</dt><dd className="mt-0.5 break-all font-semibold text-bss-green">{req.costSheetName || req.wage || '—'}</dd></div>
+            {req.joiningDate && <div className="min-w-0"><dt className="text-bss-text-muted">Date of joining</dt><dd className="mt-0.5 break-words font-semibold text-bss-text-primary">{formatApprovalDate(req.joiningDate)}</dd></div>}
           </dl>
 
           {req.status === 'Accepted' && req.contractorDetails && (
-            <div className="mt-4 rounded-xl border border-green-100 bg-green-50/40 p-3">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-green-700 mb-2">Contractor details — unlocked by your binding</p>
+            <div className="mt-4 rounded-xl border border-bss-border bg-bss-soft-green/40 p-3">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-bss-green mb-2">Contractor details — unlocked by your binding</p>
               <dl className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-                <div className="min-w-0"><dt className="text-gray-400">Trade name</dt><dd className="mt-0.5 break-words font-semibold text-gray-800">{req.contractorDetails.tradeName || '—'}</dd></div>
-                <div className="min-w-0"><dt className="text-gray-400">Contact person</dt><dd className="mt-0.5 break-words font-semibold text-gray-800">{req.contractorDetails.contactPerson || '—'}</dd></div>
-                <div className="min-w-0"><dt className="text-gray-400">Email</dt><dd className="mt-0.5 break-all font-semibold text-gray-800">{req.contractorDetails.email || '—'}</dd></div>
-                <div className="min-w-0"><dt className="text-gray-400">State</dt><dd className="mt-0.5 break-words font-semibold text-gray-800">{req.contractorDetails.state || '—'}</dd></div>
-                <div className="col-span-2 min-w-0"><dt className="text-gray-400">Registered address</dt><dd className="mt-0.5 break-words font-semibold text-gray-800">{req.contractorDetails.address || '—'}</dd></div>
+                <div className="min-w-0"><dt className="text-bss-text-muted">Trade name</dt><dd className="mt-0.5 break-words font-semibold text-bss-text-primary">{req.contractorDetails.tradeName || '—'}</dd></div>
+                <div className="min-w-0"><dt className="text-bss-text-muted">Contact person</dt><dd className="mt-0.5 break-words font-semibold text-bss-text-primary">{req.contractorDetails.contactPerson || '—'}</dd></div>
+                <div className="min-w-0"><dt className="text-bss-text-muted">Email</dt><dd className="mt-0.5 break-all font-semibold text-bss-text-primary">{req.contractorDetails.email || '—'}</dd></div>
+                <div className="min-w-0"><dt className="text-bss-text-muted">State</dt><dd className="mt-0.5 break-words font-semibold text-bss-text-primary">{req.contractorDetails.state || '—'}</dd></div>
+                <div className="col-span-2 min-w-0"><dt className="text-bss-text-muted">Registered address</dt><dd className="mt-0.5 break-words font-semibold text-bss-text-primary">{req.contractorDetails.address || '—'}</dd></div>
               </dl>
             </div>
           )}
@@ -281,30 +280,30 @@ export default function BindingRequestsPage() {
             // This worker raised the request (scanned the contractor QR), so their
             // consent is already recorded — it is waiting on the contractor, not on
             // the worker. Never show "Accept" on the worker's own request.
-            <div className="mt-auto pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs font-semibold text-amber-700 flex items-center gap-1.5"><Clock3 size={14}/>Awaiting contractor approval — you raised this request.</p>
-              <button onClick={() => setConfirm({ req, kind: 'withdraw' })} disabled={busyId===req.id} className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold flex items-center gap-1.5 hover:bg-red-50 disabled:opacity-60"><XCircle size={14}/>{busyId===req.id?'Withdrawing…':'Withdraw request'}</button>
+            <div className="mt-auto pt-4 border-t border-bss-border flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs font-semibold text-bss-orange flex items-center gap-1.5"><Clock3 size={14}/>Awaiting contractor approval — you raised this request.</p>
+              <button onClick={() => setConfirm({ req, kind: 'withdraw' })} disabled={busyId===req.id} className="h-9 px-3 rounded-lg border border-bss-border text-bss-error text-xs font-bold flex items-center gap-1.5 hover:bg-bss-soft-orange disabled:opacity-60"><XCircle size={14}/>{busyId===req.id?'Withdrawing…':'Withdraw request'}</button>
             </div>
           ) : (
-            <div className="mt-auto pt-4 border-t border-gray-100 flex flex-wrap gap-2">
-              <button onClick={() => setConfirm({ req, kind: 'accept' })} disabled={busyId===req.id} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-bold flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-60"><Link2 size={15}/>{busyId===req.id?'Approving…':'Accept & Bind'}</button>
-              <button onClick={() => setConfirm({ req, kind: 'decline' })} disabled={busyId===req.id} className="h-10 px-4 rounded-lg border border-red-200 text-red-600 text-sm font-bold flex items-center gap-2 hover:bg-red-50 disabled:opacity-60"><XCircle size={15}/>Decline</button>
+            <div className="mt-auto pt-4 border-t border-bss-border flex flex-wrap gap-2">
+              <button onClick={() => setConfirm({ req, kind: 'accept' })} disabled={busyId===req.id} className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-sm font-bold flex items-center gap-2 hover:bg-[#022B5E] disabled:opacity-60"><Link2 size={15}/>{busyId===req.id?'Approving…':'Accept & Bind'}</button>
+              <button onClick={() => setConfirm({ req, kind: 'decline' })} disabled={busyId===req.id} className="h-10 px-4 rounded-lg border border-bss-border text-bss-error text-sm font-bold flex items-center gap-2 hover:bg-bss-soft-orange disabled:opacity-60"><XCircle size={15}/>Decline</button>
             </div>
           ))}
           {req.status === 'Accepted' && (req.unbindRequested ? (
-            <div className="mt-auto pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
-              <p className="text-xs text-orange-700 font-semibold flex items-center gap-1.5"><XCircle size={14}/>{req.unbindConsentWorker ? 'Unbinding requested — awaiting the contractor’s consent.' : 'The contractor requested unbinding — awaiting your consent.'}</p>
-              {!req.unbindConsentWorker && <button onClick={() => setConfirm({ req, kind: 'unbind' })} disabled={busyId===req.id} className="h-9 px-3 rounded-lg bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 disabled:opacity-60"><XCircle size={14}/>{busyId===req.id?'Confirming…':'Confirm unbind'}</button>}
-              {!req.unbindConsentWorker && <button onClick={() => void rejectUnbind(req)} disabled={busyId===req.id} className="h-9 px-3 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-bold flex items-center gap-1.5 hover:bg-gray-50 disabled:opacity-60">Reject request</button>}
+            <div className="mt-auto pt-4 border-t border-bss-border flex flex-wrap items-center gap-3">
+              <p className="text-xs text-bss-orange font-semibold flex items-center gap-1.5"><XCircle size={14}/>{req.unbindConsentWorker ? 'Unbinding requested — awaiting the contractor’s consent.' : 'The contractor requested unbinding — awaiting your consent.'}</p>
+              {!req.unbindConsentWorker && <button onClick={() => setConfirm({ req, kind: 'unbind' })} disabled={busyId===req.id} className="h-9 px-3 rounded-lg bg-bss-error text-white text-xs font-bold flex items-center gap-1.5 hover:bg-bss-error disabled:opacity-60"><XCircle size={14}/>{busyId===req.id?'Confirming…':'Confirm unbind'}</button>}
+              {!req.unbindConsentWorker && <button onClick={() => void rejectUnbind(req)} disabled={busyId===req.id} className="h-9 px-3 rounded-lg border border-bss-border bg-white text-bss-text-secondary text-xs font-bold flex items-center gap-1.5 hover:bg-bss-bg disabled:opacity-60">Reject request</button>}
             </div>
           ) : (
-            <div className="mt-auto pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
-              <p className="text-xs text-green-700 font-semibold flex items-center gap-1.5"><CheckCircle2 size={14}/>Binding active · employment started with {req.contractor} on approval of both parties.</p>
-              <button onClick={() => setConfirm({ req, kind: 'unbind' })} disabled={busyId===req.id} className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold flex items-center gap-1.5 hover:bg-red-50 disabled:opacity-60"><XCircle size={14}/>Request Unbind</button>
+            <div className="mt-auto pt-4 border-t border-bss-border flex flex-wrap items-center gap-3">
+              <p className="text-xs text-bss-green font-semibold flex items-center gap-1.5"><CheckCircle2 size={14}/>Binding active · employment started with {req.contractor} on approval of both parties.</p>
+              <button onClick={() => setConfirm({ req, kind: 'unbind' })} disabled={busyId===req.id} className="h-9 px-3 rounded-lg border border-bss-border text-bss-error text-xs font-bold flex items-center gap-1.5 hover:bg-bss-soft-orange disabled:opacity-60"><XCircle size={14}/>Request Unbind</button>
             </div>
           ))}
-          {req.status === 'Cancelled' && <p className="mt-auto pt-4 border-t border-gray-100 text-xs text-gray-500 font-semibold">Binding unbound — both parties consented.</p>}
-          {req.status === 'Site Changed' && <p className="mt-auto pt-4 border-t border-gray-100 text-xs text-gray-500 font-semibold">Binding closed — your contractor moved you to another site; your engagement continues there.</p>}
+          {req.status === 'Cancelled' && <p className="mt-auto pt-4 border-t border-bss-border text-xs text-bss-text-muted font-semibold">Binding unbound — both parties consented.</p>}
+          {req.status === 'Site Changed' && <p className="mt-auto pt-4 border-t border-bss-border text-xs text-bss-text-muted font-semibold">Binding closed — your contractor moved you to another site; your engagement continues there.</p>}
         </article>
       ))}
     </div>

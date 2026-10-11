@@ -54,17 +54,17 @@ export default function WorkerOnboardingGate() {
   return (
     <div className="fixed inset-0 z-[96] bg-black/55 backdrop-blur-sm grid place-items-center p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-label="Verify your Aadhaar">
       <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden my-8">
-        <header className="px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-bold text-gray-900 flex items-center gap-2"><ShieldCheck size={18} className="text-[#073B67]" />Verify your Aadhaar</h2>
-          <p className="text-xs text-gray-500 mt-1">Link your Aadhaar to complete onboarding. This step is required and can’t be skipped.</p>
+        <header className="px-5 py-4 border-b border-bss-border">
+          <h2 className="text-base font-bold text-bss-text-primary flex items-center gap-2"><ShieldCheck size={18} className="text-[#01183A]" />Verify your Aadhaar</h2>
+          <p className="text-xs text-bss-text-muted mt-1">Link your Aadhaar to complete onboarding. This step is required and can’t be skipped.</p>
         </header>
         <div className="p-5 space-y-3">
-          <input value={aadhaar} onChange={e => setAadhaar(e.target.value.replace(/\D/g, "").slice(0, 12))} inputMode="numeric" placeholder="12-digit Aadhaar number" disabled={otpSent && !!reference} className="w-full h-11 rounded-lg border border-gray-200 px-3 disabled:bg-gray-50" />
-          {otpSent && <input value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="6-digit Aadhaar OTP" className="w-full h-11 rounded-lg border border-gray-200 px-3 text-center tracking-[0.3em] font-bold" />}
+          <input value={aadhaar} onChange={e => setAadhaar(e.target.value.replace(/\D/g, "").slice(0, 12))} inputMode="numeric" placeholder="12-digit Aadhaar number" disabled={otpSent && !!reference} className="w-full h-11 rounded-lg border border-bss-border px-3 disabled:bg-bss-bg" />
+          {otpSent && <input value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="6-digit Aadhaar OTP" className="w-full h-11 rounded-lg border border-bss-border px-3 text-center tracking-[0.3em] font-bold" />}
           {!otpSent
-            ? <button type="button" onClick={() => void sendOtp()} disabled={busy || !/^\d{12}$/.test(aadhaar)} className="w-full h-10 rounded-lg bg-[#073B67] text-white text-sm font-bold disabled:opacity-50">{busy ? "Sending…" : "Send OTP to Aadhaar-linked mobile"}</button>
-            : <button type="button" onClick={() => void verify()} disabled={busy} className="w-full h-10 rounded-lg bg-[#073B67] text-white text-sm font-bold disabled:opacity-50">{busy ? "Verifying…" : "Verify Aadhaar"}</button>}
-          {error && <p role="alert" className="text-xs font-semibold text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
+            ? <button type="button" onClick={() => void sendOtp()} disabled={busy || !/^\d{12}$/.test(aadhaar)} className="w-full h-10 rounded-lg bg-[#01183A] text-white text-sm font-bold disabled:opacity-50">{busy ? "Sending…" : "Send OTP to Aadhaar-linked mobile"}</button>
+            : <button type="button" onClick={() => void verify()} disabled={busy} className="w-full h-10 rounded-lg bg-[#01183A] text-white text-sm font-bold disabled:opacity-50">{busy ? "Verifying…" : "Verify Aadhaar"}</button>}
+          {error && <p role="alert" className="text-xs font-semibold text-bss-error bg-bss-soft-orange border border-bss-border rounded-lg px-3 py-2">{error}</p>}
         </div>
       </div>
     </div>

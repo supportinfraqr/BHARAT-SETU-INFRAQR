@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { IScannerControls } from "@zxing/browser";
-import { Building2, Camera, CheckCircle2, Handshake, Home, KeyRound, Link2, ScanLine, ShieldCheck, TriangleAlert, Upload, UserRound, X, XCircle } from "lucide-react";
+import { Building2, Camera, CheckCircle2, Handshake, KeyRound, Link2, ScanLine, ShieldCheck, TriangleAlert, Upload, UserRound, X, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useContractor } from "@/contexts/ContractorContext";
 import ScanIdentityCard, { type ScanVerifyData } from "@/components/scan/ScanIdentityCard";
@@ -36,6 +36,7 @@ export default function ContractorScanPage() {
   const [alreadyPending, setAlreadyPending] = useState(false);
   const [sentBssIds, setSentBssIds] = useState<string[]>([]);
   const [attendanceMarked, setAttendanceMarked] = useState(false);
+  const [workerToday, setWorkerToday] = useState<{ nextAction?: 'IN' | 'OUT'; checkIn?: string; checkOut?: string; site?: string } | null>(null);
   const [scanned, setScanned] = useState<Payload | null>(null);
   const [selectedSite, setSelectedSite] = useState(contractor.defaultSite?.name ?? contractor.sites[0]?.name ?? '');
   const [costSheets, setCostSheets] = useState<Array<{ id:number; name:string; code:string; designation?:string; status?:string; ownerId?:number|null; siteId?:number|null; siteName?:string }>>([]);
@@ -177,8 +178,23 @@ export default function ContractorScanPage() {
         setRequestSent(false);
         setAlreadyPending(Boolean(pending) || sentHere);
         setAttendanceMarked(false);
+        setWorkerToday(null);
         setState("binding");
         setMessage(known ? "Worker is bound to you — mark today's attendance." : pending ? "Binding request already sent — awaiting the worker's approval." : "Worker identified — review current relationship before requesting binding");
+        // For a bound worker, look up today's attendance so we know whether they
+        // are already in the premises (so we prompt check-out instead of check-in).
+        if (known) {
+          const today = new Date().toISOString().slice(0, 10);
+          void fetch(`/api/contractor/attendance/records?start=${today}&end=${today}`, { cache: 'no-store' })
+            .then(r => (r.ok ? r.json() : null))
+            .then((j: { data?: Array<{ bssId?: string; nextAction?: 'IN' | 'OUT'; checkIn?: string; checkOut?: string; site?: string }> } | null) => {
+              const row = (j?.data ?? []).find(x => x.bssId === bssId);
+              setWorkerToday(row ? { nextAction: row.nextAction, checkIn: row.checkIn, checkOut: row.checkOut, site: row.site } : null);
+              if (row?.nextAction === 'OUT') setMessage(`${known.name} is currently in the premises — mark check-out when they leave.`);
+              else if (row?.nextAction === 'IN') setMessage(`${known.name} checked out earlier — mark check-in to log their return.`);
+            })
+            .catch(() => setWorkerToday(null));
+        }
         // Load the tiered identity record: public-safe now, extensive when bound.
         void fetch(`/api/identity/verify/${encodeURIComponent(bssId)}`, { cache: 'no-store' })
           .then(r => (r.ok ? r.json() : null))
@@ -247,6 +263,7 @@ export default function ContractorScanPage() {
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { action?: 'IN' | 'OUT'; site?: string } };
       if (!response.ok) throw new Error(result.error || 'Attendance could not be marked.');
       setAttendanceMarked(true);
+      setWorkerToday(prev => ({ nextAction: result.data?.action === 'OUT' ? 'IN' : 'OUT', checkIn: prev?.checkIn, checkOut: prev?.checkOut, site: result.data?.site ?? prev?.site }));
       setMessage(`${entity.name} — ${result.data?.action === 'OUT' ? 'checked out (final checkout)' : 'checked in'}${result.data?.site ? ` at ${result.data.site}` : ''}.`);
       void refresh();
     } catch (e) {
@@ -271,23 +288,33 @@ export default function ContractorScanPage() {
     catch { setState("error"); setMessage("No valid QR code could be read from that image."); }
   };
 
-  const reset = () => { controls.current?.stop(); setResult(null); setVerifyData(null); setEntity(null); setRequestSent(false); setAttendanceMarked(false); setConfirmOpen(false); setMessage(""); setState("idle"); };
+  const reset = () => { controls.current?.stop(); setResult(null); setVerifyData(null); setEntity(null); setRequestSent(false); setAttendanceMarked(false); setWorkerToday(null); setConfirmOpen(false); setMessage(""); setState("idle"); };
   // A live binding unlocks the worker's verified identity details for this contractor.
 
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
-    <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
-      <div><h1 className="text-2xl font-bold text-[#022B5E]">QR Scan & Bind</h1><p className="text-sm text-bss-text-muted mt-1">Scan a Worker QR to request binding · scan an Employer QR to request employer binding.</p></div>
-      <div className="flex gap-2"><ListenButton /><Link href="/contractor/dashboard" className="p-2.5 rounded-full bg-white border" aria-label="Dashboard"><Home size={18}/></Link><Link href="/contractor/qr/requests" className="bg-[#01183A] text-white px-4 py-2.5 rounded-lg font-bold text-sm">Binding requests</Link></div>
-    </div>
+    <header className="relative overflow-hidden rounded-3xl bss-anim-gradient bg-gradient-to-br from-bss-navy via-bss-deep-navy to-bss-interactive-blue text-white p-5 sm:p-6 shadow-lg">
+      <div aria-hidden className="absolute -right-8 -top-10 w-44 h-44 rounded-full bg-white/5 blur-2xl" />
+      <div className="relative z-10 flex flex-col sm:flex-row justify-between sm:items-end gap-4">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">One QR · Bind · Verify</p>
+          <h1 className="text-2xl md:text-3xl font-bold mt-1">QR Scan &amp; Bind</h1>
+          <p className="text-sm text-white/75 mt-1 max-w-xl">Scan a Worker QR to request binding · scan an Employer QR to request employer binding. Identity is verified before anything is committed.</p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <ListenButton />
+          <Link href="/contractor/qr/requests" className="bg-white text-bss-navy px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-white/90 transition-colors">Binding requests</Link>
+        </div>
+      </div>
+    </header>
 
     <div className="grid md:grid-cols-2 gap-6">
-      <section className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-        <header className="p-4 border-b bg-bss-bg flex items-center gap-2 font-bold"><Camera size={18}/> Scanner</header>
+      <section className="bss-3d bss-scroll-rise bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <header className="p-4 border-b border-bss-border bg-gradient-to-r from-bss-navy/5 to-transparent flex items-center gap-2 font-bold text-bss-text-primary"><span className="w-8 h-8 rounded-lg bg-bss-blue-tint text-bss-interactive-blue grid place-items-center"><Camera size={16}/></span> Scanner</header>
         <div className="p-5 space-y-4">
           <div className="relative bg-black rounded-xl h-64 overflow-hidden flex items-center justify-center">
             <video ref={videoRef} className={`w-full h-full object-cover ${state==="scanning"?"block":"hidden"}`} muted playsInline/>
             <ScanFrame active={state==="scanning"} />
-            {state!=="scanning"&&<div className="text-center text-white px-6">{state==="verified"?<CheckCircle2 size={48} className="mx-auto text-bss-soft-green"/>:state==="error"?<XCircle size={48} className="mx-auto text-bss-orange"/>:state==="binding"?<Handshake size={48} className="mx-auto text-bss-soft-orange"/>:<ScanLine size={48} className="mx-auto text-bss-text-muted"/>}<p className="mt-3 text-sm font-semibold">{message||"Ready to scan a secure credential"}</p></div>}
+            {state!=="scanning"&&<div className="text-center text-white px-6">{state==="verified"?<CheckCircle2 size={48} className="mx-auto text-bss-soft-green bss-pulse-halo"/>:state==="error"?<XCircle size={48} className="mx-auto text-bss-orange"/>:state==="binding"?<Handshake size={48} className="mx-auto text-bss-soft-orange"/>:<ScanLine size={48} className="mx-auto text-bss-text-muted bss-pulse-halo"/>}<p className="mt-3 text-sm font-semibold">{message||"Ready to scan a secure credential"}</p></div>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <button onClick={state==="idle"||state==="error"||state==="verified"||state==="binding"?startCamera:reset} className="bg-[#01183A] text-white py-2.5 rounded-lg font-bold text-sm"><Camera size={16} className="inline mr-2"/>{state==="scanning"?"Reset":"Use camera"}</button>
@@ -299,8 +326,8 @@ export default function ContractorScanPage() {
         </div>
       </section>
 
-      <section className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-        <header className="p-4 border-b bg-bss-bg flex gap-2 items-center font-bold"><ShieldCheck size={18}/> {state==="binding"?"Binding request":"Identified entity"}</header>
+      <section className="bss-3d bss-scroll-rise bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <header className="p-4 border-b border-bss-border bg-gradient-to-r from-bss-navy/5 to-transparent flex gap-2 items-center font-bold text-bss-text-primary"><span className="w-8 h-8 rounded-lg bg-bss-soft-green text-bss-green grid place-items-center"><ShieldCheck size={16}/></span> {state==="binding"?"Binding request":"Identified entity"}</header>
         <div className="p-5">
           {state==="binding"&&entity?(
             <div className="space-y-4">
@@ -359,9 +386,15 @@ export default function ContractorScanPage() {
                 ? <div className="space-y-3">
                     <p className="text-xs text-bss-text-secondary bg-bss-bg rounded-xl p-3">This worker is bound to you at <strong>{entity.site}</strong>. A worker holds one active site at a time — bind this worker at another site to move them there directly; no unbind needed.</p>
                     {boundWorker?.costSheetName && <p className="text-xs text-[#01183A] bg-bss-blue-tint rounded-xl p-3">Cost sheet: <strong>{boundWorker.costSheetName}</strong>{boundWorker.costSheet ? <span className="text-bss-text-muted"> · {boundWorker.costSheet}</span> : null}</p>}
+                    {!attendanceMarked && workerToday?.nextAction === 'OUT' && (
+                      <div className="p-3 rounded-2xl bg-bss-soft-green border border-bss-border flex items-center gap-2 text-sm text-bss-green font-semibold"><CheckCircle2 size={16}/> Currently in the premises{workerToday.checkIn ? ` — checked in at ${workerToday.checkIn}` : ''}.</div>
+                    )}
+                    {!attendanceMarked && workerToday?.nextAction === 'IN' && (
+                      <div className="p-3 rounded-2xl bg-bss-soft-orange border border-bss-border flex items-center gap-2 text-sm text-bss-orange font-semibold"><CheckCircle2 size={16}/> Checked out{workerToday.checkOut ? ` at ${workerToday.checkOut}` : ''}.</div>
+                    )}
                     {attendanceMarked
                       ? <p className="p-3 bg-bss-soft-green border border-bss-border text-bss-green rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Attendance marked for {entity.name}. It is now visible on the worker&apos;s Attendance page.</p>
-                      : <button onClick={markAttendance} className="w-full h-11 rounded-xl bg-bss-green text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-bss-green"><CheckCircle2 size={17}/>Mark today&apos;s attendance</button>}
+                      : <button onClick={markAttendance} className={`w-full h-11 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-2 transition-colors ${workerToday?.nextAction === 'OUT' ? 'bg-bss-navy hover:bg-bss-deep-navy' : 'bg-bss-green'}`}><CheckCircle2 size={17}/>{workerToday?.nextAction === 'OUT' ? 'Mark check-out' : workerToday?.nextAction === 'IN' ? 'Mark check-in again' : "Mark today's attendance"}</button>}
                   </div>
                 : alreadyPending
                   ? <p className="p-3 bg-bss-soft-orange border border-bss-border text-bss-orange rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>Binding request already sent — awaiting {entity.name}&apos;s approval. Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>

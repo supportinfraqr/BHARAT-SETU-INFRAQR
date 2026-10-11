@@ -93,7 +93,7 @@ export default function ContractorProfilePage() {
   return (
     <div className="space-y-6">
       <GstVerifyCard role="contractor" />
-      <section className="bss-reveal bss-card p-6 flex flex-col sm:flex-row justify-between gap-5">
+      <section className="bss-card bss-3d bss-scroll-rise p-6 flex flex-col sm:flex-row justify-between gap-5">
         <div className="flex gap-4">
           <div className="relative flex-shrink-0">
             {contractor.identity.photoUrl
@@ -118,7 +118,7 @@ export default function ContractorProfilePage() {
       </section>
 
       <div className="grid md:grid-cols-[240px_1fr] gap-6">
-        <nav className="bss-reveal bss-card p-2 h-fit overflow-x-auto space-y-0.5" style={{ ['--bss-delay' as string]: '80ms' }}>
+        <nav className="bss-card bss-3d bss-scroll-rise p-2 h-fit overflow-x-auto space-y-0.5" style={{ ['--bss-delay' as string]: '80ms' }}>
           {tabs.map(([id, label, Icon]) => (
             <button
               key={id}
@@ -134,7 +134,7 @@ export default function ContractorProfilePage() {
         {tab === 'licences' ? (
           <div className="bss-reveal" style={{ ['--bss-delay' as string]: '80ms' }}><StatutoryLicences rows={licences} onSave={saveLicence} /></div>
         ) : (
-          <section className="bss-reveal bss-card p-6" style={{ ['--bss-delay' as string]: '80ms' }}>
+          <section className="bss-card bss-3d bss-scroll-rise p-6" style={{ ['--bss-delay' as string]: '80ms' }}>
             <header className="flex justify-between border-b border-bss-border pb-4">
               <h2 className="font-semibold">{tabs.find(item => item[0] === tab)?.[1]}</h2>
               {fields.length > 0 && <button onClick={() => setEditing(v => !v)} className="text-sm text-bss-interactive-blue font-semibold">{editing ? 'Cancel' : 'Edit'}</button>}

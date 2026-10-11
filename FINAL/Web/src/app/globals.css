@@ -583,7 +583,7 @@ body.bss-modal-open .bss-scan-fab {
 .bss-card {
   background: linear-gradient(180deg, #ffffff 0%, var(--color-bss-bg, #f2f6fc) 130%);
   border: 1px solid var(--color-bss-border, #dbe3ef);
-  border-radius: 1rem;
+  border-radius: 1.25rem;
   box-shadow: 0 1px 2px rgba(1, 24, 58, 0.04), 0 12px 30px -18px rgba(1, 24, 58, 0.25);
 }
 .bss-hover-lift {
@@ -636,6 +636,30 @@ body.bss-modal-open .bss-scan-fab {
 @keyframes bssRowIn {
   from { opacity: 0; transform: translateY(-8px); background-color: rgba(79, 196, 126, 0.14); }
   to { opacity: 1; transform: none; background-color: transparent; }
+}
+
+/* Chart grow-in animations — bars rise, horizontal bars/arcs sweep out. */
+@keyframes bssBarGrow {
+  from { transform: scaleY(0.05); opacity: 0.35; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+@keyframes bssBarGrowX {
+  from { transform: scaleX(0); opacity: 0.4; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+
+/* Soft 3D elevation shadow for hero/analytics cards. */
+.bss-elevated {
+  box-shadow:
+    0 1px 1px rgba(1, 24, 58, 0.04),
+    0 8px 20px -12px rgba(1, 24, 58, 0.28),
+    0 28px 60px -32px rgba(2, 43, 94, 0.35);
+}
+.bss-glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(242, 246, 252, 0.75));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--color-bss-border, #dbe3ef);
 }
 
 /* Respect reduced-motion preferences — remove transitions/animations */
@@ -846,86 +870,274 @@ input[type="range"],
 }
 
 
-/* =============================================================
-   Soft polish layer — gentle motion, softer corners & depth,
-   subtle colour. Applies to every portal (worker/contractor/
-   employer/admin) so cards, panels and KPIs feel lighter and
-   more premium. Motion is disabled automatically under
-   html.bss-reduce-motion (see above) and prefers-reduced-motion.
-   ============================================================= */
-:root {
-  --bss-radius-sm: 0.75rem;
-  --bss-radius-md: 1rem;
-  --bss-radius-lg: 1.25rem;
-  --bss-shadow-1: 0 1px 2px rgba(1, 24, 58, 0.04), 0 1px 3px rgba(1, 24, 58, 0.03);
-  --bss-shadow-2: 0 10px 28px -12px rgba(1, 24, 58, 0.18), 0 3px 10px -4px rgba(1, 24, 58, 0.08);
-  --bss-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
-}
 
-@keyframes bss-rise {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes bss-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* Soft, light background so white cards lift off the page. */
+/* ─────────────────────────────────────────────────────────────
+   Portal polish — consistent surface radius, soft background and
+   comfortable rhythm shared by every contractor page.
+   ───────────────────────────────────────────────────────────── */
 body {
   background-image:
-    radial-gradient(1200px 600px at 12% -8%, rgba(30, 58, 138, 0.05), transparent 60%),
-    radial-gradient(900px 500px at 100% 0%, rgba(228, 93, 36, 0.045), transparent 55%);
+    radial-gradient(1100px 560px at 10% -10%, rgba(30, 58, 138, 0.05), transparent 60%),
+    radial-gradient(900px 520px at 100% 0%, rgba(228, 93, 36, 0.05), transparent 58%);
   background-attachment: fixed;
 }
-
-/* Gentle staggered entrance for page sections. */
-.bss-app-main > * { animation: bss-rise 0.45s var(--bss-ease) both; }
-.bss-app-main > *:nth-child(2) { animation-delay: 0.04s; }
-.bss-app-main > *:nth-child(3) { animation-delay: 0.08s; }
-.bss-app-main > *:nth-child(4) { animation-delay: 0.12s; }
-
-/* Softer corners + lift on the shared card/panel surfaces. */
 .bss-kpi-card,
-.bss-panel {
-  border-radius: var(--bss-radius-lg);
-  box-shadow: var(--bss-shadow-1);
-  transition: transform 0.25s var(--bss-ease), box-shadow 0.25s var(--bss-ease),
-              border-color 0.25s var(--bss-ease);
+.bss-panel { border-radius: 1.25rem; }
+.bss-kpi-card {
+  min-height: 6.5rem;
+  padding: 1rem 1.1rem;
 }
-.bss-kpi-card:hover,
-.bss-panel:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--bss-shadow-2);
-  border-color: #cdd9ea;
+.bss-kpi-icon { border-radius: 0.75rem; }
+
+/* Balanced masonry flow — cards pack into columns without leaving a big
+   empty gap when one column runs short (used by the contractor dashboard). */
+.bss-masonry { column-gap: 1.25rem; }
+.bss-masonry > * { break-inside: avoid; -webkit-column-break-inside: avoid; margin-bottom: 1.25rem; }
+@media (min-width: 1024px) { .bss-masonry { columns: 2; } }
+@media (min-width: 1280px) { .bss-masonry { columns: 3; } }
+
+/* ─────────────────────────────────────────────────────────────
+   Motion & soft-UI layer — hover/press feedback, scroll reveals,
+   softer corners and gentle gradients. Purely presentational and
+   safe: scroll reveals use OPACITY ONLY (a transform/filter would
+   create a containing block and mis-position fixed dialogs).
+   ───────────────────────────────────────────────────────────── */
+:root { --bss-motion: cubic-bezier(0.22, 0.61, 0.36, 1); }
+
+/* Interactive controls respond softly. */
+button, [role="button"], a, select, input, textarea, .bss-interactive {
+  transition: background-color 0.2s var(--bss-motion), border-color 0.2s var(--bss-motion),
+              color 0.2s var(--bss-motion), box-shadow 0.28s var(--bss-motion),
+              transform 0.16s var(--bss-motion), opacity 0.2s var(--bss-motion);
 }
 
-/* KPI cards read cleaner with centred value + label. */
-.bss-kpi-card { align-items: stretch; text-align: center; }
-.bss-kpi-card .bss-kpi-icon { margin-inline: auto; }
+/* Buttons lift on hover and press on click (buttons never contain modals). */
+button:not([disabled]):not(.bss-mobile-trigger):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px -8px rgba(1, 24, 58, 0.30);
+}
+button:not([disabled]):active { transform: translateY(0) scale(0.975); box-shadow: none; }
 
-/* Bigger, softer corner radius on the shell surfaces. */
-.bss-app-main { animation: bss-fade 0.3s var(--bss-ease) both; }
-
-/* Buttons: soften the press a touch. */
+/* Gradient sheen on the primary/navy call-to-actions. */
 .bss-primary-action,
-.bss-secondary-action,
-.bss-compact-action {
-  transition: transform 0.15s var(--bss-ease), box-shadow 0.2s var(--bss-ease),
-              background-color 0.2s var(--bss-ease);
+button.bg-bss-navy,
+a.bg-bss-navy { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0) 55%, rgba(0, 0, 0, 0.08)); }
+
+/* Cards: soft border/shadow change on hover (no transform → keeps fixed
+   dialogs rendered inside a card correctly positioned). */
+.bss-card, .bss-panel, .bss-kpi-card {
+  transition: box-shadow 0.28s var(--bss-motion), border-color 0.28s var(--bss-motion), background-color 0.28s var(--bss-motion);
 }
-.bss-primary-action:active,
-.bss-secondary-action:active,
-.bss-compact-action:active { transform: translateY(1px) scale(0.99); }
+.bss-card:hover, .bss-panel:hover {
+  border-color: #c7d5ea;
+  box-shadow: 0 2px 5px rgba(1, 24, 58, 0.05), 0 18px 40px -20px rgba(1, 24, 58, 0.30);
+}
+
+/* KPI cards: a gentle rise on hover (no tilt — keeps the experience calm). */
+.bss-kpi-card {
+  will-change: transform;
+  transition: transform 0.28s var(--bss-motion), box-shadow 0.28s var(--bss-motion),
+              border-color 0.28s var(--bss-motion);
+}
+.bss-kpi-card:hover {
+  transform: translateY(-3px);
+  border-color: #c7d5ea;
+  box-shadow: 0 16px 30px -18px rgba(1, 24, 58, 0.32), 0 8px 16px -10px rgba(1, 24, 58, 0.18);
+}
+.bss-kpi-card:active { transform: translateY(-1px); }
+
+/* Scroll reveal (progressive enhancement, opacity-only). */
+@keyframes bssViewIn { from { opacity: 0; } to { opacity: 1; } }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .bss-app-main > section,
+    .bss-app-main .bss-card,
+    .bss-app-main .bss-kpi-card {
+      animation: bssViewIn linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .bss-app-main,
-  .bss-app-main > *,
-  .bss-kpi-card,
-  .bss-panel { animation: none !important; transition: none !important; }
+  button:not([disabled]):hover,
+  button:not([disabled]):active { transform: none; box-shadow: none; }
   .bss-kpi-card:hover,
-  .bss-panel:hover { transform: none; }
+  .bss-kpi-card:active { transform: none; }
+  .bss-app-main > section,
+  .bss-app-main .bss-card,
+  .bss-app-main .bss-kpi-card { animation: none !important; }
 }
 
+/* Make the countless ad-hoc white card containers (`bg-white border
+   rounded-2xl/3xl`) look and behave like .bss-card across ALL pages:
+   soft corners, soft shadow, hover feedback and a scroll reveal. */
+.bss-app-main :is(section, article, div).bg-white.border.rounded-2xl,
+.bss-app-main :is(section, article, div).bg-white.border.rounded-3xl {
+  border-radius: 1.25rem;
+  border-color: var(--color-bss-border);
+  box-shadow: 0 1px 2px rgba(1, 24, 58, 0.04), 0 12px 30px -18px rgba(1, 24, 58, 0.25);
+  transition: box-shadow 0.28s var(--bss-motion), border-color 0.28s var(--bss-motion);
+}
+.bss-app-main :is(section, article, div).bg-white.border.rounded-2xl:hover,
+.bss-app-main :is(section, article, div).bg-white.border.rounded-3xl:hover {
+  border-color: #c7d5ea;
+  box-shadow: 0 2px 5px rgba(1, 24, 58, 0.05), 0 18px 40px -20px rgba(1, 24, 58, 0.30);
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .bss-app-main :is(section, article).bg-white.border,
+    .bss-app-main div.bg-white.border.rounded-2xl,
+    .bss-app-main div.bg-white.border.rounded-3xl {
+      animation: bssViewIn linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+  }
+}
 
+/* ── Per-page polish utilities ──────────────────────────────────
+   .bss-3d          — elevated card with a 3D hover lift + soft shadow
+   .bss-scroll-rise — scroll-triggered rise+fade as the card enters
+   Both are opt-in per page so pages WITHOUT inline fixed dialogs can
+   use the transform-based motion safely. */
+.bss-3d {
+  transition: transform 0.28s var(--bss-motion), box-shadow 0.28s var(--bss-motion),
+              border-color 0.28s var(--bss-motion);
+  will-change: transform;
+}
+.bss-3d:hover {
+  transform: translateY(-4px);
+  border-color: #c7d5ea;
+  box-shadow: 0 18px 34px -20px rgba(1, 24, 58, 0.34), 0 8px 18px -12px rgba(1, 24, 58, 0.22);
+}
+.bss-3d:active { transform: translateY(-1px); }
 
+@keyframes bssScrollRise {
+  from { opacity: 0; transform: translateY(20px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .bss-scroll-rise {
+      animation: bssScrollRise linear backwards;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bss-3d:hover, .bss-3d:active { transform: none; }
+  .bss-scroll-rise { animation: none !important; }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Tabular data (EnterpriseDataTable / .bss-data-table) —
+   bold, centred headers; centred cells; subtle corners + hover.
+   ───────────────────────────────────────────────────────────── */
+.bss-data-table { border-radius: 1.25rem; }
+.bss-data-table table { border-collapse: separate; border-spacing: 0; }
+.bss-data-table thead {
+  background-image: linear-gradient(180deg, rgba(30, 58, 138, 0.06), rgba(30, 58, 138, 0));
+}
+.bss-data-table thead th { text-align: center; }
+.bss-data-table thead th button {
+  width: 100%;
+  justify-content: center;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 10.5px;
+  color: var(--color-bss-text-secondary);
+}
+.bss-data-table thead th button:hover { color: var(--color-bss-interactive-blue); }
+.bss-data-table tbody td { text-align: center; vertical-align: middle; }
+.bss-data-table tbody tr { transition: background-color 0.16s var(--bss-motion); }
+.bss-data-table tbody tr:hover { background-color: rgba(30, 58, 138, 0.045); }
+/* Keep inline action/thumbnail cells tidy while centred. */
+.bss-data-table tbody td .flex { justify-content: center; }
+
+/* Raw data tables (dashboard site-wise, compliance registers, rozgar,
+   advances, gate-scan console) — match the shared table style. */
+.bss-app-main table thead th {
+  text-align: center;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10.5px;
+  color: var(--color-bss-text-secondary);
+}
+.bss-app-main table tbody td { text-align: center; vertical-align: middle; }
+.bss-app-main table tbody tr { transition: background-color 0.16s var(--bss-motion); }
+.bss-app-main table tbody tr:hover { background-color: rgba(30, 58, 138, 0.045); }
+
+/* ── Subtle brand colour on headers (kept restrained) ─────────── */
+/* Signature gradient accent under the app header bar. */
+.bss-shell-header { position: relative; }
+.bss-shell-header::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; pointer-events: none;
+  background: linear-gradient(90deg,
+    var(--color-bss-deep-navy) 0%,
+    var(--color-bss-orange) 50%,
+    var(--color-bss-green) 100%);
+  opacity: 0.6;
+}
+/* Section eyebrow labels pick up the interactive blue. */
+.bss-eyebrow, .bss-panel-header p { color: var(--color-bss-interactive-blue); }
+/* Card header strips get a faint blue wash. */
+.bss-card > header,
+.bss-card > div:first-child[class*="border-b"],
+.bss-panel-header {
+  background-image: linear-gradient(180deg, rgba(30, 58, 138, 0.045), rgba(30, 58, 138, 0));
+}
+
+/* ── Extra motion: animated hero gradient, pulsing halo, gentle float ── */
+@keyframes bssGradientShift {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+.bss-anim-gradient {
+  background-size: 200% 200%;
+  animation: bssGradientShift 14s ease-in-out infinite alternate;
+}
+
+@keyframes bssPulseHalo {
+  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.35); }
+  100% { box-shadow: 0 0 0 24px rgba(255, 255, 255, 0); }
+}
+.bss-pulse-halo { border-radius: 9999px; animation: bssPulseHalo 2s ease-out infinite; }
+
+@keyframes bssFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.bss-float { animation: bssFloat 4s ease-in-out infinite; }
+
+@keyframes bssGlow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+.bss-glow { animation: bssGlow 2.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bss-anim-gradient, .bss-pulse-halo, .bss-float, .bss-glow { animation: none !important; }
+}
+
+/* ── Page watermark (faint, diagonal, non-interactive) ─── */
+.bss-watermark {
+  position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.bss-watermark::before {
+  content: attr(data-text);
+  transform: rotate(-24deg);
+  font-size: clamp(2.5rem, 11vw, 8rem);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  user-select: none;
+  color: rgba(30, 58, 138, 0.09);
+}

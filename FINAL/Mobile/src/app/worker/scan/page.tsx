@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { IScannerControls } from "@zxing/browser";
-import { Camera, CheckCircle2, Handshake, Home, KeyRound, ScanLine, ShieldCheck, Upload, UserRound, X, XCircle } from "lucide-react";
+import { Camera, CheckCircle2, Handshake, KeyRound, ScanLine, ShieldCheck, Upload, UserRound, X, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useWorker } from "@/contexts/WorkerContext";
+import PageHero from "@/components/portal/PageHero";
 import ScanIdentityCard, { type ScanVerifyData } from "@/components/scan/ScanIdentityCard";
 import ListenButton from "@/components/worker/ListenButton";
 import { Role, sanitizeWorkerProfile } from "@/lib/permissions";
@@ -199,38 +200,39 @@ export default function QRScannerWorkflow() {
   };
 
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
-    <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
-      <div><h1 className="text-2xl font-bold text-[#062D4F]">QR Scan & Bind</h1><p className="text-sm text-gray-500 mt-1">Scan a Contractor QR to request binding · scan a Worker QR to verify identity.</p></div>
-      <div className="flex gap-2"><ListenButton /><Link href="/worker" className="p-2.5 rounded-full bg-white border" aria-label="Dashboard"><Home size={18}/></Link><Link href="/worker/binding" className="bg-[#073B67] text-white px-4 py-2.5 rounded-lg font-bold text-sm">My binding requests</Link></div>
-    </div>
+    <PageHero
+      title="QR Scan & Bind"
+      subtitle="Scan a Contractor QR to request binding · scan a Worker QR to verify identity."
+      actions={<><ListenButton /><Link href="/worker/binding" className="bg-white text-bss-navy px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-white/90 transition-colors">My binding requests</Link></>}
+    />
 
     <div className="grid md:grid-cols-2 gap-6">
-      <section className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-        <header className="p-4 border-b bg-gray-50 flex items-center gap-2 font-bold"><Camera size={18}/> Scanner</header>
+      <section className="bss-3d bss-scroll-rise bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <header className="p-4 border-b border-bss-border bg-gradient-to-r from-bss-navy/5 to-transparent flex items-center gap-2 font-bold text-bss-text-primary"><span className="w-8 h-8 rounded-lg bg-bss-blue-tint text-bss-interactive-blue grid place-items-center"><Camera size={16}/></span> Scanner</header>
         <div className="p-5 space-y-4">
           <div className="relative bg-black rounded-xl h-64 overflow-hidden flex items-center justify-center">
             <video ref={videoRef} className={`w-full h-full object-cover ${state==="scanning"?"block":"hidden"}`} muted playsInline/>
             <ScanFrame active={state==="scanning"} />
-            {state!=="scanning"&&<div className="text-center text-white px-6">{state==="verified"?<CheckCircle2 size={48} className="mx-auto text-green-400"/>:state==="error"?<XCircle size={48} className="mx-auto text-red-400"/>:state==="binding"?<Handshake size={48} className="mx-auto text-orange-300"/>:<ScanLine size={48} className="mx-auto text-gray-400"/>}<p className="mt-3 text-sm font-semibold">{message||"Ready to scan a secure credential"}</p></div>}
+            {state!=="scanning"&&<div className="text-center text-white px-6">{state==="verified"?<CheckCircle2 size={48} className="mx-auto text-green-400 bss-pulse-halo"/>:state==="error"?<XCircle size={48} className="mx-auto text-red-400"/>:state==="binding"?<Handshake size={48} className="mx-auto text-orange-300"/>:<ScanLine size={48} className="mx-auto text-bss-text-muted bss-pulse-halo"/>}<p className="mt-3 text-sm font-semibold">{message||"Ready to scan a secure credential"}</p></div>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <button onClick={state==="idle"||state==="error"||state==="verified"||state==="binding"?startCamera:reset} className="bg-[#073B67] text-white py-2.5 rounded-lg font-bold text-sm"><Camera size={16} className="inline mr-2"/>{state==="scanning"?"Reset":"Use camera"}</button>
             <button onClick={()=>fileRef.current?.click()} className="border py-2.5 rounded-lg font-bold text-sm"><Upload size={16} className="inline mr-2"/>Upload image</button>
           </div>
-          <button type="button" onClick={() => setManualOpen(true)} className="w-full py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"><KeyRound size={14}/>Enter BSS ID manually</button>
+          <button type="button" onClick={() => setManualOpen(true)} className="w-full py-2 bg-bss-bg hover:bg-bss-bg border border-bss-border text-bss-text-secondary rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"><KeyRound size={14}/>Enter BSS ID manually</button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e=>scanFile(e.target.files?.[0])}/>
-          <p className="text-xs text-gray-500">Camera permission is requested only while scanning. Scans are processed locally.</p>
+          <p className="text-xs text-bss-text-muted">Camera permission is requested only while scanning. Scans are processed locally.</p>
         </div>
       </section>
 
-      <section className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-        <header className="p-4 border-b bg-gray-50 flex gap-2 items-center font-bold"><ShieldCheck size={18}/> {state==="binding"?"Contractor binding request":"Role-filtered result"}</header>
+      <section className="bss-3d bss-scroll-rise bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <header className="p-4 border-b border-bss-border bg-gradient-to-r from-bss-navy/5 to-transparent flex gap-2 items-center font-bold text-bss-text-primary"><span className="w-8 h-8 rounded-lg bg-bss-soft-green text-bss-green grid place-items-center"><ShieldCheck size={16}/></span> {state==="binding"?"Contractor binding request":"Role-filtered result"}</header>
         <div className="p-5">
           {state==="binding"&&contractor?(
             <div className="space-y-4">
               <div className="flex items-center gap-4"><span className="w-14 h-14 rounded-full bg-orange-50 text-[#F47A32] grid place-items-center"><Handshake size={26}/></span><div><h2 className="font-bold text-lg">{contractor.name}</h2><code className="text-xs text-[#073B67]">{contractor.bssId}</code><p className="text-xs text-orange-600 mt-1 font-semibold">Contractor QR identified</p></div></div>
               {verifyData && <ScanIdentityCard data={verifyData} />}
-              <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">
+              <p className="text-xs text-bss-text-muted bg-bss-bg rounded-xl p-3">
                 {siteCheck === 'loading'
                   ? 'Checking the contractor\u2019s default site…'
                   : siteCheck === 'none'
@@ -248,9 +250,9 @@ export default function QRScannerWorkflow() {
             <div className="space-y-5">
               {verifyData
                 ? <ScanIdentityCard data={verifyData} />
-                : <div className="flex items-center gap-4"><span className="w-16 h-16 rounded-full bg-gray-100 border border-gray-200 grid place-items-center text-gray-400"><UserRound size={26}/></span><div><h2 className="font-bold text-lg">{result.identity.name}</h2><code className="text-xs text-[#073B67]">{result.identity.bssId}</code><p className="text-xs text-green-700 mt-1">Verified BSS credential</p></div></div>}
+                : <div className="flex items-center gap-4"><span className="w-16 h-16 rounded-full bg-bss-bg border border-bss-border grid place-items-center text-bss-text-muted"><UserRound size={26}/></span><div><h2 className="font-bold text-lg">{result.identity.name}</h2><code className="text-xs text-[#073B67]">{result.identity.bssId}</code><p className="text-xs text-green-700 mt-1">Verified BSS credential</p></div></div>}
             </div>
-          ):<div className="py-20 text-center text-gray-400"><ScanLine size={44} className="mx-auto mb-3"/><p className="text-sm">Scanned result will appear here.</p></div>}
+          ):<div className="py-20 text-center text-bss-text-muted"><ScanLine size={44} className="mx-auto mb-3"/><p className="text-sm">Scanned result will appear here.</p></div>}
         </div>
       </section>
     </div>
@@ -277,12 +279,12 @@ export default function QRScannerWorkflow() {
           <header className="p-5 border-b flex justify-between items-center">
             <div>
               <h2 className="font-semibold text-[#062D4F]">Enter BSS ID Manually</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Enter a Contractor BSS ID (BSS-C...) to request binding, or a Worker BSS ID (BSS-W...) to verify.</p>
+              <p className="text-xs text-bss-text-muted mt-0.5">Enter a Contractor BSS ID (BSS-C...) to request binding, or a Worker BSS ID (BSS-W...) to verify.</p>
             </div>
-            <button onClick={() => setManualOpen(false)} className="text-gray-400 hover:text-gray-600" aria-label="Close"><X size={18}/></button>
+            <button onClick={() => setManualOpen(false)} className="text-bss-text-muted hover:text-bss-text-secondary" aria-label="Close"><X size={18}/></button>
           </header>
           <form onSubmit={submitManualBssId} className="p-5 space-y-4">
-            <label className="block text-xs font-semibold text-gray-700">
+            <label className="block text-xs font-semibold text-bss-text-secondary">
               BSS ID
               <input
                 required
@@ -290,11 +292,11 @@ export default function QRScannerWorkflow() {
                 value={manualInput}
                 onChange={e => setManualInput(e.target.value)}
                 placeholder="e.g. BSS-C12345678 or BSS-W7KQ2M9X4RT"
-                className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm font-mono uppercase bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm font-mono uppercase bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
             </label>
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setManualOpen(false)} className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 rounded-lg">Cancel</button>
+              <button type="button" onClick={() => setManualOpen(false)} className="px-4 py-2 text-xs font-semibold text-bss-text-secondary hover:bg-bss-bg rounded-lg">Cancel</button>
               <button type="submit" className="px-4 py-2 bg-[#073B67] text-white text-xs font-bold rounded-lg hover:bg-[#062D4F]">Identify Entity</button>
             </div>
           </form>

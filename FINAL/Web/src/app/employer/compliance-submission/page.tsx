@@ -136,30 +136,30 @@ export default function EmployerComplianceSubmissionPage() {
     if (row.kind === 'package') {
       return row.batchId ? (
         <div className="flex flex-col gap-1">
-          <button type="button" onClick={() => void viewBatchReport(row.batchId as string)} className="text-[11px] text-[#073B67] font-semibold hover:underline text-left">View report</button>
-          <a href={`/api/employer/compliance-batches/${row.batchId}/verification-report?download=pdf`} className="text-[11px] text-blue-700 font-semibold hover:underline">Download PDF</a>
+          <button type="button" onClick={() => void viewBatchReport(row.batchId as string)} className="text-[11px] text-[#01183A] font-semibold hover:underline text-left">View report</button>
+          <a href={`/api/employer/compliance-batches/${row.batchId}/verification-report?download=pdf`} className="text-[11px] text-bss-interactive-blue font-semibold hover:underline">Download PDF</a>
         </div>
-      ) : <span className="text-gray-400 text-xs">—</span>;
+      ) : <span className="text-bss-text-muted text-xs">—</span>;
     }
     return (
       <div className="flex flex-col gap-1">
-        <button type="button" onClick={() => void viewAiReport(row)} className="text-[11px] text-[#073B67] font-semibold hover:underline text-left">View report</button>
-        <a href={`/api/employer/submissions/${row.id}/ai-report?format=pdf`} className="text-[11px] text-blue-700 font-semibold hover:underline">Download PDF</a>
+        <button type="button" onClick={() => void viewAiReport(row)} className="text-[11px] text-[#01183A] font-semibold hover:underline text-left">View report</button>
+        <a href={`/api/employer/submissions/${row.id}/ai-report?format=pdf`} className="text-[11px] text-bss-interactive-blue font-semibold hover:underline">Download PDF</a>
       </div>
     );
   };
 
-  const contractorCell = (row: EmployerSubmission) => <div><strong className="text-gray-900">{row.contractor || '—'}</strong>{row.contractorId && <p className="font-mono text-[10px] text-gray-400">{row.contractorId}</p>}</div>;  const statusCell = (row: EmployerSubmission) => <Status value={row.status}/>;
+  const contractorCell = (row: EmployerSubmission) => <div><strong className="text-bss-text-primary">{row.contractor || '—'}</strong>{row.contractorId && <p className="font-mono text-[10px] text-bss-text-muted">{row.contractorId}</p>}</div>;  const statusCell = (row: EmployerSubmission) => <Status value={row.status}/>;
   const actionCell = (row: EmployerSubmission) => row.status === 'Pending review'
-    ? <div className="flex gap-3"><button disabled={busy} onClick={() => void review(row, 'Verified')} className="text-green-700 font-semibold hover:underline whitespace-nowrap">Accept all</button><button disabled={busy} onClick={() => { setRejectNote(''); setRejectRow(row); }} className="text-red-700 font-semibold hover:underline">Reject</button></div>
-    : <span className="text-gray-400">No action</span>;
+    ? <div className="flex gap-3"><button disabled={busy} onClick={() => void review(row, 'Verified')} className="text-bss-green font-semibold hover:underline whitespace-nowrap">Accept all</button><button disabled={busy} onClick={() => { setRejectNote(''); setRejectRow(row); }} className="text-bss-error font-semibold hover:underline">Reject</button></div>
+    : <span className="text-bss-text-muted">No action</span>;
 
   const auditBadge = (status?: string) => {
     const s = status || 'pending';
-    const tone = s === 'passed' ? 'bg-green-50 text-green-700 border-green-200'
-      : s === 'failed' ? 'bg-red-50 text-red-700 border-red-200'
-      : s === 'unavailable' ? 'bg-slate-100 text-slate-500 border-slate-200'
-      : 'bg-amber-50 text-amber-700 border-amber-200';
+    const tone = s === 'passed' ? 'bg-bss-soft-green text-bss-green border-bss-border'
+      : s === 'failed' ? 'bg-bss-soft-orange text-bss-error border-bss-border'
+      : s === 'unavailable' ? 'bg-bss-bg text-bss-text-muted border-bss-border'
+      : 'bg-bss-soft-orange text-bss-orange border-bss-border';
     const label = s === 'passed' ? 'Passed' : s === 'failed' ? 'Issues' : s === 'unavailable' ? 'No provider' : s === 'review' ? 'Review' : 'Auditing…';
     return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${tone}`}>{label}</span>;
   };
@@ -178,105 +178,105 @@ export default function EmployerComplianceSubmissionPage() {
   const verified = filtered.filter(item => item.status === 'Verified').length;
 
   return <div className="space-y-6">
-    <header><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Governance controls</p><h1 className="text-2xl font-bold mt-1">Compliance Submission</h1><p className="text-sm text-gray-500 mt-1">Review the CLRA registers and additional forms submitted by connected contractors. Marking a submission accepted verifies it for the contractor.</p></header>
+    <header><p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Governance controls</p><h1 className="text-2xl font-bold mt-1">Compliance Submission</h1><p className="text-sm text-bss-text-muted mt-1">Review the CLRA registers and additional forms submitted by connected contractors. Marking a submission accepted verifies it for the contractor.</p></header>
 
-    <div className="grid grid-cols-3 gap-3"><Metric label="Submissions" value={filtered.length} icon={FileCheck2} tone="bg-blue-50 text-blue-700"/><Metric label="Pending review" value={pending.length} icon={Clock3} tone="bg-orange-50 text-orange-700"/><Metric label="Accepted" value={verified} icon={CheckCircle2} tone="bg-green-50 text-green-700"/></div>
+    <div className="grid grid-cols-3 gap-3"><Metric label="Submissions" value={filtered.length} icon={FileCheck2} tone="bg-bss-blue-tint text-bss-interactive-blue"/><Metric label="Pending review" value={pending.length} icon={Clock3} tone="bg-bss-soft-orange text-bss-orange"/><Metric label="Accepted" value={verified} icon={CheckCircle2} tone="bg-bss-soft-green text-bss-green"/></div>
 
     {/* Filters — same shape as the contractor submissions page */}
-    <div className="bg-white p-4 rounded-2xl border border-gray-200 space-y-3.5 shadow-sm">
+    <div className="bg-white p-4 rounded-2xl border border-bss-border space-y-3.5 shadow-sm">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Contractor:</span>
-        <select value={contractorFilter} onChange={e => setContractorFilter(e.target.value)} className="h-9 max-w-[260px] rounded-lg border border-gray-200 px-3 text-xs bg-white font-semibold">
+        <span className="text-xs font-extrabold text-bss-text-muted uppercase tracking-wider flex-shrink-0">Contractor:</span>
+        <select value={contractorFilter} onChange={e => setContractorFilter(e.target.value)} className="h-9 max-w-[260px] rounded-lg border border-bss-border px-3 text-xs bg-white font-semibold">
           <option value="all">All Contractors</option>
           {contractors.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
         </select>
-        <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0 sm:ml-2">Site:</span>
-        <select value={siteFilter} onChange={e => setSiteFilter(e.target.value)} className="h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white font-semibold">
+        <span className="text-xs font-extrabold text-bss-text-muted uppercase tracking-wider flex-shrink-0 sm:ml-2">Site:</span>
+        <select value={siteFilter} onChange={e => setSiteFilter(e.target.value)} className="h-9 rounded-lg border border-bss-border px-3 text-xs bg-white font-semibold">
           <option value="all">All Sites</option>
           {employer.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}
         </select>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-100">
-        <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Financial Year:</span>
+      <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-bss-border">
+        <span className="text-xs font-extrabold text-bss-text-muted uppercase tracking-wider flex-shrink-0">Financial Year:</span>
         <div className="flex flex-wrap gap-1.5">
-          <button onClick={() => setYearFilter('all')} className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${yearFilter === 'all' ? 'bg-[#073B67] text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>All Years</button>
-          {years.map(yr => <button key={yr} onClick={() => setYearFilter(yr)} className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${yearFilter === yr ? 'bg-[#073B67] text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>FY {yr}</button>)}
+          <button onClick={() => setYearFilter('all')} className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${yearFilter === 'all' ? 'bg-[#01183A] text-white shadow-md' : 'bg-bss-bg text-bss-text-primary hover:bg-bss-surface'}`}>All Years</button>
+          {years.map(yr => <button key={yr} onClick={() => setYearFilter(yr)} className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${yearFilter === yr ? 'bg-[#01183A] text-white shadow-md' : 'bg-bss-bg text-bss-text-primary hover:bg-bss-surface'}`}>FY {yr}</button>)}
         </div>
       </div>
 
-      {frequencies.length > 0 && <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-100">
-        <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Frequency:</span>
+      {frequencies.length > 0 && <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-bss-border">
+        <span className="text-xs font-extrabold text-bss-text-muted uppercase tracking-wider flex-shrink-0">Frequency:</span>
         <div className="flex flex-wrap gap-1.5">
-          <button onClick={() => setFreqFilter('all')} className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${freqFilter === 'all' ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>All</button>
-          {frequencies.map(f => <button key={f} onClick={() => setFreqFilter(f)} className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${freqFilter === f ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>{f}</button>)}
+          <button onClick={() => setFreqFilter('all')} className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${freqFilter === 'all' ? 'bg-[#01183A] text-white shadow-sm' : 'bg-bss-bg text-bss-text-primary hover:bg-bss-surface'}`}>All</button>
+          {frequencies.map(f => <button key={f} onClick={() => setFreqFilter(f)} className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${freqFilter === f ? 'bg-[#01183A] text-white shadow-sm' : 'bg-bss-bg text-bss-text-primary hover:bg-bss-surface'}`}>{f}</button>)}
         </div>
       </div>}
 
-      <div className="flex items-center gap-3 pt-3 border-t border-gray-100 overflow-x-auto">
-        <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider flex-shrink-0">Period:</span>
+      <div className="flex items-center gap-3 pt-3 border-t border-bss-border overflow-x-auto">
+        <span className="text-xs font-extrabold text-bss-text-muted uppercase tracking-wider flex-shrink-0">Period:</span>
         <div className="flex items-center gap-1.5">
-          <button onClick={() => setPeriodFilter('all')} className={`px-3.5 py-1 rounded-full text-xs font-bold transition-colors whitespace-nowrap ${periodFilter === 'all' ? 'bg-blue-700 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>All Periods</button>
-          {MONTHS.map(p => <button key={p} onClick={() => setPeriodFilter(p)} className={`px-3.5 py-1 rounded-full text-xs font-bold transition-colors whitespace-nowrap ${periodFilter === p ? 'bg-blue-700 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{p}</button>)}
+          <button onClick={() => setPeriodFilter('all')} className={`px-3.5 py-1 rounded-full text-xs font-bold transition-colors whitespace-nowrap ${periodFilter === 'all' ? 'bg-bss-interactive-blue text-white shadow-sm' : 'bg-bss-bg text-bss-text-secondary hover:bg-bss-surface'}`}>All Periods</button>
+          {MONTHS.map(p => <button key={p} onClick={() => setPeriodFilter(p)} className={`px-3.5 py-1 rounded-full text-xs font-bold transition-colors whitespace-nowrap ${periodFilter === p ? 'bg-bss-interactive-blue text-white shadow-sm' : 'bg-bss-bg text-bss-text-secondary hover:bg-bss-surface'}`}>{p}</button>)}
         </div>
       </div>
     </div>
 
-    {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">{error}</p>}
-    {notice && <p role="status" className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl p-3">{notice}</p>}
+    {error && <p role="alert" className="text-sm text-bss-error bg-bss-soft-orange border border-bss-border rounded-xl p-3">{error}</p>}
+    {notice && <p role="status" className="text-sm text-bss-green bg-bss-soft-green border border-bss-border rounded-xl p-3">{notice}</p>}
 
     <div className="flex border-b overflow-x-auto">
       {([['records', 'Compliance Records'], ['reports', 'Reports']] as Array<['records' | 'reports', string]>).map(([id, label]) => (
-        <button key={id} onClick={() => setTab(id)} className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${tab === id ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>{label}</button>
+        <button key={id} onClick={() => setTab(id)} className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${tab === id ? 'border-bss-interactive-blue text-bss-interactive-blue' : 'border-transparent text-bss-text-muted hover:text-bss-text-primary'}`}>{label}</button>
       ))}
     </div>
 
     {tab === 'records' && <div className="space-y-4">
       {registers.length === 0
-        ? <p className="text-sm text-gray-400 bg-white border border-gray-200 rounded-2xl p-5">No contractor submissions yet.</p>
+        ? <p className="text-sm text-bss-text-muted bss-card rounded-2xl p-5">No contractor submissions yet.</p>
         : registers.map(row => (
-          <section key={row.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-            <header className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-start justify-between gap-3">
+          <section key={row.id} className="bss-card rounded-2xl overflow-hidden">
+            <header className="px-5 py-4 border-b border-bss-border flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <strong className="text-gray-900">{row.contractor || row.type || '—'}</strong>
-                  {row.contractorId && <span className="font-mono text-[10px] text-gray-400">{row.contractorId}</span>}
+                  <strong className="text-bss-text-primary">{row.contractor || row.type || '—'}</strong>
+                  {row.contractorId && <span className="font-mono text-[10px] text-bss-text-muted">{row.contractorId}</span>}
                   <Status value={row.status}/>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">{row.period}{row.site ? ` · ${row.site}` : ''}{row.kind === 'package' ? ` · ${row.registerCount ?? 0} register batch(es) · ${row.formCount ?? 0} form(s)` : ''}</p>
-                {row.note && <p className="text-[11px] text-red-600 mt-1">Note: {row.note}</p>}
+                <p className="text-xs text-bss-text-muted mt-1">{row.period}{row.site ? ` · ${row.site}` : ''}{row.kind === 'package' ? ` · ${row.registerCount ?? 0} register batch(es) · ${row.formCount ?? 0} form(s)` : ''}</p>
+                {row.note && <p className="text-[11px] text-bss-error mt-1">Note: {row.note}</p>}
               </div>
               <div className="shrink-0">{actionCell(row)}</div>
             </header>
             {row.batches && row.batches.length > 0 && (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
-                  <thead><tr className="bg-slate-50 border-b border-gray-200 text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+                  <thead><tr className="bg-bss-bg border-b border-bss-border text-[10px] font-extrabold text-bss-text-secondary uppercase tracking-wider">
                     <th className="py-2.5 px-3">Site</th><th className="py-2.5 px-3">Month / Year</th><th className="py-2.5 px-3">Ver</th><th className="py-2.5 px-3">Workers</th><th className="py-2.5 px-3">Registers</th><th className="py-2.5 px-3">AI Audit</th><th className="py-2.5 px-3">Master File</th><th className="py-2.5 px-3">Status</th><th className="py-2.5 px-3">Action</th>
                   </tr></thead>
-                  <tbody className="divide-y divide-gray-100 text-xs">
-                    {row.batches.map(b => <tr key={b.id} className="hover:bg-slate-50/70">
-                      <td className="py-2.5 px-3"><p className="font-semibold text-gray-900">{b.site || '—'}</p>{b.siteCode && <p className="font-mono text-[10px] text-gray-400">{b.siteCode}</p>}</td>
-                      <td className="py-2.5 px-3 text-gray-600">{b.month} {b.year}</td>
+                  <tbody className="divide-y divide-bss-border text-xs">
+                    {row.batches.map(b => <tr key={b.id} className="hover:bg-bss-bg/70">
+                      <td className="py-2.5 px-3"><p className="font-semibold text-bss-text-primary">{b.site || '—'}</p>{b.siteCode && <p className="font-mono text-[10px] text-bss-text-muted">{b.siteCode}</p>}</td>
+                      <td className="py-2.5 px-3 text-bss-text-secondary">{b.month} {b.year}</td>
                       <td className="py-2.5 px-3"><VersionHistory versions={(b.versions || []).map(v => ({ version:v.version, isCurrent:v.isCurrent, status:v.status, date:v.generatedOn }))} /></td>
-                      <td className="py-2.5 px-3 font-bold text-[#073B67]">{b.employeeCount}</td>
+                      <td className="py-2.5 px-3 font-bold text-[#01183A]">{b.employeeCount}</td>
                       <td className="py-2.5 px-3">{b.registerCount ?? 0}</td>
                       <td className="py-2.5 px-3">{auditBadge(b.auditStatus)}</td>
-                      <td className="py-2.5 px-3"><a href={`/api/employer/compliance-batches/${b.id}/master`} download className="text-blue-700 font-semibold hover:underline">Download</a></td>
-                      <td className="py-2.5 px-3 text-gray-600">{b.status}</td>
-                      <td className="py-2.5 px-3 whitespace-nowrap"><button type="button" onClick={() => setBatchView(String(b.id))} className="text-[11px] text-blue-600 font-semibold hover:underline">View documents</button><a href={`/api/employer/compliance-batches/${b.id}/file`} className="text-[11px] text-blue-600 hover:underline ml-2">Download ZIP</a></td>
+                      <td className="py-2.5 px-3"><a href={`/api/employer/compliance-batches/${b.id}/master`} download className="text-bss-interactive-blue font-semibold hover:underline">Download</a></td>
+                      <td className="py-2.5 px-3 text-bss-text-secondary">{b.status}</td>
+                      <td className="py-2.5 px-3 whitespace-nowrap"><button type="button" onClick={() => setBatchView(String(b.id))} className="text-[11px] text-bss-interactive-blue font-semibold hover:underline">View documents</button><a href={`/api/employer/compliance-batches/${b.id}/file`} className="text-[11px] text-bss-interactive-blue hover:underline ml-2">Download ZIP</a></td>
                     </tr>)}
                   </tbody>
                 </table>
               </div>
             )}
             {row.forms && row.forms.length > 0 && (
-              <div className="px-5 py-3 border-t border-gray-100">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Additional forms ({row.forms.length})</p>
-                <div className="flex flex-wrap gap-1.5">{row.forms.map(f => <button key={f.id} type="button" onClick={() => void viewEvidence(f.id)} className="text-[11px] px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200">{f.name}</button>)}</div>
+              <div className="px-5 py-3 border-t border-bss-border">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted mb-1.5">Additional forms ({row.forms.length})</p>
+                <div className="flex flex-wrap gap-1.5">{row.forms.map(f => <button key={f.id} type="button" onClick={() => void viewEvidence(f.id)} className="text-[11px] px-2 py-0.5 rounded bg-bss-bg border border-bss-border text-bss-text-primary hover:bg-bss-surface">{f.name}</button>)}</div>
               </div>
             )}
-            {row.source === 'evidence' && <div className="px-5 py-3 border-t border-gray-100"><button type="button" onClick={() => void viewEvidence(row.id)} className="text-[11px] text-blue-600 hover:underline">View evidence</button></div>}
+            {row.source === 'evidence' && <div className="px-5 py-3 border-t border-bss-border"><button type="button" onClick={() => void viewEvidence(row.id)} className="text-[11px] text-bss-interactive-blue hover:underline">View evidence</button></div>}
           </section>
         ))}
     </div>}
@@ -285,15 +285,15 @@ export default function EmployerComplianceSubmissionPage() {
 
     {rejectRow && <div className="fixed inset-0 z-[90] bg-black/50 grid place-items-center p-4" onMouseDown={e => { if (e.target === e.currentTarget) setRejectRow(null); }}>
       <section role="dialog" aria-modal="true" className="w-full max-w-md bg-white rounded-2xl shadow-xl">
-        <header className="p-5 border-b border-gray-100"><h2 className="font-semibold text-gray-950">Reject submission</h2><p className="text-xs text-gray-500 mt-1">{rejectRow.contractor || 'Contractor'} · {rejectRow.site} · {rejectRow.period}</p></header>
+        <header className="p-5 border-b border-bss-border"><h2 className="font-semibold text-bss-text-primary">Reject submission</h2><p className="text-xs text-bss-text-muted mt-1">{rejectRow.contractor || 'Contractor'} · {rejectRow.site} · {rejectRow.period}</p></header>
         <div className="p-5">
-          <label htmlFor="reject-note" className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Reason / notes for the contractor</label>
-          <textarea id="reject-note" value={rejectNote} onChange={e => setRejectNote(e.target.value)} rows={4} placeholder="Describe what needs fixing so they can correct and resubmit…" className="mt-1.5 w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200" />
-          <p className="text-[11px] text-gray-400 mt-2">This rejects the whole submission (CLRA registers + additional forms) for this period. The contractor can fix it and resubmit.</p>
+          <label htmlFor="reject-note" className="block text-[10px] font-bold uppercase tracking-wider text-bss-text-muted">Reason / notes for the contractor</label>
+          <textarea id="reject-note" value={rejectNote} onChange={e => setRejectNote(e.target.value)} rows={4} placeholder="Describe what needs fixing so they can correct and resubmit…" className="mt-1.5 w-full rounded-lg border border-bss-border p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200" />
+          <p className="text-[11px] text-bss-text-muted mt-2">This rejects the whole submission (CLRA registers + additional forms) for this period. The contractor can fix it and resubmit.</p>
         </div>
-        <footer className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
-          <button type="button" onClick={() => setRejectRow(null)} className="h-9 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button>
-          <button type="button" disabled={busy} onClick={() => { const row = rejectRow; setRejectRow(null); void review(row as EmployerSubmission, 'Rejected', rejectNote.trim()); }} className="h-9 px-4 rounded-lg bg-red-600 text-white text-xs font-bold disabled:opacity-40">Reject submission</button>
+        <footer className="px-5 py-4 border-t border-bss-border flex justify-end gap-2">
+          <button type="button" onClick={() => setRejectRow(null)} className="h-9 px-4 rounded-lg border border-bss-border text-xs font-bold text-bss-text-secondary">Cancel</button>
+          <button type="button" disabled={busy} onClick={() => { const row = rejectRow; setRejectRow(null); void review(row as EmployerSubmission, 'Rejected', rejectNote.trim()); }} className="h-9 px-4 rounded-lg bg-bss-error text-white text-xs font-bold disabled:opacity-40">Reject submission</button>
         </footer>
       </section>
     </div>}
@@ -302,5 +302,5 @@ export default function EmployerComplianceSubmissionPage() {
   </div>;
 }
 
-function Status({ value }: { value: EmployerSubmission['status'] }) { const tone = value === 'Verified' ? 'bg-green-50 text-green-700' : value === 'Pending review' ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'; return <span className={`px-2 py-1 rounded text-[10px] font-semibold whitespace-nowrap ${tone}`}>{value === 'Verified' ? 'Accepted' : value}</span>; }
-function Metric({ label, value, icon:Icon, tone }: { label:string; value:number; icon:typeof FileCheck2; tone:string }) { return <div className="bg-white border border-gray-200 rounded-xl p-4"><span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon size={16}/></span><strong className="block text-2xl mt-2">{value}</strong><p className="text-xs text-gray-500">{label}</p></div>; }
+function Status({ value }: { value: EmployerSubmission['status'] }) { const tone = value === 'Verified' ? 'bg-bss-soft-green text-bss-green' : value === 'Pending review' ? 'bg-bss-soft-orange text-bss-orange' : 'bg-bss-soft-orange text-bss-error'; return <span className={`px-2 py-1 rounded text-[10px] font-semibold whitespace-nowrap ${tone}`}>{value === 'Verified' ? 'Accepted' : value}</span>; }
+function Metric({ label, value, icon:Icon, tone }: { label:string; value:number; icon:typeof FileCheck2; tone:string }) { return <div className="bg-white border border-bss-border rounded-xl p-4"><span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon size={16}/></span><strong className="block text-2xl mt-2">{value}</strong><p className="text-xs text-bss-text-muted">{label}</p></div>; }

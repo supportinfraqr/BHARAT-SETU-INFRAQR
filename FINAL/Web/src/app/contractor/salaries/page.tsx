@@ -171,4 +171,4 @@ function parseCsvLine(line:string): string[] {
   out.push(cur); return out;
 }
 function money(value:number){ return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(value); }
-function Metric({ label, value, icon:Icon, tone }: { label:string; value:number | string; icon:typeof FileText; tone:string }) { return <div className="bg-white border border-bss-border rounded-xl p-4"><span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon size={16}/></span><strong className="block text-2xl mt-2">{value}</strong><p className="text-xs text-bss-text-muted">{label}</p></div>; }
+function Metric({ label, value, icon:Icon, tone }: { label:string; value:number | string; icon:typeof FileText; tone:string }) { return <div className="bss-3d bss-scroll-rise bg-white border border-bss-border rounded-xl p-4"><span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon size={16}/></span><strong className="block text-2xl mt-2">{value}</strong><p className="text-xs text-bss-text-muted">{label}</p></div>; }

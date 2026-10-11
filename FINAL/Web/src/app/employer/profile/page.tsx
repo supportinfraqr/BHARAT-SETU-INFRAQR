@@ -90,29 +90,29 @@ export default function EmployerProfilePage() {
 
   return <div className="space-y-6">
     <GstVerifyCard role="employer" />
-    <section className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col sm:flex-row justify-between gap-5">
+    <section className="bss-card rounded-2xl p-6 flex flex-col sm:flex-row justify-between gap-5">
       <div className="flex gap-4">
-        <span className="w-16 h-16 rounded-xl bg-blue-50 text-blue-700 grid place-items-center text-2xl font-bold">{employer.identity.company.charAt(0)}</span>
+        <span className="w-16 h-16 rounded-xl bg-bss-blue-tint text-bss-interactive-blue grid place-items-center text-2xl font-bold">{employer.identity.company.charAt(0)}</span>
         <div>
-          <div className="flex gap-2 items-center"><h1 className="text-2xl font-bold">{employer.identity.company}</h1>{employer.identity.verified && <ShieldCheck className="text-green-700" size={20}/>}</div>
-          <p className="font-mono text-xs text-gray-500 mt-1">{employer.identity.bssId}</p>
-          <p className="text-sm text-gray-600 mt-2">{employer.identity.contact} · {employer.identity.email}</p>
+          <div className="flex gap-2 items-center"><h1 className="text-2xl font-bold">{employer.identity.company}</h1>{employer.identity.verified && <ShieldCheck className="text-bss-green" size={20}/>}</div>
+          <p className="font-mono text-xs text-bss-text-muted mt-1">{employer.identity.bssId}</p>
+          <p className="text-sm text-bss-text-secondary mt-2">{employer.identity.contact} · {employer.identity.email}</p>
         </div>
       </div>
       <div className="text-sm">
-        <p><span className="text-gray-500">Authorised signatory:</span> {employer.identity.name}</p>
-        <p className="mt-1"><span className="text-gray-500">Entity:</span> {employer.identity.entity}</p>
-        <p className="mt-1"><span className="text-gray-500">Category:</span> Principal Employer</p>
+        <p><span className="text-bss-text-muted">Authorised signatory:</span> {employer.identity.name}</p>
+        <p className="mt-1"><span className="text-bss-text-muted">Entity:</span> {employer.identity.entity}</p>
+        <p className="mt-1"><span className="text-bss-text-muted">Category:</span> Principal Employer</p>
       </div>
     </section>
 
     <div className="grid md:grid-cols-[260px_1fr] gap-6">
-      <nav className="bg-white border border-gray-200 rounded-2xl p-2 h-fit max-h-[75vh] overflow-y-auto space-y-0.5 scrollbar-thin scrollbar-thumb-gray-200">
+      <nav className="bss-card rounded-2xl p-2 h-fit max-h-[75vh] overflow-y-auto space-y-0.5 scrollbar-thin scrollbar-thumb-gray-200">
         {tabs.map(([id, label, Icon]) => (
           <button
             key={id}
             onClick={() => { setTab(id); setEditing(false); setError(''); }}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors ${tab === id ? 'bg-gray-950 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors ${tab === id ? 'bg-bss-navy text-white shadow-sm' : 'text-bss-text-secondary hover:bg-bss-bg'}`}
           >
             <Icon size={16} className="shrink-0" />
             <span className="leading-tight">{label}</span>
@@ -126,10 +126,10 @@ export default function EmployerProfilePage() {
         ? <ClraRegistersPage />
         : tab === 'cost-sheets'
         ? <OrgCostSheetsPage />
-        : <section className="bg-white border border-gray-200 rounded-2xl p-6">
-        <header className="flex flex-wrap justify-between gap-2 border-b border-gray-100 pb-4">
-          <div><h2 className="font-semibold">{tabs.find(item => item[0] === tab)?.[1]}</h2><p className="text-[11px] text-gray-400 mt-0.5">{fields.length} field(s) · BSS_Employer.csv data dictionary</p></div>
-          {fields.length > 0 && <button onClick={() => setEditing(value => !value)} className="text-sm text-blue-700 font-semibold">{editing ? 'Cancel' : 'Edit'}</button>}
+        : <section className="bss-card rounded-2xl p-6">
+        <header className="flex flex-wrap justify-between gap-2 border-b border-bss-border pb-4">
+          <div><h2 className="font-semibold">{tabs.find(item => item[0] === tab)?.[1]}</h2><p className="text-[11px] text-bss-text-muted mt-0.5">{fields.length} field(s) · BSS_Employer.csv data dictionary</p></div>
+          {fields.length > 0 && <button onClick={() => setEditing(value => !value)} className="text-sm text-bss-interactive-blue font-semibold">{editing ? 'Cancel' : 'Edit'}</button>}
         </header>
         <form onSubmit={save} className="grid sm:grid-cols-2 gap-x-6 gap-y-5 mt-6">
           {fields.map((field, index) => {
@@ -161,8 +161,8 @@ export default function EmployerProfilePage() {
               }
             }
 
-            return <label key={field.label} className="text-xs font-semibold text-gray-500">
-              <span className="flex items-center gap-1.5">{field.label}{locked && <Lock size={11} className="text-gray-300"/>}{field.sensitive && <Lock size={11} className="text-amber-500"/>}</span>
+            return <label key={field.label} className="text-xs font-semibold text-bss-text-muted">
+              <span className="flex items-center gap-1.5">{field.label}{locked && <Lock size={11} className="text-bss-text-muted"/>}{field.sensitive && <Lock size={11} className="text-bss-orange"/>}</span>
               {editing && !field.sensitive && !locked ? (
                 isDocField ? (
                   <div className="mt-1 space-y-2">
@@ -171,19 +171,19 @@ export default function EmployerProfilePage() {
                       name={`field-${index}`}
                       defaultValue={field.value}
                       placeholder="Enter document / reference number"
-                      className="block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900 bg-white"
+                      className="block w-full h-10 border border-bss-border rounded-lg px-3 text-sm normal-case text-bss-text-primary bg-white"
                     />
                     <input
                       type="file"
                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                      className="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                      className="block w-full text-xs text-bss-text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-bss-blue-tint file:text-bss-interactive-blue hover:file:bg-bss-blue-tint cursor-pointer"
                     />
                   </div>
                 ) : dropdownOptions ? (
                   <select
                     name={`field-${index}`}
                     defaultValue={field.value || dropdownOptions[0]}
-                    className="mt-1 block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900 bg-white"
+                    className="mt-1 block w-full h-10 border border-bss-border rounded-lg px-3 text-sm normal-case text-bss-text-primary bg-white"
                   >
                     {!field.value && <option value="">Select option</option>}
                     {dropdownOptions.map(opt => (
@@ -196,18 +196,18 @@ export default function EmployerProfilePage() {
                     type={isDateField ? 'date' : 'text'}
                     name={`field-${index}`}
                     defaultValue={field.value}
-                    className="mt-1 block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900 bg-white"
+                    className="mt-1 block w-full h-10 border border-bss-border rounded-lg px-3 text-sm normal-case text-bss-text-primary bg-white"
                   />
                 )
               ) : (
-                <span className="mt-1 block text-sm normal-case text-gray-900 font-medium">{isDateField ? formatDate(field.value) : (field.value || '—')}</span>
+                <span className="mt-1 block text-sm normal-case text-bss-text-primary font-medium">{isDateField ? formatDate(field.value) : (field.value || '—')}</span>
               )}
-              {field.note && <span className="mt-1 block text-[10px] font-normal text-gray-400">{field.note}</span>}
+              {field.note && <span className="mt-1 block text-[10px] font-normal text-bss-text-muted">{field.note}</span>}
             </label>;
           })}
-          {!fields.length && <p className="sm:col-span-2 text-sm text-gray-500 py-10 text-center">No records were returned for this section.</p>}
-          {error && <p role="alert" className="sm:col-span-2 text-sm text-red-700">{error}</p>}
-          {editing && <div className="sm:col-span-2 flex justify-end"><button disabled={busy} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold">{busy ? 'Saving…' : 'Save changes'}</button></div>}
+          {!fields.length && <p className="sm:col-span-2 text-sm text-bss-text-muted py-10 text-center">No records were returned for this section.</p>}
+          {error && <p role="alert" className="sm:col-span-2 text-sm text-bss-error">{error}</p>}
+          {editing && <div className="sm:col-span-2 flex justify-end"><button disabled={busy} className="px-4 py-2 bg-bss-interactive-blue text-white rounded-lg text-sm font-semibold">{busy ? 'Saving…' : 'Save changes'}</button></div>}
         </form>
         </section>}
     </div>

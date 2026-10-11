@@ -45,7 +45,7 @@ export default function ContractorCoursePage({ params }: { params: Promise<{ cou
 
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
 
-    <section className="bg-white border rounded-2xl overflow-hidden grid md:grid-cols-[260px_1fr]">
+    <section className="bss-3d bss-scroll-rise bg-white border rounded-2xl overflow-hidden grid md:grid-cols-[260px_1fr]">
       <Image src={course.image} alt="" width={520} height={360} className="w-full h-full object-cover"/>
       <div className="p-6">
         <p className="text-sm text-bss-text-secondary">{course.description}</p>
@@ -62,7 +62,7 @@ export default function ContractorCoursePage({ params }: { params: Promise<{ cou
 
     <section className="grid lg:grid-cols-[1.6fr_1fr] gap-5 items-start">
       {/* Video lesson player (simulated, same pattern as Worker Skills) */}
-      <div className="bg-white border rounded-2xl overflow-hidden">
+      <div className="bss-3d bss-scroll-rise bg-white border rounded-2xl overflow-hidden">
         <div className="aspect-video bg-[#0A192F] flex items-center justify-center relative">
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center p-6">
             <PlayCircle size={52} className="text-white/80"/>
@@ -79,7 +79,7 @@ export default function ContractorCoursePage({ params }: { params: Promise<{ cou
 
       <div className="space-y-5">
         {/* Module list */}
-        <section className="bg-white border rounded-2xl divide-y">
+        <section className="bss-3d bss-scroll-rise bg-white border rounded-2xl divide-y">
           <div className="px-4 py-3 border-b border-bss-border"><h2 className="text-sm font-semibold text-bss-text-primary">Course lessons</h2><p className="text-[11px] text-bss-text-muted mt-0.5">Watch each lesson — completing all lessons auto-generates the certificate</p></div>
           {course.modules.map((item, index) => (
             <button key={item.id} onClick={() => setActiveModule(index)} className={`w-full p-4 flex justify-between gap-3 items-center cursor-pointer hover:bg-bss-bg text-left ${activeModule === index ? 'bg-bss-blue-tint/40' : ''}`}>

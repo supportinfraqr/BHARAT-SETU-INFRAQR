@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { hasFoulLanguage } from '@/lib/profanity';
 import { grievanceFileBlobUrl, downloadGrievanceFile, openGrievanceFileInNewTab } from '@/lib/grievanceFiles';
 import { useWorker } from '@/contexts/WorkerContext';
+import PageHero from '@/components/portal/PageHero';
 
 // Statuses mirror the BSS grievance lifecycle (schema: Submitted, Under Review,
 // In Progress, Resolved). UI never invents new statuses.
@@ -376,8 +377,8 @@ export default function GrievancePage() {
   };
 
   const statusBadge = (status: string) => {
-    const config: Record<string, string> = { 'Submitted':'bg-slate-100 text-slate-600', 'Open':'bg-blue-100 text-blue-700', 'In Progress':'bg-orange-100 text-[#F47A32]', 'Resolved':'bg-green-100 text-[#2F9E67]', 'Reopened':'bg-red-100 text-red-700', 'Closed':'bg-emerald-100 text-emerald-700' };
-    return <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${config[status] ?? 'bg-gray-100 text-gray-600'}`}>{status}</span>;
+    const config: Record<string, string> = { 'Submitted':'bg-slate-100 text-slate-600', 'Open':'bg-blue-100 text-bss-interactive-blue', 'In Progress':'bg-orange-100 text-[#F47A32]', 'Resolved':'bg-green-100 text-[#2F9E67]', 'Reopened':'bg-red-100 text-red-700', 'Closed':'bg-emerald-100 text-emerald-700' };
+    return <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${config[status] ?? 'bg-bss-bg text-bss-text-secondary'}`}>{status}</span>;
   };
 
   const counts = {
@@ -402,21 +403,21 @@ export default function GrievancePage() {
           return (
             <div key={step.status} className="flex gap-3">
               <div className="flex flex-col items-center">
-                <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isReached ? (isCurrent ? 'bg-[#073B67] border-[#073B67] text-white' : 'bg-green-100 border-green-200 text-[#2F9E67]') : 'bg-white border-gray-200 text-gray-300'}`}>
-                  {isReached && index < reached ? <CheckCircle2 size={13}/> : isCurrent ? <span className="w-1.5 h-1.5 rounded-full bg-white"/> : <span className="w-1.5 h-1.5 rounded-full bg-gray-200"/>}
+                <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isReached ? (isCurrent ? 'bg-[#073B67] border-[#073B67] text-white' : 'bg-green-100 border-green-200 text-[#2F9E67]') : 'bg-white border-bss-border text-bss-text-muted'}`}>
+                  {isReached && index < reached ? <CheckCircle2 size={13}/> : isCurrent ? <span className="w-1.5 h-1.5 rounded-full bg-white"/> : <span className="w-1.5 h-1.5 rounded-full bg-bss-bg"/>}
                 </span>
-                {index < TIMELINE_STEPS.length - 1 && <span className={`w-0.5 flex-1 min-h-6 ${isReached && index < reached ? 'bg-green-200' : 'bg-gray-100'}`}/>}
+                {index < TIMELINE_STEPS.length - 1 && <span className={`w-0.5 flex-1 min-h-6 ${isReached && index < reached ? 'bg-green-200' : 'bg-bss-bg'}`}/>}
               </div>
               <div className={`pb-5 ${isReached ? '' : 'opacity-45'}`}>
-                <p className={`text-xs font-bold ${isCurrent ? 'text-[#073B67]' : 'text-gray-700'}`}>{step.label}</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">{isReached ? step.note : 'Pending'}</p>
-                {index === 0 && isReached && <p className="text-[11px] text-gray-400 mt-0.5">Raised {ticket.raisedAt}</p>}
-                {showUpdated && <p className="text-[11px] font-medium text-gray-500 mt-0.5">Last update · {ticket.updatedAt}</p>}
+                <p className={`text-xs font-bold ${isCurrent ? 'text-[#073B67]' : 'text-bss-text-secondary'}`}>{step.label}</p>
+                <p className="text-[11px] text-bss-text-muted mt-0.5">{isReached ? step.note : 'Pending'}</p>
+                {index === 0 && isReached && <p className="text-[11px] text-bss-text-muted mt-0.5">Raised {ticket.raisedAt}</p>}
+                {showUpdated && <p className="text-[11px] font-medium text-bss-text-muted mt-0.5">Last update · {ticket.updatedAt}</p>}
               </div>
             </div>
           );
         })}
-        <p className="text-[10px] text-gray-400 mt-1">Progress reflects events recorded in the BSS grievance system.</p>
+        <p className="text-[10px] text-bss-text-muted mt-1">Progress reflects events recorded in the BSS grievance system.</p>
       </div>
     );
   };
@@ -424,30 +425,28 @@ export default function GrievancePage() {
   return (
     <div ref={contentTopRef} className="p-4 lg:p-6 max-w-6xl mx-auto space-y-6 scroll-mt-24">
       
-      <div className="flex justify-between items-start gap-3 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-[#062D4F]">Grievances</h1>
-          <p className="text-sm text-gray-500 mt-1">Lodge a new grievance or track your submitted tickets end-to-end.</p>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHero
+        title="Grievances"
+        subtitle="Lodge a new grievance or track your submitted tickets end-to-end."
+        actions={<>
           {view === 'lodge' ? (
-            <button onClick={() => goTo('track')} className="h-10 px-4 rounded-lg bg-white border border-[#073B67] text-[#073B67] text-sm font-bold flex items-center gap-2 hover:bg-[#073B67]/5"><ClipboardList size={16}/>My Grievances · Track Status</button>
+            <button onClick={() => goTo('track')} className="bg-white/10 border border-white/20 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-white/20 transition-colors flex items-center gap-2"><ClipboardList size={16}/>My Grievances · Track Status</button>
           ) : (
-            <button onClick={() => goTo('lodge')} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-bold flex items-center gap-2 hover:bg-[#062D4F]"><Mic size={16}/>Lodge New Grievance</button>
+            <button onClick={() => goTo('lodge')} className="bg-white/10 border border-white/20 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-white/20 transition-colors flex items-center gap-2"><Mic size={16}/>Lodge New Grievance</button>
           )}
-          <Link href="/worker" className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-600 hover:text-[#073B67] hover:border-[#073B67] transition-all shadow-sm" title="Go to Dashboard">
+          <Link href="/worker" className="w-10 h-10 grid place-items-center rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors" title="Go to Dashboard">
             <Home size={18} />
           </Link>
-        </div>
-      </div>
+        </>}
+      />
 
       {/* TICKET STATS */}
-      {loading && <p className="text-xs font-semibold text-gray-400">Loading your grievances…</p>}
+      {loading && <p className="text-xs font-semibold text-bss-text-muted">Loading your grievances…</p>}
       {loadError && <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label:'Submitted', value: counts.submitted, tone:'text-slate-600 bg-slate-50 border-slate-100' },
-          { label:'Open', value: counts.open, tone:'text-blue-700 bg-blue-50 border-blue-100' },
+          { label:'Open', value: counts.open, tone:'text-bss-interactive-blue bg-bss-blue-tint border-bss-border' },
           { label:'In Progress', value: counts.inProgress, tone:'text-[#F47A32] bg-orange-50 border-orange-100' },
           { label:'Resolved', value: counts.resolved, tone:'text-[#2F9E67] bg-green-50 border-green-100' },
         ].map(stat => <div key={stat.label} className={`rounded-xl border p-4 ${stat.tone}`}><strong className="block text-2xl font-bold">{stat.value}</strong><span className="text-[11px] font-semibold uppercase tracking-wider opacity-80">{stat.label}</span></div>)}
@@ -455,47 +454,47 @@ export default function GrievancePage() {
 
       {/* SEGMENTED VIEW SWITCH — filing and tracking are distinct experiences */}
       {!submittedGrievance && (
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-gray-200 rounded-2xl p-1.5">
-          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-            <button onClick={() => setView('lodge')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-colors ${view === 'lodge' ? 'bg-[#073B67] text-white shadow-sm' : 'text-gray-600 hover:text-[#073B67]'}`}><MessageSquareText size={15}/>Lodge Grievance</button>
-            <button onClick={() => setView('track')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-colors ${view === 'track' ? 'bg-[#073B67] text-white shadow-sm' : 'text-gray-600 hover:text-[#073B67]'}`}><ClipboardList size={15}/>Track Status <span className="text-[10px] bg-white/90 text-[#073B67] px-1.5 rounded-full font-black">{counts.total}</span></button>
+        <div className="bss-3d bss-scroll-rise flex flex-wrap items-center justify-between gap-3 bg-white border border-bss-border rounded-2xl p-1.5">
+          <div className="flex gap-1 bg-bss-bg p-1 rounded-xl w-fit">
+            <button onClick={() => setView('lodge')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-colors ${view === 'lodge' ? 'bg-[#073B67] text-white shadow-sm' : 'text-bss-text-secondary hover:text-[#073B67]'}`}><MessageSquareText size={15}/>Lodge Grievance</button>
+            <button onClick={() => setView('track')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-colors ${view === 'track' ? 'bg-[#073B67] text-white shadow-sm' : 'text-bss-text-secondary hover:text-[#073B67]'}`}><ClipboardList size={15}/>Track Status <span className="text-[10px] bg-white/90 text-[#073B67] px-1.5 rounded-full font-black">{counts.total}</span></button>
           </div>
-          {view === 'track' && <p className="text-[11px] font-semibold text-gray-400 px-3">{counts.total} grievance{counts.total === 1 ? '' : 's'} · statuses shown exactly as recorded by BSS</p>}
+          {view === 'track' && <p className="text-[11px] font-semibold text-bss-text-muted px-3">{counts.total} grievance{counts.total === 1 ? '' : 's'} · statuses shown exactly as recorded by BSS</p>}
         </div>
       )}
 
       {submittedGrievance ? (
-        <div className="bg-white rounded-[16px] shadow-sm border border-green-200 overflow-hidden text-center p-10 animate-in zoom-in-95 duration-300">
+        <div className="bss-3d bss-scroll-rise bg-white rounded-[16px] shadow-sm border border-green-200 overflow-hidden text-center p-10 animate-in zoom-in-95 duration-300">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 size={40} className="text-[#2F9E67]" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Grievance Submitted</h2>
-          <p className="text-gray-500 max-w-sm mx-auto mb-8">
+          <h2 className="text-2xl font-bold text-bss-text-primary mb-2">Grievance Submitted</h2>
+          <p className="text-bss-text-muted max-w-sm mx-auto mb-8">
             Your complaint has been recorded and forwarded to the appropriate authorities. Track its progress from the My Grievances screen.
           </p>
           
-          <div className="bg-gray-50 border border-gray-200 rounded-xl max-w-md mx-auto p-4 flex flex-col gap-3 text-left">
-            <div className="flex justify-between items-center border-b border-gray-200 pb-2">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Ticket / Reference Number</span>
+          <div className="bg-bss-bg border border-bss-border rounded-xl max-w-md mx-auto p-4 flex flex-col gap-3 text-left">
+            <div className="flex justify-between items-center border-b border-bss-border pb-2">
+              <span className="text-xs font-bold text-bss-text-muted uppercase tracking-wider">Ticket / Reference Number</span>
               <span className="font-mono font-bold text-[#073B67]">{submittedGrievance.ref}</span>
             </div>
-            <div className="flex justify-between items-center border-b border-gray-200 pb-2">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Raised Date & Time</span>
-              <span className="font-semibold text-gray-800">{submittedGrievance.date}</span>
+            <div className="flex justify-between items-center border-b border-bss-border pb-2">
+              <span className="text-xs font-bold text-bss-text-muted uppercase tracking-wider">Raised Date & Time</span>
+              <span className="font-semibold text-bss-text-primary">{submittedGrievance.date}</span>
             </div>
-            <div className="flex justify-between items-center border-b border-gray-200 pb-2">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Raised By</span>
-              <span className="font-semibold text-gray-800">{worker.identity.name?.trim() ? `${worker.identity.name} (Self)` : 'You (Self)'}</span>
+            <div className="flex justify-between items-center border-b border-bss-border pb-2">
+              <span className="text-xs font-bold text-bss-text-muted uppercase tracking-wider">Raised By</span>
+              <span className="font-semibold text-bss-text-primary">{worker.identity.name?.trim() ? `${worker.identity.name} (Self)` : 'You (Self)'}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Current Status</span>
+              <span className="text-xs font-bold text-bss-text-muted uppercase tracking-wider">Current Status</span>
               {statusBadge(submittedGrievance.status)}
             </div>
           </div>
 
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <button onClick={() => goTo('track')} className="bg-[#073B67] text-white px-6 py-2.5 rounded-[8px] font-bold text-sm hover:bg-[#062D4F] transition-colors flex items-center gap-2"><ClipboardList size={16}/>View My Grievances</button>
-            <button onClick={() => setSubmittedGrievance(null)} className="bg-white border border-[#073B67] text-[#073B67] px-6 py-2.5 rounded-[8px] font-bold text-sm hover:bg-gray-50 transition-colors">
+            <button onClick={() => setSubmittedGrievance(null)} className="bg-white border border-[#073B67] text-[#073B67] px-6 py-2.5 rounded-[8px] font-bold text-sm hover:bg-bss-bg transition-colors">
               Record Another
             </button>
           </div>
@@ -505,13 +504,13 @@ export default function GrievancePage() {
           
           {/* RECORDING / FORM INTERFACE */}
           <div id="new-grievance" className="space-y-6 scroll-mt-24">
-            <div className="bg-white rounded-[16px] shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-4 border-b border-gray-50 bg-gray-50/50 flex flex-wrap justify-between items-center gap-3">
-                <h2 className="font-bold text-gray-800 flex items-center gap-2"><Mic size={18} className="text-[#073B67]"/> New Grievance</h2>
-                <div className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-1.5 rounded-lg">
-                  <Globe size={14} className="text-gray-400" />
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider hidden sm:inline">Preferred Response Language</span>
-                  <select value={language} onChange={(e) => changeLanguage(e.target.value)} className="text-xs font-bold text-gray-700 bg-transparent outline-none cursor-pointer">
+            <div className="bss-3d bss-scroll-rise bg-white rounded-[16px] shadow-sm border border-bss-border overflow-hidden">
+              <div className="p-4 border-b border-bss-border bg-bss-bg/50 flex flex-wrap justify-between items-center gap-3">
+                <h2 className="font-bold text-bss-text-primary flex items-center gap-2"><Mic size={18} className="text-[#073B67]"/> New Grievance</h2>
+                <div className="flex items-center gap-2 bg-white border border-bss-border px-3 py-1.5 rounded-lg">
+                  <Globe size={14} className="text-bss-text-muted" />
+                  <span className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider hidden sm:inline">Preferred Response Language</span>
+                  <select value={language} onChange={(e) => changeLanguage(e.target.value)} className="text-xs font-bold text-bss-text-secondary bg-transparent outline-none cursor-pointer">
                     <option value="Hindi">हिन्दी</option>
                     <option value="English">English</option>
                     <option value="Marathi">मराठी</option>
@@ -533,16 +532,16 @@ export default function GrievancePage() {
               <div className="p-5 space-y-5">
                 {/* Category */}
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Grievance Category</label>
+                  <label className="block text-[11px] font-bold text-bss-text-muted uppercase tracking-wider mb-2">Grievance Category</label>
                   <div className="flex flex-wrap gap-2">
                     {['Wages','Safety','Harassment','Accommodation','Benefits','Other'].map(cat => (
-                      <button key={cat} type="button" onClick={() => setCategory(cat)} className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-colors ${category === cat ? 'bg-[#073B67] text-white border-[#073B67]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#073B67]/40'}`}>{cat}</button>
+                      <button key={cat} type="button" onClick={() => setCategory(cat)} className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-colors ${category === cat ? 'bg-[#073B67] text-white border-[#073B67]' : 'bg-white text-bss-text-secondary border-bss-border hover:border-[#073B67]/40'}`}>{cat}</button>
                     ))}
                   </div>
                 </div>
 
                 {/* Recorder */}
-                <div className="bg-gray-50/70 rounded-xl p-5 flex flex-col items-center">
+                <div className="bg-bss-bg/70 rounded-xl p-5 flex flex-col items-center">
                   <div className="text-4xl font-mono font-extrabold text-[#073B67] mb-5 tabular-nums">
                     {formatTime(timer)}
                   </div>
@@ -567,8 +566,8 @@ export default function GrievancePage() {
                   )}
                   {recordingState === 'recorded' && (
                     <div className="flex items-center gap-6">
-                      <button onClick={resetRecording} className="flex flex-col items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors">
-                        <div className="w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center"><RotateCcw size={18} /></div>
+                      <button onClick={resetRecording} className="flex flex-col items-center gap-1.5 text-bss-text-muted hover:text-bss-text-primary transition-colors">
+                        <div className="w-11 h-11 rounded-full bg-white border border-bss-border flex items-center justify-center"><RotateCcw size={18} /></div>
                         <span className="text-[10px] font-bold uppercase tracking-wider">Re-record</span>
                       </button>
                       <button onClick={playRecording} className="flex flex-col items-center gap-1.5 text-[#2F9E67] hover:text-[#237c50] transition-colors">
@@ -578,7 +577,7 @@ export default function GrievancePage() {
                     </div>
                   )}
 
-                  <p className="mt-4 text-sm font-semibold text-gray-500 h-5">
+                  <p className="mt-4 text-sm font-semibold text-bss-text-muted h-5">
                     {recordingState === 'idle' && 'Tap the microphone to start recording'}
                     {recordingState === 'recording' && <span className="text-red-500 animate-pulse">● Recording in progress...</span>}
                     {recordingState === 'playing' && 'Playing back recording...'}
@@ -599,20 +598,20 @@ export default function GrievancePage() {
 
                 {/* Describe the concern */}
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Describe the Concern</label>
-                  <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} placeholder="Write the concern in your own words (optional if you recorded audio)" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC] resize-none"/>
+                  <label className="block text-[11px] font-bold text-bss-text-muted uppercase tracking-wider mb-2">Describe the Concern</label>
+                  <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} placeholder="Write the concern in your own words (optional if you recorded audio)" className="w-full bg-white border border-bss-border rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC] resize-none"/>
                   {foulSpotted && <p className="mt-1.5 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-1.5"><MessageSquareWarning size={13} className="mt-0.5 flex-shrink-0"/>Please avoid using foul or abusive language in your grievance. Your case text is shared with the contractor — inappropriate words are masked on their screen but describing the issue clearly helps it get resolved faster.</p>}
                 </div>
 
                 {/* Attachment */}
-                <div className="flex items-center justify-between gap-3 bg-gray-50/70 rounded-xl p-3">
+                <div className="flex items-center justify-between gap-3 bg-bss-bg/70 rounded-xl p-3">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Paperclip size={16} className="text-gray-400 flex-shrink-0"/>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex-shrink-0">Upload Letter / Letter Image</span>
-                    {attachment ? <span className="text-xs font-semibold text-[#073B67] truncate flex items-center gap-1"><FileAudio size={14}/>{attachment.name}<button onClick={() => setAttachment(null)} className="text-gray-400 hover:text-red-500"><X size={13}/></button></span> : <span className="text-xs text-gray-400">No file chosen</span>}
+                    <Paperclip size={16} className="text-bss-text-muted flex-shrink-0"/>
+                    <span className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider flex-shrink-0">Upload Letter / Letter Image</span>
+                    {attachment ? <span className="text-xs font-semibold text-[#073B67] truncate flex items-center gap-1"><FileAudio size={14}/>{attachment.name}<button onClick={() => setAttachment(null)} className="text-bss-text-muted hover:text-red-500"><X size={13}/></button></span> : <span className="text-xs text-bss-text-muted">No file chosen</span>}
                   </div>
                   <input ref={fileRef} type="file" accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setAttachment(f); }}/>
-                  <button onClick={() => fileRef.current?.click()} className="text-xs font-bold text-[#073B67] bg-white border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0">Choose file</button>
+                  <button onClick={() => fileRef.current?.click()} className="text-xs font-bold text-[#073B67] bg-white border border-bss-border px-3 py-1.5 rounded-lg hover:bg-bss-bg flex-shrink-0">Choose file</button>
                 </div>
 
                 {submitError && <p className="text-xs font-semibold text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{submitError}</p>}
@@ -646,23 +645,23 @@ export default function GrievancePage() {
 
           {/* TRACKING TEASER */}
           <div className="space-y-4">
-            <div className="bg-white rounded-[16px] shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-4 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
-                <h2 className="font-bold text-gray-800 flex items-center gap-2"><ClipboardList size={17} className="text-[#073B67]"/> Your recent grievances</h2>
+            <div className="bss-3d bss-scroll-rise bg-white rounded-[16px] shadow-sm border border-bss-border overflow-hidden">
+              <div className="p-4 border-b border-bss-border bg-bss-bg/50 flex items-center justify-between">
+                <h2 className="font-bold text-bss-text-primary flex items-center gap-2"><ClipboardList size={17} className="text-[#073B67]"/> Your recent grievances</h2>
                 <button onClick={() => goTo('track')} className="text-xs font-bold text-[#073B67] hover:underline flex items-center gap-1">View full tracking<ChevronRight size={14}/></button>
               </div>
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-bss-border">
                 {tickets.slice(0, 3).map(ticket => (
                   <div key={ticket.ref} className="p-4 flex items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-xs font-bold text-[#073B67]">{ticket.ref}</span>{statusBadge(ticket.status)}</div>
-                      <p className="text-[13px] text-gray-700 font-medium mt-1 line-clamp-1">{ticket.description}</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">Updated {ticket.updatedAt}</p>
+                      <p className="text-[13px] text-bss-text-secondary font-medium mt-1 line-clamp-1">{ticket.description}</p>
+                      <p className="text-[11px] text-bss-text-muted mt-0.5">Updated {ticket.updatedAt}</p>
                     </div>
-                    <button onClick={() => { setSelectedTicket(ticket); goTo('track'); }} className="text-[11px] font-bold text-[#073B67] bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-100 flex-shrink-0">Track</button>
+                    <button onClick={() => { setSelectedTicket(ticket); goTo('track'); }} className="text-[11px] font-bold text-[#073B67] bg-bss-bg border border-bss-border px-3 py-1.5 rounded-lg hover:bg-bss-bg flex-shrink-0">Track</button>
                   </div>
                 ))}
-                {tickets.length === 0 && <p className="p-6 text-center text-xs text-gray-400">No grievances raised yet.</p>}
+                {tickets.length === 0 && <p className="p-6 text-center text-xs text-bss-text-muted">No grievances raised yet.</p>}
               </div>
             </div>
           </div>
@@ -672,75 +671,75 @@ export default function GrievancePage() {
         /* TRACK STATUS — dedicated tracking experience */
         <div className="space-y-4 scroll-mt-24">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="font-bold text-gray-800 flex items-center gap-2"><Clock size={17} className="text-[#073B67]"/> My Grievances — Track Status</h2>
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{counts.total} ticket{counts.total === 1 ? '' : 's'}</span>
+            <h2 className="font-bold text-bss-text-primary flex items-center gap-2"><Clock size={17} className="text-[#073B67]"/> My Grievances — Track Status</h2>
+            <span className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider">{counts.total} ticket{counts.total === 1 ? '' : 's'}</span>
           </div>
 
           {tickets.map(ticket => (
-            <article key={ticket.ref} id={ticket.ref} className="bg-white rounded-[12px] border border-gray-200 shadow-sm overflow-hidden scroll-mt-28">
-              <button onClick={() => setSelectedTicket(selectedTicket?.ref === ticket.ref ? null : ticket)} className="w-full p-4 text-left flex items-start gap-3 hover:bg-gray-50/60 transition-colors">
+            <article key={ticket.ref} id={ticket.ref} className="bss-3d bss-scroll-rise bg-white rounded-[12px] border border-bss-border shadow-sm overflow-hidden scroll-mt-28">
+              <button onClick={() => setSelectedTicket(selectedTicket?.ref === ticket.ref ? null : ticket)} className="w-full p-4 text-left flex items-start gap-3 hover:bg-bss-bg/60 transition-colors">
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-xs font-bold text-[#073B67]">{ticket.ref}</span>
                     {statusBadge(ticket.status)}
-                    <span className="text-[10px] font-semibold text-gray-400">{ticket.category}</span>
+                    <span className="text-[10px] font-semibold text-bss-text-muted">{ticket.category}</span>
                   </div>
-                  <p className="text-sm font-semibold text-gray-800 mt-1.5 line-clamp-1">{ticket.description}</p>
-                  <p className="text-[11px] text-gray-400 mt-1">Raised {ticket.raisedAt} · Last update {ticket.updatedAt}</p>
+                  <p className="text-sm font-semibold text-bss-text-primary mt-1.5 line-clamp-1">{ticket.description}</p>
+                  <p className="text-[11px] text-bss-text-muted mt-1">Raised {ticket.raisedAt} · Last update {ticket.updatedAt}</p>
                 </div>
-                <span className="flex items-center gap-1.5 mt-1 flex-shrink-0"><span className="text-[10px] font-bold text-[#073B67]">{selectedTicket?.ref === ticket.ref ? 'Hide Details' : 'View Details'}</span><ChevronRight size={16} className={`text-gray-300 transition-transform ${selectedTicket?.ref === ticket.ref ? 'rotate-90' : ''}`}/></span>
+                <span className="flex items-center gap-1.5 mt-1 flex-shrink-0"><span className="text-[10px] font-bold text-[#073B67]">{selectedTicket?.ref === ticket.ref ? 'Hide Details' : 'View Details'}</span><ChevronRight size={16} className={`text-bss-text-muted transition-transform ${selectedTicket?.ref === ticket.ref ? 'rotate-90' : ''}`}/></span>
               </button>
 
               {selectedTicket?.ref === ticket.ref && (
-                <div className="border-t border-gray-100 bg-gray-50/50 p-4 sm:p-5 space-y-4 animate-in slide-in-from-top-1 duration-200">
+                <div className="border-t border-bss-border bg-bss-bg/50 p-4 sm:p-5 space-y-4 animate-in slide-in-from-top-1 duration-200">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                    <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><UserRound size={11}/> Raised By</p><p className="font-semibold text-gray-800 mt-0.5">{ticket.raisedBy}</p></div>
-                    <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><MapPin size={11}/> Site Location</p><p className="font-semibold text-gray-800 mt-0.5">{ticket.site}</p></div>
-                    <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><Building2 size={11}/> Responsible Authority</p><p className="font-semibold text-gray-800 mt-0.5">{ticket.assignedTo}</p></div>
-                    <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><TimerReset size={11}/> Updated Date & Time</p><p className="font-semibold text-gray-800 mt-0.5">{ticket.updatedAt}</p></div>
+                    <div><p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider flex items-center gap-1"><UserRound size={11}/> Raised By</p><p className="font-semibold text-bss-text-primary mt-0.5">{ticket.raisedBy}</p></div>
+                    <div><p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider flex items-center gap-1"><MapPin size={11}/> Site Location</p><p className="font-semibold text-bss-text-primary mt-0.5">{ticket.site}</p></div>
+                    <div><p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider flex items-center gap-1"><Building2 size={11}/> Responsible Authority</p><p className="font-semibold text-bss-text-primary mt-0.5">{ticket.assignedTo}</p></div>
+                    <div><p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider flex items-center gap-1"><TimerReset size={11}/> Updated Date & Time</p><p className="font-semibold text-bss-text-primary mt-0.5">{ticket.updatedAt}</p></div>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {/* Progress timeline */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-4">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Resolution Progress</p>
+                    <div className="bg-white border border-bss-border rounded-xl p-4">
+                      <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider mb-3">Resolution Progress</p>
                       <Timeline ticket={ticket} />
                     </div>
                     <div className="space-y-3">
                       {/* Original attachment (secure single-use link) */}
                       {ticket.attachmentName && (
-                        <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between gap-3">
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5"><Paperclip size={12}/>Your attachment</p>
+                        <div className="bg-white border border-bss-border rounded-xl p-4 flex items-center justify-between gap-3">
+                          <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider flex items-center gap-1.5"><Paperclip size={12}/>Your attachment</p>
                           <button onClick={() => void downloadGrievanceFile(ticket.id, 'attachment')} className="text-xs font-bold text-[#073B67] hover:underline truncate">{ticket.attachmentName}</button>
                         </div>
                       )}
                       {/* Voice recording — single request → blob (single-use token) */}
                       {ticket.audioAvailable && (
-                        <div className="bg-white border border-gray-200 rounded-xl p-4">
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><FileAudio size={12}/> Voice recording</p>
+                        <div className="bg-white border border-bss-border rounded-xl p-4">
+                          <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5"><FileAudio size={12}/> Voice recording</p>
                           {playUrl ? <audio controls autoPlay src={playUrl} className="w-full" /> : <button onClick={() => void playAudio(ticket)} className="text-xs font-bold text-[#073B67] hover:underline flex items-center gap-1"><Play size={13}/>Play recording</button>}
                         </div>
                       )}
                       {/* Conversation + worker reply */}
-                      <div className="bg-white border border-gray-200 rounded-xl p-4">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Conversation</p>
+                      <div className="bg-white border border-bss-border rounded-xl p-4">
+                        <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider mb-3">Conversation</p>
                         <div className="space-y-2 max-h-72 overflow-y-auto">
-                          {ticket.replyHistory.length === 0 && <p className="text-xs text-gray-400 italic">No replies yet — the contractor and principal employer have been notified.</p>}
+                          {ticket.replyHistory.length === 0 && <p className="text-xs text-bss-text-muted italic">No replies yet — the contractor and principal employer have been notified.</p>}
                           {ticket.replyHistory.map(entry => (
-                            <div key={entry.id} className={`rounded-lg border p-2.5 text-xs ${entry.by === 'Worker' ? 'bg-gray-50 border-gray-100 ml-6' : 'bg-blue-50 border-blue-100 mr-6'}`}>
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">{entry.by} · {formatDateTime(entry.at)}</p>
-                              {entry.text && <p className="text-gray-800 leading-5 whitespace-pre-line">{entry.text}</p>}
+                            <div key={entry.id} className={`rounded-lg border p-2.5 text-xs ${entry.by === 'Worker' ? 'bg-bss-bg border-bss-border ml-6' : 'bg-bss-blue-tint border-bss-border mr-6'}`}>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted mb-1">{entry.by} · {formatDateTime(entry.at)}</p>
+                              {entry.text && <p className="text-bss-text-primary leading-5 whitespace-pre-line">{entry.text}</p>}
                               {entry.attachment && <button onClick={() => void openGrievanceFileInNewTab(ticket.id, 'attachment', entry.id)} className="mt-1 text-[11px] font-bold text-[#073B67] hover:underline flex items-center gap-1"><Paperclip size={11}/>{entry.attachmentName || 'Attachment'}</button>}
                             </div>
                           ))}
                         </div>
                         {ticket.status !== 'Closed' && (
                           <div className="mt-3 space-y-2">
-                            <textarea rows={2} value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Reply to the contractor / employer…" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066CC] resize-none"/>
+                            <textarea rows={2} value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Reply to the contractor / employer…" className="w-full border border-bss-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066CC] resize-none"/>
                             <div className="flex items-center gap-2">
                               <input ref={replyFileRef} type="file" accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setReplyFile(f); }}/>
-                              <button onClick={() => replyFileRef.current?.click()} className="text-[11px] font-bold text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 flex items-center gap-1"><Paperclip size={12}/>{replyFile ? replyFile.name : 'Attach'}</button>
-                              {replyFile && <button onClick={() => setReplyFile(null)} aria-label="Remove attachment" className="text-gray-400 hover:text-red-500"><X size={13}/></button>}
+                              <button onClick={() => replyFileRef.current?.click()} className="text-[11px] font-bold text-bss-text-secondary border border-bss-border rounded-lg px-2.5 py-1.5 hover:bg-bss-bg flex items-center gap-1"><Paperclip size={12}/>{replyFile ? replyFile.name : 'Attach'}</button>
+                              {replyFile && <button onClick={() => setReplyFile(null)} aria-label="Remove attachment" className="text-bss-text-muted hover:text-red-500"><X size={13}/></button>}
                               <button onClick={() => void sendReply(ticket)} disabled={actionBusy || (!replyText.trim() && !replyFile)} className="ml-auto text-xs font-bold text-white bg-[#073B67] rounded-lg px-3 py-1.5 hover:bg-[#062D4F] disabled:opacity-50 flex items-center gap-1"><Send size={12}/>Send reply</button>
                             </div>
                           </div>
@@ -750,7 +749,7 @@ export default function GrievancePage() {
                       <div className="flex flex-wrap gap-2 items-center">
                         {ticket.status === 'Resolved' && <button onClick={() => void runAction(ticket, 'confirm')} disabled={actionBusy} className="text-xs font-bold text-white bg-[#2F9E67] rounded-lg px-3 py-2 hover:brightness-95 disabled:opacity-50 flex items-center gap-1"><CheckCircle2 size={13}/>Confirm resolution</button>}
                         {['Resolved', 'Closed'].includes(ticket.status) && <button onClick={() => void runAction(ticket, 'reopen')} disabled={actionBusy} className="text-xs font-bold text-red-600 border border-red-200 rounded-lg px-3 py-2 hover:bg-red-50 disabled:opacity-50 flex items-center gap-1"><RotateCcw size={13}/>Reopen</button>}
-                        <span className="text-[11px] text-gray-400 ml-auto">Auto-generated reference · {ticket.ref}</span>
+                        <span className="text-[11px] text-bss-text-muted ml-auto">Auto-generated reference · {ticket.ref}</span>
                       </div>
                       {actionError && <p className="text-xs font-semibold text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{actionError}</p>}
                     </div>
@@ -760,7 +759,7 @@ export default function GrievancePage() {
             </article>
           ))}
 
-          {tickets.length === 0 && <div className="bg-white border border-dashed border-gray-300 rounded-xl p-10 text-center"><p className="text-sm font-semibold text-gray-600">No grievances raised yet</p><p className="text-xs text-gray-400 mt-1">Your raised grievances and their status will appear here.</p></div>}
+          {tickets.length === 0 && <div className="bss-3d bss-scroll-rise bg-white border border-dashed border-bss-border rounded-2xl p-10 text-center"><p className="text-sm font-semibold text-bss-text-secondary">No grievances raised yet</p><p className="text-xs text-bss-text-muted mt-1">Your raised grievances and their status will appear here.</p></div>}
         </div>
       )}
     </div>

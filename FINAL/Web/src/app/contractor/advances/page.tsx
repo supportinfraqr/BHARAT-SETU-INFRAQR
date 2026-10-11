@@ -31,9 +31,15 @@ export default function ContractorAdvancesPage() {
   const chip = (status: string) => status === 'Adjusted' ? 'bg-bss-soft-green text-bss-green' : status === 'Rejected' ? 'bg-bss-soft-orange text-bss-error' : status === 'Requested' ? 'bg-bss-soft-orange text-bss-orange' : 'bg-bss-blue-tint text-bss-interactive-blue';
 
   return (
-    <div className="relative p-4 lg:p-6 space-y-5">
+    <div className="relative p-4 lg:p-6">
+      <div aria-hidden className="pointer-events-none select-none absolute inset-0 z-[60] overflow-hidden">
+        <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-x-20 gap-y-28 -rotate-[24deg] scale-[1.6]">
+          {Array.from({ length: 14 }).map((_, i) => <span key={i} className="text-2xl sm:text-3xl font-black uppercase tracking-[0.28em] text-black/5 whitespace-nowrap">Under Development</span>)}
+        </div>
+      </div>
+      <div className="relative z-10 space-y-5">
       <div className="inline-flex items-center gap-2 rounded-full border border-bss-border bg-bss-soft-orange text-bss-orange px-3 py-1.5 text-xs font-semibold">
-        <span className="w-1.5 h-1.5 rounded-full bg-bss-orange animate-pulse" />
+        <span className="w-1.5 h-1.5 rounded-full bg-bss-orange" />
         Under Development
       </div>
       <header>
@@ -77,6 +83,7 @@ export default function ContractorAdvancesPage() {
         </div>
         <div className="px-5 py-4 border-t border-bss-border flex justify-end gap-2"><button onClick={() => setDisburse(null)} className="h-10 px-4 rounded-lg border border-bss-border text-xs font-semibold text-bss-text-primary hover:bg-bss-bg">Cancel</button><button disabled={busy === disburse.id} onClick={() => act(disburse, 'disburse', { mode, reference })} className="h-10 px-4 rounded-lg bg-bss-interactive-blue text-white text-xs font-semibold hover:bg-bss-deep-navy disabled:opacity-60 shadow-sm">Mark disbursed</button></div>
       </div></div>}
+      </div>
     </div>
   );
 }

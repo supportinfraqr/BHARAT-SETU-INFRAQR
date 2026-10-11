@@ -142,22 +142,22 @@ export default function EmployerQrBindingRequestsPage() {
   }
 
   const columns: DataColumn<Row>[] = [
-    { id:'entity', header:'Requesting entity', value:row => row.name, render:row => <div><strong className="text-gray-900">{row.name}</strong><p className="font-mono text-[10px] text-gray-400">{row.bssId}</p></div> },
-    { id:'type', header:'Request type', value:row => row.entityType, render:row => <span className={`px-2 py-1 rounded text-[10px] font-semibold ${row.entityType === 'Contractor' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>{row.entityType}</span> },
+    { id:'entity', header:'Requesting entity', value:row => row.name, render:row => <div><strong className="text-bss-text-primary">{row.name}</strong><p className="font-mono text-[10px] text-bss-text-muted">{row.bssId}</p></div> },
+    { id:'type', header:'Request type', value:row => row.entityType, render:row => <span className={`px-2 py-1 rounded text-[10px] font-semibold ${row.entityType === 'Contractor' ? 'bg-bss-blue-tint text-bss-interactive-blue' : 'bg-bss-soft-orange text-bss-orange'}`}>{row.entityType}</span> },
     { id:'site', header:'Site', value:row => row.site, export:{split:','} },
     { id:'through', header:'Connected through', value:row => row.contractor ?? 'Direct contractor request' },
     { id:'submitted', header:'Requested', value:row => row.submittedAt.slice(0, 10) },
-    { id:'initiated', header:'Initiated by', value:row => row.initiatedBy || '—', render:row => <span className="font-semibold text-gray-700">{row.initiatedBy || '—'}</span> },
-    { id:'accepted', header:'Accepted by', value:row => row.acceptedBy || '—', render:row => <span className={row.acceptedBy ? 'font-semibold text-green-700' : 'text-gray-400'}>{row.acceptedBy || '—'}</span> },
-    { id:'status', header:'Relationship', value:row => row.status, render:row => <span className={row.status === 'Approved' || row.status === 'Accepted' ? 'text-green-700' : row.status === 'Rejected' || row.status === 'Cancelled' ? 'text-red-700' : 'text-orange-700'}>{row.status}</span> },
+    { id:'initiated', header:'Initiated by', value:row => row.initiatedBy || '—', render:row => <span className="font-semibold text-bss-text-primary">{row.initiatedBy || '—'}</span> },
+    { id:'accepted', header:'Accepted by', value:row => row.acceptedBy || '—', render:row => <span className={row.acceptedBy ? 'font-semibold text-bss-green' : 'text-bss-text-muted'}>{row.acceptedBy || '—'}</span> },
+    { id:'status', header:'Relationship', value:row => row.status, render:row => <span className={row.status === 'Approved' || row.status === 'Accepted' ? 'text-bss-green' : row.status === 'Rejected' || row.status === 'Cancelled' ? 'text-bss-error' : 'text-bss-orange'}>{row.status}</span> },
     { id:'actions', header:'Action', filterable:false, value:row => row.status, render:row => {
       if (row.status === 'Pending') {
         // A contractor↔employer binding the employer already consented to (they
         // scanned the contractor's QR) only needs the contractor's consent.
         if (row.bindingId && row.consentEmployer) return (
           <div className="flex items-center gap-1.5">
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting contractor</span>
-            <button disabled={busy} onClick={() => openAllot(row)} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button>
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-bss-soft-orange text-bss-orange border border-bss-border/60">Awaiting contractor</span>
+            <button disabled={busy} onClick={() => openAllot(row)} className="h-8 px-3 rounded-lg border border-bss-border bg-bss-blue-tint hover:bg-bss-blue-tint text-[#01183A] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button>
           </div>
         );
         return (
@@ -165,14 +165,14 @@ export default function EmployerQrBindingRequestsPage() {
             <button
               disabled={busy}
               onClick={() => setConfirm({ row, kind: 'approve' })}
-              className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+              className="h-8 px-3 rounded-lg bg-bss-green hover:bg-bss-green active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50"
             >
               Approve
             </button>
             <button
               disabled={busy}
               onClick={() => setConfirm({ row, kind: 'reject' })}
-              className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50"
+              className="h-8 px-3 rounded-lg border border-bss-border bg-bss-soft-orange hover:bg-bss-soft-orange text-bss-error active:scale-95 text-xs font-bold transition-all disabled:opacity-50"
             >
               Reject
             </button>
@@ -182,28 +182,28 @@ export default function EmployerQrBindingRequestsPage() {
       if (row.bindingId && (row.status === 'Accepted' || row.status === 'Approved')) {
         if (row.unbindRequested) {
           return row.unbindConsentEmployer
-            ? <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting contractor</span>
-            : <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setConfirm({ row, kind: 'unbind' })} className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Confirm unbind</button><button disabled={busy} onClick={() => void rejectUnbind(row)} className="h-8 px-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Reject request</button></div>;
+            ? <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-bss-soft-orange text-bss-orange border border-bss-border/60">Awaiting contractor</span>
+            : <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setConfirm({ row, kind: 'unbind' })} className="h-8 px-3 rounded-lg bg-bss-error hover:bg-bss-error active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Confirm unbind</button><button disabled={busy} onClick={() => void rejectUnbind(row)} className="h-8 px-3 rounded-lg border border-bss-border bg-white hover:bg-bss-bg text-bss-text-primary active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Reject request</button></div>;
         }
         return (
           <div className="flex items-center gap-1.5">
-            <button disabled={busy} onClick={() => openAllot(row)} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button>
-            <button disabled={busy} onClick={() => setConfirm({ row, kind: 'unbind' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Unbind</button>
+            <button disabled={busy} onClick={() => openAllot(row)} className="h-8 px-3 rounded-lg border border-bss-border bg-bss-blue-tint hover:bg-bss-blue-tint text-[#01183A] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button>
+            <button disabled={busy} onClick={() => setConfirm({ row, kind: 'unbind' })} className="h-8 px-3 rounded-lg border border-bss-border bg-bss-soft-orange hover:bg-bss-soft-orange text-bss-error active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Unbind</button>
           </div>
         );
       }
-      return <span className="text-gray-400">—</span>;
+      return <span className="text-bss-text-muted">—</span>;
     } },
-    { id:'history', header:'History', filterable:false, value:() => '', render:row => <button disabled={busy} onClick={() => setHistoryFor(row)} className="inline-flex items-center gap-1 text-xs font-semibold text-[#073B67] hover:underline"><History size={13}/>History</button> },
+    { id:'history', header:'History', filterable:false, value:() => '', render:row => <button disabled={busy} onClick={() => setHistoryFor(row)} className="inline-flex items-center gap-1 text-xs font-semibold text-[#01183A] hover:underline"><History size={13}/>History</button> },
   ];
   const rows: Row[] = employer.approvals;
 
   return <div className="space-y-6">
-    <header><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">QR system</p><h1 className="text-2xl font-bold mt-1">Binding Requests</h1><p className="text-sm text-gray-500 mt-1">Manage contractor and worker requests to bind to your organisation and sites.</p></header>
+    <header><p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">QR system</p><h1 className="text-2xl font-bold mt-1">Binding Requests</h1><p className="text-sm text-bss-text-muted mt-1">Manage contractor and worker requests to bind to your organisation and sites.</p></header>
     <BindingSitesExplainer/>
-    <div className="grid grid-cols-3 gap-3"><Metric label="Pending" value={rows.filter(r => r.status === 'Pending').length} icon={Clock3} tone="bg-orange-50 text-orange-700"/><Metric label="Contractors" value={new Set(rows.filter(r => r.entityType === 'Contractor').map(r => r.entityId || r.bssId)).size} icon={Building2} tone="bg-blue-50 text-blue-700"/><Metric label="Workers" value={new Set(rows.filter(r => r.entityType === 'Worker').map(r => r.entityId || r.bssId)).size} icon={UserRoundCheck} tone="bg-green-50 text-green-700"/></div>
-    {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">{error}</p>}
-    {notice && <p role="status" className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl p-3">{notice}</p>}
+    <div className="grid grid-cols-3 gap-3"><Metric label="Pending" value={rows.filter(r => r.status === 'Pending').length} icon={Clock3} tone="bg-bss-soft-orange text-bss-orange"/><Metric label="Contractors" value={new Set(rows.filter(r => r.entityType === 'Contractor').map(r => r.entityId || r.bssId)).size} icon={Building2} tone="bg-bss-blue-tint text-bss-interactive-blue"/><Metric label="Workers" value={new Set(rows.filter(r => r.entityType === 'Worker').map(r => r.entityId || r.bssId)).size} icon={UserRoundCheck} tone="bg-bss-soft-green text-bss-green"/></div>
+    {error && <p role="alert" className="text-sm text-bss-error bg-bss-soft-orange border border-bss-border rounded-xl p-3">{error}</p>}
+    {notice && <p role="status" className="text-sm text-bss-green bg-bss-soft-green border border-bss-border rounded-xl p-3">{notice}</p>}
     <EnterpriseDataTable title="Binding request register" rows={rows} columns={columns} rowKey={row => row.id} filename="employer-binding-requests"/>
 
     <SitePermissionsDialog
@@ -277,32 +277,32 @@ export default function EmployerQrBindingRequestsPage() {
     {unbindFor && (() => {
       const requiresSuccessor = (unbindFor.workersAtRisk ?? 0) > 0;
       const candidates = unbindFor.successorCandidates ?? [];
-      return <div className="fixed inset-0 z-[95] grid place-items-center p-4 bg-slate-950/60 backdrop-blur-sm" role="dialog" aria-modal="true" onClick={() => setUnbindFor(null)}>
+      return <div className="fixed inset-0 z-[95] grid place-items-center p-4 bg-bss-navy/60 backdrop-blur-sm" role="dialog" aria-modal="true" onClick={() => setUnbindFor(null)}>
         <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl ring-1 ring-black/5 overflow-hidden" onClick={e => e.stopPropagation()}>
-          <div className="px-6 pt-6 pb-4 border-b border-gray-100">
-            <h2 className="text-lg font-bold text-gray-950">{requiresSuccessor ? 'Move workers before unbinding' : 'Hand over sites before unbinding'}</h2>
-            <p className="text-xs text-gray-500 mt-0.5">{unbindFor.name} · {unbindFor.bssId}</p>
+          <div className="px-6 pt-6 pb-4 border-b border-bss-border">
+            <h2 className="text-lg font-bold text-bss-text-primary">{requiresSuccessor ? 'Move workers before unbinding' : 'Hand over sites before unbinding'}</h2>
+            <p className="text-xs text-bss-text-muted mt-0.5">{unbindFor.name} · {unbindFor.bssId}</p>
           </div>
           <div className="px-6 py-4 space-y-3">
-            <p className="text-xs text-gray-600 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5 leading-5">
+            <p className="text-xs text-bss-text-secondary bg-bss-soft-orange border border-bss-border rounded-xl px-3 py-2.5 leading-5">
               {unbindFor.name} still has <strong>{unbindFor.workersAtRisk ?? 0}</strong> worker(s) and <strong>{unbindFor.sitesAtRisk ?? 0}</strong> site(s) with you.{' '}
               {requiresSuccessor
                 ? 'Choose a successor contractor so the workers and sites are moved instead of being orphaned.'
                 : 'You may hand these sites to a successor contractor, or release them without one.'}
             </p>
             {candidates.length ? (
-              <label className="block text-xs font-bold text-gray-700">Successor contractor {requiresSuccessor ? <span className="text-rose-600">*</span> : <span className="font-normal text-gray-400">(optional)</span>}
-                <select value={unbindSuccessor} onChange={e => setUnbindSuccessor(e.target.value ? Number(e.target.value) : '')} className="mt-1 w-full h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white">
+              <label className="block text-xs font-bold text-bss-text-primary">Successor contractor {requiresSuccessor ? <span className="text-bss-error">*</span> : <span className="font-normal text-bss-text-muted">(optional)</span>}
+                <select value={unbindSuccessor} onChange={e => setUnbindSuccessor(e.target.value ? Number(e.target.value) : '')} className="mt-1 w-full h-10 rounded-lg border border-bss-border px-3 text-sm bg-white">
                   <option value="">{requiresSuccessor ? 'Select a contractor…' : 'No successor — release only'}</option>
                   {candidates.map(c => <option key={c.contractorId} value={c.contractorId}>{c.name}</option>)}
                 </select>
               </label>
-            ) : <p className="text-xs text-red-600">{requiresSuccessor ? 'No other contractor is available in the system — onboard another contractor first, then unbind.' : 'No other contractor is available — the sites will be released without a successor.'}</p>}
+            ) : <p className="text-xs text-bss-error">{requiresSuccessor ? 'No other contractor is available in the system — onboard another contractor first, then unbind.' : 'No other contractor is available — the sites will be released without a successor.'}</p>}
           </div>
-          <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
-            <button onClick={() => setUnbindFor(null)} className="h-10 px-4 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50">Cancel</button>
-            {!requiresSuccessor && <button disabled={busy} onClick={() => { const row = unbindFor; setUnbindFor(null); void decideUnbind(row); }} className="h-10 px-4 rounded-xl border border-rose-200 text-rose-700 text-sm font-bold hover:bg-rose-50 disabled:opacity-50">Release without successor</button>}
-            <button disabled={busy || (requiresSuccessor && !unbindSuccessor)} onClick={() => { const row = unbindFor; setUnbindFor(null); void decideUnbind(row, unbindSuccessor ? Number(unbindSuccessor) : undefined); }} className="h-10 px-4 rounded-xl bg-rose-600 text-white text-sm font-bold hover:bg-rose-700 disabled:opacity-50">{requiresSuccessor ? 'Move workers & unbind' : 'Hand over & unbind'}</button>
+          <div className="px-6 py-4 border-t border-bss-border flex justify-end gap-2">
+            <button onClick={() => setUnbindFor(null)} className="h-10 px-4 rounded-xl border border-bss-border text-sm font-bold text-bss-text-secondary hover:bg-bss-bg">Cancel</button>
+            {!requiresSuccessor && <button disabled={busy} onClick={() => { const row = unbindFor; setUnbindFor(null); void decideUnbind(row); }} className="h-10 px-4 rounded-xl border border-bss-border text-bss-error text-sm font-bold hover:bg-bss-soft-orange disabled:opacity-50">Release without successor</button>}
+            <button disabled={busy || (requiresSuccessor && !unbindSuccessor)} onClick={() => { const row = unbindFor; setUnbindFor(null); void decideUnbind(row, unbindSuccessor ? Number(unbindSuccessor) : undefined); }} className="h-10 px-4 rounded-xl bg-bss-error text-white text-sm font-bold hover:bg-bss-error disabled:opacity-50">{requiresSuccessor ? 'Move workers & unbind' : 'Hand over & unbind'}</button>
           </div>
         </div>
       </div>;
@@ -310,4 +310,4 @@ export default function EmployerQrBindingRequestsPage() {
   </div>;
 }
 
-function Metric({ label, value, icon:Icon, tone }: { label:string; value:number; icon:typeof Clock3; tone:string }) { return <div className="bg-white border border-gray-200 rounded-xl p-4"><span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon size={16}/></span><strong className="block text-2xl mt-2">{value}</strong><p className="text-xs text-gray-500">{label}</p></div>; }
+function Metric({ label, value, icon:Icon, tone }: { label:string; value:number; icon:typeof Clock3; tone:string }) { return <div className="bg-white border border-bss-border rounded-xl p-4"><span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon size={16}/></span><strong className="block text-2xl mt-2">{value}</strong><p className="text-xs text-bss-text-muted">{label}</p></div>; }

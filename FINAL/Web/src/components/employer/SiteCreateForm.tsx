@@ -401,7 +401,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   const [startDate, setStartDate] = useState(String(initial?.site_start_date ?? ''));
   const [endDate, setEndDate] = useState(String(initial?.expected_end_date ?? ''));
   const [status, setStatus] = useState(String(initial?.site_status ?? 'Active'));
-  const [colour, setColour] = useState(String(initial?.assign_color ?? '#F47A32'));
+  const [colour, setColour] = useState(String(initial?.assign_color ?? '#E45D24'));
   const [geography, setGeography] = useState<Record<string, Record<string, { city: string; pins: string[] }[]>>>({});
   const [tab, setTab] = useState(FORM_SECTIONS[0].title);
   const section = useMemo(() => FORM_SECTIONS.find(s => s.title === tab) ?? FORM_SECTIONS[0], [tab]);
@@ -472,7 +472,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     status: !status.trim(),
   };
   const hasMissing = Object.values(missing).some(Boolean);
-  const fieldCls = 'mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm';
+  const fieldCls = 'mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm';
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -512,87 +512,87 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   return (
     <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm p-4 flex items-center justify-center">
       <section role="dialog" aria-modal="true" aria-labelledby="add-site-title" className="w-full max-w-3xl max-h-[calc(100vh-2rem)] bg-white rounded-2xl overflow-hidden flex flex-col">
-        <header className="p-5 border-b border-gray-100 flex justify-between items-start flex-shrink-0">
+        <header className="p-5 border-b border-bss-border flex justify-between items-start flex-shrink-0">
           <div>
             <h2 id="add-site-title" className="font-semibold">{initial ? 'Edit site' : 'Register a project site'}</h2>
-            <p className="text-xs text-gray-500 mt-1 max-w-lg">A site is the E·C·S·W anchor. Fill the identity + location basics, then complete the site master fields across the sections below.</p>
+            <p className="text-xs text-bss-text-muted mt-1 max-w-lg">A site is the E·C·S·W anchor. Fill the identity + location basics, then complete the site master fields across the sections below.</p>
           </div>
           <button onClick={onClose} aria-label="Close"><X /></button>
         </header>
 
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto flex-1">
           <div className="grid sm:grid-cols-2 gap-4">
-            <label className="text-xs font-semibold text-gray-700">Site name <span className="text-red-500">*</span><input required value={name} onChange={e => setName(e.target.value)} className={fieldCls} /></label>
-            <label className="text-xs font-semibold text-gray-700">Site code <span className="text-red-500">*</span>
+            <label className="text-xs font-semibold text-bss-text-primary">Site name <span className="text-bss-error">*</span><input required value={name} onChange={e => setName(e.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-bss-text-primary">Site code <span className="text-bss-error">*</span>
               <div className="flex gap-2">
-                <input required readOnly value={code} title="Auto-generated site code (locked)" className={fieldCls + ' bg-gray-100 text-gray-500 cursor-not-allowed'} />
-                <button type="button" onClick={() => setCode(makeSiteCode())} title="Regenerate the site code" className="mt-1 h-10 px-3 rounded-lg border border-gray-200 bg-gray-50 text-[11px] font-bold text-gray-700 hover:bg-gray-100 shrink-0">Auto</button>
+                <input required readOnly value={code} title="Auto-generated site code (locked)" className={fieldCls + ' bg-bss-bg text-bss-text-muted cursor-not-allowed'} />
+                <button type="button" onClick={() => setCode(makeSiteCode())} title="Regenerate the site code" className="mt-1 h-10 px-3 rounded-lg border border-bss-border bg-bss-bg text-[11px] font-bold text-bss-text-primary hover:bg-bss-bg shrink-0">Auto</button>
               </div>
             </label>
-            <label className="text-xs font-semibold text-gray-700">Site colour
+            <label className="text-xs font-semibold text-bss-text-primary">Site colour
               <div className="mt-1 flex items-center gap-3">
-                <input type="color" value={colour} onChange={e => setColour(e.target.value)} className="h-10 w-16 rounded-lg border border-gray-200 bg-white p-1 cursor-pointer" />
-                <span className="text-xs font-mono text-gray-500">{colour.toUpperCase()}</span>
+                <input type="color" value={colour} onChange={e => setColour(e.target.value)} className="h-10 w-16 rounded-lg border border-bss-border bg-white p-1 cursor-pointer" />
+                <span className="text-xs font-mono text-bss-text-muted">{colour.toUpperCase()}</span>
               </div>
             </label>
-            <label className="text-xs font-semibold text-gray-700">City / location <span className="text-red-500">*</span><input list="site-city-options" value={location} onChange={event => setLocation(event.target.value)} className={fieldCls} /></label>
-            <div className="relative text-xs font-semibold text-gray-700">State (auto-filled from map if you pin) <span className="text-red-500">*</span>
+            <label className="text-xs font-semibold text-bss-text-primary">City / location <span className="text-bss-error">*</span><input list="site-city-options" value={location} onChange={event => setLocation(event.target.value)} className={fieldCls} /></label>
+            <div className="relative text-xs font-semibold text-bss-text-primary">State (auto-filled from map if you pin) <span className="text-bss-error">*</span>
               <button type="button" onClick={() => setStateOpen(o => !o)} className={`${fieldCls} bg-white text-left flex items-center justify-between`}>
-                <span className={state ? 'text-gray-800' : 'text-gray-400'}>{state || 'Select state'}</span>
-                <ChevronDown size={14} className={`text-gray-400 transition-transform ${stateOpen ? 'rotate-180' : ''}`} />
+                <span className={state ? 'text-bss-text-primary' : 'text-bss-text-muted'}>{state || 'Select state'}</span>
+                <ChevronDown size={14} className={`text-bss-text-muted transition-transform ${stateOpen ? 'rotate-180' : ''}`} />
               </button>
               {stateOpen && (
                 <>
                   <button type="button" aria-hidden="true" tabIndex={-1} onClick={() => setStateOpen(false)} className="fixed inset-0 z-20 cursor-default" />
-                  <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-60 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                  <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-60 overflow-y-auto rounded-lg border border-bss-border bg-white shadow-lg">
                     {stateOptions.map(s => (
-                      <button key={s} type="button" onClick={() => { setState(s); setStateOpen(false); }} className={`block w-full px-3 py-2 text-left text-sm hover:bg-gray-50 ${state === s ? 'bg-blue-50 font-semibold text-[#073B67]' : 'text-gray-700'}`}>{s}</button>
+                      <button key={s} type="button" onClick={() => { setState(s); setStateOpen(false); }} className={`block w-full px-3 py-2 text-left text-sm hover:bg-bss-bg ${state === s ? 'bg-bss-blue-tint font-semibold text-[#01183A]' : 'text-bss-text-primary'}`}>{s}</button>
                     ))}
                   </div>
                 </>
               )}
             </div>
             <datalist id="site-city-options">{cityOptions.map(city => <option key={city} value={city} />)}</datalist>
-            <label className="text-xs font-semibold text-gray-700">Start date <span className="text-red-500">*</span><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={fieldCls} /></label>
-            <label className="text-xs font-semibold text-gray-700">End date <span className="text-red-500">*</span><input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={fieldCls} /></label>
-            <label className="text-xs font-semibold text-gray-700">Status <span className="text-red-500">*</span><select value={status} onChange={e => setStatus(e.target.value)} className={`${fieldCls} bg-white`}><option>Active</option><option>Planned</option></select></label>
+            <label className="text-xs font-semibold text-bss-text-primary">Start date <span className="text-bss-error">*</span><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-bss-text-primary">End date <span className="text-bss-error">*</span><input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-bss-text-primary">Status <span className="text-bss-error">*</span><select value={status} onChange={e => setStatus(e.target.value)} className={`${fieldCls} bg-white`}><option>Active</option><option>Planned</option></select></label>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="flex items-center gap-2 mb-3"><MapPin size={15} className="text-[#073B67]" /><p className="text-xs font-bold uppercase tracking-wider text-gray-500">Identify site on OpenStreetMap</p></div>
+          <div className="mt-4 pt-4 border-t border-bss-border">
+            <div className="flex items-center gap-2 mb-3"><MapPin size={15} className="text-[#01183A]" /><p className="text-xs font-bold uppercase tracking-wider text-bss-text-muted">Identify site on OpenStreetMap</p></div>
             <SiteMapPicker initial={geo ? { lat: geo.lat, lng: geo.lng } : undefined} onPick={handleGeoPick} />
           </div>
 
-          <div className="mt-5 border-t border-gray-100 pt-4">
+          <div className="mt-5 border-t border-bss-border pt-4">
             <div className="flex flex-wrap gap-1.5">
               {FORM_SECTIONS.map(s => (
-                <button key={s.title} type="button" onClick={() => setTab(s.title)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${tab === s.title ? 'bg-gray-950 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{s.title}</button>
+                <button key={s.title} type="button" onClick={() => setTab(s.title)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${tab === s.title ? 'bg-bss-navy text-white' : 'bg-bss-bg text-bss-text-secondary hover:bg-bss-surface'}`}>{s.title}</button>
               ))}
             </div>
             <div className="grid sm:grid-cols-2 gap-4 mt-4">
               {section.fields.map(f => f.type === 'checkbox' ? (
-                <label key={f.name} className="flex items-center gap-2 text-xs font-semibold text-gray-700 py-1">
-                  <input name={f.name} type="checkbox" defaultChecked={Boolean(initial?.[f.name])} className="w-4 h-4 rounded border-gray-300" />
+                <label key={f.name} className="flex items-center gap-2 text-xs font-semibold text-bss-text-primary py-1">
+                  <input name={f.name} type="checkbox" defaultChecked={Boolean(initial?.[f.name])} className="w-4 h-4 rounded border-bss-border" />
                   {f.label}
                 </label>
               ) : (
-                <label key={f.name} className="text-xs font-semibold text-gray-700">
+                <label key={f.name} className="text-xs font-semibold text-bss-text-primary">
                   {f.label}
                   {f.type === 'select' ? (
-                    <select name={f.name} defaultValue={String(initial?.[f.name] ?? '')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 bg-white text-sm">{(f.options ?? []).map(o => <option key={o}>{o}</option>)}</select>
+                    <select name={f.name} defaultValue={String(initial?.[f.name] ?? '')} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 bg-white text-sm">{(f.options ?? []).map(o => <option key={o}>{o}</option>)}</select>
                   ) : (
-                    <input name={f.name} type={f.type ?? 'text'} step={f.type === 'number' ? 'any' : undefined} defaultValue={initial?.[f.name] == null ? undefined : String(initial[f.name])} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" />
+                    <input name={f.name} type={f.type ?? 'text'} step={f.type === 'number' ? 'any' : undefined} defaultValue={initial?.[f.name] == null ? undefined : String(initial[f.name])} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm" />
                   )}
                 </label>
               ))}
             </div>
           </div>
 
-          {error && <p role="alert" className="mt-4 text-sm text-red-700 bg-red-50 rounded-lg p-3">{error}</p>}
-          {hasMissing && <p className="mt-4 text-xs text-gray-400">All fields except <span className="font-semibold">Additional details</span> are required.</p>}
+          {error && <p role="alert" className="mt-4 text-sm text-bss-error bg-bss-soft-orange rounded-lg p-3">{error}</p>}
+          {hasMissing && <p className="mt-4 text-xs text-bss-text-muted">All fields except <span className="font-semibold">Additional details</span> are required.</p>}
           <div className="mt-5 flex justify-end gap-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm">Cancel</button>
-            <button disabled={busy || hasMissing} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed">{busy ? 'Saving…' : initial ? 'Save changes' : 'Register site'}</button>
+            <button disabled={busy || hasMissing} className="px-4 py-2 bg-bss-interactive-blue text-white rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed">{busy ? 'Saving…' : initial ? 'Save changes' : 'Register site'}</button>
           </div>
         </form>
       </section>

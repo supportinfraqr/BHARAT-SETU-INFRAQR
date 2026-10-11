@@ -57,7 +57,7 @@ export default function ContractorQrSitesPage() {
           <h2 className="text-sm font-semibold text-bss-text-primary">Awaiting your approval</h2>
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
             {pending.map(site => (
-              <article key={site.id} className="bss-card rounded-2xl p-5">
+              <article key={site.id} className="bss-card bss-3d bss-scroll-rise rounded-2xl p-5">
                 <div className="flex items-start justify-between gap-3">
                   <span className="w-10 h-10 rounded-xl bg-bss-soft-orange text-bss-orange grid place-items-center"><Clock size={19} /></span>
                   <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-bss-orange bg-bss-soft-orange px-2 py-1 rounded-full">Pending approval</span>
@@ -112,5 +112,5 @@ export default function ContractorQrSitesPage() {
 }
 
 function Metric({ label, value, icon: Icon, tone, text }: { label: string; value: string | number; icon: typeof Building2; tone: string; text?: boolean }) {
-  return <div className="bss-card rounded-2xl p-4"><span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon size={16} /></span><strong className={`block mt-2 text-bss-text-primary ${text ? 'text-sm truncate' : 'text-2xl'}`}>{value}</strong><p className="text-xs text-bss-text-secondary mt-1">{label}</p></div>;
+  return <div className="bss-card bss-3d bss-scroll-rise rounded-2xl p-4"><span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon size={16} /></span><strong className={`block mt-2 text-bss-text-primary ${text ? 'text-sm truncate' : 'text-2xl'}`}>{value}</strong><p className="text-xs text-bss-text-secondary mt-1">{label}</p></div>;
 }

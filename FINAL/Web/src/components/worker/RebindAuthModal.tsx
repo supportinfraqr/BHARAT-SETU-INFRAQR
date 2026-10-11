@@ -45,21 +45,21 @@ export default function RebindAuthModal({ currentContractor, targetContractor, c
         <div className="bg-[#7A1F1F] p-5 text-white flex items-start gap-3">
           <span className="w-11 h-11 rounded-xl bg-white/10 grid place-items-center flex-shrink-0"><ShieldAlert size={22}/></span>
           <div className="flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-red-200">Active binding detected</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-bss-soft-orange">Active binding detected</p>
             <h2 className="text-base font-bold mt-0.5">Authenticate to bind with a new contractor</h2>
           </div>
           <button onClick={onCancel} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-full hover:bg-white/10"><X size={16}/></button>
         </div>
 
         <div className="p-5 space-y-4">
-          <div className="rounded-xl border border-orange-200 bg-orange-50/60 p-3.5 space-y-2 text-xs">
-            <p className="flex items-start gap-2"><span className="text-orange-500 font-black mt-0.5">!</span><span className="text-gray-800 leading-5">You are currently <strong>bound to {currentContractor}</strong>{sameContractor ? ' — an active binding already exists for this contractor.' : '. Binding with a new contractor switches your employment after both parties approve.'}</span></p>
-            <p className="flex items-start gap-2"><span className="text-orange-500 font-black mt-0.5">!</span><span className="text-gray-700 leading-5">Attendance, wages and compliance records follow the contractor you are bound to. Re-binding is a controlled action — please authenticate to continue.</span></p>
-            {contextLabel && <p className="text-[11px] font-semibold text-gray-500 pl-5">{contextLabel}</p>}
+          <div className="rounded-xl border border-bss-border bg-bss-soft-orange/60 p-3.5 space-y-2 text-xs">
+            <p className="flex items-start gap-2"><span className="text-bss-orange font-black mt-0.5">!</span><span className="text-bss-text-primary leading-5">You are currently <strong>bound to {currentContractor}</strong>{sameContractor ? ' — an active binding already exists for this contractor.' : '. Binding with a new contractor switches your employment after both parties approve.'}</span></p>
+            <p className="flex items-start gap-2"><span className="text-bss-orange font-black mt-0.5">!</span><span className="text-bss-text-primary leading-5">Attendance, wages and compliance records follow the contractor you are bound to. Re-binding is a controlled action — please authenticate to continue.</span></p>
+            {contextLabel && <p className="text-[11px] font-semibold text-bss-text-muted pl-5">{contextLabel}</p>}
           </div>
 
           <div>
-            <label className="block text-[12px] font-semibold text-[#1D1D1F] mb-2">Confirm with 4-digit MPIN</label>
+            <label className="block text-[12px] font-semibold text-[#01183A] mb-2">Confirm with 4-digit MPIN</label>
             <input
               ref={inputRef}
               type="password"
@@ -70,11 +70,11 @@ export default function RebindAuthModal({ currentContractor, targetContractor, c
               onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
               onKeyDown={e => { if (e.key === 'Enter') confirm(); }}
               placeholder="• • • •"
-              className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-[16px] font-mono font-semibold tracking-[0.5em] text-center focus:outline-none focus:border-[#073B67] focus:ring-1 focus:ring-[#073B67]/30 disabled:opacity-60"
+              className="w-full bg-white border border-bss-border rounded-xl px-4 py-3 text-[16px] font-mono font-semibold tracking-[0.5em] text-center focus:outline-none focus:border-[#01183A] focus:ring-1 focus:ring-[#01183A]/30 disabled:opacity-60"
               disabled={verifying}
             />
-            {error && <p role="alert" className="text-xs text-red-600 mt-1.5">{error}</p>}
-            <p className="text-[11px] text-gray-400 mt-2 flex items-center gap-1.5"><KeyRound size={12}/>MPIN is verified before the binding action is allowed. (Demo environment: any 4-digit MPIN is accepted.)</p>
+            {error && <p role="alert" className="text-xs text-bss-error mt-1.5">{error}</p>}
+            <p className="text-[11px] text-bss-text-muted mt-2 flex items-center gap-1.5"><KeyRound size={12}/>MPIN is verified before the binding action is allowed. (Demo environment: any 4-digit MPIN is accepted.)</p>
           </div>
 
           <div className="flex gap-2">
@@ -82,7 +82,7 @@ export default function RebindAuthModal({ currentContractor, targetContractor, c
               {verifying ? <Loader2 size={17} className="animate-spin"/> : <KeyRound size={16}/>}
               {verifying ? 'Authenticating…' : 'Authenticate & continue'}
             </button>
-            <button onClick={onCancel} disabled={verifying} className="flex-1 h-11 rounded-xl border border-gray-200 text-gray-600 text-sm font-bold hover:bg-gray-50 disabled:opacity-60">Cancel</button>
+            <button onClick={onCancel} disabled={verifying} className="flex-1 h-11 rounded-xl border border-bss-border text-bss-text-secondary text-sm font-bold hover:bg-bss-bg disabled:opacity-60">Cancel</button>
           </div>
         </div>
       </div>

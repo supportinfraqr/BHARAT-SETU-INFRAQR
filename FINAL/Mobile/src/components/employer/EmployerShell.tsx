@@ -56,7 +56,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
   const headerRef = useRef<HTMLElement>(null);
   const { employer } = useEmployer();
   const { t } = useLanguage();
-  const groups = [ { key:'nav.dashboard', href:'/employer/dashboard', icon:LayoutDashboard }, { key:'Analytics', href:'/employer/analytics', icon:Activity }, workforceGroup, sitesGroup, { key:'nav.payroll', href:'/employer/payroll', icon:Banknote }, complianceGroup, qrGroup, ...(employer.canAccessAdmin ? [adminGroup] : []) ];
+  const groups = [ { key:'nav.dashboard', href:'/employer/dashboard', icon:LayoutDashboard }, workforceGroup, sitesGroup, { key:'nav.payroll', href:'/employer/payroll', icon:Banknote }, complianceGroup, qrGroup, ...(employer.canAccessAdmin ? [adminGroup] : []) ];
   const mobileItems = groups.reduce<Array<readonly [string,string]>>((items, group) => items.concat('href' in group ? [[group.key, group.href]] : group.items as unknown as readonly [string,string][]), []);
 
   // Close every popover on navigation (adjust state during render — the
@@ -80,7 +80,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
   const toggleMenu = (key: string) => setOpenMenu(current => (current === key ? null : key));
 
   return <div className="bss-shell min-h-screen text-[#1D1D1F] flex flex-col">
-    <header ref={headerRef} className="bss-shell-header sticky top-0 z-50 bg-white border-b border-gray-200 shadow-[0_1px_3px_0_rgba(100,116,139,0.18)]">
+    <header ref={headerRef} className="bss-shell-header sticky top-0 z-50 bg-white border-b border-bss-border shadow-[0_1px_3px_0_rgba(100,116,139,0.18)]">
       <div className="bss-shell-bar w-full max-w-[1200px] mx-auto px-6 md:px-12 h-16 flex items-center justify-between min-[1181px]:justify-center gap-5">
         <Link href="/employer/dashboard" className="flex items-center gap-2 shrink-0">
           <Image src="/bss-original-logo.png" width={154} height={40} className="h-9 sm:h-8 w-auto" alt="Bharat Shram Setu"/>
@@ -89,12 +89,12 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
         <div className="min-w-0 flex items-center justify-center gap-4 mx-4 md:mx-8">
           <nav aria-label={t('nav.primary')} className="bss-desktop-nav items-center gap-1.5">
           {groups.map(group => 'href' in group
-            ? <Link key={group.key} href={group.href} aria-current={pathname === group.href ? 'page' : undefined} className={`inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-full text-[12.5px] leading-none font-medium ${pathname === group.href ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>{t(group.key)}</Link>
+            ? <Link key={group.key} href={group.href} aria-current={pathname === group.href ? 'page' : undefined} className={`inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-full text-[12.5px] leading-none font-medium ${pathname === group.href ? 'bg-bss-navy text-white' : 'text-bss-text-secondary transition-colors duration-150 hover:bg-bss-bg'}`}>{t(group.key)}</Link>
             : <div key={group.key} className="relative">
-                <button type="button" aria-haspopup="menu" aria-expanded={openMenu === group.key} onClick={() => toggleMenu(group.key)} className={`inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-full text-[12.5px] leading-none font-medium gap-1 ${group.items.some(item => pathname === item[1]) || openMenu === group.key ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>{t(group.key)}<ChevronDown size={12} className={`transition-transform ${openMenu === group.key ? 'rotate-180' : ''}`}/></button>
+                <button type="button" aria-haspopup="menu" aria-expanded={openMenu === group.key} onClick={() => toggleMenu(group.key)} className={`inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-full text-[12.5px] leading-none font-medium gap-1 ${group.items.some(item => pathname === item[1]) || openMenu === group.key ? 'bg-bss-navy text-white' : 'text-bss-text-secondary transition-colors duration-150 hover:bg-bss-bg'}`}>{t(group.key)}<ChevronDown size={12} className={`transition-transform ${openMenu === group.key ? 'rotate-180' : ''}`}/></button>
                 {openMenu === group.key && <div role="menu" className="absolute top-full left-0 pt-2 w-56 z-50">
-                  <div className="bg-white border border-gray-200 rounded-xl shadow-xl p-1">
-                    {group.items.map(item => <Link key={item[0]} href={item[1]} role="menuitem" onClick={() => setOpenMenu(null)} className="block px-3 py-2.5 rounded-lg text-xs hover:bg-gray-50">{t(item[0])}</Link>)}
+                  <div className="bg-white border border-bss-border rounded-xl shadow-xl p-1">
+                    {group.items.map(item => <Link key={item[0]} href={item[1]} role="menuitem" onClick={() => setOpenMenu(null)} className="block px-3 py-2.5 rounded-lg text-xs hover:bg-bss-bg">{t(item[0])}</Link>)}
                   </div>
                 </div>}
               </div>)}
@@ -104,31 +104,33 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <NotificationBell viewAllHref="/employer/notifications"/>
           <div className="relative">
-            <button type="button" onClick={() => setProfile(value => !value)} aria-expanded={profile} className="min-h-11 flex items-center gap-2 rounded-full transition-colors duration-150 hover:bg-gray-100 p-1 pr-2">
-              <span className="w-8 h-8 rounded-full bg-[#073B67] text-white flex items-center justify-center font-bold">{employer.identity.company.charAt(0)}</span>
+            <button type="button" onClick={() => setProfile(value => !value)} aria-expanded={profile} className="min-h-11 flex items-center gap-2 rounded-full transition-colors duration-150 hover:bg-bss-bg p-1 pr-2">
+              <span className="w-8 h-8 rounded-full bg-[#01183A] text-white flex items-center justify-center font-bold">{employer.identity.company.charAt(0)}</span>
               <span className="hidden xl:block text-sm font-semibold max-w-32 truncate">{employer.identity.company}</span>
               <ChevronDown size={14}/>
             </button>
-            {profile && <div className="absolute right-0 top-full mt-2 w-60 bg-white border border-gray-200 rounded-xl shadow-xl p-1">
-              <div className="p-3 border-b border-gray-100"><p className="font-semibold text-sm">{employer.identity.company}</p><p className="text-xs text-gray-500 font-mono mt-0.5">{employer.identity.bssId}</p></div>
-              <Link href="/employer/profile" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-gray-50"><Settings size={16}/>{t('nav.profile')}</Link>
-              <Link href="/employer/clra-registers" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-gray-50"><ClipboardCheck size={16}/>Registers Adoption</Link>
-              <Link href="/employer/cost-sheets" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-gray-50"><Calculator size={16}/>Cost Sheet Adoption</Link>
-              <Link href="/employer/templates" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-gray-50"><FileText size={16}/>{t('nav.templates')}</Link>
-              <Link href="/employer/settings" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-gray-50"><Settings size={16}/>{t('nav.settings')}</Link>
-              <SignOutButton className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 rounded-lg hover:bg-red-50"/>
+            {profile && <div className="absolute right-0 top-full mt-2 w-60 bg-white border border-bss-border rounded-xl shadow-xl p-1">
+              <div className="p-3 border-b border-bss-border"><p className="font-semibold text-sm">{employer.identity.company}</p><p className="text-xs text-bss-text-muted font-mono mt-0.5">{employer.identity.bssId}</p></div>
+              <Link href="/employer/profile" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><Settings size={16}/>{t('nav.profile')}</Link>
+              <Link href="/employer/analytics" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><Activity size={16}/>Analytics</Link>
+              <Link href="/employer/clra-registers" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><ClipboardCheck size={16}/>Registers Adoption</Link>
+              <Link href="/employer/cost-sheets" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><Calculator size={16}/>Cost Sheet Adoption</Link>
+              <Link href="/employer/templates" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><FileText size={16}/>{t('nav.templates')}</Link>
+              <Link href="/employer/settings" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><Settings size={16}/>{t('nav.settings')}</Link>
+              <SignOutButton className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-bss-error rounded-lg hover:bg-bss-soft-orange"/>
             </div>}
           </div>
           <button type="button" className="bss-mobile-trigger" aria-label={t('nav.menu')} aria-expanded={mobile} onClick={() => setMobile(value => !value)}>{mobile ? <X/> : <Menu/>}</button>
         </div>
       </div>
-      {mobile && <nav aria-label={t('nav.mobile')} className="bss-mobile-menu absolute top-16 w-full bg-white border-b border-gray-200 shadow-xl p-4">
-        {mobileItems.map(item => <Link key={`${item[0]}-${item[1]}`} href={item[1]} onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-gray-50">{t(item[0])}</Link>)}
-        <Link href="/employer/profile" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-gray-50">{t('nav.profile')}</Link>
-        <Link href="/employer/clra-registers" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-gray-50">Registers Adoption</Link>
-        <Link href="/employer/templates" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-gray-50">{t('nav.templates')}</Link>
-        <Link href="/employer/settings" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-gray-50">{t('nav.settings')}</Link>
-        <SignOutButton className="w-full flex items-center gap-2 px-4 py-3 text-red-600"/>
+      {mobile && <nav aria-label={t('nav.mobile')} className="bss-mobile-menu absolute top-16 w-full bg-white border-b border-bss-border shadow-xl p-4">
+        {mobileItems.map(item => <Link key={`${item[0]}-${item[1]}`} href={item[1]} onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t(item[0])}</Link>)}
+        <Link href="/employer/profile" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t('nav.profile')}</Link>
+        <Link href="/employer/analytics" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">Analytics</Link>
+        <Link href="/employer/clra-registers" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">Registers Adoption</Link>
+        <Link href="/employer/templates" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t('nav.templates')}</Link>
+        <Link href="/employer/settings" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t('nav.settings')}</Link>
+        <SignOutButton className="w-full flex items-center gap-2 px-4 py-3 text-bss-error"/>
       </nav>}
     </header>
     <main key={pathname} className="bss-app-main bss-content-fade flex-1 w-full max-w-[1200px] mx-auto py-6 md:py-10 px-4 md:px-8">{children}</main>

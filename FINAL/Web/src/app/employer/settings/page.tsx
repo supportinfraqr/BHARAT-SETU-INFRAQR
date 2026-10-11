@@ -9,9 +9,9 @@ export default function EmployerSettingsPage() {
   return (
     <div className="space-y-6 pb-12">
       <header>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Account settings</p>
-        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Settings</h1>
-        <p className="text-sm text-gray-500 mt-1">Language, alerts, privacy, accessibility and account security · {employer.identity.company}</p>
+        <p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Account settings</p>
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-bss-text-primary mt-1">Settings</h1>
+        <p className="text-sm text-bss-text-muted mt-1">Language, alerts, privacy, accessibility and account security · {employer.identity.company}</p>
       </header>
 
       <PortalSettingsPanel

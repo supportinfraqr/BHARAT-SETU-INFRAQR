@@ -152,8 +152,10 @@ def attendance_upload(request):
 
     def upsert(worker, row_site, attendance_date, sheet_status, remarks):
         from bss_core.models import AttendanceEvent
+        # One row per worker-day: fold the sheet into the existing day (whatever
+        # source captured the first check-in) instead of creating a duplicate row.
         existing = Attendance.objects.filter(
-            worker=worker, attendance_date=attendance_date, capture_method="SHEET").first()
+            worker=worker, attendance_date=attendance_date).order_by("id").first()
         if existing is None:
             existing = Attendance.objects.create(
                 worker=worker, site=row_site, contractor=user,
@@ -165,9 +167,15 @@ def attendance_upload(request):
             existing.contractor = user
             existing.status = sheet_status
             existing.is_verified = True
-            existing.remarks = remarks
-            existing.save(update_fields=["site", "contractor", "status",
-                                         "is_verified", "remarks", "updated_at"])
+            # Keep the day's original source + remarks (the first check-in) unless
+            # this day is itself sheet-sourced.
+            if existing.capture_method == "SHEET":
+                existing.remarks = remarks
+                existing.save(update_fields=["site", "contractor", "status",
+                                             "is_verified", "remarks", "updated_at"])
+            else:
+                existing.save(update_fields=["site", "contractor", "status",
+                                             "is_verified", "updated_at"])
             created = False
         # Record/refresh the day's SHEET event so the upload shows in the ledger.
         from datetime import datetime as _dt, time as _time
@@ -834,7 +842,8 @@ def _record_punch(worker, site, source, method, when, *, lat=None, lng=None,
         attendance=attendance, worker=worker, site=site, attendance_date=today,
         source=source, method=method, event_type=action, at=when,
         gps_lat=lat, gps_long=lng, gps_accuracy_m=accuracy, gps_address=address,
-        is_geofence_ok=geofence_ok, distance_m=distance, marked_by=marked_by)
+        is_geofence_ok=geofence_ok, distance_m=distance, remarks=(remarks or "")[:255],
+        marked_by=marked_by)
     return attendance, event, action
 
 
@@ -922,6 +931,8 @@ def worker_mark_attendance_site(request):
         "radiusM": radius if distance is not None else None,
         "outsideM": round(max(0.0, distance - radius), 1) if distance is not None else None,
         "accuracyM": round(accuracy, 1) if accuracy is not None else None,
+        "gpsLat": round(lat, 6),
+        "gpsLong": round(lng, 6),
         "geofenceOk": geofence_ok,
         "address": address,
         "remarks": remarks,

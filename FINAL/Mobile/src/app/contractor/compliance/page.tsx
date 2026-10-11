@@ -260,8 +260,13 @@ export default function ContractorCompliancePage() {
   }
 
   return <div className="space-y-6 pb-12">
-    <header className="flex flex-col sm:flex-row justify-between gap-4">
-      <div><p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Master data</p><h1 className="text-2xl font-bold mt-1 text-bss-navy">Contractor Compliance</h1><p className="text-sm text-bss-text-secondary mt-1">Statutory, site and worker-level evidence — registers, master file CLRA generation and contractor reports.</p></div>
+    <header className="relative overflow-hidden rounded-3xl bss-anim-gradient bg-gradient-to-br from-bss-navy via-bss-deep-navy to-bss-interactive-blue text-white p-5 sm:p-6 shadow-lg">
+      <div aria-hidden className="absolute -right-8 -top-10 w-44 h-44 rounded-full bg-white/5 blur-2xl" />
+      <div className="relative z-10">
+        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">Statutory compliance · CLRA</p>
+        <h1 className="text-2xl md:text-3xl font-bold mt-1">Contractor Compliance</h1>
+        <p className="text-sm text-white/75 mt-1 max-w-2xl">Statutory, site and worker-level evidence — registers, master-file CLRA generation and contractor reports, all in one place.</p>
+      </div>
     </header>
 
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
@@ -333,7 +338,7 @@ export default function ContractorCompliancePage() {
       </div>
 
       <div className="grid gap-6">
-      <section className="bg-white rounded-2xl overflow-hidden border border-bss-border shadow-sm">
+      <section className="bss-3d bss-scroll-rise bg-white rounded-2xl overflow-hidden border border-bss-border shadow-sm">
         <div className="relative overflow-hidden bg-gradient-to-br from-bss-navy via-bss-deep-navy to-[#022B5E] text-white p-5">
           <div className="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-white/5" />
           <div className="relative flex items-start justify-between gap-3">
@@ -411,7 +416,7 @@ export default function ContractorCompliancePage() {
 
       {/* Generation status — per-site, for the selected period + frequency */}
       {siteStatus.length > 0 && (
-        <section className="bg-white rounded-2xl overflow-hidden border border-bss-border">
+        <section className="bss-3d bss-scroll-rise bg-white rounded-2xl overflow-hidden border border-bss-border">
           <header className="px-5 pt-4 pb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><Activity size={16} className="text-bss-interactive-blue" />Generation Status</h2>
@@ -447,7 +452,7 @@ export default function ContractorCompliancePage() {
       )}
 
       {/* PAN-India register template library for the selected state */}
-      <section className="bg-white rounded-2xl overflow-hidden border border-bss-border">
+      <section className="bss-3d bss-scroll-rise bg-white rounded-2xl overflow-hidden border border-bss-border">
         <button type="button" onClick={() => setTemplateLibraryOpen(o => !o)} className="w-full px-5 py-4 flex flex-wrap justify-between gap-2 items-center text-left hover:bg-bss-bg/60 transition-colors">
           <div className="flex items-start gap-3 min-w-0">
             <ChevronDown size={18} className={`mt-0.5 flex-shrink-0 text-bss-text-muted transition-transform ${templateLibraryOpen ? 'rotate-180' : ''}`} />
@@ -479,7 +484,7 @@ export default function ContractorCompliancePage() {
     </div>}
 
     {tab === 'report' && <div className="space-y-6">
-      <section className="bg-white rounded-2xl overflow-hidden border border-bss-border">
+      <section className="bss-3d bss-scroll-rise bg-white rounded-2xl overflow-hidden border border-bss-border">
         <div className="relative overflow-hidden bg-gradient-to-br from-bss-navy via-bss-deep-navy to-[#022B5E] text-white p-5">
           <div className="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-white/5" />
           <div className="relative flex items-start justify-between gap-3">

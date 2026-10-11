@@ -123,7 +123,7 @@ export default function ContractorSkillsPage() {
       <EnterpriseDataTable title="Created courses" rows={courses} columns={columns} rowKey={r => r.id} filename="contractor-courses"/>
     </>}
 
-    {tab === 'history' && <section className="bss-card rounded-2xl overflow-hidden">
+    {tab === 'history' && <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
       <header className="px-5 py-4 border-b border-bss-border"><h2 className="text-sm font-semibold text-bss-text-primary">Course History & Certificates</h2><p className="text-xs text-bss-text-muted mt-0.5">Certificates auto-generated per course once a learner completes all video lessons.</p></header>
       <div className="divide-y divide-bss-border">{courses.map(course => (
         <div key={course.id} className="px-5 py-4 flex flex-wrap items-center justify-between gap-3 hover:bg-bss-bg">

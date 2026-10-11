@@ -131,6 +131,7 @@ class AttendanceEvent(models.Model):
     is_geofence_ok = models.BooleanField(null=True, blank=True)
     distance_m = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     external_id = models.CharField(max_length=60, blank=True)  # e.g. pipeline sighting id
+    remarks = models.CharField(max_length=255, blank=True)
     meta = models.JSONField(default=dict, blank=True)
     marked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                                   related_name="+")

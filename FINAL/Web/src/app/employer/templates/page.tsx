@@ -17,13 +17,13 @@ export default function EmployerTemplatesPage() {
   return (
     <div className="space-y-6 pb-12">
       <header>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Templates setting</p>
-        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Templates Setting</h1>
-        <p className="text-sm text-gray-500 mt-1">Document templates, organisation branding and worker document operations · {employer.identity.company}</p>
+        <p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Templates setting</p>
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-bss-text-primary mt-1">Templates Setting</h1>
+        <p className="text-sm text-bss-text-muted mt-1">Document templates, organisation branding and worker document operations · {employer.identity.company}</p>
       </header>
 
-      <div className="flex flex-wrap gap-2 border-b border-gray-200">
-        <button className="px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px inline-flex items-center gap-2 border-[#073B67] text-[#073B67]"><LayoutTemplate size={16}/>Document Templates</button>
+      <div className="flex flex-wrap gap-2 border-b border-bss-border">
+        <button className="px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px inline-flex items-center gap-2 border-[#01183A] text-[#01183A]"><LayoutTemplate size={16}/>Document Templates</button>
       </div>
 
       <DocumentTemplateManager owner={owner} onGenerate={type => setGenerateType(type)} />

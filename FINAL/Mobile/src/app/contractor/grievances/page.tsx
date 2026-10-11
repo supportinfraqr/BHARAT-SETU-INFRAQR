@@ -116,7 +116,7 @@ export default function ContractorGrievancesPage() {
     <EnterpriseDataTable title="Worker grievance register" rows={grievances} columns={columns} rowKey={g => g.id} filename="contractor-grievances"/>
 
     {/* Detail + conversation */}
-    {selected && <section className="bss-card rounded-2xl overflow-hidden">
+    {selected && <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">
       <header className="px-5 py-4 border-b border-bss-border flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="w-10 h-10 rounded-xl bg-bss-blue-tint text-bss-interactive-blue grid place-items-center"><MessageSquareText size={18}/></span>

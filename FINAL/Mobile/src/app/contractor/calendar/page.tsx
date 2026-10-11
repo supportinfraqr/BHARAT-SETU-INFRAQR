@@ -514,7 +514,7 @@ export default function ContractorCalendarPage() {
       ) : (
         <div className="space-y-6">
           {/* Controls Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-2 border border-bss-border rounded-2xl shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bss-3d bss-scroll-rise bg-white p-2 border border-bss-border rounded-2xl shadow-sm">
             <div className="flex items-center gap-1 w-full sm:w-auto">
               <button
                 onClick={() => setActiveTab('calendar')}

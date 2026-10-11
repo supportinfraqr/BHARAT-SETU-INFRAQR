@@ -92,12 +92,12 @@ export default function BatchDrilldown({ batchId, role, onClose }: { batchId:str
     finally { setBusy(false); }
   }
 
-  return <div className="fixed inset-0 z-[95] bg-bss-navy/40 backdrop-blur-sm flex justify-end" role="presentation"><section role="dialog" aria-modal="true" aria-label="Batch drill-down" className="bg-white w-full max-w-2xl h-full overflow-y-auto shadow-2xl">
-    <header className="sticky top-0 bg-white border-b border-bss-border px-5 py-4 flex items-start justify-between gap-3">
-      <div><p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted">Generated batch · {siteLabel || 'State / Site'}</p><h2 className="font-semibold text-bss-text-primary mt-0.5">{summary ? `${summary.state} · ${summary.month} ${summary.year}` : 'Loading…'}</h2>{summary && <p className="text-xs text-bss-text-secondary mt-0.5">{summary.employees} employee row(s) · {placeCount} {placeLabel}</p>}</div>
-      <button onClick={onClose} aria-label="Close" className="w-9 h-9 grid place-items-center rounded-lg hover:bg-bss-bg text-bss-text-secondary"><X size={18}/></button>
+  return <div className="fixed inset-0 z-[95] bg-bss-navy/50 backdrop-blur-sm grid place-items-center p-4 animate-in fade-in duration-200" role="presentation" onClick={onClose}><section role="dialog" aria-modal="true" aria-label="Batch drill-down" onClick={e => e.stopPropagation()} className="bg-white w-full max-w-2xl max-h-[88vh] rounded-3xl overflow-hidden shadow-2xl border border-bss-border flex flex-col animate-in fade-in zoom-in-95 duration-200">
+    <header className="flex items-start justify-between gap-3 px-5 py-4 bg-gradient-to-r from-bss-navy to-bss-deep-navy text-white flex-shrink-0">
+      <div><p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Generated batch · {siteLabel || 'State / Site'}</p><h2 className="font-semibold mt-0.5">{summary ? `${summary.state} · ${summary.month} ${summary.year}` : 'Loading…'}</h2>{summary && <p className="text-xs text-white/70 mt-0.5">{summary.employees} employee row(s) · {placeCount} {placeLabel}</p>}</div>
+      <button onClick={onClose} aria-label="Close" className="w-9 h-9 grid place-items-center rounded-full hover:bg-white/15 text-white flex-shrink-0 transition-colors"><X size={18}/></button>
     </header>
-    <div className="p-5 space-y-5">
+    <div className="flex-1 overflow-y-auto p-5 space-y-5">
       {error && <p role="alert" className="text-sm text-bss-error bg-bss-soft-orange border border-bss-border rounded-lg p-2.5">{error}</p>}
       <div className="rounded-xl border border-bss-border bg-bss-bg p-4" title={summary ? `${summary.employees} worker row(s) · ${placeCount} ${placeLabel} · ${summary.state} · ${summary.month} ${summary.year}` : ''}>
         <div className="flex items-start justify-between gap-3">
@@ -129,7 +129,8 @@ export default function BatchDrilldown({ batchId, role, onClose }: { batchId:str
         </div>
       </div>}
     </div>
-  </section></div>;
+    </section>
+  </div>;
 }
 
 function hasPendingAudit(data: SiteDocs): boolean {

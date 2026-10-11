@@ -62,7 +62,7 @@ export default function MyEmployersPage() {
       <p className="text-sm text-bss-text-muted mt-1">Authorised employer relationships and the sites allotted to you — one contractor can be bound to multiple employers.</p>
     </header>
 
-    <section className="bss-card rounded-2xl p-5">
+    <section className="bss-card bss-3d bss-scroll-rise rounded-2xl p-5">
       <div className="flex items-center gap-2"><Star size={16} className="text-[#E45D24]" /><h2 className="font-semibold text-sm">Default site for worker bindings</h2></div>
       <p className="text-xs text-bss-text-muted mt-1 mb-3">When you scan a worker QR, this site is pre-selected. You can still change it at scan time.</p>
       <select

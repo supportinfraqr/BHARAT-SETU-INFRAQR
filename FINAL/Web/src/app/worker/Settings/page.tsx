@@ -7,6 +7,7 @@ import ConsentPanel from '@/components/ConsentPanel';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
+import PageHero from '@/components/portal/PageHero';
 import SecuritySettings from '@/components/settings/SecuritySettings';
 import RegisteredDevices from '@/components/settings/RegisteredDevices';
 import { getLocale } from '@/i18n';
@@ -113,16 +114,14 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-5 pb-12 max-w-4xl mx-auto">
-      <header className="flex justify-between items-end gap-4">
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Worker account</p>
-          <h1 className="text-2xl md:text-3xl font-semibold text-gray-950 mt-1">{t('nav.settings')}</h1>
-          <p className="text-sm text-gray-500 mt-1">Control language, alerts, privacy, accessibility and account security.</p>
-        </div>
-        {saved && <span className="hidden sm:flex text-xs text-green-700 gap-1 items-center font-medium"><CheckCircle2 size={14} />Saved</span>}
-      </header>
+      <PageHero
+        eyebrow="Worker account"
+        title={t('nav.settings')}
+        subtitle="Control language, alerts, privacy, accessibility and account security."
+        actions={saved ? <span className="hidden sm:flex text-xs text-white/80 gap-1 items-center font-medium"><CheckCircle2 size={14} />Saved</span> : undefined}
+      />
 
-      {profileError && <p role="alert" className="p-3 bg-red-50 text-red-700 rounded-lg text-sm font-medium">{profileError}</p>}
+      {profileError && <p role="alert" className="p-3 bg-bss-soft-orange text-bss-error rounded-lg text-sm font-medium">{profileError}</p>}
 
       <SettingSection
         icon={Globe2}
@@ -130,7 +129,7 @@ export default function SettingsPage() {
         subtitle={`${locale.abbreviation} · ${locale.nativeName} · ${locale.name}`}
       >
         <LanguageSelect label={t('settings.interface_language')} />
-        <p className="text-xs text-gray-400 mt-3">Used consistently before and after login on this device.</p>
+        <p className="text-xs text-bss-text-muted mt-3">Used consistently before and after login on this device.</p>
       </SettingSection>
 
       <div className="grid lg:grid-cols-2 gap-5">
@@ -149,12 +148,12 @@ export default function SettingsPage() {
           title="Communication Preferences"
           subtitle="How BSS should contact you"
         >
-          <label className="block text-xs font-semibold text-gray-600">
+          <label className="block text-xs font-semibold text-bss-text-secondary">
             Preferred channel
             <select
               value={prefs.preferredChannel}
               onChange={e => void updateSetting('preferredChannel', e.target.value)}
-              className="mt-2 w-full h-10 border border-gray-200 rounded-lg px-3 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="mt-2 w-full h-10 border border-bss-border rounded-lg px-3 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
             >
               <option value="SMS">SMS</option>
               <option value="WhatsApp">WhatsApp</option>
@@ -163,9 +162,9 @@ export default function SettingsPage() {
               <option value="Email">Email</option>
             </select>
           </label>
-          <div className="mt-4 p-3 rounded-lg bg-gray-50 text-xs text-gray-500 flex items-center gap-2">
+          <div className="mt-4 p-3 rounded-lg bg-bss-bg text-xs text-bss-text-muted flex items-center gap-2">
             <Smartphone size={15} />
-            <span>Registered mobile: <strong className="text-gray-800 font-mono">{maskedMobile}</strong></span>
+            <span>Registered mobile: <strong className="text-bss-text-primary font-mono">{maskedMobile}</strong></span>
           </div>
         </SettingSection>
       </div>
@@ -189,8 +188,8 @@ export default function SettingsPage() {
           <Toggle label="Show photo on public verification" detail="Authorised roles remain unaffected" checked={prefs.consentToPublicPhoto} onChange={v => void updateSetting('consentToPublicPhoto', v)} />
           <Toggle label="Allow role-based data sharing" detail="Workbook permissions are always enforced" checked={prefs.consentToDataSharing} onChange={v => void updateSetting('consentToDataSharing', v)} />
           <Toggle label="Allow binding & unbinding" detail="Contractors can send binding requests; both parties must still consent" checked={prefs.bindingEnabled} onChange={v => void updateSetting('bindingEnabled', v)} />
-          <a href="/policy" className="mt-3 flex items-center justify-between text-xs font-semibold text-[#073B67] hover:underline">Read the privacy policy<ChevronRight size={14} /></a>
-          <a href="/data-sharing" className="mt-2 flex items-center justify-between text-xs font-semibold text-[#073B67] hover:underline">Review data-sharing policy<ChevronRight size={14} /></a>
+          <a href="/policy" className="mt-3 flex items-center justify-between text-xs font-semibold text-[#01183A] hover:underline">Read the privacy policy<ChevronRight size={14} /></a>
+          <a href="/data-sharing" className="mt-2 flex items-center justify-between text-xs font-semibold text-[#01183A] hover:underline">Review data-sharing policy<ChevronRight size={14} /></a>
         </SettingSection>
       </div>
 
@@ -200,10 +199,10 @@ export default function SettingsPage() {
         subtitle="Protect access to your worker account"
       >
         <div className="grid sm:grid-cols-2 gap-3">
-          <div className="p-3 rounded-lg border border-gray-100 bg-white sm:col-span-2">
-            <p className="text-xs font-semibold text-gray-800 flex gap-2 items-center"><MonitorCog size={14} />Active Session</p>
-            <p className="text-[11px] text-green-700 font-medium mt-1">BSS Worker ID: <span className="font-mono">{worker.identity?.bssId || 'Active'}</span></p>
-            <p className="text-[11px] text-gray-600 mt-1">Aadhaar Status: <strong className="text-gray-800">{worker.identity?.aadhaarVerified ? 'Verified' : 'Pending Verification'}</strong></p>
+          <div className="p-3 rounded-lg border border-bss-border bg-white sm:col-span-2">
+            <p className="text-xs font-semibold text-bss-text-primary flex gap-2 items-center"><MonitorCog size={14} />Active Session</p>
+            <p className="text-[11px] text-bss-green font-medium mt-1">BSS Worker ID: <span className="font-mono">{worker.identity?.bssId || 'Active'}</span></p>
+            <p className="text-[11px] text-bss-text-secondary mt-1">Aadhaar Status: <strong className="text-bss-text-primary">{worker.identity?.aadhaarVerified ? 'Verified' : 'Pending Verification'}</strong></p>
           </div>
         </div>
         <div className="mt-4">
@@ -227,10 +226,10 @@ export default function SettingsPage() {
         subtitle="Portable and worker controlled"
       >
         <div className="flex flex-col sm:flex-row gap-3">
-          <button onClick={exportData} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-gray-50 transition">
+          <button onClick={exportData} className="h-10 px-4 rounded-lg border border-bss-border text-xs font-semibold flex items-center justify-center gap-2 hover:bg-bss-bg transition">
             <Download size={15} />Download My Data
           </button>
-          <SignOutButton label="Sign Out on This Device" className="h-10 px-4 rounded-lg border border-red-200 bg-white text-red-700 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-red-50 transition" />
+          <SignOutButton label="Sign Out on This Device" className="h-10 px-4 rounded-lg border border-bss-border bg-white text-bss-error text-xs font-semibold flex items-center justify-center gap-2 hover:bg-bss-soft-orange transition" />
         </div>
       </SettingSection>
     </div>
@@ -239,13 +238,13 @@ export default function SettingsPage() {
 
 function SettingSection({ icon: Icon, title, subtitle, children }: { icon: typeof Globe2; title: string; subtitle: string; children: React.ReactNode }) {
   return (
-    <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-      <header className="p-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
+    <section className="bss-3d bss-scroll-rise bss-card rounded-2xl overflow-hidden">
+      <header className="p-4 border-b border-bss-border flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <span className="w-9 h-9 rounded-lg bg-gray-50 text-[#073B67] flex items-center justify-center"><Icon size={17} /></span>
+          <span className="w-9 h-9 rounded-lg bg-bss-blue-tint text-bss-interactive-blue flex items-center justify-center"><Icon size={17} /></span>
           <div>
-            <h2 className="text-sm font-semibold text-gray-950">{title}</h2>
-            <p className="text-[11px] text-gray-400 mt-0.5">{subtitle}</p>
+            <h2 className="text-sm font-semibold text-bss-text-primary">{title}</h2>
+            <p className="text-[11px] text-bss-text-muted mt-0.5">{subtitle}</p>
           </div>
         </div>
       </header>
@@ -256,13 +255,13 @@ function SettingSection({ icon: Icon, title, subtitle, children }: { icon: typeo
 
 function Toggle({ label, detail, checked, onChange }: { label: string; detail: string; checked: boolean; onChange: (value: boolean) => void }) {
   return (
-    <label className="flex items-center justify-between gap-3 py-3 border-b border-gray-50 last:border-0 cursor-pointer select-none">
+    <label className="flex items-center justify-between gap-3 py-3 border-b border-bss-border last:border-0 cursor-pointer select-none">
       <span>
-        <strong className="block text-xs font-semibold text-gray-800">{label}</strong>
-        <small className="block text-[11px] text-gray-400 mt-0.5">{detail}</small>
+        <strong className="block text-xs font-semibold text-bss-text-primary">{label}</strong>
+        <small className="block text-[11px] text-bss-text-muted mt-0.5">{detail}</small>
       </span>
       <input type="checkbox" className="sr-only" checked={checked} onChange={e => onChange(e.target.checked)} />
-      <span className={`w-10 h-6 rounded-full p-0.5 transition ${checked ? 'bg-[#073B67]' : 'bg-gray-200'}`}>
+      <span className={`w-10 h-6 rounded-full p-0.5 transition ${checked ? 'bg-[#01183A]' : 'bg-bss-bg'}`}>
         <span className={`block w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
       </span>
     </label>

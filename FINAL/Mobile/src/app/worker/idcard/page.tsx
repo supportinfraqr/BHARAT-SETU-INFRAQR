@@ -3,6 +3,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { ChevronLeft, Home, RadioTower, ShieldCheck, Briefcase, CheckCircle2, UserRound, IdCard } from 'lucide-react';
 import Link from 'next/link';
+import PageHero from '@/components/portal/PageHero';
 import WorkerQr from '@/components/qr/WorkerQr';
 import CredentialQrPanel from '@/components/idcard/CredentialQrPanel';
 import { GatePassViewer } from '@/components/documentEngine/GatePassViewer';
@@ -73,32 +74,32 @@ export default function IdentityCardPage() {
   return (
     <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-6">
       
-      <div className="flex items-center gap-4">
-        <Link href="/worker/scan" className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-600 hover:text-[#073B67] hover:border-[#073B67] transition-all" title="Back to Scanner">
-          <ChevronLeft size={20} />
-        </Link>
-        <Link href="/worker" className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-600 hover:text-[#073B67] hover:border-[#073B67] transition-all" title="Go to Dashboard">
-          <Home size={16} />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-[#062D4F]">{t('dash.view_card')}</h1>
-          <p className="text-sm text-gray-500">Your official BSS digital credential.</p>
-        </div>
-      </div>
+      <PageHero
+        title={t('dash.view_card')}
+        subtitle="Your official BSS digital credential."
+        actions={<>
+          <Link href="/worker/scan" className="w-10 h-10 grid place-items-center rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors" title="Back to Scanner">
+            <ChevronLeft size={20} />
+          </Link>
+          <Link href="/worker" className="w-10 h-10 grid place-items-center rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors" title="Go to Dashboard">
+            <Home size={16} />
+          </Link>
+        </>}
+      />
 
       {/* CARD FORMAT SELECTOR */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-gray-200 shadow-sm">
+      <div className="bss-3d bss-scroll-rise flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-bss-border shadow-sm">
         <div className="flex gap-1 w-full sm:w-auto">
           <button
             onClick={() => setCardFormat('standard')}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${!isEmployment ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${!isEmployment ? 'bg-[#073B67] text-white shadow-sm' : 'bg-bss-bg text-bss-text-secondary hover:bg-bss-bg'}`}
           >
             <IdCard size={15}/> Standard BSS ID Card
           </button>
           {isBound && (
           <button
             onClick={() => setCardFormat('employment')}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${isEmployment ? 'bg-[#073B67] text-white shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${isEmployment ? 'bg-[#073B67] text-white shadow-sm' : 'bg-bss-bg text-bss-text-secondary hover:bg-bss-bg'}`}
           >
             <Briefcase size={15} className="text-orange-400"/> Employment Card
           </button>
@@ -106,16 +107,16 @@ export default function IdentityCardPage() {
         </div>
 
         {/* SIDE FLIP CONTROLS */}
-        <div className="bg-gray-100 p-1 rounded-xl flex gap-1 shadow-inner w-full sm:w-auto">
+        <div className="bg-bss-bg p-1 rounded-xl flex gap-1 shadow-inner w-full sm:w-auto">
           <button 
             onClick={() => setIsFlipped(false)}
-            className={`flex-1 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${!isFlipped ? 'bg-white text-[#073B67] shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+            className={`flex-1 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${!isFlipped ? 'bg-white text-[#073B67] shadow-sm' : 'text-bss-text-muted hover:text-bss-text-primary'}`}
           >
             Front Side
           </button>
           <button 
             onClick={() => setIsFlipped(true)}
-            className={`flex-1 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${isFlipped ? 'bg-white text-[#073B67] shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+            className={`flex-1 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${isFlipped ? 'bg-white text-[#073B67] shadow-sm' : 'text-bss-text-muted hover:text-bss-text-primary'}`}
           >
             Back Side
           </button>
@@ -500,7 +501,7 @@ export default function IdentityCardPage() {
         description="This large QR carries the same BSS credential as the card — use it when the printed card QR is too small to scan. Anyone can scan it to verify your identity."
       />
 
-      <p className="text-center text-xs text-gray-500">ISO/IEC 7810 ID-1 · 85.60 × 53.98 mm · front and back · 4× raster capture</p>
+      <p className="text-center text-xs text-bss-text-muted">ISO/IEC 7810 ID-1 · 85.60 × 53.98 mm · front and back · 4× raster capture</p>
 
       {passPreview && <GatePassViewer html={passPreview.html} title={passPreview.title} onClose={() => setPassPreview(null)} />}
 

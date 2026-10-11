@@ -86,7 +86,7 @@ export default function ContractorHistoryPage() {
               {filtered.map((h, index) => (
                 <li key={h.id} className="ms-6">
                   <span className="absolute -start-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#01183A] text-white text-[10px] font-bold ring-4 ring-white">{h.sequence ?? index + 1}</span>
-                  <div className="rounded-2xl border border-bss-border bg-white p-4">
+                  <div className="bss-3d bss-scroll-rise rounded-2xl border border-bss-border bg-white p-4">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
