@@ -135,7 +135,7 @@ export default function EmployerAnalyticsPage() {
 
     <div className="bss-reveal bss-card p-3 flex flex-wrap items-center gap-3" style={{ ['--bss-delay' as string]: '60ms' }}>
       <label className="text-xs font-semibold text-bss-text-secondary">Period
-        <select value={effectivePeriod} disabled={tab === 'live'} onChange={e => setPeriod(e.target.value)} className="ml-2 h-9 border border-bss-border rounded-lg px-2.5 text-sm bg-white text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 disabled:opacity-60">
+        <select value={effectivePeriod} onChange={e => { const v = e.target.value; setPeriod(v); if (tab === 'live' && v !== 'live') setTab('overview'); }} className="ml-2 h-9 border border-bss-border rounded-lg px-2.5 text-sm bg-white text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30">
           {PERIODS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
       </label>
