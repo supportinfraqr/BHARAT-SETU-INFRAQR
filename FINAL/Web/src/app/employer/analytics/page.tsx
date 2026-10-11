@@ -48,7 +48,7 @@ const PERIODS: Array<[string, string]> = [
 ];
 const TABS: Array<[string, string]> = [
   ['live', 'Live'], ['overview', 'Overview'], ['attendance', 'Attendance'], ['workforce', 'Workforce'],
-  ['compliance', 'Compliance'], ['payroll', 'Payroll'], ['contractors', 'Contractors'],
+  ['compliance', 'Compliance'], ['contractors', 'Contractors'],
   ['access', 'Access & Gate'], ['grievances', 'Grievances'],
 ];
 
@@ -111,7 +111,7 @@ export default function EmployerAnalyticsPage() {
         <div>
           <p className="text-xs font-semibold text-bss-soft-green uppercase tracking-[0.14em] flex items-center gap-1.5"><Activity size={14}/>Insights</p>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight mt-1">Workforce Analytics</h1>
-          <p className="text-sm text-white/70 mt-1 max-w-2xl">Live status and trends across your sites — workforce, attendance, compliance, payroll, access and grievances.</p>
+          <p className="text-sm text-white/70 mt-1 max-w-2xl">Live status and trends across your sites — workforce, attendance, compliance, access and grievances.</p>
         </div>
         <button type="button" onClick={() => void load()} className="self-start h-10 px-4 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/20 transition-colors backdrop-blur-sm">
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''}/> {updatedAt ? `Updated ${updatedAt}` : 'Refresh'}
@@ -171,6 +171,30 @@ function StatGrid({ items }: { items: Array<{ label: string; value: string | num
   return <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{items.map(i => <Stat key={i.label} {...i}/>)}</div>;
 }
 
+function LiveByTable({ rows, firstLabel }: { rows: Array<{ label: string; workers: number; onSite: number; present: number }>; firstLabel: string }) {
+  if (!rows.length) return <p className="text-xs text-bss-text-muted">Nothing in scope.</p>;
+  return <div className="overflow-hidden rounded-xl border border-bss-border">
+    <table className="w-full text-xs">
+      <thead className="bg-bss-bg text-[10px] uppercase tracking-wide text-bss-text-muted">
+        <tr>
+          <th className="text-left px-3 py-2 font-semibold">{firstLabel}</th>
+          <th className="px-2 py-2 font-semibold text-center">Workers</th>
+          <th className="px-2 py-2 font-semibold text-center text-bss-green">On site</th>
+          <th className="px-2 py-2 font-semibold text-center">Present</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-bss-border">
+        {rows.map((r, i) => <tr key={i}>
+          <td className="px-3 py-2 font-semibold text-bss-text-primary truncate max-w-[180px]">{r.label}</td>
+          <td className="px-2 py-2 text-center text-bss-text-secondary">{r.workers}</td>
+          <td className="px-2 py-2 text-center font-bold text-bss-green">{r.onSite}</td>
+          <td className="px-2 py-2 text-center text-bss-text-secondary">{r.present}</td>
+        </tr>)}
+      </tbody>
+    </table>
+  </div>;
+}
+
 function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n?: number) => string }) {
   if (tab === 'live') {
     const bySite = (data.bySite ?? []) as Array<{ site: string; workers: number; onSite: number; present: number }>;
@@ -180,17 +204,19 @@ function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n
         { label: 'On site now', value: data.onSiteNow ?? 0, tone: 'text-bss-green' },
         { label: 'Bound workers', value: data.boundWorkers ?? 0 },
         { label: 'Present today', value: data.today?.present ?? 0 },
+        { label: 'Checked out', value: data.today?.checkedOut ?? 0, tone: 'text-bss-interactive-blue' },
         { label: 'Not arrived', value: data.today?.notArrived ?? 0, tone: 'text-bss-orange' },
+        { label: 'Punches today', value: (data.recentEvents ?? []).length },
       ]}/>
-      <div className="grid lg:grid-cols-3 gap-5">
-        <Card title="On site now — by site"><HBar data={bySite.map(s => ({ label: s.site, value: s.onSite }))} color="#14843C"/></Card>
-        <Card title="On site now — by contractor"><HBar data={byContractor.map(c => ({ label: c.contractor, value: c.onSite }))} color="#1E3A8A"/></Card>
-        <Card title="Today's snapshot"><Donut slices={[
-          { label: 'On site', value: data.today?.onSite ?? 0, color: '#14843C' },
-          { label: 'Checked out', value: data.today?.checkedOut ?? 0, color: '#1E3A8A' },
-          { label: 'Not arrived', value: data.today?.notArrived ?? 0, color: '#F59E0B' },
-        ]}/></Card>
+      <div className="grid lg:grid-cols-2 gap-5">
+        <Card title="By site" subtitle="Bound workers · on site now · present today"><LiveByTable firstLabel="Site" rows={bySite.map(s => ({ label: s.site, workers: s.workers, onSite: s.onSite, present: s.present }))}/></Card>
+        <Card title="By contractor" subtitle="Bound workers · on site now · present today"><LiveByTable firstLabel="Contractor" rows={byContractor.map(c => ({ label: c.contractor, workers: c.workers, onSite: c.onSite, present: c.present }))}/></Card>
       </div>
+      <Card title="Today's snapshot"><Donut slices={[
+        { label: 'On site', value: data.today?.onSite ?? 0, color: '#14843C' },
+        { label: 'Checked out', value: data.today?.checkedOut ?? 0, color: '#1E3A8A' },
+        { label: 'Not arrived', value: data.today?.notArrived ?? 0, color: '#F59E0B' },
+      ]}/></Card>
       <Card title="Hourly arrivals (check-ins)" subtitle="Today"><BarChart data={data.hourlyArrivals ?? []} color="#1E3A8A"/></Card>
       <Card title="Live event feed" subtitle="Latest punches — any source">
         {data.recentEvents && data.recentEvents.length
@@ -270,28 +296,6 @@ function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n
         <Card title="Compliance score by site" subtitle="Lowest first"><HBar data={(data.bySite ?? []).map(s => ({ label: String(s.site), value: Number(s.score ?? 0) }))} color="#14843C"/></Card>
         <Card title="Report status">{data.statusMix?.length ? <Donut slices={data.statusMix.map((s, i) => ({ label: s.label, value: s.value, color: ['#14843C','#F59E0B','#DC2626'][i % 3] }))}/> : <p className="text-xs text-bss-text-muted">No reports.</p>}</Card>
         <Card title="Summary"><Stat label="Compliance reports" value={data.reports ?? 0}/></Card>
-      </div>
-    </div>;
-  }
-
-  if (tab === 'payroll') {
-    return <div className="space-y-5">
-      <StatGrid items={[
-        { label: 'Processed', value: data.processed ?? 0, tone: 'text-bss-green' },
-        { label: 'Pending', value: data.pending ?? 0, tone: 'text-bss-orange' },
-        { label: 'Exceptions', value: data.exceptions ?? 0, tone: 'text-bss-error' },
-        { label: 'Avg net pay', value: inr(data.wageDistribution?.avg) },
-      ]}/>
-      <div className="grid lg:grid-cols-2 gap-5">
-        <Card title="Net pay by period">{data.byPeriod?.length ? <BarChart data={data.byPeriod} color="#1E3A8A"/> : <p className="text-xs text-bss-text-muted">No payroll records.</p>}</Card>
-        <Card title="Net pay by contractor"><HBar data={(data.byContractor ?? []).map(c => ({ label: String(c.contractor), value: Number(c.value ?? 0) }))} color="#E45D24"/></Card>
-        <Card title="Wage distribution">
-          <div className="grid grid-cols-3 gap-3">
-            <Stat label="Min" value={inr(data.wageDistribution?.min)}/>
-            <Stat label="Avg" value={inr(data.wageDistribution?.avg)}/>
-            <Stat label="Max" value={inr(data.wageDistribution?.max)}/>
-          </div>
-        </Card>
       </div>
     </div>;
   }

@@ -48,7 +48,7 @@ const PERIODS: Array<[string, string]> = [
 ];
 const TABS: Array<[string, string]> = [
   ['live', 'Live'], ['overview', 'Overview'], ['attendance', 'Attendance'], ['workforce', 'Workforce'],
-  ['compliance', 'Compliance'], ['payroll', 'Payroll'], ['contractors', 'Contractors'],
+  ['compliance', 'Compliance'], ['contractors', 'Contractors'],
   ['access', 'Access & Gate'], ['grievances', 'Grievances'],
 ];
 
@@ -104,61 +104,65 @@ export default function EmployerAnalyticsPage() {
   }, [tab, load]);
 
   return <div className="space-y-5 pb-12">
-    <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
-      <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Insights</p>
-        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Workforce Analytics</h1>
-        <p className="text-sm text-gray-500 mt-1">Live status and trends across your sites — workforce, attendance, compliance, payroll, access and grievances.</p>
+    <header className="bss-reveal bss-gradient-hero bss-elevated relative overflow-hidden rounded-2xl p-5 sm:p-6 text-white">
+      <div className="pointer-events-none absolute -right-16 -top-16 w-56 h-56 rounded-full bg-white/5" />
+      <div className="pointer-events-none absolute right-24 -bottom-20 w-48 h-48 rounded-full bg-white/5" />
+      <div className="relative flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold text-bss-soft-green uppercase tracking-[0.14em] flex items-center gap-1.5"><Activity size={14}/>Insights</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight mt-1">Workforce Analytics</h1>
+          <p className="text-sm text-white/70 mt-1 max-w-2xl">Live status and trends across your sites — workforce, attendance, compliance, access and grievances.</p>
+        </div>
+        <button type="button" onClick={() => void load()} className="self-start h-10 px-4 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-white/20 transition-colors backdrop-blur-sm">
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''}/> {updatedAt ? `Updated ${updatedAt}` : 'Refresh'}
+        </button>
       </div>
-      <button type="button" onClick={() => void load()} className="self-start h-10 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-gray-50">
-        <RefreshCw size={14} className={loading ? 'animate-spin' : ''}/> {updatedAt ? `Updated ${updatedAt}` : 'Refresh'}
-      </button>
     </header>
 
-    <div className="flex flex-wrap items-center gap-2">
-      <label className="text-xs font-semibold text-gray-600">Period
-        <select value={effectivePeriod} disabled={tab === 'live'} onChange={e => setPeriod(e.target.value)} className="ml-2 h-9 border border-gray-200 rounded-lg px-2 text-sm bg-white disabled:opacity-60">
+    <div className="bss-reveal bss-card p-3 flex flex-wrap items-center gap-3" style={{ ['--bss-delay' as string]: '60ms' }}>
+      <label className="text-xs font-semibold text-bss-text-secondary">Period
+        <select value={effectivePeriod} disabled={tab === 'live'} onChange={e => setPeriod(e.target.value)} className="ml-2 h-9 border border-bss-border rounded-lg px-2.5 text-sm bg-white text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 disabled:opacity-60">
           {PERIODS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
       </label>
       {effectivePeriod === 'custom' && <>
-        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="h-9 border border-gray-200 rounded-lg px-2 text-sm"/>
-        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="h-9 border border-gray-200 rounded-lg px-2 text-sm"/>
+        <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="h-9 border border-bss-border rounded-lg px-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30"/>
+        <input type="date" value={to} onChange={e => setTo(e.target.value)} className="h-9 border border-bss-border rounded-lg px-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30"/>
       </>}
-      <label className="text-xs font-semibold text-gray-600">Site
-        <select value={siteId} onChange={e => setSiteId(e.target.value)} className="ml-2 h-9 border border-gray-200 rounded-lg px-2 text-sm bg-white">
+      <label className="text-xs font-semibold text-bss-text-secondary">Site
+        <select value={siteId} onChange={e => setSiteId(e.target.value)} className="ml-2 h-9 border border-bss-border rounded-lg px-2.5 text-sm bg-white text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30">
           <option value="">All sites</option>{sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
       </label>
-      <label className="text-xs font-semibold text-gray-600">Contractor
-        <select value={contractorId} onChange={e => setContractorId(e.target.value)} className="ml-2 h-9 border border-gray-200 rounded-lg px-2 text-sm bg-white">
+      <label className="text-xs font-semibold text-bss-text-secondary">Contractor
+        <select value={contractorId} onChange={e => setContractorId(e.target.value)} className="ml-2 h-9 border border-bss-border rounded-lg px-2.5 text-sm bg-white text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30">
           <option value="">All contractors</option>{contractors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </label>
     </div>
 
-    <div className="inline-flex flex-wrap gap-1 rounded-lg border border-gray-200 bg-white p-1">
-      {TABS.map(([v, l]) => <button key={v} onClick={() => setTab(v)} className={`h-8 px-3 rounded-md text-xs font-bold transition-colors ${tab === v ? 'bg-[#073B67] text-white' : 'text-gray-600 hover:bg-gray-50'}`}>{l}</button>)}
+    <div className="bss-reveal inline-flex flex-wrap gap-1 rounded-xl border border-bss-border bg-white p-1.5 shadow-sm" style={{ ['--bss-delay' as string]: '100ms' }}>
+      {TABS.map(([v, l]) => <button key={v} onClick={() => setTab(v)} className={`h-8 px-3.5 rounded-lg text-xs font-semibold transition-all ${tab === v ? 'bg-bss-navy text-white shadow-sm' : 'text-bss-text-secondary hover:bg-bss-bg hover:text-bss-text-primary'}`}>{l}</button>)}
     </div>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
 
-    {loading && !data ? <p className="flex items-center gap-2 text-sm text-gray-500 py-10"><Loader2 size={15} className="animate-spin"/>Loading analytics…</p>
-      : data && <TabBody tab={tab} data={data} inr={inr}/>}
+    {loading && !data ? <p className="flex items-center gap-2 text-sm text-bss-text-muted py-10"><Loader2 size={15} className="animate-spin"/>Loading analytics…</p>
+      : data && <div className="bss-reveal" style={{ ['--bss-delay' as string]: '140ms' }}><TabBody tab={tab} data={data} inr={inr}/></div>}
   </div>;
 }
 
 function Card({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
-  return <section className="bg-white border border-gray-200 rounded-2xl p-5">
-    <h2 className="text-sm font-semibold text-gray-950">{title}</h2>
-    {subtitle && <p className="text-[11px] text-gray-400 mt-0.5">{subtitle}</p>}
+  return <section className="bss-card rounded-2xl p-5 hover:border-bss-border transition-colors">
+    <h2 className="text-sm font-semibold text-bss-text-primary">{title}</h2>
+    {subtitle && <p className="text-[11px] text-bss-text-muted mt-0.5">{subtitle}</p>}
     <div className="mt-4">{children}</div>
   </section>;
 }
 
-function Stat({ label, value, tone = 'text-gray-900' }: { label: string; value: string | number; tone?: string }) {
-  return <div className="bg-white border border-gray-200 rounded-xl p-4">
-    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
+function Stat({ label, value, tone = 'text-bss-text-primary' }: { label: string; value: string | number; tone?: string }) {
+  return <div className="bss-surface-soft border border-bss-border rounded-xl p-4 bss-hover-lift">
+    <p className="text-[11px] font-semibold uppercase tracking-wider text-bss-text-muted">{label}</p>
     <strong className={`block text-2xl mt-1 ${tone}`}>{value}</strong>
   </div>;
 }
@@ -167,31 +171,57 @@ function StatGrid({ items }: { items: Array<{ label: string; value: string | num
   return <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{items.map(i => <Stat key={i.label} {...i}/>)}</div>;
 }
 
+function LiveByTable({ rows, firstLabel }: { rows: Array<{ label: string; workers: number; onSite: number; present: number }>; firstLabel: string }) {
+  if (!rows.length) return <p className="text-xs text-bss-text-muted">Nothing in scope.</p>;
+  return <div className="overflow-hidden rounded-xl border border-bss-border">
+    <table className="w-full text-xs">
+      <thead className="bg-bss-bg text-[10px] uppercase tracking-wide text-bss-text-muted">
+        <tr>
+          <th className="text-left px-3 py-2 font-semibold">{firstLabel}</th>
+          <th className="px-2 py-2 font-semibold text-center">Workers</th>
+          <th className="px-2 py-2 font-semibold text-center text-bss-green">On site</th>
+          <th className="px-2 py-2 font-semibold text-center">Present</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-bss-border">
+        {rows.map((r, i) => <tr key={i}>
+          <td className="px-3 py-2 font-semibold text-bss-text-primary truncate max-w-[180px]">{r.label}</td>
+          <td className="px-2 py-2 text-center text-bss-text-secondary">{r.workers}</td>
+          <td className="px-2 py-2 text-center font-bold text-bss-green">{r.onSite}</td>
+          <td className="px-2 py-2 text-center text-bss-text-secondary">{r.present}</td>
+        </tr>)}
+      </tbody>
+    </table>
+  </div>;
+}
+
 function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n?: number) => string }) {
   if (tab === 'live') {
     const bySite = (data.bySite ?? []) as Array<{ site: string; workers: number; onSite: number; present: number }>;
     const byContractor = (data.byContractor ?? []) as Array<{ contractor: string; workers: number; onSite: number; present: number }>;
     return <div className="space-y-5">
       <StatGrid items={[
-        { label: 'On site now', value: data.onSiteNow ?? 0, tone: 'text-emerald-700' },
+        { label: 'On site now', value: data.onSiteNow ?? 0, tone: 'text-bss-green' },
         { label: 'Bound workers', value: data.boundWorkers ?? 0 },
         { label: 'Present today', value: data.today?.present ?? 0 },
-        { label: 'Not arrived', value: data.today?.notArrived ?? 0, tone: 'text-amber-700' },
+        { label: 'Checked out', value: data.today?.checkedOut ?? 0, tone: 'text-bss-interactive-blue' },
+        { label: 'Not arrived', value: data.today?.notArrived ?? 0, tone: 'text-bss-orange' },
+        { label: 'Punches today', value: (data.recentEvents ?? []).length },
       ]}/>
-      <div className="grid lg:grid-cols-3 gap-5">
-        <Card title="On site now — by site"><HBar data={bySite.map(s => ({ label: s.site, value: s.onSite }))} color="#2F9E67"/></Card>
-        <Card title="On site now — by contractor"><HBar data={byContractor.map(c => ({ label: c.contractor, value: c.onSite }))} color="#155E95"/></Card>
-        <Card title="Today's snapshot"><Donut slices={[
-          { label: 'On site', value: data.today?.onSite ?? 0, color: '#2F9E67' },
-          { label: 'Checked out', value: data.today?.checkedOut ?? 0, color: '#155E95' },
-          { label: 'Not arrived', value: data.today?.notArrived ?? 0, color: '#F59E0B' },
-        ]}/></Card>
+      <div className="grid lg:grid-cols-2 gap-5">
+        <Card title="By site" subtitle="Bound workers · on site now · present today"><LiveByTable firstLabel="Site" rows={bySite.map(s => ({ label: s.site, workers: s.workers, onSite: s.onSite, present: s.present }))}/></Card>
+        <Card title="By contractor" subtitle="Bound workers · on site now · present today"><LiveByTable firstLabel="Contractor" rows={byContractor.map(c => ({ label: c.contractor, workers: c.workers, onSite: c.onSite, present: c.present }))}/></Card>
       </div>
-      <Card title="Hourly arrivals (check-ins)" subtitle="Today"><BarChart data={data.hourlyArrivals ?? []} color="#155E95"/></Card>
+      <Card title="Today's snapshot"><Donut slices={[
+        { label: 'On site', value: data.today?.onSite ?? 0, color: '#14843C' },
+        { label: 'Checked out', value: data.today?.checkedOut ?? 0, color: '#1E3A8A' },
+        { label: 'Not arrived', value: data.today?.notArrived ?? 0, color: '#F59E0B' },
+      ]}/></Card>
+      <Card title="Hourly arrivals (check-ins)" subtitle="Today"><BarChart data={data.hourlyArrivals ?? []} color="#1E3A8A"/></Card>
       <Card title="Live event feed" subtitle="Latest punches — any source">
         {data.recentEvents && data.recentEvents.length
-          ? <ul className="divide-y divide-gray-100">{data.recentEvents.map((e, i) => <li key={i} className="py-2 flex items-center justify-between text-xs"><span className="text-gray-700"><strong>{e.worker}</strong> · <span className="font-mono text-[11px] text-gray-400">{e.bssId}</span> · {e.site}</span><span className="flex items-center gap-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${e.type === 'IN' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}`}>{e.source} {e.type}</span><span className="text-gray-400">{e.at ? new Date(e.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}</span></span></li>)}</ul>
-          : <p className="text-xs text-gray-400">No punches yet today.</p>}
+          ? <ul className="divide-y divide-bss-border">{data.recentEvents.map((e, i) => <li key={i} className="py-2 flex items-center justify-between text-xs"><span className="text-bss-text-secondary"><strong>{e.worker}</strong> · <span className="font-mono text-[11px] text-bss-text-muted">{e.bssId}</span> · {e.site}</span><span className="flex items-center gap-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${e.type === 'IN' ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-blue-tint text-bss-interactive-blue'}`}>{e.source} {e.type}</span><span className="text-bss-text-muted">{e.at ? new Date(e.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}</span></span></li>)}</ul>
+          : <p className="text-xs text-bss-text-muted">No punches yet today.</p>}
       </Card>
     </div>;
   }
@@ -202,17 +232,17 @@ function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n
       {k && <StatGrid items={[
         { label: 'Workers', value: k.workers }, { label: 'Active sites', value: k.activeSites },
         { label: 'Contractors', value: k.contractors }, { label: 'Attendance rate', value: `${k.attendanceRate}%` },
-        { label: 'Present today', value: k.presentToday }, { label: 'Absent today', value: k.absentToday, tone: 'text-red-600' },
-        { label: 'Payroll processed', value: inr(k.payrollProcessed) }, { label: 'Payroll exceptions', value: k.payrollExceptions, tone: 'text-red-600' },
-        { label: 'Active gate passes', value: k.activeGatePasses }, { label: 'Open grievances', value: k.openGrievances, tone: 'text-orange-700' },
-        { label: 'Documents expiring', value: k.documentsExpiring, tone: 'text-orange-700' }, { label: 'Records (period)', value: k.period.total },
+        { label: 'Present today', value: k.presentToday }, { label: 'Absent today', value: k.absentToday, tone: 'text-bss-error' },
+        { label: 'Payroll processed', value: inr(k.payrollProcessed) }, { label: 'Payroll exceptions', value: k.payrollExceptions, tone: 'text-bss-error' },
+        { label: 'Active gate passes', value: k.activeGatePasses }, { label: 'Open grievances', value: k.openGrievances, tone: 'text-bss-orange' },
+        { label: 'Documents expiring', value: k.documentsExpiring, tone: 'text-bss-orange' }, { label: 'Records (period)', value: k.period.total },
       ]}/>}
       <div className="grid lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2"><Card title="Attendance — present trend"><BarChart data={(data.trend ?? []).map(t => ({ label: t.label, value: t.value }))} color="#2F9E67"/></Card></div>
+        <div className="lg:col-span-2"><Card title="Attendance — present trend"><BarChart data={(data.trend ?? []).map(t => ({ label: t.label, value: t.value }))} color="#14843C"/></Card></div>
         <Card title="Alerts">
           {data.alerts && data.alerts.length
-            ? <ul className="space-y-2">{data.alerts.map((a, i) => <li key={i}><a href={a.href} className="flex items-start gap-2 text-xs text-gray-700 hover:underline"><AlertTriangle size={14} className={a.tone === 'red' ? 'text-red-500 mt-0.5' : 'text-orange-500 mt-0.5'}/>{a.label}</a></li>)}</ul>
-            : <p className="text-xs text-emerald-700 flex items-center gap-1.5"><Activity size={14}/>All clear.</p>}
+            ? <ul className="space-y-2">{data.alerts.map((a, i) => <li key={i}><a href={a.href} className="flex items-start gap-2 text-xs text-bss-text-secondary hover:underline"><AlertTriangle size={14} className={a.tone === 'red' ? 'text-bss-error mt-0.5' : 'text-bss-orange mt-0.5'}/>{a.label}</a></li>)}</ul>
+            : <p className="text-xs text-bss-green flex items-center gap-1.5"><Activity size={14}/>All clear.</p>}
         </Card>
       </div>
     </div>;
@@ -221,16 +251,16 @@ function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n
   if (tab === 'attendance') {
     return <div className="space-y-5">
       <div className="grid lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2"><Card title="Attendance trend (present)"><BarChart data={(data.trend ?? []).map(t => ({ label: t.label, value: t.present ?? t.value }))} color="#2F9E67"/></Card></div>
-        <Card title="Source mix">{data.sourceMix?.length ? <Donut slices={data.sourceMix.map((s, i) => ({ label: s.source, value: s.value, color: ['#155E95','#2F9E67','#F47A32','#7C3AED','#0EA5E9'][i % 5] }))}/> : <p className="text-xs text-gray-400">No records.</p>}</Card>
+        <div className="lg:col-span-2"><Card title="Attendance trend (present)"><BarChart data={(data.trend ?? []).map(t => ({ label: t.label, value: t.present ?? t.value }))} color="#14843C"/></Card></div>
+        <Card title="Source mix">{data.sourceMix?.length ? <Donut slices={data.sourceMix.map((s, i) => ({ label: s.source, value: s.value, color: ['#1E3A8A','#14843C','#E45D24','#7C3AED','#0EA5E9'][i % 5] }))}/> : <p className="text-xs text-bss-text-muted">No records.</p>}</Card>
       </div>
       <div className="grid lg:grid-cols-2 gap-5">
-        <Card title="Attendance rate by site"><HBar data={(data.bySite ?? []).map(s => ({ label: String(s.site), value: Number(s.rate ?? 0) }))} color="#155E95"/></Card>
+        <Card title="Attendance rate by site"><HBar data={(data.bySite ?? []).map(s => ({ label: String(s.site), value: Number(s.rate ?? 0) }))} color="#1E3A8A"/></Card>
         <Card title="Summary">
           <div className="grid grid-cols-2 gap-3 text-xs">
             <Stat label="Records" value={data.totalRecords ?? 0}/>
             <Stat label="Avg check-in" value={data.avgCheckIn || '—'}/>
-            <Stat label="Geo-fence exceptions" value={data.geofenceExceptions ?? 0} tone="text-amber-700"/>
+            <Stat label="Geo-fence exceptions" value={data.geofenceExceptions ?? 0} tone="text-bss-orange"/>
             <Stat label="Present total" value={(data.trend ?? []).reduce((n, t) => n + (t.present ?? 0), 0)}/>
           </div>
         </Card>
@@ -241,21 +271,21 @@ function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n
   if (tab === 'workforce') {
     return <div className="space-y-5">
       <StatGrid items={[
-        { label: 'Total workers', value: data.total ?? 0 }, { label: 'Verified (Aadhaar)', value: data.verified ?? 0, tone: 'text-emerald-700' },
-        { label: 'Unverified', value: data.unverified ?? 0, tone: 'text-amber-700' }, { label: 'Joiners (period)', value: data.joiners ?? 0 },
-        { label: 'Exits (period)', value: data.exits ?? 0, tone: 'text-red-600' },
+        { label: 'Total workers', value: data.total ?? 0 }, { label: 'Verified (Aadhaar)', value: data.verified ?? 0, tone: 'text-bss-green' },
+        { label: 'Unverified', value: data.unverified ?? 0, tone: 'text-bss-orange' }, { label: 'Joiners (period)', value: data.joiners ?? 0 },
+        { label: 'Exits (period)', value: data.exits ?? 0, tone: 'text-bss-error' },
       ]}/>
       <div className="grid lg:grid-cols-2 gap-5">
         <Card title="Headcount by site"><HBar data={(data.bySite ?? []).map(s => ({ label: String(s.site), value: Number(s.value ?? 0) }))}/></Card>
-        <Card title="Headcount by contractor"><HBar data={(data.byContractor ?? []).map(c => ({ label: String(c.contractor), value: Number(c.value ?? 0) }))} color="#155E95"/></Card>
-        <Card title="Gender split"><Donut slices={(data.gender ?? []).map((g, i) => ({ label: g.label, value: g.value, color: ['#155E95','#F47A32','#2F9E67','#7C3AED'][i % 4] }))}/></Card>
+        <Card title="Headcount by contractor"><HBar data={(data.byContractor ?? []).map(c => ({ label: String(c.contractor), value: Number(c.value ?? 0) }))} color="#1E3A8A"/></Card>
+        <Card title="Gender split"><Donut slices={(data.gender ?? []).map((g, i) => ({ label: g.label, value: g.value, color: ['#1E3A8A','#E45D24','#14843C','#7C3AED'][i % 4] }))}/></Card>
         <Card title="Age bands"><BarChart data={data.ageBands ?? []} color="#7C3AED"/></Card>
-        <Card title="Blood group"><HBar data={data.bloodGroup ?? []} color="#F47A32"/></Card>
+        <Card title="Blood group"><HBar data={data.bloodGroup ?? []} color="#E45D24"/></Card>
         <Card title="Documents"><BarChart data={[
           { label: 'Valid', value: data.documents?.valid ?? 0 },
           { label: 'Expiring', value: data.documents?.expiring ?? 0 },
           { label: 'Missing', value: data.documents?.missing ?? 0 },
-        ]} color="#155E95"/></Card>
+        ]} color="#1E3A8A"/></Card>
       </div>
     </div>;
   }
@@ -263,31 +293,9 @@ function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n
   if (tab === 'compliance') {
     return <div className="space-y-5">
       <div className="grid lg:grid-cols-3 gap-5">
-        <Card title="Compliance score by site" subtitle="Lowest first"><HBar data={(data.bySite ?? []).map(s => ({ label: String(s.site), value: Number(s.score ?? 0) }))} color="#2F9E67"/></Card>
-        <Card title="Report status">{data.statusMix?.length ? <Donut slices={data.statusMix.map((s, i) => ({ label: s.label, value: s.value, color: ['#2F9E67','#F59E0B','#DC2626'][i % 3] }))}/> : <p className="text-xs text-gray-400">No reports.</p>}</Card>
+        <Card title="Compliance score by site" subtitle="Lowest first"><HBar data={(data.bySite ?? []).map(s => ({ label: String(s.site), value: Number(s.score ?? 0) }))} color="#14843C"/></Card>
+        <Card title="Report status">{data.statusMix?.length ? <Donut slices={data.statusMix.map((s, i) => ({ label: s.label, value: s.value, color: ['#14843C','#F59E0B','#DC2626'][i % 3] }))}/> : <p className="text-xs text-bss-text-muted">No reports.</p>}</Card>
         <Card title="Summary"><Stat label="Compliance reports" value={data.reports ?? 0}/></Card>
-      </div>
-    </div>;
-  }
-
-  if (tab === 'payroll') {
-    return <div className="space-y-5">
-      <StatGrid items={[
-        { label: 'Processed', value: data.processed ?? 0, tone: 'text-emerald-700' },
-        { label: 'Pending', value: data.pending ?? 0, tone: 'text-amber-700' },
-        { label: 'Exceptions', value: data.exceptions ?? 0, tone: 'text-red-600' },
-        { label: 'Avg net pay', value: inr(data.wageDistribution?.avg) },
-      ]}/>
-      <div className="grid lg:grid-cols-2 gap-5">
-        <Card title="Net pay by period">{data.byPeriod?.length ? <BarChart data={data.byPeriod} color="#155E95"/> : <p className="text-xs text-gray-400">No payroll records.</p>}</Card>
-        <Card title="Net pay by contractor"><HBar data={(data.byContractor ?? []).map(c => ({ label: String(c.contractor), value: Number(c.value ?? 0) }))} color="#F47A32"/></Card>
-        <Card title="Wage distribution">
-          <div className="grid grid-cols-3 gap-3">
-            <Stat label="Min" value={inr(data.wageDistribution?.min)}/>
-            <Stat label="Avg" value={inr(data.wageDistribution?.avg)}/>
-            <Stat label="Max" value={inr(data.wageDistribution?.max)}/>
-          </div>
-        </Card>
       </div>
     </div>;
   }
@@ -295,8 +303,8 @@ function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n
   if (tab === 'contractors') {
     return <Card title="Contractor scorecard" subtitle="Workers and sites per connected contractor">
       <div className="overflow-x-auto"><table className="w-full text-sm">
-        <thead className="bg-gray-50 text-[11px] uppercase tracking-wider text-gray-500"><tr><th className="text-left px-4 py-2">Contractor</th><th className="text-right px-4 py-2">Workers</th><th className="text-right px-4 py-2">Sites</th></tr></thead>
-        <tbody className="divide-y divide-gray-100">{(data.contractors ?? []).map(c => <tr key={c.contractor}><td className="px-4 py-2 font-semibold text-gray-900">{c.contractor}</td><td className="px-4 py-2 text-right">{c.workers}</td><td className="px-4 py-2 text-right">{c.sites}</td></tr>)}</tbody>
+        <thead className="bg-bss-bg text-[11px] uppercase tracking-wider text-bss-text-muted"><tr><th className="text-left px-4 py-2">Contractor</th><th className="text-right px-4 py-2">Workers</th><th className="text-right px-4 py-2">Sites</th></tr></thead>
+        <tbody className="divide-y divide-bss-border">{(data.contractors ?? []).map(c => <tr key={c.contractor}><td className="px-4 py-2 font-semibold text-bss-text-primary">{c.contractor}</td><td className="px-4 py-2 text-right">{c.workers}</td><td className="px-4 py-2 text-right">{c.sites}</td></tr>)}</tbody>
       </table></div>
     </Card>;
   }
@@ -304,9 +312,9 @@ function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n
   if (tab === 'access') {
     return <div className="space-y-5">
       <div className="grid lg:grid-cols-3 gap-5">
-        <Card title="Gate passes by status">{data.passStatusMix?.length ? <Donut slices={data.passStatusMix.map((s, i) => ({ label: s.label, value: s.value, color: ['#2F9E67','#F59E0B','#DC2626','#6B7280'][i % 4] }))}/> : <p className="text-xs text-gray-400">No passes.</p>}</Card>
+        <Card title="Gate passes by status">{data.passStatusMix?.length ? <Donut slices={data.passStatusMix.map((s, i) => ({ label: s.label, value: s.value, color: ['#14843C','#F59E0B','#DC2626','#6B7280'][i % 4] }))}/> : <p className="text-xs text-bss-text-muted">No passes.</p>}</Card>
         <Card title="Gate scans (period)"><Donut slices={[
-          { label: 'Allow', value: data.scans?.allow ?? 0, color: '#2F9E67' },
+          { label: 'Allow', value: data.scans?.allow ?? 0, color: '#14843C' },
           { label: 'Deny', value: data.scans?.deny ?? 0, color: '#DC2626' },
         ]}/></Card>
         <Card title="Summary"><StatGrid items={[{ label: 'Passes', value: data.passes ?? 0 }, { label: 'Scans', value: data.scans?.total ?? 0 }]}/></Card>
@@ -317,14 +325,14 @@ function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n
   if (tab === 'grievances') {
     return <div className="space-y-5">
       <StatGrid items={[
-        { label: 'Open', value: data.open ?? 0, tone: 'text-orange-700' },
+        { label: 'Open', value: data.open ?? 0, tone: 'text-bss-orange' },
         { label: 'Total', value: data.total ?? 0 },
         { label: 'Avg resolution (h)', value: data.avgResolutionHours ?? 0 },
-        { label: 'Overdue (>7d)', value: data.overdue ?? 0, tone: 'text-red-600' },
+        { label: 'Overdue (>7d)', value: data.overdue ?? 0, tone: 'text-bss-error' },
       ]}/>
       <div className="grid lg:grid-cols-2 gap-5">
-        <Card title="By status">{data.byStatus?.length ? <Donut slices={data.byStatus.map((s, i) => ({ label: s.label, value: s.value, color: ['#2F9E67','#F59E0B','#DC2626','#155E95'][i % 4] }))}/> : <p className="text-xs text-gray-400">No grievances.</p>}</Card>
-        <Card title="By category"><HBar data={data.byCategory ?? []} color="#F47A32"/></Card>
+        <Card title="By status">{data.byStatus?.length ? <Donut slices={data.byStatus.map((s, i) => ({ label: s.label, value: s.value, color: ['#14843C','#F59E0B','#DC2626','#1E3A8A'][i % 4] }))}/> : <p className="text-xs text-bss-text-muted">No grievances.</p>}</Card>
+        <Card title="By category"><HBar data={data.byCategory ?? []} color="#E45D24"/></Card>
       </div>
     </div>;
   }
