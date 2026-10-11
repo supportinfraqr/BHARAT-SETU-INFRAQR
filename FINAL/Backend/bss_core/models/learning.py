@@ -103,6 +103,9 @@ class CourseAssignment(models.Model):
     title = models.CharField(max_length=160)
     assignment_type = models.CharField(max_length=20, choices=TYPE, default="QUIZ")
     instructions = models.TextField(blank=True)
+    # Model answer for a written-response assignment; the AI grades the worker's
+    # response against it.
+    sample_answer = models.TextField(blank=True)
     pass_score = models.PositiveIntegerField(default=60)
     sort_order = models.PositiveIntegerField(default=0)
 

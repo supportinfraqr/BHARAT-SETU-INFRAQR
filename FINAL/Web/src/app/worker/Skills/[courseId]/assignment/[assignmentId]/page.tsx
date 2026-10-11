@@ -293,7 +293,7 @@ export default function AssignmentPage({ params }: { params: Promise<{ courseId:
             <p className="p-8 text-center text-sm text-bss-text-muted">No questions published for this quiz yet.</p>
           )
         ) : (
-          /* WRITTEN / UPLOAD INTERFACE */
+          /* WRITTEN RESPONSE INTERFACE */
           <div className="p-6 space-y-4">
             <label className="block text-xs font-semibold uppercase tracking-wider text-bss-text-muted">
               Your Written Answer / Response

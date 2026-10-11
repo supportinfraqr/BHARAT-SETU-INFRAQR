@@ -7,10 +7,10 @@ import AdminPageHero from '@/components/admin/AdminPageHero';
 type Lesson = { id?: number; title: string; duration?: string; youtubeUrl?: string };
 type Reading = { id?: number; title: string; body?: string; resourceUrl?: string; duration?: string };
 type Question = { id?: number; question: string; options: string[]; correctIndex: number };
-type Assignment = { id?: number; title: string; type: 'QUIZ' | 'WRITING' | 'UPLOAD'; instructions?: string; passScore: number; questions: Question[] };
+type Assignment = { id?: number; title: string; type: 'QUIZ' | 'WRITING'; instructions?: string; sampleAnswer?: string; passScore: number; questions: Question[] };
 type Module = { id?: number; title: string; lessons: Lesson[]; readings: Reading[]; assignments: Assignment[] };
 
-type CourseAssignmentView = { id: number; title: string; type: string; instructions: string; passScore: number; questions: Array<{ id: number; question: string; options: string[]; correctIndex: number }> };
+type CourseAssignmentView = { id: number; title: string; type: string; instructions: string; sampleAnswer?: string; passScore: number; questions: Array<{ id: number; question: string; options: string[]; correctIndex: number }> };
 type CourseModuleView = { id: number; title: string; lessons: Array<{ id: number; title: string; duration: string; youtubeUrl: string }>; readings: Array<{ id: number; title: string; body: string; resourceUrl: string; duration: string }>; assignments: CourseAssignmentView[] };
 type Course = {
   id: number; code: string; title: string; provider: string; category: string; duration: string;
@@ -30,7 +30,7 @@ type ReportEnrollment = { id: number; workerName: string; workerId: string; cour
 type Report = { summary: { enrollments: number; completed: number; submissions: number; pendingGrading: number }; enrollments: ReportEnrollment[]; submissions: ReportSubmission[] };
 
 const emptyModule = (): Module => ({ title: '', lessons: [{ title: '', duration: '', youtubeUrl: '' }], readings: [], assignments: [] });
-const emptyAssignment = (): Assignment => ({ title: '', type: 'QUIZ', instructions: '', passScore: 60, questions: [] });
+const emptyAssignment = (): Assignment => ({ title: '', type: 'QUIZ', instructions: '', sampleAnswer: '', passScore: 60, questions: [] });
 const emptyQuestion = (): Question => ({ question: '', options: ['', ''], correctIndex: 0 });
 
 const emptyDraft = (): Draft => ({ title: '', provider: 'Bharat Shram Setu', category: '', duration: '', instructor: '', certification: '', skillName: '', description: '', passScore: 70, active: true, modules: [emptyModule()], imageUrl: '', audience: 'all', audienceContractorIds: [], audienceEmployerIds: [] });
@@ -55,7 +55,7 @@ function audienceText(c: { audience?: string; audienceContractorIds?: number[]; 
 }
 
 const input = 'mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm';
-const TYPE_LABEL: Record<string, string> = { QUIZ: 'Quiz', WRITING: 'Written response', UPLOAD: 'File upload' };
+const TYPE_LABEL: Record<string, string> = { QUIZ: 'Quiz', WRITING: 'Written response' };
 
 export default function AdminCoursesPage() {
   const [tab, setTab] = useState<'courses' | 'reports'>('courses');
@@ -150,7 +150,8 @@ export default function AdminCoursesPage() {
         lessons: m.lessons.map(l => ({ id: l.id, title: l.title, duration: l.duration, youtubeUrl: l.youtubeUrl })),
         readings: m.readings.map(r => ({ id: r.id, title: r.title, body: r.body, resourceUrl: r.resourceUrl, duration: r.duration })),
         assignments: m.assignments.map(a => ({
-          id: a.id, title: a.title, type: (a.type as Assignment['type']) || 'QUIZ', instructions: a.instructions,
+          id: a.id, title: a.title, type: (a.type === 'QUIZ' ? 'QUIZ' : 'WRITING') as Assignment['type'], instructions: a.instructions,
+          sampleAnswer: a.sampleAnswer ?? '',
           passScore: a.passScore,
           questions: a.questions.map(q => ({ id: q.id, question: q.question, options: q.options.length ? q.options : ['', ''], correctIndex: q.correctIndex })),
         })),
@@ -315,8 +316,8 @@ export default function AdminCoursesPage() {
         </section>
       </>)}
 
-    {draft && <div className="fixed inset-0 z-[95] bg-black/50 flex justify-end" role="presentation">
-      <section role="dialog" aria-modal="true" className="bg-white w-full max-w-3xl h-full overflow-y-auto">
+    {draft && <div className="fixed inset-0 z-[95] bg-black/50 grid place-items-center p-4" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setDraft(null); }}>
+      <section role="dialog" aria-modal="true" className="bg-white w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl">
         <header className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between z-10"><h2 className="text-sm font-bold">{draft.id ? 'Edit course' : 'New course'}</h2><button onClick={() => setDraft(null)} aria-label="Close"><X size={16}/></button></header>
         <div className="p-5 space-y-3">
           <div className="grid sm:grid-cols-2 gap-3">
@@ -386,11 +387,15 @@ export default function AdminCoursesPage() {
           <div className="border-t border-gray-100 pt-3">
             <div className="flex items-center justify-between mb-2"><p className="text-xs font-bold uppercase tracking-wider text-gray-500">Modules & content</p><button onClick={() => setDraft({ ...draft, modules: [...draft.modules, emptyModule()] })} className="text-[11px] font-bold text-[#073B67] inline-flex items-center gap-1"><Plus size={12}/>Add module</button></div>
 
-            {draft.modules.map((m, i) => <div key={i} className="rounded-xl border border-gray-200 p-3 mb-3 space-y-3 bg-gray-50/40">
-              <div className="flex items-center gap-2"><input className={input + ' flex-1 mt-0 bg-white'} placeholder={`Module ${i + 1} title`} value={m.title} onChange={e => setMod(i, { title: e.target.value })}/><button onClick={() => setDraft({ ...draft, modules: draft.modules.filter((_, k) => k !== i) })} className="text-gray-400 hover:text-red-600" aria-label="Remove module"><Trash2 size={14}/></button></div>
+            {draft.modules.map((m, i) => <div key={i} className="rounded-2xl border-2 border-bss-border bg-white p-3 mb-5 space-y-3 shadow-sm">
+              <div className="flex items-center gap-2 border-b border-bss-border pb-2">
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-bss-navy text-white text-[11px] font-bold shrink-0">{i + 1}</span>
+                <input className={input + ' flex-1 mt-0 font-semibold'} placeholder={`Module ${i + 1} title`} value={m.title} onChange={e => setMod(i, { title: e.target.value })}/>
+                <button onClick={() => setDraft({ ...draft, modules: draft.modules.filter((_, k) => k !== i) })} className="text-gray-400 hover:text-red-600" aria-label="Remove module" title="Remove module"><Trash2 size={15}/></button>
+              </div>
 
               {/* Lessons */}
-              <div className="rounded-lg border border-gray-100 bg-white p-2.5">
+              <div className="rounded-lg border border-gray-100 border-l-4 border-l-bss-interactive-blue/40 bg-white p-2.5">
                 <div className="flex items-center justify-between mb-1.5"><p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Video lessons</p><button onClick={() => setMod(i, { lessons: [...m.lessons, { title: '', duration: '', youtubeUrl: '' }] })} className="text-[11px] font-bold text-[#073B67] inline-flex items-center gap-1"><Plus size={11}/>Add lesson</button></div>
                 {m.lessons.map((l, j) => <div key={j} className="grid grid-cols-[1fr_80px_1fr_24px] gap-2 items-center mb-1.5">
                   <input className={input + ' mt-0'} placeholder="Lesson title" value={l.title} onChange={e => setLesson(i, j, { title: e.target.value })}/>
@@ -401,7 +406,7 @@ export default function AdminCoursesPage() {
               </div>
 
               {/* Readings */}
-              <div className="rounded-lg border border-gray-100 bg-white p-2.5">
+              <div className="rounded-lg border border-gray-100 border-l-4 border-l-bss-green/40 bg-white p-2.5">
                 <div className="flex items-center justify-between mb-1.5"><p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Readings</p><button onClick={() => setMod(i, { readings: [...m.readings, { title: '', body: '', resourceUrl: '', duration: '' }] })} className="text-[11px] font-bold text-[#073B67] inline-flex items-center gap-1"><Plus size={11}/>Add reading</button></div>
                 {m.readings.map((r, j) => <div key={j} className="rounded-lg border border-gray-100 p-2 mb-1.5 space-y-1.5">
                   <div className="grid grid-cols-[1fr_90px_1fr_24px] gap-2 items-center">
@@ -415,18 +420,23 @@ export default function AdminCoursesPage() {
               </div>
 
               {/* Assignments */}
-              <div className="rounded-lg border border-gray-100 bg-white p-2.5">
+              <div className="rounded-lg border border-gray-100 border-l-4 border-l-bss-orange/40 bg-white p-2.5">
                 <div className="flex items-center justify-between mb-1.5"><p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Assignments &amp; quizzes</p><button onClick={() => setMod(i, { assignments: [...m.assignments, emptyAssignment()] })} className="text-[11px] font-bold text-[#073B67] inline-flex items-center gap-1"><Plus size={11}/>Add assignment</button></div>
                 {m.assignments.map((a, j) => <div key={j} className="rounded-lg border border-gray-100 p-2.5 mb-2 space-y-2">
                   <div className="grid grid-cols-[1fr_140px_80px_24px] gap-2 items-center">
                     <input className={input + ' mt-0'} placeholder="Assignment title" value={a.title} onChange={e => setAssign(i, j, { title: e.target.value })}/>
                     <select className={input + ' mt-0'} value={a.type} onChange={e => setAssign(i, j, { type: e.target.value as Assignment['type'] })}>
-                      <option value="QUIZ">Quiz</option><option value="WRITING">Written response</option><option value="UPLOAD">File upload</option>
+                      <option value="QUIZ">Quiz</option><option value="WRITING">Written response</option>
                     </select>
                     <input type="number" min={0} max={100} className={input + ' mt-0'} placeholder="Pass %" value={a.passScore} onChange={e => setAssign(i, j, { passScore: Number(e.target.value) })}/>
                     <button onClick={() => setMod(i, { assignments: m.assignments.filter((_, x) => x !== j) })} className="text-gray-400 hover:text-red-600" aria-label="Remove assignment"><X size={14}/></button>
                   </div>
                   <textarea rows={2} className={input + ' mt-0 h-auto py-2'} placeholder="Instructions (optional)" value={a.instructions ?? ''} onChange={e => setAssign(i, j, { instructions: e.target.value })}/>
+                  {a.type === 'WRITING' && <div className="rounded-lg border border-bss-border bg-bss-bg/60 p-2 space-y-1.5">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-bss-text-secondary">Sample answer <span className="font-normal normal-case tracking-normal text-bss-text-muted">— the AI grades each response against this</span>
+                      <textarea rows={3} className={input + ' mt-1 h-auto py-2 bg-white'} placeholder="Paste the model/sample answer here…" value={a.sampleAnswer ?? ''} onChange={e => setAssign(i, j, { sampleAnswer: e.target.value })}/>
+                    </label>
+                  </div>}
                   {a.type === 'QUIZ' && <div className="rounded-lg border border-gray-100 p-2 space-y-2">
                     <div className="flex items-center justify-between"><p className="text-[11px] font-bold text-gray-500">Questions</p><button onClick={() => setAssign(i, j, { questions: [...a.questions, emptyQuestion()] })} className="text-[11px] font-bold text-[#073B67] inline-flex items-center gap-1"><Plus size={11}/>Add question</button></div>
                     {a.questions.map((q, k) => <div key={k} className="rounded-lg bg-gray-50 p-2 space-y-1.5">

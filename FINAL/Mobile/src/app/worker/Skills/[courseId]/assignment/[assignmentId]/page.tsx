@@ -140,9 +140,9 @@ export default function AssignmentPage({ params }: { params: Promise<{ courseId:
           </Link>
           <span className={`text-xs font-bold px-3 py-1 rounded-full ${
             isPassed
-              ? 'bg-green-100 text-green-800 border border-green-200'
+              ? 'bg-bss-soft-green text-bss-green border border-bss-border'
               : currentScore !== null
-                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                ? 'bg-bss-soft-orange text-bss-orange border border-bss-border'
                 : 'bg-bss-bg text-bss-text-secondary border border-bss-border'
           }`}>
             {isPassed ? `Passed (${currentScore}%)` : currentScore !== null ? `Score: ${currentScore}%` : 'Not Attempted'}
@@ -152,16 +152,16 @@ export default function AssignmentPage({ params }: { params: Promise<{ courseId:
 
       {/* 8-Hour Cooldown Banner */}
       {cooldownRemaining && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-3 text-amber-900 shadow-sm">
-          <Clock size={22} className="text-amber-600 shrink-0 mt-0.5" />
+        <div className="bg-bss-soft-orange border border-bss-border rounded-2xl p-5 flex items-start gap-3 text-bss-orange shadow-sm">
+          <Clock size={22} className="text-bss-orange shrink-0 mt-0.5" />
           <div className="flex-1">
-            <h3 className="text-sm font-bold text-amber-900">Quiz Retry Limit Active (8-Hour Limit)</h3>
-            <p className="text-xs text-amber-700 mt-1">
+            <h3 className="text-sm font-bold text-bss-orange">Quiz Retry Limit Active (8-Hour Limit)</h3>
+            <p className="text-xs text-bss-orange mt-1">
               You did not pass this quiz on your previous attempt. To ensure thorough learning, retakes are locked for 8 hours after a failed attempt.
             </p>
-            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-100 border border-amber-300 text-xs font-mono font-bold text-amber-900">
+            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bss-soft-orange border border-bss-border text-xs font-mono font-bold text-bss-orange">
               <span>Time remaining until retry:</span>
-              <strong className="text-amber-950">{cooldownRemaining}</strong>
+              <strong className="text-bss-orange">{cooldownRemaining}</strong>
             </div>
           </div>
         </div>
@@ -169,13 +169,13 @@ export default function AssignmentPage({ params }: { params: Promise<{ courseId:
 
       {/* Success Notification */}
       {successNotice && (
-        <div className="bg-green-50 border border-green-200 rounded-2xl p-5 flex items-start gap-3 text-green-900 shadow-sm">
-          <CheckCircle2 size={22} className="text-green-600 shrink-0 mt-0.5" />
+        <div className="bg-bss-soft-green border border-bss-border rounded-2xl p-5 flex items-start gap-3 text-bss-green shadow-sm">
+          <CheckCircle2 size={22} className="text-bss-green shrink-0 mt-0.5" />
           <div className="flex-1">
-            <h3 className="text-sm font-bold text-green-900">Assignment Passed!</h3>
-            <p className="text-xs text-green-700 mt-1">{successNotice}</p>
+            <h3 className="text-sm font-bold text-bss-green">Assignment Passed!</h3>
+            <p className="text-xs text-bss-green mt-1">{successNotice}</p>
             <div className="mt-4 flex gap-3">
-              <Link href={`/worker/Skills/${courseId}`} className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5">
+              <Link href={`/worker/Skills/${courseId}`} className="px-4 py-2 bg-bss-green hover:bg-bss-green text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5">
                 Back to Course Lessons
               </Link>
             </div>
@@ -185,14 +185,14 @@ export default function AssignmentPage({ params }: { params: Promise<{ courseId:
 
       {/* Error Alert */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 text-red-700 text-sm">
-          <AlertTriangle size={18} className="shrink-0 text-red-600" />
+        <div className="bg-bss-soft-orange border border-bss-border rounded-xl p-4 flex items-center gap-3 text-bss-error text-sm">
+          <AlertTriangle size={18} className="shrink-0 text-bss-error" />
           <span>{error}</span>
         </div>
       )}
 
       {/* Assignment Workspace */}
-      <main className="bss-3d bss-scroll-rise bg-white border border-bss-border rounded-2xl shadow-sm overflow-hidden">
+      <main className="bss-3d bss-scroll-rise bss-card rounded-2xl overflow-hidden">
         {/* Instructions */}
         {assignment.instructions && (
           <div className="p-5 bg-bss-blue-tint/50 border-b border-bss-border flex gap-3">
@@ -220,7 +220,7 @@ export default function AssignmentPage({ params }: { params: Promise<{ courseId:
 
               {/* Progress Bar */}
               <div className="h-1.5 bg-bss-bg rounded-full overflow-hidden">
-                <div className="h-full bg-[#073B67] transition-all duration-300 rounded-full" style={{ width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%` }} />
+                <div className="h-full bg-[#01183A] transition-all duration-300 rounded-full" style={{ width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%` }} />
               </div>
 
               {/* Current Question */}
@@ -237,7 +237,7 @@ export default function AssignmentPage({ params }: { params: Promise<{ courseId:
                         key={oi}
                         className={`flex items-start gap-3 p-4 rounded-xl border-2 transition-all cursor-pointer ${
                           selected
-                            ? 'border-[#073B67] bg-bss-blue-tint/60 shadow-sm'
+                            ? 'border-[#01183A] bg-bss-blue-tint/60 shadow-sm'
                             : 'border-bss-border hover:border-bss-border bg-white'
                         } ${cooldownRemaining ? 'opacity-70 cursor-not-allowed' : ''}`}
                       >
@@ -247,7 +247,7 @@ export default function AssignmentPage({ params }: { params: Promise<{ courseId:
                           disabled={!!cooldownRemaining}
                           checked={selected}
                           onChange={() => setAnswers(cur => ({ ...cur, [currentQuestion.id]: oi }))}
-                          className="mt-0.5 h-4 w-4 text-[#073B67] border-bss-border focus:ring-[#073B67]"
+                          className="mt-0.5 h-4 w-4 text-[#01183A] border-bss-border focus:ring-[#01183A]"
                         />
                         <span className="text-sm font-medium text-bss-text-primary leading-tight">{option}</span>
                       </label>
@@ -272,7 +272,7 @@ export default function AssignmentPage({ params }: { params: Promise<{ courseId:
                     <button
                       type="button"
                       onClick={() => setCurrentQuestionIndex(i => i + 1)}
-                      className="px-5 py-2.5 bg-[#073B67] text-white rounded-lg text-xs font-bold hover:bg-[#062D4F] flex items-center gap-1.5"
+                      className="px-5 py-2.5 bg-[#01183A] text-white rounded-lg text-xs font-bold hover:bg-[#022B5E] flex items-center gap-1.5"
                     >
                       Next Question <ChevronRight size={16} />
                     </button>
@@ -281,7 +281,7 @@ export default function AssignmentPage({ params }: { params: Promise<{ courseId:
                       type="button"
                       disabled={busy || !!cooldownRemaining || Object.keys(answers).length < totalQuestions}
                       onClick={submitAssignment}
-                      className="px-6 py-2.5 bg-[#2F9E67] text-white rounded-lg text-xs font-bold hover:bg-[#247c51] disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                      className="px-6 py-2.5 bg-[#14843C] text-white rounded-lg text-xs font-bold hover:bg-[#247c51] disabled:opacity-50 flex items-center gap-2 shadow-sm"
                     >
                       {busy ? 'Submitting...' : isPassed ? 'Re-submit Quiz' : 'Submit Quiz'}
                     </button>
@@ -293,7 +293,7 @@ export default function AssignmentPage({ params }: { params: Promise<{ courseId:
             <p className="p-8 text-center text-sm text-bss-text-muted">No questions published for this quiz yet.</p>
           )
         ) : (
-          /* WRITTEN / UPLOAD INTERFACE */
+          /* WRITTEN RESPONSE INTERFACE */
           <div className="p-6 space-y-4">
             <label className="block text-xs font-semibold uppercase tracking-wider text-bss-text-muted">
               Your Written Answer / Response
@@ -304,7 +304,7 @@ export default function AssignmentPage({ params }: { params: Promise<{ courseId:
               value={writing}
               onChange={e => setWriting(e.target.value)}
               placeholder="Type your response here in detail..."
-              className="w-full border border-bss-border rounded-xl p-4 text-sm text-bss-text-primary focus:ring-2 focus:ring-[#073B67] focus:border-transparent outline-none transition-all disabled:opacity-60"
+              className="w-full border border-bss-border rounded-xl p-4 text-sm text-bss-text-primary focus:ring-2 focus:ring-[#01183A] focus:border-transparent outline-none transition-all disabled:opacity-60"
             />
             {assignment.submission && (
               <div className="p-3 bg-bss-bg border border-bss-border rounded-xl text-xs text-bss-text-secondary flex items-center justify-between">
@@ -317,7 +317,7 @@ export default function AssignmentPage({ params }: { params: Promise<{ courseId:
                 type="button"
                 disabled={busy || !!cooldownRemaining || writing.trim().length === 0}
                 onClick={submitAssignment}
-                className="px-6 py-2.5 bg-[#073B67] text-white rounded-lg text-xs font-bold hover:bg-[#062D4F] disabled:opacity-50 flex items-center gap-2"
+                className="px-6 py-2.5 bg-[#01183A] text-white rounded-lg text-xs font-bold hover:bg-[#022B5E] disabled:opacity-50 flex items-center gap-2"
               >
                 {busy ? 'Submitting...' : 'Submit Written Response'}
               </button>

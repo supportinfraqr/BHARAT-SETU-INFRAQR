@@ -78,6 +78,93 @@ def _course_summary(user, course, enrollment):
     }
 
 
+def _ai_grade_writing(assignment, content):
+    """Grade a written response against the assignment's sample answer with AI.
+
+    Returns ``(score, feedback)`` or ``None`` when there is no sample answer, no
+    content, or no AI provider configured (caller then falls back to keyword
+    overlap)."""
+    from . import ai_audit
+    sample = (assignment.sample_answer or "").strip()
+    if not sample or not content.strip():
+        return None
+    system = (
+        "You are an examiner for the Bharat Shram Setu skilling portal. Grade a "
+        "worker's written response against the model answer. Reply with ONLY a "
+        "compact JSON object — no prose, no markdown: "
+        '{"score": <integer 0-100>, "feedback": "<= 2 sentences"}. '
+        "Award marks for the concepts covered in the model answer; be fair and "
+        "consistent across workers."
+    )
+    prompt = (
+        f"Assignment: {assignment.title}\n"
+        f"Pass mark: {assignment.pass_score}%\n\n"
+        f"Model answer:\n{sample}\n\n"
+        f"Worker's response:\n{content}\n\n"
+        "Return the JSON now."
+    )
+    raw, _cred, _err = ai_audit._call_provider_any(system, prompt)
+    if raw is None:
+        return None
+    parsed = ai_audit._parse_json_block(raw)
+    if not isinstance(parsed, dict):
+        return None
+    try:
+        score = max(0, min(100, int(parsed.get("score"))))
+    except (TypeError, ValueError):
+        return None
+    return score, str(parsed.get("feedback") or "").strip()[:500]
+
+
+# Minimal English stop-word set — ignored when comparing keyword overlap.
+_STOPWORDS = frozenset({
+    "the", "a", "an", "and", "or", "of", "to", "in", "on", "for", "with", "is",
+    "are", "was", "were", "be", "been", "being", "as", "at", "by", "it", "its",
+    "this", "that", "these", "those", "from", "into", "than", "then", "so",
+    "such", "not", "no", "but", "if", "we", "you", "they", "he", "she", "i",
+    "do", "does", "did", "has", "have", "had", "will", "would", "shall",
+    "should", "can", "could", "may", "might", "must", "about", "above", "after",
+    "again", "against", "all", "any", "because", "before", "below", "between",
+    "both", "each", "few", "more", "most", "other", "some", "only", "own",
+    "same", "too", "very", "also", "there", "here", "when", "where", "which",
+    "who", "whom", "what", "how", "why", "their", "them", "our", "your",
+})
+
+
+def _keywords(text):
+    """Significant lowercased words (len > 2, not stop-words) from a string."""
+    import re
+    words = re.findall(r"[a-z0-9]+", str(text or "").lower())
+    return [w for w in words if len(w) > 2 and w not in _STOPWORDS]
+
+
+def _keyword_grade(sample, content):
+    """Deterministic fallback grader: score = share of the sample answer's key
+    terms that appear in the worker's response."""
+    sample_kw = set(_keywords(sample))
+    if not sample_kw:
+        return None
+    content_kw = set(_keywords(content))
+    covered = sample_kw & content_kw
+    score = round(len(covered) / len(sample_kw) * 100)
+    feedback = (f"Auto-graded by keyword match against the sample answer "
+                f"({len(covered)}/{len(sample_kw)} key terms covered).")
+    return score, feedback
+
+
+def _grade_writing(assignment, content):
+    """Grade a written response: AI against the sample answer when a provider is
+    available, otherwise a keyword-overlap fallback. ``None`` → manual review
+    (no sample answer or empty response)."""
+    sample = (assignment.sample_answer or "").strip()
+    if not sample or not (content or "").strip():
+        return None
+    graded = _ai_grade_writing(assignment, content)
+    if graded is not None:
+        return graded
+    return _keyword_grade(sample, content)
+
+
 def _grade_submission(submission, score, feedback, reviewer):
     """Grade a written/upload submission, sync the worker's assignment score and
     complete the course (issuing the certificate + skill) once everything passes.
@@ -201,17 +288,23 @@ def _handle_course_action(user, body):
                 else:
                     enrollment.save(update_fields=["assignment_scores", "quiz_score", "updated_at"])
         else:
-            # Written / upload assignment — store the response. A reviewer can
-            # grade it; until then it is accepted at the pass mark so the module
-            # can complete.
+            # Written response — AI grades it against the assignment's sample
+            # answer when one is set; otherwise it waits for manual review.
             content = str(body.get("content") or "")[:5000]
-            file_url = str(body.get("fileUrl") or "")[:255]
-            if not content and not file_url:
+            if not content.strip():
                 raise PortalMutationError("Add your response before submitting.", 400)
             submission, _ = CourseSubmission.objects.update_or_create(
                 worker=user, assignment=assignment,
-                defaults={"content": content, "file_url": file_url, "status": "SUBMITTED"})
-            score = submission.score if submission.score is not None else assignment.pass_score
+                defaults={"content": content, "file_url": "", "status": "SUBMITTED"})
+            graded = _grade_writing(assignment, content)
+            if graded is not None:
+                submission.score, submission.feedback = graded
+                submission.status = "GRADED"
+                submission.reviewed_at = timezone.now()
+                submission.save(update_fields=["score", "feedback", "status", "reviewed_at"])
+                score = submission.score
+            else:
+                score = submission.score if submission.score is not None else assignment.pass_score
             previous = scores.get(str(assignment.id))
             if previous is None or score > previous:
                 scores[str(assignment.id)] = score
@@ -290,6 +383,7 @@ def _admin_course_row(course):
             "assignments": [{
                 "id": a.id, "title": a.title, "type": a.assignment_type,
                 "instructions": a.instructions, "passScore": a.pass_score,
+                "sampleAnswer": a.sample_answer,
                 "questions": [{"id": q.id, "question": q.question,
                                "options": list(q.options or []), "correctIndex": q.correct_index}
                               for q in a.questions.all()],
@@ -382,18 +476,19 @@ def _write_course_modules(course, modules):
             if not atitle:
                 continue
             atype = str(a.get("type") or "QUIZ").upper()
-            if atype not in ("QUIZ", "WRITING", "UPLOAD"):
-                atype = "QUIZ"
+            # Only quiz + written response are supported (no file uploads).
+            atype = "QUIZ" if atype == "QUIZ" else "WRITING"
             assignment = existing.get(_row_id(a.get("id")))
             if assignment is None:
                 assignment = CourseAssignment.objects.create(module=module, title=atitle[:160])
             assignment.title = atitle[:160]
             assignment.assignment_type = atype
             assignment.instructions = str(a.get("instructions") or "")
+            assignment.sample_answer = str(a.get("sampleAnswer") or "")
             assignment.pass_score = _int_in_range(a.get("passScore"), 60, 0, 100)
             assignment.sort_order = j
             assignment.save(update_fields=["title", "assignment_type", "instructions",
-                                           "pass_score", "sort_order"])
+                                           "sample_answer", "pass_score", "sort_order"])
             kept.add(assignment.id)
 
             question_rows = a.get("questions") or [] if atype == "QUIZ" else []
