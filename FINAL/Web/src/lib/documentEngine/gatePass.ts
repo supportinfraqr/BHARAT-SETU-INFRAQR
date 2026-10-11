@@ -43,7 +43,20 @@ export function autoPassNo(bssId: string): string {
 }
 
 function generatedStamp(): string {
-  return new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** ISO `YYYY-MM-DD` (or any parseable date) → `DD/MM/YYYY` for display. */
+function dmy(value?: string): string {
+  if (!value) return '';
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -124,9 +137,9 @@ export async function buildGatePassHtml(
     'document.number': passNo,
     'document.generatedAt': generatedStamp(),
     'document.qr': qr,
-    'document.issueDate': issue,
-    'document.validFrom': overrides.validFrom || issue,
-    'document.validTo': validTo,
+    'document.issueDate': dmy(issue),
+    'document.validFrom': dmy(overrides.validFrom || issue),
+    'document.validTo': dmy(validTo),
     'document.days': overrides.days ?? (type === 'temporary-gate-pass' ? String(daysBetween(issue, validTo)) : ''),
     'document.reason': overrides.reason ?? tokens['document.reason'] ?? '',
     'document.place': overrides.place ?? tokens['document.place'] ?? '',
