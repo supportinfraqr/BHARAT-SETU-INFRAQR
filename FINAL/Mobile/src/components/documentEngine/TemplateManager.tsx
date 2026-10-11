@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useReducer, useState } from 'react';
-import { Copy, FileText, History, Layers, Plus, RefreshCw, RotateCcw, ShieldCheck, Sparkles, TestTube2 } from 'lucide-react';
+import { FileText, History, Layers, Plus, RefreshCw, RotateCcw, ShieldCheck, Sparkles, TestTube2 } from 'lucide-react';
 import { DOCUMENT_TYPES, DocumentType, OwnerScope, documentTypesFor, isGatePassType } from '@/lib/documentEngine/types';
 import type { TemplateVersionRecord } from '@/lib/documentEngine/types';
 import { templateService } from '@/lib/documentEngine/services';
@@ -36,11 +36,6 @@ export default function DocumentTemplateManager({ owner, onGenerate }: { owner: 
   const lineages = mounted ? templateService.lineages(owner) : [];
   const byType = (type: DocumentType) => lineages.filter(lineage => lineage.documentType === type);
 
-  function duplicate(lineageId: string, name: string) {
-    templateService.duplicate(lineageId, 'Me');
-    setNotice(`Duplicated "${name}" as a new Draft lineage.`);
-    forceRefresh();
-  }
 
   function activateVersion(lineageId: string, recordId: string) {
     const record = templateService.getById(recordId);
@@ -98,7 +93,6 @@ export default function DocumentTemplateManager({ owner, onGenerate }: { owner: 
                     <>
                       <button className={btnPrimary + ' !h-9 !px-3 !text-xs'} onClick={() => setEditor({ type: meta.id, record: templateService.editingVersion(lineage.lineageId) })}><Sparkles size={13}/>Edit template</button>
                       <button className={btnSecondary + ' !h-9 !px-3 !text-xs'} onClick={() => setVersionsFor({ lineageId: lineage.lineageId, name: lineage.name, type: meta.id })}><History size={13}/>Versions & restore</button>
-                      <button className={btnSecondary + ' !h-9 !px-3 !text-xs'} onClick={() => duplicate(lineage.lineageId, lineage.name)}><Copy size={13}/>Duplicate</button>
                       {!isGatePassType(meta.id) && <button className={btnSecondary + ' !h-9 !px-3 !text-xs'} onClick={() => onGenerate(meta.id)}><TestTube2 size={13}/>Test with worker</button>}
                     </>
                   ) : (
