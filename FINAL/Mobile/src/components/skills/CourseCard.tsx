@@ -5,18 +5,38 @@ import { useState } from 'react';
 import { BookOpenCheck, CheckCircle2, ChevronRight, Clock3, Play, Star } from 'lucide-react';
 import type { LearningCourse } from '@/types/portal';
 
+// A branded SVG cover, used whenever a course has no uploaded image — so a real
+// thumbnail image always renders (never an empty box).
+function coverDataUri(category: string, title: string): string {
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const cat = (category || 'COURSE').toUpperCase().slice(0, 20);
+  const t = esc((title || '').slice(0, 26));
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240" viewBox="0 0 320 240">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#01183A"/><stop offset="0.55" stop-color="#022B5E"/><stop offset="1" stop-color="#1E3A8A"/></linearGradient></defs>
+<rect width="320" height="240" fill="url(#g)"/>
+<circle cx="272" cy="26" r="96" fill="#ffffff" opacity="0.05"/>
+<circle cx="40" cy="220" r="70" fill="#ffffff" opacity="0.04"/>
+<g transform="translate(24,34)" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
+<path d="M2 6h20a4 4 0 0 1 4 4v22H6a4 4 0 0 1-4-4z"/><path d="M26 10v22"/>
+</g>
+<text x="24" y="152" fill="#ffffff" font-family="Inter,Segoe UI,sans-serif" font-size="26" font-weight="800" letter-spacing="0.5">${cat}</text>
+<text x="24" y="182" fill="#ffffff" font-family="Inter,Segoe UI,sans-serif" font-size="14" opacity="0.65">${t}</text>
+<text x="24" y="214" fill="#ffffff" font-family="Inter,Segoe UI,sans-serif" font-size="11" font-weight="600" letter-spacing="2" opacity="0.55">BHARAT SHRAM SETU</text>
+</svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 export default function CourseCard({ course }: { course: LearningCourse }) {
-  const [imgOk, setImgOk] = useState(Boolean(course.image));
+  const fallback = coverDataUri(course.category, course.title);
+  const [src, setSrc] = useState(course.image || fallback);
   const statusTone = course.status === 'Completed' ? 'bg-bss-soft-green text-bss-green'
     : course.status === 'In progress' ? 'bg-bss-blue-tint text-bss-interactive-blue'
     : 'bg-white/90 text-bss-text-secondary border border-bss-border';
   return <Link href={`/worker/Skills/${course.id}`} className="group bss-card bss-hover-lift rounded-2xl overflow-hidden flex flex-col sm:flex-row border border-bss-border bg-white">
     <div className="relative w-full sm:w-40 h-36 sm:h-auto flex-shrink-0 overflow-hidden">
-      {imgOk && course.image
-        ? <img src={course.image} alt="" onError={() => setImgOk(false)} className="w-full h-full object-cover" />
-        : <div className="w-full h-full min-h-[144px] grid place-items-center bg-gradient-to-br from-bss-navy via-bss-deep-navy to-bss-interactive-blue text-white">
-            <div className="text-center px-3"><BookOpenCheck size={26} className="mx-auto opacity-90" /><span className="mt-1.5 block text-[10px] font-bold uppercase tracking-wider opacity-90">{course.category || 'Course'}</span></div>
-          </div>}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" onError={() => setSrc(fallback)} className="w-full h-full min-h-[144px] object-cover" />
       <span className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${statusTone}`}>{course.status}</span>
     </div>
     <div className="p-4 flex-1 min-w-0 flex flex-col">
