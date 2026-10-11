@@ -40,9 +40,9 @@ def seed():
             defaults={
                 # A statutory type can never carry a logo, whatever the
                 # snapshot says, so a stale snapshot cannot reintroduce one.
-                "html": letter_brand.ensure_letter_html(e["html"], kind),
+                "html": letter_brand.ensure_letter_html(e["html"], kind, state=e.get("state") or ""),
                 "logo_url": (e.get("logo_url") or "")
-                            if letter_brand.wants_logo(kind) else "",
+                            if letter_brand.wants_logo(kind, state=e.get("state") or "") else "",
                 "is_active": bool(e.get("is_active", True)),
             })
         created += int(made)

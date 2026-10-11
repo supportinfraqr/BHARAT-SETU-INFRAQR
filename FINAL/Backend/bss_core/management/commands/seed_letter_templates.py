@@ -87,9 +87,9 @@ class Command(BaseCommand):
             # derived code and is re-applied here (and at render time).
             # A statutory type can never carry a logo, whatever the snapshot
             # says, so a stale snapshot cannot reintroduce one.
-            logo = (e.get("logo_url") or "") if wants_logo(kind) else ""
+            logo = (e.get("logo_url") or "") if wants_logo(kind, state=state) else ""
             updates = {
-                "html": ensure_letter_html(e["html"], kind),
+                "html": ensure_letter_html(e["html"], kind, state=state),
                 "logo_url": logo,
                 "is_active": bool(e.get("is_active", True)),
             }

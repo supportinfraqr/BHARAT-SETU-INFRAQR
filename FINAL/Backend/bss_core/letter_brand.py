@@ -26,6 +26,9 @@ DEFAULT_LOGO_URL = "https://login.bharatshramsetu.com/bss-brand/bharatshramsetu-
 # Letter types that must never receive BSS branding (statutory government format).
 UNBRANDED_LETTER_TYPES = {"EXPERIENCE"}
 
+# Specific states whose appointment letters must not carry the BSS logo.
+LOGO_SUPPRESSED_STATES = {"Andaman and Nicobar Islands"}
+
 # Bump when the CSS changes so previously-injected stylesheets get replaced.
 _CSS_MARKER = "bss-letter-css-v3"
 _INJECTED_RE = re.compile(r"<style[^>]*>\s*bss-letter-css[^<]*</style>", re.I)
@@ -112,23 +115,25 @@ def strip_injected_css(html_text: str) -> str:
     return _INJECTED_RE.sub("", html_text)
 
 
-def wants_logo(letter_type: str, with_logo: bool | None = None) -> bool:
-    """Whether this letter type may carry BSS branding."""
+def wants_logo(letter_type: str, with_logo: bool | None = None, state: str | None = None) -> bool:
+    """Whether this letter type may carry BSS branding (and a BSS logo)."""
     if with_logo is not None:
         return bool(with_logo)
+    if state is not None and str(state).strip() in LOGO_SUPPRESSED_STATES:
+        return False
     return (letter_type or "").strip().upper() not in UNBRANDED_LETTER_TYPES
 
 
 def ensure_logo_url(value, letter_type: str = "APPOINTMENT",
-                    with_logo: bool | None = None) -> str:
+                    with_logo: bool | None = None, state: str | None = None) -> str:
     """Return the template's logo URL, or the hosted BSS default.
 
-    Always blank for unbranded types (statutory Form XV), discarding whatever
-    was passed in: a stale logo left on a Form XV row must be removed, not
-    preserved, or the statutory certificate renders a BSS logo.
+    Always blank for unbranded types (statutory Form XV) or logo-suppressed
+    states (e.g. Andaman and Nicobar Islands appointment letters), discarding
+    whatever was passed in.
     """
     text = (value or "").strip()
-    if not wants_logo(letter_type, with_logo):
+    if not wants_logo(letter_type, with_logo, state):
         return ""
     return text or DEFAULT_LOGO_URL
 
@@ -186,7 +191,7 @@ def _neutralise_footer(out: str) -> str:
 
 
 def ensure_letter_html(html_text: str, letter_type: str = "APPOINTMENT",
-                       with_logo: bool | None = None) -> str:
+                       with_logo: bool | None = None, state: str | None = None) -> str:
     """Return template HTML with a safe A4 page box, plus BSS branding when allowed.
 
     ``with_logo`` defaults to False for statutory types such as ``EXPERIENCE``
@@ -197,7 +202,7 @@ def ensure_letter_html(html_text: str, letter_type: str = "APPOINTMENT",
         return html_text
 
     out = html_text
-    brand = wants_logo(letter_type, with_logo)
+    brand = wants_logo(letter_type, with_logo, state)
 
     if brand:
         # 1. Logo <img> must be size-constrained, or a portrait logo blows up the header.

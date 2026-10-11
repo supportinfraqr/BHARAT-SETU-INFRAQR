@@ -22,8 +22,8 @@ def _row(t):
         # ensure_letter_html is non-persisting: the admin preview shows exactly
         # what the generated PDF gets, including the page-box fix. Branding is
         # omitted for statutory types (Form XV).
-        "html": letter_brand.ensure_letter_html(t.html or "", t.letter_type),
-        "logoUrl": letter_brand.ensure_logo_url(t.logo_url, t.letter_type),
+        "html": letter_brand.ensure_letter_html(t.html or "", t.letter_type, state=getattr(t, "state", "") or ""),
+        "logoUrl": letter_brand.ensure_logo_url(t.logo_url, t.letter_type, state=getattr(t, "state", "") or ""),
         "active": t.is_active,
         "updatedAt": payloads._dts(t.updated_at),
     }

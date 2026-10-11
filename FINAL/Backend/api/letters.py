@@ -221,7 +221,7 @@ def _block_table(headers: list, row, cls: str = "") -> str:
             f"<thead><tr>{th}</tr></thead><tbody>{body}</tbody></table>")
 
 
-def _letter_tokens(binding, letter_type: str, logo_url: str = "") -> dict:
+def _letter_tokens(binding, letter_type: str, logo_url: str = "", state: str = "") -> dict:
     """Values injected into an admin-authored HTML template. Tokens are written
     as {{token}} (or {{ token }}) — values are HTML-escaped by the facts helpers."""
     w = _worker_facts(binding.worker)
@@ -320,7 +320,7 @@ def _letter_tokens(binding, letter_type: str, logo_url: str = "") -> dict:
         "employerName": p["employer"],
         "employerBssId": _dash(employer_bss_id),
         "siteName": _dash(p["site"]), "siteAddress": _dash(p["siteAddr"]),
-        "logoUrl": letter_brand.ensure_logo_url(logo_url, letter_type),
+        "logoUrl": letter_brand.ensure_logo_url(logo_url, letter_type, state=state),
     }
 
 
@@ -347,11 +347,11 @@ def _resolve_letter_template(binding, letter_type: str):
             .exclude(html="").order_by("-updated_at").first())
 
 
-def _render_template_html(html_text: str, tokens: dict, letter_type: str = "APPOINTMENT") -> str:
+def _render_template_html(html_text: str, tokens: dict, letter_type: str = "APPOINTMENT", state: str = "") -> str:
     # Normalise the page box first (older templates hardcode a 794px width that
     # overflows the PDF page box). Branding is skipped for statutory types such
     # as EXPERIENCE, which must stay free of any BSS logo or wordmark.
-    out = letter_brand.ensure_letter_html(html_text, letter_type)
+    out = letter_brand.ensure_letter_html(html_text, letter_type, state=state)
     for key, value in tokens.items():
         out = out.replace("{{" + key + "}}", value).replace("{{ " + key + " }}", value)
     return out
@@ -398,8 +398,9 @@ def render_letter(binding, letter_type: str) -> str:
     if template is not None:
         return _render_template_html(
             template.html,
-            _letter_tokens(binding, letter_type, getattr(template, "logo_url", "") or ""),
-            letter_type)
+            _letter_tokens(binding, letter_type, getattr(template, "logo_url", "") or "", getattr(template, "state", "") or ""),
+            letter_type,
+            getattr(template, "state", "") or "")
     w = _worker_facts(binding.worker)
     p = _party_facts(binding)
     ref = bss_ids.letter_bss_id(binding.id, letter_type)
