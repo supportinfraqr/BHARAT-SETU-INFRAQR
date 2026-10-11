@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronRight, Eye, EyeOff, Lock, Plus, Save, ShieldCheck, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronRight, Eye, EyeOff, Lock, Plus, Save, ShieldCheck, Sparkles, Trash2, Upload } from 'lucide-react';
 import type { OwnerScope, TemplateConfig, TemplateSection, SignatureRole, DocumentType, TemplateVersionRecord } from '@/lib/documentEngine/types';
 import { DOCUMENT_TYPES, isGatePassType, isAppearanceOnlyType } from '@/lib/documentEngine/types';
 import { templateService, makeDefaultTemplate } from '@/lib/documentEngine/services';
@@ -62,7 +62,7 @@ export default function TemplateEditor({
 
   // debounced preview html
   const [previewHtml, setPreviewHtml] = useState('');
-  const jsonKey = JSON.stringify(template.sections) + template.styles.theme + template.styles.fontSize + template.styles.fontFamily + template.styles.headingColor + template.styles.showBrandHeader + template.styles.brandHeaderText + template.styles.brandTagline + template.styles.footerText + template.styles.showLogo;
+  const jsonKey = JSON.stringify(template.sections) + template.styles.theme + template.styles.fontSize + template.styles.fontFamily + template.styles.headingColor + template.styles.showBrandHeader + template.styles.brandHeaderText + template.styles.brandTagline + template.styles.footerText + template.styles.showLogo + (template.styles.brandColors?.join(',') ?? '') + (template.styles.brandLogoUrl ?? '') + (template.styles.customHtml ?? '');
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setPreviewHtml(renderDocumentHtml({ template: { ...template }, tokens: {} }));
@@ -111,8 +111,7 @@ export default function TemplateEditor({
     setSelectedId(null);
   }
 
-  function insertToken(tokenKey: string) {
-    const id = selectedId ?? template.sections.find(section => section.editable)?.id;
+  function insertToken(tokenKey: string) {    const id = selectedId ?? template.sections.find(section => section.editable)?.id;
     if (!id) return;
     const token = `{{${tokenKey}}}`;
     setTemplate(current => {
@@ -127,6 +126,23 @@ export default function TemplateEditor({
       textareaRef.current?.focus();
       textareaRef.current?.setSelectionRange(field.end + token.length, field.end + token.length);
     }, 0);
+  }
+
+  function onLogoFile(event: { target: HTMLInputElement }) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setTemplate(current => ({ ...current, styles: { ...current.styles, brandLogoUrl: String(reader.result ?? ''), showLogo: true } }));
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  }
+
+  function setBrandColor(index: number, value: string) {
+    setTemplate(current => {
+      const colors = [...(current.styles.brandColors ?? ['#022B5E', '#E45D24', '#14843C'])];
+      colors[index] = value;
+      return { ...current, styles: { ...current.styles, brandColors: colors } };
+    });
   }
 
   function persistVersion(persist: TemplateConfig, note: string): TemplateVersionRecord | null {
@@ -252,10 +268,22 @@ export default function TemplateEditor({
                 <label className="block text-xs font-semibold text-gray-600">Text style<select value={template.styles.fontFamily} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, fontFamily: event.target.value } }))} className={inputCls + ' text-xs'}><option value="'Arial', sans-serif">Arial</option><option value="'Segoe UI', sans-serif">Segoe UI</option><option value="Georgia, serif">Georgia (serif)</option><option value="'Times New Roman', serif">Times New Roman</option><option value="'Courier New', monospace">Courier (mono)</option></select></label>
                 <label className="block text-xs font-semibold text-gray-600">Text size ({template.styles.fontSize}px)<input type="range" min={9} max={15} value={template.styles.fontSize} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, fontSize: Number(event.target.value) } }))} className="w-full mt-1"/></label>
                 <label className="flex items-center justify-between text-xs font-semibold text-gray-600"><span>Show logo</span><input type="checkbox" checked={template.styles.showLogo} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, showLogo: event.target.checked } }))} className="accent-[#073B67] w-4 h-4"/></label>
+                {template.styles.showLogo && <div className="space-y-2 pl-1">
+                  <label className="block text-xs font-semibold text-gray-600">Logo image URL<input value={template.styles.brandLogoUrl ?? ''} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, brandLogoUrl: event.target.value } }))} placeholder="/bss-original-logo.png or https://…" className={inputCls + ' text-xs'}/></label>
+                  <div className="flex items-center gap-2">
+                    <label className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-600 cursor-pointer hover:bg-gray-50"><Upload size={14}/>Upload logo<input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden" onChange={onLogoFile}/></label>
+                    {template.styles.brandLogoUrl?.startsWith('data:') && <button type="button" onClick={() => setTemplate(current => ({ ...current, styles: { ...current.styles, brandLogoUrl: '' } }))} className="text-[11px] text-gray-500 hover:text-red-600">Reset to default</button>}
+                  </div>
+                </div>}
                 <label className="flex items-center justify-between text-xs font-semibold text-gray-600"><span>Show brand header</span><input type="checkbox" checked={template.styles.showBrandHeader} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, showBrandHeader: event.target.checked } }))} className="accent-[#073B67] w-4 h-4"/></label>
                 {template.styles.showBrandHeader && <label className="block text-xs font-semibold text-gray-600">Brand header text<input value={template.styles.brandHeaderText} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, brandHeaderText: event.target.value } }))} className={inputCls + ' text-xs'}/></label>}
                 <label className="block text-xs font-semibold text-gray-600">Brand tagline<input value={template.styles.brandTagline ?? ''} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, brandTagline: event.target.value } }))} className={inputCls + ' text-xs'}/></label>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Wordmark colours (one per word)</p>
+                  <div className="flex gap-2">{[0, 1, 2].map(index => <input key={index} type="color" value={(template.styles.brandColors ?? ['#022B5E', '#E45D24', '#14843C'])[index] ?? '#000000'} onChange={event => setBrandColor(index, event.target.value)} className="h-9 w-full rounded-lg border border-gray-200 bg-white p-1"/>)}</div>
+                </div>
                 <label className="block text-xs font-semibold text-gray-600">Document footer<textarea rows={2} value={template.styles.footerText} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, footerText: event.target.value } }))} className={textareaCls + ' text-xs'}/></label>
+                <label className="block text-xs font-semibold text-gray-600">Custom HTML block<textarea rows={4} value={template.styles.customHtml ?? ''} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, customHtml: event.target.value } }))} placeholder="<p>Authorised signatory: <b>Site In-charge</b></p>" className={textareaCls + ' font-mono text-xs mt-1'}/><span className="text-[10px] text-gray-400">Simple HTML is rendered into the document (script tags and inline handlers are stripped).</span></label>
                 <p className="text-[11px] leading-5 text-gray-400">Layout, wording, fields and signatories are fixed in code — only the appearance above can be changed.</p>
               </div>
             ) : (

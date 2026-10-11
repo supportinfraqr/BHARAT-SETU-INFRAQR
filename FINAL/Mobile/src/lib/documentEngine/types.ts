@@ -61,6 +61,10 @@ export type TemplateStyles = {
   /** Optional employer-branding overrides (gate-pass compliance template). */
   brandLogoUrl?: string;
   brandTagline?: string;
+  /** Per-part wordmark colours (e.g. one part red, another green). */
+  brandColors?: string[];
+  /** A simple free-form HTML block rendered into the document (script tags stripped). */
+  customHtml?: string;
   footerText: string;
   theme: 'bss-navy' | 'bss-midnight' | 'bss-green' | 'bss-red' | 'bss-plain';
 };
@@ -133,6 +137,9 @@ export const EMPTY_STYLES: TemplateStyles = {
   showLogo: true,
   showBrandHeader: true,
   brandHeaderText: 'Bharat Shram Setu',
+  brandTagline: 'One Nation · One Identity · One Future',
+  brandColors: ['#022B5E', '#E45D24', '#14843C'],
+  customHtml: '',
   footerText: 'This is a system-generated document. Verify authenticity by scanning the worker QR code on bharatshramsetu.com.',
   theme: 'bss-navy',
 };

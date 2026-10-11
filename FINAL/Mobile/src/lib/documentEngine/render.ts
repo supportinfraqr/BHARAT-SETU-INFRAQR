@@ -105,6 +105,7 @@ function cssFor(template: TemplateConfig): string {
   .doc-value-na { color:#9ca3af; }
   .doc-token-empty { background:#fff3e0; color:#b45309; border:1px dashed #f59e0b; border-radius:4px; padding:0 4px; font-size:${fontSize - 2}px; font-family: monospace; }
   .doc-muted { font-size:${fontSize - 3}px; color:#6b7280; margin-top:4px; }
+  .doc-custom-html { font-size:${fontSize}px; line-height:1.6; margin:10px 0; }
   .doc-signature-grid { display:flex; gap:44px; justify-content:space-between; margin:40px 10px 4px; }
   .doc-signature-grid > div { width:210px; text-align:center; }
   .doc-signature-line { border-top:1px solid #4b5563; margin-top:32px; padding-top:5px; font-size:${fontSize - 1}px; color:#111827; font-weight:600; min-height:18px; }
@@ -163,10 +164,13 @@ export function renderDocumentHtml(target: RenderTarget): string {
     : '';
 
   const brandName = template.styles.brandHeaderText || 'Bharat Shram Setu';
-  // Wordmark keeps the Indian tricolour treatment used across the portal.
-  const brandWordmark = brandName.trim().toLowerCase() === 'bharat shram setu'
-    ? '<span style="color:#022B5E">Bharat</span><span style="color:#E45D24"> Shram</span><span style="color:#14843C"> Setu</span>'
-    : esc(brandName);
+  // Wordmark colours: use the template's per-part colours when set (so a designer
+  // can make one part red and another green), else the BSS tricolour.
+  const brandColors = template.styles.brandColors?.length ? template.styles.brandColors : ['#022B5E', '#E45D24', '#14843C'];
+  const parts = brandName.trim().split(/\s+/);
+  const brandWordmark = parts.length === 3
+    ? `<span style="color:${esc(brandColors[0])}">${esc(parts[0])}</span><span style="color:${esc(brandColors[1])}"> ${esc(parts[1])}</span><span style="color:${esc(brandColors[2])}"> ${esc(parts[2])}</span>`
+    : `<span style="color:${esc(brandColors[0])}">${esc(brandName)}</span>`;
   const logoUrl = template.styles.brandLogoUrl || '/bss-original-logo.png';
   const tagline = template.styles.brandTagline || 'One Nation · One Identity · One Future';
   const headingMeta = template.styles.showBrandHeader
@@ -178,9 +182,16 @@ export function renderDocumentHtml(target: RenderTarget): string {
     .map(section => sectionHtml(section, tokens, workerRows))
     .join('');
 
+  // Optional author-supplied HTML block (scripts and inline handlers stripped).
+  const safeCustom = (template.styles.customHtml ?? '')
+    .replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/gi, '')
+    .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/\son\w+\s*=\s*'[^']*'/gi, '');
+  const customBlock = safeCustom.trim() ? `<div class="doc-custom-html">${safeCustom}</div>` : '';
+
   const watermark = template.documentType === 'temporary-gate-pass' ? '<div class="doc-watermark">TEMP</div>' : '';
 
-  return `<!doctype html><html><head><meta charset="utf-8"/><title>${esc(template.name)}</title><style>${cssFor(template)}</style></head><body><div class="doc-page">${watermark}${headingMeta}${body}${signHtml}<div class="doc-footer">${esc(template.styles.footerText)}</div></div></body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"/><title>${esc(template.name)}</title><style>${cssFor(template)}</style></head><body><div class="doc-page">${watermark}${headingMeta}${body}${customBlock}${signHtml}<div class="doc-footer">${esc(template.styles.footerText)}</div></div></body></html>`;
 }
 
 /** Open a clean printable window (browser print dialog → printer or "Save as PDF"). */
