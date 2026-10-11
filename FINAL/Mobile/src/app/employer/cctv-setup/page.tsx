@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Camera, CheckCircle2, Loader2, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
-import CameraPreview from '@/components/employer/CameraPreview';
-import VideoAttendancePanel from '@/components/attendance/VideoAttendancePanel';
 
 type CameraRow = {
   id: number;
@@ -170,8 +168,6 @@ export default function CctvSetupPage() {
         </button>
       </header>
 
-      <VideoAttendancePanel sites={sites} />
-
       <div className="bss-card rounded-2xl p-4">
         <label className={label}>Site</label>
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
@@ -254,7 +250,7 @@ export default function CctvSetupPage() {
             {cameras.map(c => (
               <li key={c.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <CameraPreview cameraId={c.id} label={c.label} />
+                  <span className="w-16 h-12 rounded-lg bg-bss-bg border border-bss-border grid place-items-center text-bss-text-muted shrink-0"><Camera size={18}/></span>
                   <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-semibold text-bss-text-primary">{c.label || '(unnamed)'}</span>
