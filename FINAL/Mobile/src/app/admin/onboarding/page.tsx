@@ -164,13 +164,14 @@ export default function AdminOnboardingPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-500 border-b border-gray-100"><tr><th className="px-4 py-2">Entity</th><th className="px-4 py-2">Row</th><th className="px-4 py-2">Status</th><th className="px-4 py-2">Key fields</th><th className="px-4 py-2">Result</th><th className="px-4 py-2">Issues</th></tr></thead>
+            <thead className="bg-gray-50 text-gray-500 border-b border-gray-100"><tr><th className="px-4 py-2">Entity</th><th className="px-4 py-2">Row</th><th className="px-4 py-2">Status</th><th className="px-4 py-2">Key fields</th><th className="px-4 py-2">Result</th><th className="px-4 py-2">BSS ID</th><th className="px-4 py-2">Issues</th></tr></thead>
             <tbody className="divide-y divide-gray-100">{detail.records.map(r => <tr key={r.id} className="align-top hover:bg-gray-50">
               <td className="px-4 py-2 font-semibold text-gray-700">{r.entityType}</td>
               <td className="px-4 py-2 text-gray-400">{r.rowIndex + 1}</td>
               <td className="px-4 py-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.status === 'OK' ? 'bg-emerald-50 text-emerald-700' : r.status === 'FLAGGED' ? 'bg-amber-50 text-amber-700' : r.status === 'MIGRATED' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{r.status}</span></td>
               <td className="px-4 py-2 text-gray-600">{Object.entries(r.data || {}).filter(([k, v]) => ['name','mobile','employer_mobile','contractor_mobile','worker_mobile','site_name','gstin','pan','aadhaar'].includes(k) && v).slice(0, 4).map(([k, v]) => `${k}: ${v}`).join(' · ') || '—'}</td>
               <td className={`px-4 py-2 ${r.status === 'REJECTED' ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>{String((r.result as Record<string, unknown>)?.detail ?? '') || (r.status === 'MIGRATED' ? 'Account created' : '—')}</td>
+              <td className="px-4 py-2 font-mono text-[11px] text-gray-700">{String((r.result as Record<string, unknown>)?.bssId ?? '') || '—'}</td>
               <td className="px-4 py-2">{(r.issues ?? []).length ? <ul className="space-y-0.5">{(r.issues ?? []).slice(0, 4).map((i, k) => <li key={k} className={i.level === 'error' ? 'text-red-600' : 'text-amber-600'}>{i.message}</li>)}</ul> : <span className="text-gray-300">—</span>}</td>
             </tr>)}</tbody>
           </table>

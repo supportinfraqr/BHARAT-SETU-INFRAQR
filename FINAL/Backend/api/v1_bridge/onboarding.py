@@ -315,6 +315,20 @@ def _send_account_created(mobile, name):
     return result
 
 
+def _bss_id_of(user):
+    """The created entity's BSS ID: worker id, contractor code or employer code."""
+    role = getattr(user, "role", "")
+    if role == "worker":
+        wi = getattr(user, "worker_identity", None)
+        return getattr(wi, "bss_worker_id", "") or ""
+    prof = getattr(user, "contractor_profile", None) or getattr(user, "employer_profile", None)
+    if role == "contractor":
+        return getattr(prof, "contractor_code", "") or ""
+    if role == "employer":
+        return getattr(prof, "employer_code", "") or ""
+    return ""
+
+
 def migrate_batch(batch):
     """Create live accounts + bindings from the structured batch, then intro SMS."""
     if batch.state != "APPROVED":
@@ -332,6 +346,11 @@ def migrate_batch(batch):
             if res.get("status") == "ok":
                 rec.status = "MIGRATED"
                 migrated += 1
+                # Capture the created account's BSS ID for the submission view.
+                mobile = (rec.clean_data or {}).get("mobile")
+                created = _find_user_by_mobile(mobile) if mobile else None
+                if created is not None:
+                    rec.result = {**res, "bssId": _bss_id_of(created)}
             else:
                 rec.status = "REJECTED"
                 rec.issues = list(rec.issues or []) + [_issue("migrate", "error", res.get("detail", "migration failed"))]

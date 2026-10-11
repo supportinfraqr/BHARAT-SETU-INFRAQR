@@ -9,7 +9,7 @@ type Batch = {
   consentGiven: boolean; declaration?: string; counts: { total?: number; ok?: number; flagged?: number; migrated?: number; byEntity?: Record<string, number> };
   reviewNote: string; employerReviewNote: string; createdAt: string;
 };
-type Rec = { id: number; entityType: string; rowIndex: number; data: Record<string, unknown>; issues: Array<{ level?: string; message: string }>; status: string };
+type Rec = { id: number; entityType: string; rowIndex: number; data: Record<string, unknown>; result?: Record<string, unknown>; issues: Array<{ level?: string; message: string }>; status: string };
 
 const STATE_TONE: Record<string, string> = {
   SUBMITTED: 'bg-bss-soft-orange text-bss-orange border-bss-border',
@@ -172,8 +172,8 @@ export default function EmployerOnboardingPage() {
         </p>}
         <div className="max-h-[60vh] overflow-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-bss-bg text-bss-text-muted border-b border-bss-border sticky top-0"><tr><th className="px-4 py-2">Entity</th><th className="px-4 py-2">Row</th><th className="px-4 py-2">Status</th><th className="px-4 py-2">Details</th></tr></thead>
-            <tbody className="divide-y divide-bss-border">{detail.records.map(r => <tr key={r.id} className="align-top"><td className="px-4 py-2 font-semibold text-bss-text-primary">{r.entityType}</td><td className="px-4 py-2 text-bss-text-muted">{r.rowIndex + 1}</td><td className="px-4 py-2"><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-bss-bg text-bss-text-secondary">{r.status}</span></td><td className="px-4 py-2 text-bss-text-secondary">{Object.entries(r.data || {}).filter(([k, v]) => ['name','mobile','employer_mobile','contractor_mobile','worker_mobile','site_name'].includes(k) && v).map(([k, v]) => `${k}: ${v}`).join(' · ') || '—'}{(r.issues ?? []).length ? <span className="text-bss-orange"> · {r.issues.length} issue(s)</span> : null}</td></tr>)}</tbody>
+            <thead className="bg-bss-bg text-bss-text-muted border-b border-bss-border sticky top-0"><tr><th className="px-4 py-2">Entity</th><th className="px-4 py-2">Row</th><th className="px-4 py-2">Status</th><th className="px-4 py-2">BSS ID</th><th className="px-4 py-2">Details</th></tr></thead>
+            <tbody className="divide-y divide-bss-border">{detail.records.map(r => <tr key={r.id} className="align-top"><td className="px-4 py-2 font-semibold text-bss-text-primary">{r.entityType}</td><td className="px-4 py-2 text-bss-text-muted">{r.rowIndex + 1}</td><td className="px-4 py-2"><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-bss-bg text-bss-text-secondary">{r.status}</span></td><td className="px-4 py-2 font-mono text-[11px] text-bss-text-primary">{String((r.result as Record<string, unknown>)?.bssId ?? '') || '—'}</td><td className="px-4 py-2 text-bss-text-secondary">{Object.entries(r.data || {}).filter(([k, v]) => ['name','mobile','employer_mobile','contractor_mobile','worker_mobile','site_name'].includes(k) && v).map(([k, v]) => `${k}: ${v}`).join(' · ') || '—'}{(r.issues ?? []).length ? <span className="text-bss-orange"> · {r.issues.length} issue(s)</span> : null}</td></tr>)}</tbody>
           </table>
         </div>
       </section>}
