@@ -90,7 +90,8 @@ def _employer_contractor_row(b):
         "contractor": payloads._org_name(b.contractor),
         "contractorCode": payloads._d(getattr(cp, "contractor_code", "")
                                       or payloads._bss_contractor_code(b.contractor_id)),
-        "initiatedBy": payloads._d(b.initiated_by),
+        "initiatedBy": {"employer_qr": "Employer QR", "contractor_qr": "Contractor QR",
+                        "site_qr": "Site QR"}.get(payloads._d(b.source), payloads._d(b.source)),
         "sites": [payloads._d(a.site.site_name) if a.site else "" for a in sites],
         "siteCount": len(sites),
         "startDate": start,

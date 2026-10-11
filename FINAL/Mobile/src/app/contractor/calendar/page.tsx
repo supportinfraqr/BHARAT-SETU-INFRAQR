@@ -43,9 +43,9 @@ function displayDate(iso: string) {
 }
 
 const HOLIDAY_TYPES = [
-  ['WEEKLY_OFF', 'Weekly Off', 'bg-emerald-50 text-emerald-700 border-emerald-200 ring-emerald-500/20'],
-  ['PUBLIC', 'Public Holiday', 'bg-blue-50 text-blue-700 border-blue-200 ring-blue-500/20'],
-  ['RESTRICTED', 'Restricted Holiday', 'bg-amber-50 text-amber-700 border-amber-200 ring-amber-500/20'],
+  ['WEEKLY_OFF', 'Weekly Off', 'bg-bss-soft-green text-bss-green border-bss-border ring-emerald-500/20'],
+  ['PUBLIC', 'Public Holiday', 'bg-bss-blue-tint text-bss-interactive-blue border-bss-border ring-blue-500/20'],
+  ['RESTRICTED', 'Restricted Holiday', 'bg-bss-soft-orange text-bss-orange border-bss-border ring-amber-500/20'],
 ] as const;
 
 const STANDARD_INDIAN_HOLIDAYS = [
@@ -125,8 +125,8 @@ export default function ContractorCalendarPage() {
     { id: 'date', header: 'Date', value: r => r.date, render: r => displayDate(r.date) },
     { id: 'worker', header: 'Worker', value: r => r.worker },
     { id: 'site', header: 'Site', value: r => r.site || '—', render: r => r.site || '—' },
-    { id: 'status', header: 'Status', value: r => ATT_STATUS_LABEL[r.status] ?? r.status, render: r => <span className={r.status === 'PRESENT' ? 'text-green-700' : r.status === 'ABSENT' ? 'text-red-700' : 'text-orange-700'}>{ATT_STATUS_LABEL[r.status] ?? r.status}</span> },
-    { id: 'source', header: 'Source', value: r => r.capture, render: r => <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">{r.capture}</span> },
+    { id: 'status', header: 'Status', value: r => ATT_STATUS_LABEL[r.status] ?? r.status, render: r => <span className={r.status === 'PRESENT' ? 'text-bss-green' : r.status === 'ABSENT' ? 'text-bss-error' : 'text-bss-orange'}>{ATT_STATUS_LABEL[r.status] ?? r.status}</span> },
+    { id: 'source', header: 'Source', value: r => r.capture, render: r => <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-bss-blue-tint text-bss-interactive-blue">{r.capture}</span> },
   ];
 
   // Form states
@@ -425,17 +425,17 @@ export default function ContractorCalendarPage() {
   };
 
   const inputStyle =
-    'w-full h-10 border border-gray-200 rounded-xl px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#073B67]/20 focus:border-[#073B67] transition-all bg-white';
+    'w-full h-10 border border-bss-border rounded-xl px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#01183A]/20 focus:border-[#01183A] transition-all bg-white';
 
   return (
     <div className="p-4 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#073B67] to-[#0A4D87] rounded-3xl p-6 lg:p-8 text-white shadow-xl shadow-[#073B67]/10 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-[#01183A] to-[#1E3A8A] rounded-3xl p-6 lg:p-8 text-white shadow-xl shadow-[#01183A]/10 relative overflow-hidden">
         <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/90 text-xs font-semibold backdrop-blur-md border border-white/15">
-              <Building2 size={13} className="text-[#F47A32]" />
+              <Building2 size={13} className="text-[#E45D24]" />
               <span>Master Configuration</span>
             </div>
             <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">Leave Calendar</h1>
@@ -450,7 +450,7 @@ export default function ContractorCalendarPage() {
               <select
                 value={current?.siteId ?? ''}
                 onChange={(e) => setSiteId(Number(e.target.value))}
-                className="w-full h-10 bg-white text-gray-900 font-bold rounded-xl px-3 text-sm border-0 focus:ring-2 focus:ring-[#F47A32] cursor-pointer shadow-sm"
+                className="w-full h-10 bg-white text-bss-text-primary font-bold rounded-xl px-3 text-sm border-0 focus:ring-2 focus:ring-[#E45D24] cursor-pointer shadow-sm"
               >
                 {calendars.map((c) => (
                   <option key={c.siteId} value={c.siteId}>
@@ -479,7 +479,7 @@ export default function ContractorCalendarPage() {
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
               <span className="text-xs text-white/70 block">Workers Bound</span>
-              <span className="text-xl font-bold flex items-center gap-1.5 text-emerald-300">
+              <span className="text-xl font-bold flex items-center gap-1.5 text-bss-soft-green">
                 <ShieldCheck size={16} /> Inherited
               </span>
             </div>
@@ -489,39 +489,39 @@ export default function ContractorCalendarPage() {
 
       {/* Notifications */}
       {notice && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-sm font-semibold flex items-center gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
-          <CheckCircle2 size={18} className="text-emerald-600 flex-shrink-0" />
+        <div className="p-4 bg-bss-soft-green border border-bss-border text-bss-green rounded-2xl text-sm font-semibold flex items-center gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <CheckCircle2 size={18} className="text-bss-green flex-shrink-0" />
           <span>{notice}</span>
         </div>
       )}
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-sm font-semibold flex items-center gap-3 shadow-sm">
-          <Info size={18} className="text-rose-600 flex-shrink-0" />
+        <div className="p-4 bg-bss-soft-orange border border-bss-border text-bss-error rounded-2xl text-sm font-semibold flex items-center gap-3 shadow-sm">
+          <Info size={18} className="text-bss-error flex-shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {!current ? (
-        <div className="bg-white border border-gray-200 rounded-3xl p-12 text-center max-w-lg mx-auto shadow-sm space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-amber-50 text-[#F47A32] grid place-items-center mx-auto">
+        <div className="bss-card rounded-3xl p-12 text-center max-w-lg mx-auto space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-bss-soft-orange text-[#E45D24] grid place-items-center mx-auto">
             <Building2 size={32} />
           </div>
-          <h2 className="text-lg font-bold text-gray-900">No Sites Allotted Yet</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-lg font-bold text-bss-text-primary">No Sites Allotted Yet</h2>
+          <p className="text-sm text-bss-text-muted">
             You do not have any active project site allotments mapped to your account. Once a principal employer allots a site to your organisation, its calendar interface will appear here.
           </p>
         </div>
       ) : (
         <div className="space-y-6">
           {/* Controls Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-2 border border-gray-200 rounded-2xl shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-2 border border-bss-border rounded-2xl shadow-sm">
             <div className="flex items-center gap-1 w-full sm:w-auto">
               <button
                 onClick={() => setActiveTab('calendar')}
                 className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                   activeTab === 'calendar'
-                    ? 'bg-[#073B67] text-white shadow-md shadow-[#073B67]/20'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-[#01183A] text-white shadow-md shadow-[#01183A]/20'
+                    : 'text-bss-text-secondary hover:bg-bss-bg'
                 }`}
               >
                 <CalendarDays size={16} /> Interactive Calendar Grid
@@ -530,8 +530,8 @@ export default function ContractorCalendarPage() {
                 onClick={() => setActiveTab('holidays')}
                 className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                   activeTab === 'holidays'
-                    ? 'bg-[#073B67] text-white shadow-md shadow-[#073B67]/20'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-[#01183A] text-white shadow-md shadow-[#01183A]/20'
+                    : 'text-bss-text-secondary hover:bg-bss-bg'
                 }`}
               >
                 <CalendarIcon size={16} /> Holidays List ({siteHolidays.length})
@@ -540,8 +540,8 @@ export default function ContractorCalendarPage() {
                 onClick={() => setActiveTab('policy')}
                 className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                   activeTab === 'policy'
-                    ? 'bg-[#073B67] text-white shadow-md shadow-[#073B67]/20'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-[#01183A] text-white shadow-md shadow-[#01183A]/20'
+                    : 'text-bss-text-secondary hover:bg-bss-bg'
                 }`}
               >
                 <Clock size={16} /> Leave Policies ({sitePolicies.length})
@@ -550,8 +550,8 @@ export default function ContractorCalendarPage() {
                 onClick={() => setActiveTab('attendance')}
                 className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                   activeTab === 'attendance'
-                    ? 'bg-[#073B67] text-white shadow-md shadow-[#073B67]/20'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-[#01183A] text-white shadow-md shadow-[#01183A]/20'
+                    : 'text-bss-text-secondary hover:bg-bss-bg'
                 }`}
               >
                 <FileSpreadsheet size={16} /> Attendance
@@ -561,7 +561,7 @@ export default function ContractorCalendarPage() {
             <button
               onClick={loadStandardPresets}
               disabled={busy}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-[#F47A32] text-white text-xs font-bold flex items-center justify-center gap-2 hover:opacity-95 shadow-md shadow-[#F47A32]/20 transition-all disabled:opacity-50"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-bss-orange to-[#E45D24] text-white text-xs font-bold flex items-center justify-center gap-2 hover:opacity-95 shadow-md shadow-[#E45D24]/20 transition-all disabled:opacity-50"
             >
               <Sparkles size={15} /> Auto-fill Indian Public Holidays
             </button>
@@ -571,42 +571,42 @@ export default function ContractorCalendarPage() {
           {activeTab === 'calendar' && (
             <div className="grid lg:grid-cols-[1.8fr_1fr] gap-6 items-start">
               {/* Calendar Grid Box */}
-              <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm">
-                <div className="p-5 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3 bg-gray-50/50">
+              <div className="bss-card rounded-3xl overflow-hidden">
+                <div className="p-5 border-b border-bss-border flex flex-wrap items-center justify-between gap-3 bg-bss-bg/50">
                   <div className="flex items-center gap-3">
                     <button
                       onClick={prevMonth}
-                      className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-all"
+                      className="w-9 h-9 rounded-xl border border-bss-border bg-white flex items-center justify-center text-bss-text-secondary hover:bg-bss-bg transition-all"
                     >
                       <ChevronLeft size={18} />
                     </button>
-                    <h2 className="text-base font-extrabold text-gray-900 min-w-[140px] text-center">
+                    <h2 className="text-base font-extrabold text-bss-text-primary min-w-[140px] text-center">
                       {monthNames[currentMonth]} {currentYear}
                     </h2>
                     <button
                       onClick={nextMonth}
-                      className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-all"
+                      className="w-9 h-9 rounded-xl border border-bss-border bg-white flex items-center justify-center text-bss-text-secondary hover:bg-bss-bg transition-all"
                     >
                       <ChevronRight size={18} />
                     </button>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                    <span className="text-xs font-semibold px-3 py-1 rounded-full bg-bss-blue-tint text-bss-interactive-blue border border-bss-border">
                       {monthHolidays.length} Holiday{monthHolidays.length === 1 ? '' : 's'} in {monthNames[currentMonth]}
                     </span>
                   </div>
                 </div>
 
                 {/* Day Headers */}
-                <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50 text-center text-xs font-bold uppercase tracking-wider text-gray-500 py-3">
+                <div className="grid grid-cols-7 border-b border-bss-border bg-bss-bg text-center text-xs font-bold uppercase tracking-wider text-bss-text-muted py-3">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
                     <span key={d}>{d}</span>
                   ))}
                 </div>
 
                 {/* Calendar Days */}
-                <div className="grid grid-cols-7 gap-px bg-gray-200 p-px">
+                <div className="grid grid-cols-7 gap-px bg-bss-surface p-px">
                   {Array.from({ length: firstWeekday }, (_, i) => (
                     <div key={`pad-${i}`} className="bg-white p-2 min-h-[5.5rem] opacity-40" />
                   ))}
@@ -626,18 +626,18 @@ export default function ContractorCalendarPage() {
                             setHName(holiday.name);
                           }
                         }}
-                        className={`bg-white p-2.5 min-h-[5.5rem] transition-all relative group cursor-pointer hover:bg-blue-50/30 ${
-                          holiday ? 'bg-amber-50/40 ring-1 ring-inset ring-[#F47A32]/40' : ''
+                        className={`bg-white p-2.5 min-h-[5.5rem] transition-all relative group cursor-pointer hover:bg-bss-blue-tint/30 ${
+                          holiday ? 'bg-bss-soft-orange/40 ring-1 ring-inset ring-[#E45D24]/40' : ''
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <span
                             className={`text-xs font-extrabold w-6 h-6 rounded-full flex items-center justify-center ${
                               holiday
-                                ? 'bg-[#F47A32] text-white shadow-sm'
+                                ? 'bg-[#E45D24] text-white shadow-sm'
                                 : isSunday
-                                ? 'text-rose-500 bg-rose-50'
-                                : 'text-gray-800'
+                                ? 'text-bss-error bg-bss-soft-orange'
+                                : 'text-bss-text-primary'
                             }`}
                           >
                             {day}
@@ -649,7 +649,7 @@ export default function ContractorCalendarPage() {
                                 e.stopPropagation();
                                 removeHoliday(holiday.id);
                               }}
-                              className="text-gray-300 hover:text-rose-600 transition-colors opacity-0 group-hover:opacity-100"
+                              className="text-bss-text-muted hover:text-bss-error transition-colors opacity-0 group-hover:opacity-100"
                               title="Remove holiday"
                             >
                               <Trash2 size={13} />
@@ -659,15 +659,15 @@ export default function ContractorCalendarPage() {
 
                         {holiday ? (
                           <div className="mt-1.5 space-y-1">
-                            <span className="block text-[11px] font-bold text-amber-900 leading-tight truncate">
+                            <span className="block text-[11px] font-bold text-bss-orange leading-tight truncate">
                               {holiday.name}
                             </span>
-                            <span className="inline-block text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                            <span className="inline-block text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-bss-soft-orange text-bss-orange border border-bss-border">
                               {holiday.isPaid ? 'Paid' : 'Unpaid'}
                             </span>
                           </div>
                         ) : isSunday ? (
-                          <span className="mt-2 block text-[10px] font-medium text-rose-400">Weekly Off</span>
+                          <span className="mt-2 block text-[10px] font-medium text-bss-error">Weekly Off</span>
                         ) : null}
                       </div>
                     );
@@ -676,19 +676,19 @@ export default function ContractorCalendarPage() {
               </div>
 
               {/* Quick Add Holiday Panel */}
-              <div className="bg-white border border-gray-200 rounded-3xl p-6 space-y-5 shadow-sm">
+              <div className="bss-card rounded-3xl p-6 space-y-5">
                 <div>
-                  <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                    <Plus size={18} className="text-[#073B67]" /> Add Holiday to Site
+                  <h3 className="text-base font-bold text-bss-text-primary flex items-center gap-2">
+                    <Plus size={18} className="text-[#01183A]" /> Add Holiday to Site
                   </h3>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-bss-text-muted mt-1">
                     Select a date or pick one directly from the calendar grid to register a holiday for {current.siteName}.
                   </p>
                 </div>
 
                 <form onSubmit={(e) => addHoliday(e)} className="space-y-4">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-700">Date</label>
+                    <label className="text-xs font-bold text-bss-text-primary">Date</label>
                     <input
                       type="date"
                       required
@@ -699,7 +699,7 @@ export default function ContractorCalendarPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-700">Holiday Name / Description</label>
+                    <label className="text-xs font-bold text-bss-text-primary">Holiday Name / Description</label>
                     <input
                       required
                       value={hName}
@@ -710,7 +710,7 @@ export default function ContractorCalendarPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-700">Category Type</label>
+                    <label className="text-xs font-bold text-bss-text-primary">Category Type</label>
                     <select
                       value={hType}
                       onChange={(e) => setHType(e.target.value)}
@@ -730,16 +730,16 @@ export default function ContractorCalendarPage() {
                       id="hPaid"
                       checked={hPaid}
                       onChange={(e) => setHPaid(e.target.checked)}
-                      className="w-4 h-4 text-[#073B67] rounded border-gray-300 focus:ring-[#073B67]"
+                      className="w-4 h-4 text-[#01183A] rounded border-bss-border focus:ring-[#01183A]"
                     />
-                    <label htmlFor="hPaid" className="text-xs font-semibold text-gray-700 cursor-pointer">
+                    <label htmlFor="hPaid" className="text-xs font-semibold text-bss-text-primary cursor-pointer">
                       Paid holiday (Workers receive daily wage entitlement)
                     </label>
                   </div>
 
                   <button
                     disabled={busy}
-                    className="w-full h-11 rounded-xl bg-[#073B67] hover:bg-[#062D4F] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#073B67]/20 transition-all disabled:opacity-60"
+                    className="w-full h-11 rounded-xl bg-[#01183A] hover:bg-[#022B5E] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#01183A]/20 transition-all disabled:opacity-60"
                   >
                     <Plus size={16} /> Save Holiday to Calendar
                   </button>
@@ -750,33 +750,33 @@ export default function ContractorCalendarPage() {
 
           {/* TAB 2: Holidays Master Table & List */}
           {activeTab === 'holidays' && (
-            <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm space-y-4 p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+            <div className="bss-card rounded-3xl overflow-hidden space-y-4 p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-bss-border pb-4">
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">Configured Site Holidays ({siteHolidays.length})</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <h3 className="text-base font-bold text-bss-text-primary">Configured Site Holidays ({siteHolidays.length})</h3>
+                  <p className="text-xs text-bss-text-muted mt-0.5">
                     Holidays applicable for all workers and sub-contractors on {current.siteName}.
                   </p>
                 </div>
               </div>
 
               {siteHolidays.length === 0 ? (
-                <div className="p-8 text-center text-sm text-gray-400">
+                <div className="p-8 text-center text-sm text-bss-text-muted">
                   No holidays configured for this site. Switch to the calendar tab or click &quot;Auto-fill Indian Public Holidays&quot; above.
                 </div>
               ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {siteHolidays.map((h) => {
                     const typeConfig = HOLIDAY_TYPES.find((t) => t[0] === h.holidayTypeCode || t[1] === h.holidayType);
-                    const badgeStyle = typeConfig ? typeConfig[2] : 'bg-gray-50 text-gray-700 border-gray-200';
+                    const badgeStyle = typeConfig ? typeConfig[2] : 'bg-bss-bg text-bss-text-primary border-bss-border';
                     return (
                       <div
                         key={h.id}
-                        className="p-4 border border-gray-200 rounded-2xl bg-white hover:border-[#073B67]/30 transition-all flex items-start justify-between gap-3 shadow-sm"
+                        className="p-4 border border-bss-border rounded-2xl bg-white hover:border-[#01183A]/30 transition-all flex items-start justify-between gap-3 shadow-sm"
                       >
                         <div className="space-y-1">
-                          <span className="text-xs font-bold text-gray-400 block">{h.date}</span>
-                          <strong className="text-sm font-bold text-gray-900 block">{h.name}</strong>
+                          <span className="text-xs font-bold text-bss-text-muted block">{h.date}</span>
+                          <strong className="text-sm font-bold text-bss-text-primary block">{h.name}</strong>
                           <div className="flex flex-wrap items-center gap-2 pt-1">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${badgeStyle}`}>
                               {h.holidayType || h.holidayTypeCode}
@@ -784,8 +784,8 @@ export default function ContractorCalendarPage() {
                             <span
                               className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
                                 h.isPaid
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                  : 'bg-rose-50 text-rose-700 border-rose-200'
+                                  ? 'bg-bss-soft-green text-bss-green border-bss-border'
+                                  : 'bg-bss-soft-orange text-bss-error border-bss-border'
                               }`}
                             >
                               {h.isPaid ? 'Paid' : 'Unpaid'}
@@ -797,7 +797,7 @@ export default function ContractorCalendarPage() {
                           type="button"
                           onClick={() => removeHoliday(h.id)}
                           disabled={busy}
-                          className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                          className="p-2 text-bss-text-muted hover:text-bss-error hover:bg-bss-soft-orange rounded-xl transition-all"
                           title="Delete Holiday"
                         >
                           <Trash2 size={16} />
@@ -815,16 +815,16 @@ export default function ContractorCalendarPage() {
             <div className="grid lg:grid-cols-[1.5fr_1fr] gap-6 items-start">
               <div className="space-y-6">
               {/* Leave Policy List */}
-              <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-4">
+              <div className="bss-card rounded-3xl p-6 space-y-4">
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">Leave Policies & Allowances ({sitePolicies.length})</h3>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <h3 className="text-base font-bold text-bss-text-primary">Leave Policies & Allowances ({sitePolicies.length})</h3>
+                  <p className="text-xs text-bss-text-muted mt-1">
                     Annual leave quotas and opening balances inherited by workers on {current.siteName}.
                   </p>
                 </div>
 
                 {sitePolicies.length === 0 ? (
-                  <div className="p-8 text-center text-sm text-gray-400 border border-dashed border-gray-200 rounded-2xl">
+                  <div className="p-8 text-center text-sm text-bss-text-muted border border-dashed border-bss-border rounded-2xl">
                     No leave policies configured for this site yet. Workers at this site will see &ldquo;leave calendar not set up&rdquo; until you add at least one leave type here.
                   </div>
                 ) : (
@@ -832,17 +832,17 @@ export default function ContractorCalendarPage() {
                     {sitePolicies.map((p) => (
                       <div
                         key={p.id}
-                        className="p-4 border border-gray-200 rounded-2xl flex items-center justify-between gap-4 hover:border-[#F47A32]/40 transition-all bg-gray-50/40"
+                        className="p-4 border border-bss-border rounded-2xl flex items-center justify-between gap-4 hover:border-[#E45D24]/40 transition-all bg-bss-bg/40"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-orange-100 text-[#F47A32] grid place-items-center font-bold">
+                          <div className="w-10 h-10 rounded-xl bg-bss-soft-orange text-[#E45D24] grid place-items-center font-bold">
                             {p.leaveType.substring(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <strong className="text-sm font-bold text-gray-900 block">{p.leaveType}</strong>
-                            <span className="text-xs text-gray-500">
-                              Annual Quota: <b className="text-gray-900">{p.annualEntitlement} Days</b> · Opening Balance:{' '}
-                              <b className="text-gray-900">{p.openingBalance} Days</b>
+                            <strong className="text-sm font-bold text-bss-text-primary block">{p.leaveType}</strong>
+                            <span className="text-xs text-bss-text-muted">
+                              Annual Quota: <b className="text-bss-text-primary">{p.annualEntitlement} Days</b> · Opening Balance:{' '}
+                              <b className="text-bss-text-primary">{p.openingBalance} Days</b>
                             </span>
                           </div>
                         </div>
@@ -851,7 +851,7 @@ export default function ContractorCalendarPage() {
                           type="button"
                           onClick={() => removePolicy(p.id)}
                           disabled={busy}
-                          className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                          className="p-2 text-bss-text-muted hover:text-bss-error hover:bg-bss-soft-orange rounded-xl transition-all"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -862,71 +862,71 @@ export default function ContractorCalendarPage() {
               </div>
 
               {/* Restricted Holiday (RH) policy */}
-              <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-4">
+              <div className="bss-card rounded-3xl p-6 space-y-4">
                 <div>
-                  <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                    <CalendarDays size={18} className="text-[#F47A32]" /> Restricted Holiday (RH) Policy
+                  <h3 className="text-base font-bold text-bss-text-primary flex items-center gap-2">
+                    <CalendarDays size={18} className="text-[#E45D24]" /> Restricted Holiday (RH) Policy
                   </h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Optional/regional holidays (e.g. Ganesh Chaturthi, Onam) workers may choose from. <strong className="text-gray-700">{rhOfferedCount}</strong> restricted holiday{rhOfferedCount === 1 ? '' : 's'} currently on this site&apos;s calendar. Set how many a worker may avail per year — with your prior approval.
+                  <p className="text-xs text-bss-text-muted mt-1">
+                    Optional/regional holidays (e.g. Ganesh Chaturthi, Onam) workers may choose from. <strong className="text-bss-text-primary">{rhOfferedCount}</strong> restricted holiday{rhOfferedCount === 1 ? '' : 's'} currently on this site&apos;s calendar. Set how many a worker may avail per year — with your prior approval.
                   </p>
                 </div>
-                <label className="text-xs font-bold text-gray-700 block max-w-xs">RH allowance per worker / year
+                <label className="text-xs font-bold text-bss-text-primary block max-w-xs">RH allowance per worker / year
                   <input type="number" min="0" value={rhMaxAvail} onChange={(e) => setRhMaxAvail(e.target.value)} className={inputStyle} />
                 </label>
-                <button type="button" disabled={busy} onClick={() => void saveRestrictedPolicy()} className="h-11 px-4 rounded-xl bg-[#073B67] hover:bg-[#062D4F] text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60">
+                <button type="button" disabled={busy} onClick={() => void saveRestrictedPolicy()} className="h-11 px-4 rounded-xl bg-[#01183A] hover:bg-[#022B5E] text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60">
                   <Zap size={16} /> Save RH policy
                 </button>
               </div>
 
               {/* Weekly off days */}
-              <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-3">
+              <div className="bss-card rounded-3xl p-6 space-y-3">
                 <div>
-                  <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                    <CalendarDays size={18} className="text-[#F47A32]" /> Weekly Off Days
+                  <h3 className="text-base font-bold text-bss-text-primary flex items-center gap-2">
+                    <CalendarDays size={18} className="text-[#E45D24]" /> Weekly Off Days
                   </h3>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-bss-text-muted mt-1">
                     The day(s) workers at this site get off every week. Leave cannot be applied on weekly offs or public holidays.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {DAY_CODES.map(([code, label]) => (
-                    <button key={code} type="button" onClick={() => toggleWeeklyOff(code)} className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${weeklyOff.has(code) ? 'bg-[#073B67] text-white border-[#073B67]' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'}`}>{label}</button>
+                    <button key={code} type="button" onClick={() => toggleWeeklyOff(code)} className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${weeklyOff.has(code) ? 'bg-[#01183A] text-white border-[#01183A]' : 'bg-white border-bss-border text-bss-text-secondary hover:border-bss-border'}`}>{label}</button>
                   ))}
                 </div>
-                <button type="button" disabled={busy} onClick={() => void saveWeeklyOff()} className="h-11 px-4 rounded-xl bg-[#073B67] hover:bg-[#062D4F] text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60">
+                <button type="button" disabled={busy} onClick={() => void saveWeeklyOff()} className="h-11 px-4 rounded-xl bg-[#01183A] hover:bg-[#022B5E] text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60">
                   <Zap size={16} /> Save weekly offs
                 </button>
               </div>
 
               {/* Copy setup to other sites */}
-              <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-3">
-                <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                  <Copy size={18} className="text-[#F47A32]" /> Copy setup to other sites
+              <div className="bss-card rounded-3xl p-6 space-y-3">
+                <h3 className="text-base font-bold text-bss-text-primary flex items-center gap-2">
+                  <Copy size={18} className="text-[#E45D24]" /> Copy setup to other sites
                 </h3>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-bss-text-muted">
                   Apply this site&apos;s holidays, leave policies and RH policy to all your other allotted sites. Existing entries are kept and updated.
                 </p>
-                <button type="button" disabled={busy} onClick={() => void copyCalendarToSites()} className="h-11 px-4 rounded-xl border border-[#073B67]/30 text-[#073B67] text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#073B67]/5 disabled:opacity-60">
+                <button type="button" disabled={busy} onClick={() => void copyCalendarToSites()} className="h-11 px-4 rounded-xl border border-[#01183A]/30 text-[#01183A] text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#01183A]/5 disabled:opacity-60">
                   <Copy size={16} /> Copy to other sites
                 </button>
               </div>
               </div>
 
               {/* Form */}
-              <div className="bg-white border border-gray-200 rounded-3xl p-6 space-y-4 shadow-sm">
+              <div className="bss-card rounded-3xl p-6 space-y-4">
                 <div>
-                  <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                    <Clock size={18} className="text-[#F47A32]" /> Configure Leave Entitlement
+                  <h3 className="text-base font-bold text-bss-text-primary flex items-center gap-2">
+                    <Clock size={18} className="text-[#E45D24]" /> Configure Leave Entitlement
                   </h3>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-bss-text-muted mt-1">
                     Set up or modify leave rules for Casual, Earned, or Sick leave categories.
                   </p>
                 </div>
 
                 <form onSubmit={savePolicy} className="space-y-4">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-700">Leave Category</label>
+                    <label className="text-xs font-bold text-bss-text-primary">Leave Category</label>
                     <select
                       value={pType}
                       onChange={(e) => setPType(e.target.value)}
@@ -941,7 +941,7 @@ export default function ContractorCalendarPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-700">Annual Entitlement (Days / Year)</label>
+                    <label className="text-xs font-bold text-bss-text-primary">Annual Entitlement (Days / Year)</label>
                     <input
                       type="number"
                       min="0"
@@ -952,7 +952,7 @@ export default function ContractorCalendarPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-700">Opening Balance Default</label>
+                    <label className="text-xs font-bold text-bss-text-primary">Opening Balance Default</label>
                     <input
                       type="number"
                       min="0"
@@ -964,7 +964,7 @@ export default function ContractorCalendarPage() {
 
                   <button
                     disabled={busy || !pType}
-                    className="w-full h-11 rounded-xl bg-[#F47A32] hover:bg-[#D96622] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#F47A32]/20 transition-all disabled:opacity-60"
+                    className="w-full h-11 rounded-xl bg-[#E45D24] hover:bg-[#C94D18] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#E45D24]/20 transition-all disabled:opacity-60"
                   >
                     <Zap size={16} /> Save Leave Policy
                   </button>
@@ -976,31 +976,31 @@ export default function ContractorCalendarPage() {
           {/* TAB 4: Attendance — uploaded sheet */}
           {activeTab === 'attendance' && (
             <div className="space-y-6">
-              <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-4">
+              <div className="bss-card rounded-3xl p-6 space-y-4">
                 <div>
-                  <h3 className="text-base font-bold text-gray-900 flex items-center gap-2"><FileSpreadsheet size={18} className="text-[#073B67]" /> Attendance — Uploaded Sheet</h3>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <h3 className="text-base font-bold text-bss-text-primary flex items-center gap-2"><FileSpreadsheet size={18} className="text-[#01183A]" /> Attendance — Uploaded Sheet</h3>
+                  <p className="text-xs text-bss-text-muted mt-1">
                     Download the BSS-ID / date-wise CSV for {current.siteName || 'your site'}, fill P/A/L, upload it, and it syncs into the attendance system marked as &ldquo;Uploaded sheet&rdquo;.
                   </p>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">
-                  <label className="space-y-1"><span className="text-xs font-bold text-gray-700">Start date</span><input type="date" value={attStart} onChange={(e) => setAttStart(e.target.value)} className={inputStyle} /></label>
-                  <label className="space-y-1"><span className="text-xs font-bold text-gray-700">End date</span><input type="date" value={attEnd} onChange={(e) => setAttEnd(e.target.value)} className={inputStyle} /></label>
+                  <label className="space-y-1"><span className="text-xs font-bold text-bss-text-primary">Start date</span><input type="date" value={attStart} onChange={(e) => setAttStart(e.target.value)} className={inputStyle} /></label>
+                  <label className="space-y-1"><span className="text-xs font-bold text-bss-text-primary">End date</span><input type="date" value={attEnd} onChange={(e) => setAttEnd(e.target.value)} className={inputStyle} /></label>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
-                  <button type="button" onClick={downloadAttendanceTemplate} className="h-10 px-4 rounded-xl border border-gray-200 text-xs font-bold flex items-center gap-2 hover:bg-gray-50"><Download size={15} /> Download Attendance CSV</button>
-                  <label className={`h-10 px-4 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer ${attBusy ? 'bg-[#073B67]/60 text-white' : 'bg-[#073B67] text-white hover:bg-[#062D4F]'}`}>
+                  <button type="button" onClick={downloadAttendanceTemplate} className="h-10 px-4 rounded-xl border border-bss-border text-xs font-bold flex items-center gap-2 hover:bg-bss-bg"><Download size={15} /> Download Attendance CSV</button>
+                  <label className={`h-10 px-4 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer ${attBusy ? 'bg-[#01183A]/60 text-white' : 'bg-[#01183A] text-white hover:bg-[#022B5E]'}`}>
                     <Upload size={15} /> {attBusy ? 'Uploading…' : 'Upload Filled Sheet (CSV/XLSX)'}
                     <input type="file" accept=".csv,.xlsx" className="hidden" disabled={attBusy} onChange={(e) => { void uploadAttendanceSheet(e.target.files?.[0]); e.target.value = ''; }} />
                   </label>
-                  <span className="text-[11px] text-gray-400">Codes: P = Present · A = Absent · L = Leave · H = Holiday</span>
+                  <span className="text-[11px] text-bss-text-muted">Codes: P = Present · A = Absent · L = Leave · H = Holiday</span>
                 </div>
-                {attNotice && <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl p-3">{attNotice}</p>}
-                {attError && <p className="text-xs text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">{attError}</p>}
-                {attResult && <div className="text-xs text-emerald-800 bg-emerald-50/50 border border-emerald-100 rounded-xl p-3">Synced {attResult.rows} row(s) → {attResult.created} new + {attResult.updated} updated{attResult.holidays ? `, ${attResult.holidays} holiday/weekly-off` : ''} for {attResult.workers} worker(s).{attResult.unknown.length ? ` ${attResult.unknown.length} BSS ID(s) not linked to you: ${attResult.unknown.slice(0, 5).join(', ')}.` : ''}</div>}
-                <p className="text-[11px] text-gray-400">The CSV is generated for the <strong>selected site</strong> and already marks that site&rsquo;s holidays and weekly offs (pre-filled <strong>H</strong>, labelled in the date header). Rows are validated by BSS ID (must be bound to you). Saved with capture method <strong>Uploaded sheet</strong> alongside QR/NFC/camera punches.</p>
+                {attNotice && <p className="text-xs text-bss-green bg-bss-soft-green border border-bss-border rounded-xl p-3">{attNotice}</p>}
+                {attError && <p className="text-xs text-bss-error bg-bss-soft-orange border border-bss-border rounded-xl p-3">{attError}</p>}
+                {attResult && <div className="text-xs text-bss-green bg-bss-soft-green/50 border border-bss-border rounded-xl p-3">Synced {attResult.rows} row(s) → {attResult.created} new + {attResult.updated} updated{attResult.holidays ? `, ${attResult.holidays} holiday/weekly-off` : ''} for {attResult.workers} worker(s).{attResult.unknown.length ? ` ${attResult.unknown.length} BSS ID(s) not linked to you: ${attResult.unknown.slice(0, 5).join(', ')}.` : ''}</div>}
+                <p className="text-[11px] text-bss-text-muted">The CSV is generated for the <strong>selected site</strong> and already marks that site&rsquo;s holidays and weekly offs (pre-filled <strong>H</strong>, labelled in the date header). Rows are validated by BSS ID (must be bound to you). Saved with capture method <strong>Uploaded sheet</strong> alongside QR/NFC/camera punches.</p>
               </div>
-              <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm">
+              <div className="bss-card rounded-3xl overflow-hidden">
                 <EnterpriseDataTable title={`Uploaded attendance — ${attStart} → ${attEnd}`} rows={attRows} columns={attendanceColumns} rowKey={(r) => r.id} filename={`attendance-uploaded-${attStart}-to-${attEnd}`} />
               </div>
             </div>

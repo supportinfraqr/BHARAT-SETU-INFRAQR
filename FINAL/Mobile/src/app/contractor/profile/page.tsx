@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Building2, Camera, CreditCard, FileSignature, FileText, Landmark, Loader2, Lock, MapPin, Phone, ShieldCheck, Users } from 'lucide-react';
 import StatutoryLicences from '@/components/portal/StatutoryLicences';
 import GstVerifyCard from '@/components/gst/GstVerifyCard';
@@ -37,6 +37,13 @@ export default function ContractorProfilePage() {
   const [licences, setLicences] = useState<ContractorLicence[]>(contractor.licenses);
   const [logoBusy, setLogoBusy] = useState(false);
   const fields = contractor.profileSections[tab] ?? [];
+
+  // Deep-link support: /contractor/profile?tab=licences (etc).
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('tab');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deep-link on mount
+    if (requested && tabs.some(([id]) => id === requested)) setTab(requested);
+  }, []);
 
   async function uploadLogo(file?: File) {
     if (!file) return;
@@ -86,37 +93,37 @@ export default function ContractorProfilePage() {
   return (
     <div className="space-y-6">
       <GstVerifyCard role="contractor" />
-      <section className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col sm:flex-row justify-between gap-5">
+      <section className="bss-reveal bss-card p-6 flex flex-col sm:flex-row justify-between gap-5">
         <div className="flex gap-4">
           <div className="relative flex-shrink-0">
             {contractor.identity.photoUrl
-              ? <img src={contractor.identity.photoUrl} alt={contractor.identity.company} className="w-16 h-16 rounded-xl object-cover border border-gray-200"/>
-              : <span className="w-16 h-16 rounded-xl bg-blue-50 text-blue-700 grid place-items-center text-2xl font-bold">{contractor.identity.company.charAt(0)}</span>}
-            <label className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-[#073B67] text-white grid place-items-center cursor-pointer shadow-md hover:bg-[#062D4F]" title="Upload profile image">
+              ? <img src={contractor.identity.photoUrl} alt={contractor.identity.company} className="w-16 h-16 rounded-xl object-cover border border-bss-border"/>
+              : <span className="w-16 h-16 rounded-xl bg-bss-blue-tint text-bss-interactive-blue grid place-items-center text-2xl font-bold">{contractor.identity.company.charAt(0)}</span>}
+            <label className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-[#01183A] text-white grid place-items-center cursor-pointer shadow-md hover:bg-[#022B5E]" title="Upload profile image">
               {logoBusy ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
               <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" disabled={logoBusy} onChange={e => { void uploadLogo(e.target.files?.[0]); e.target.value = ''; }} />
             </label>
           </div>
           <div>
-            <div className="flex gap-2 items-center"><h1 className="text-2xl font-bold">{contractor.identity.company}</h1>{contractor.identity.verified && <ShieldCheck className="text-green-700" size={20}/>}</div>
-            <p className="font-mono text-xs text-gray-500 mt-1">{contractor.identity.bssId}</p>
-            <p className="text-sm text-gray-600 mt-2">{contractor.identity.contact} · {contractor.identity.email}</p>
+            <div className="flex gap-2 items-center"><h1 className="text-2xl font-bold">{contractor.identity.company}</h1>{contractor.identity.verified && <ShieldCheck className="text-bss-green" size={20}/>}</div>
+            <p className="font-mono text-xs text-bss-text-muted mt-1">{contractor.identity.bssId}</p>
+            <p className="text-sm text-bss-text-secondary mt-2">{contractor.identity.contact} · {contractor.identity.email}</p>
           </div>
         </div>
         <div className="text-sm">
-          <p><span className="text-gray-500">Authorised signatory:</span> {contractor.identity.name}</p>
-          <p className="mt-1"><span className="text-gray-500">Rating:</span> {contractor.identity.rating.toFixed(1)}</p>
-          {contractor.identity.memberSince && <p className="mt-1"><span className="text-gray-500">BSS member since:</span> {fmtDate(contractor.identity.memberSince)}</p>}
+          <p><span className="text-bss-text-muted">Authorised signatory:</span> {contractor.identity.name}</p>
+          <p className="mt-1"><span className="text-bss-text-muted">Rating:</span> {contractor.identity.rating.toFixed(1)}</p>
+          {contractor.identity.memberSince && <p className="mt-1"><span className="text-bss-text-muted">BSS member since:</span> {fmtDate(contractor.identity.memberSince)}</p>}
         </div>
       </section>
 
       <div className="grid md:grid-cols-[240px_1fr] gap-6">
-        <nav className="bg-white border border-gray-200 rounded-2xl p-2 h-fit overflow-x-auto space-y-0.5">
+        <nav className="bss-reveal bss-card p-2 h-fit overflow-x-auto space-y-0.5" style={{ ['--bss-delay' as string]: '80ms' }}>
           {tabs.map(([id, label, Icon]) => (
             <button
               key={id}
               onClick={() => { setTab(id); setEditing(false); setError(''); }}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-colors ${tab === id ? 'bg-gray-950 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-all ${tab === id ? 'bg-bss-navy text-white shadow-sm' : 'text-bss-text-secondary hover:bg-bss-bg hover:text-bss-text-primary'}`}
             >
               <Icon size={16} className="shrink-0" />
               <span className="leading-snug">{label}</span>
@@ -125,12 +132,12 @@ export default function ContractorProfilePage() {
         </nav>
 
         {tab === 'licences' ? (
-          <StatutoryLicences rows={licences} onSave={saveLicence} />
+          <div className="bss-reveal" style={{ ['--bss-delay' as string]: '80ms' }}><StatutoryLicences rows={licences} onSave={saveLicence} /></div>
         ) : (
-          <section className="bg-white border border-gray-200 rounded-2xl p-6">
-            <header className="flex justify-between border-b border-gray-100 pb-4">
+          <section className="bss-reveal bss-card p-6" style={{ ['--bss-delay' as string]: '80ms' }}>
+            <header className="flex justify-between border-b border-bss-border pb-4">
               <h2 className="font-semibold">{tabs.find(item => item[0] === tab)?.[1]}</h2>
-              {fields.length > 0 && <button onClick={() => setEditing(v => !v)} className="text-sm text-blue-700 font-semibold">{editing ? 'Cancel' : 'Edit'}</button>}
+              {fields.length > 0 && <button onClick={() => setEditing(v => !v)} className="text-sm text-bss-interactive-blue font-semibold">{editing ? 'Cancel' : 'Edit'}</button>}
             </header>
             <form onSubmit={save} className="grid sm:grid-cols-2 gap-6 mt-6">
               {fields.map((field, index) => {
@@ -170,8 +177,8 @@ export default function ContractorProfilePage() {
                 }
 
                 return (
-                  <label key={field.label} className="text-xs font-semibold text-gray-500 uppercase">
-                    <span className="flex items-center gap-1.5">{field.label}{locked && <Lock size={11} className="text-gray-300" />}</span>
+                  <label key={field.label} className="text-xs font-semibold text-bss-text-muted uppercase">
+                    <span className="flex items-center gap-1.5">{field.label}{locked && <Lock size={11} className="text-bss-text-muted" />}</span>
                     {editing && !field.sensitive && !locked ? (
                       isDocField ? (
                         <div className="mt-1 space-y-2">
@@ -180,19 +187,19 @@ export default function ContractorProfilePage() {
                             name={`field-${index}`}
                             defaultValue={field.value}
                             placeholder="Enter document number / reference"
-                            className="block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900 bg-white"
+                            className="block w-full h-10 border border-bss-border rounded-lg px-3 text-sm normal-case text-bss-text-primary bg-white"
                           />
                           <input
                             type="file"
                             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                            className="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                            className="block w-full text-xs text-bss-text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-bss-blue-tint file:text-bss-interactive-blue hover:file:bg-bss-bg cursor-pointer"
                           />
                         </div>
                       ) : dropdownOptions ? (
                         <select
                           name={`field-${index}`}
                           defaultValue={field.value || dropdownOptions[0]}
-                          className="mt-1 block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900 bg-white"
+                          className="mt-1 block w-full h-10 border border-bss-border rounded-lg px-3 text-sm normal-case text-bss-text-primary bg-white"
                         >
                           {!field.value && <option value="">Select option</option>}
                           {dropdownOptions.map(opt => (
@@ -205,18 +212,18 @@ export default function ContractorProfilePage() {
                           type={isDateField ? 'date' : 'text'}
                           name={`field-${index}`}
                           defaultValue={field.value}
-                          className="mt-1 block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900 bg-white"
+                          className="mt-1 block w-full h-10 border border-bss-border rounded-lg px-3 text-sm normal-case text-bss-text-primary bg-white"
                         />
                       )
                     ) : (
-                      <span className="mt-1 block text-sm normal-case text-gray-900 font-medium">{isDateField ? fmtDate(field.value) : (field.value || '—')}</span>
+                      <span className="mt-1 block text-sm normal-case text-bss-text-primary font-medium">{isDateField ? fmtDate(field.value) : (field.value || '—')}</span>
                     )}
                   </label>
                 );
               })}
-              {!fields.length && <p className="sm:col-span-2 text-sm text-gray-500 py-10 text-center">No records were returned for this section.</p>}
-              {error && <p role="alert" className="sm:col-span-2 text-sm text-red-700">{error}</p>}
-              {editing && <div className="sm:col-span-2 flex justify-end"><button disabled={busy} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold">{busy ? 'Saving…' : 'Save changes'}</button></div>}
+              {!fields.length && <p className="sm:col-span-2 text-sm text-bss-text-muted py-10 text-center">No records were returned for this section.</p>}
+              {error && <p role="alert" className="sm:col-span-2 text-sm text-bss-error">{error}</p>}
+              {editing && <div className="sm:col-span-2 flex justify-end"><button disabled={busy} className="px-4 py-2 bg-bss-interactive-blue text-white rounded-lg text-sm font-semibold">{busy ? 'Saving…' : 'Save changes'}</button></div>}
             </form>
           </section>
         )}

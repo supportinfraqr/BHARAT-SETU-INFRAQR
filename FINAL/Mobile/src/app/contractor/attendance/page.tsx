@@ -107,9 +107,9 @@ export default function ContractorAttendancePage() {
     { id: 'site', header: 'Site', value: r => r.site || '—', render: r => r.site || '—' },
     { id: 'in', header: 'In', value: r => r.checkIn || '—', render: r => r.checkIn || '—' },
     { id: 'out', header: 'Out', value: r => r.checkOut || '—', render: r => r.checkOut || '—' },
-    { id: 'status', header: 'Status', value: r => STATUS_LABEL[r.statusCode || r.status || ''] ?? (r.statusCode || r.status || '—'), render: r => <span className={(r.statusCode || r.status) === 'PRESENT' ? 'text-green-700' : (r.statusCode || r.status) === 'ABSENT' ? 'text-red-700' : 'text-orange-700'}>{STATUS_LABEL[r.statusCode || r.status || ''] ?? (r.statusCode || r.status || '—')}</span> },
-    { id: 'source', header: 'Source', value: r => r.source || r.capture || '', render: r => <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">{r.source || r.capture}</span> },
-    { id: 'view', header: '', value: () => '', render: r => <button type="button" onClick={() => setRecSelected(r)} className="text-[11px] font-bold text-[#073B67] hover:underline">Details</button> },
+    { id: 'status', header: 'Status', value: r => STATUS_LABEL[r.statusCode || r.status || ''] ?? (r.statusCode || r.status || '—'), render: r => { const s = r.statusCode || r.status; return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${s === 'PRESENT' ? 'bg-bss-soft-green text-bss-green' : s === 'ABSENT' ? 'bg-bss-soft-orange text-bss-error' : 'bg-bss-soft-orange text-bss-orange'}`}>{s === 'PRESENT' ? <CheckCircle2 size={11}/> : s === 'ABSENT' ? <X size={11}/> : null}{STATUS_LABEL[s || ''] ?? (s || '—')}</span>; } },
+    { id: 'source', header: 'Source', value: r => r.source || r.capture || '', render: r => <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-bss-blue-tint text-bss-interactive-blue">{r.source || r.capture}</span> },
+    { id: 'view', header: '', value: () => '', render: r => <button type="button" onClick={() => setRecSelected(r)} className="text-[11px] font-semibold text-bss-interactive-blue hover:underline">Details</button> },
   ];
 
   const presentCount = useMemo(() => recRows.filter(r => (r.statusCode || r.status) === 'PRESENT').length, [recRows]);
@@ -122,48 +122,56 @@ export default function ContractorAttendancePage() {
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
 
-    <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-      <header className="px-5 py-4 border-b border-gray-100 flex items-center gap-2"><CalendarDays size={16} className="text-[#073B67]"/><div><h2 className="text-sm font-semibold text-gray-950">Attendance records</h2><p className="text-xs text-gray-400 mt-0.5">{recRows.length} entr{recRows.length === 1 ? 'y' : 'ies'} · {presentCount} present this month</p></div></header>
+    {/* Stat cards */}
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="bss-card rounded-2xl p-4"><span className="bss-kpi-icon bg-bss-blue-tint text-bss-interactive-blue"><CalendarDays size={16}/></span><strong className="block text-2xl font-bold text-bss-text-primary mt-2">{recRows.length}</strong><p className="text-xs text-bss-text-secondary mt-1">Total entries</p></div>
+      <div className="bss-card rounded-2xl p-4"><span className="bss-kpi-icon bg-bss-soft-green text-bss-green"><CheckCircle2 size={16}/></span><strong className="block text-2xl font-bold text-bss-green mt-2">{presentCount}</strong><p className="text-xs text-bss-text-secondary mt-1">Present this month</p></div>
+      <div className="bss-card rounded-2xl p-4"><span className="bss-kpi-icon bg-bss-soft-orange text-bss-orange"><FileSpreadsheet size={16}/></span><strong className="block text-2xl font-bold text-bss-text-primary mt-2">{sites.length}</strong><p className="text-xs text-bss-text-secondary mt-1">Sites</p></div>
+      <div className="bss-card rounded-2xl p-4"><span className="bss-kpi-icon bg-bss-blue-tint text-bss-interactive-blue"><Upload size={16}/></span><strong className="block text-2xl font-bold text-bss-text-primary mt-2">{result ? result.workers : '—'}</strong><p className="text-xs text-bss-text-secondary mt-1">Last upload syncs</p></div>
+    </div>
+
+    <section className="bss-card rounded-2xl overflow-hidden">
+      <header className="px-5 py-4 border-b border-bss-border flex items-center gap-2"><span className="bss-kpi-icon bg-bss-blue-tint text-bss-interactive-blue"><CalendarDays size={16}/></span><div><h2 className="text-sm font-semibold text-bss-text-primary">Attendance records</h2><p className="text-xs text-bss-text-muted mt-0.5">{recRows.length} entr{recRows.length === 1 ? 'y' : 'ies'} · {presentCount} present this month</p></div></header>
       <div className="p-5 space-y-4">
         <div className="grid sm:grid-cols-2 gap-3">
-          <label className="text-xs font-semibold">Month<input type="month" value={recMonth} onChange={e => setRecMonth(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white"/></label>
-          <label className="text-xs font-semibold">Site<select value={recSite} onChange={e => setRecSite(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white"><option value="">All my sites</option>{sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` · ${s.code}` : ''}</option>)}</select></label>
+          <label className="block"><span className="text-[11px] font-semibold text-bss-text-secondary">Month</span><input type="month" value={recMonth} onChange={e => setRecMonth(e.target.value)} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm bg-white text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 focus:border-bss-interactive-blue"/></label>
+          <label className="block"><span className="text-[11px] font-semibold text-bss-text-secondary">Site</span><select value={recSite} onChange={e => setRecSite(e.target.value)} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm bg-white text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 focus:border-bss-interactive-blue"><option value="">All my sites</option>{sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` · ${s.code}` : ''}</option>)}</select></label>
         </div>
-        {recBusy && <p className="text-[11px] text-gray-400">Loading attendance…</p>}
+        {recBusy && <p className="text-[11px] text-bss-text-muted">Loading attendance…</p>}
         <EnterpriseDataTable title="Attendance records" rows={recRows} columns={recColumns} rowKey={r => r.id} filename={`attendance-records-${recMonth}`} />
       </div>
     </section>
 
-    <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-      <header className="px-5 py-4 border-b border-gray-100 flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#073B67]"/><div><h2 className="text-sm font-semibold text-gray-950">Upload attendance sheet</h2><p className="text-xs text-gray-400 mt-0.5">Choose the site and date range, download the CSV, fill it and upload it back.</p></div></header>
+    <section className="bss-card rounded-2xl overflow-hidden">
+      <header className="px-5 py-4 border-b border-bss-border flex items-center gap-2"><span className="bss-kpi-icon bg-bss-blue-tint text-bss-interactive-blue"><FileSpreadsheet size={16}/></span><div><h2 className="text-sm font-semibold text-bss-text-primary">Upload attendance sheet</h2><p className="text-xs text-bss-text-muted mt-0.5">Choose the site and date range, download the CSV, fill it and upload it back.</p></div></header>
       <div className="p-5 space-y-4">
         <div className="grid sm:grid-cols-3 gap-3">
-          <label className="text-xs font-semibold">Site<select value={site} onChange={e => setSite(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white"><option value="">All my sites</option>{sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.code ? ` · ${s.code}` : ''}</option>)}</select></label>
-          <label className="text-xs font-semibold">Start date<input type="date" value={start} onChange={e => setStart(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white"/></label>
-          <label className="text-xs font-semibold">End date<input type="date" value={end} onChange={e => setEnd(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white"/></label>
+          <label className="block"><span className="text-[11px] font-semibold text-bss-text-secondary">Site</span><select value={site} onChange={e => setSite(e.target.value)} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm bg-white text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 focus:border-bss-interactive-blue"><option value="">All my sites</option>{sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.code ? ` · ${s.code}` : ''}</option>)}</select></label>
+          <label className="block"><span className="text-[11px] font-semibold text-bss-text-secondary">Start date</span><input type="date" value={start} onChange={e => setStart(e.target.value)} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm bg-white text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 focus:border-bss-interactive-blue"/></label>
+          <label className="block"><span className="text-[11px] font-semibold text-bss-text-secondary">End date</span><input type="date" value={end} onChange={e => setEnd(e.target.value)} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm bg-white text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 focus:border-bss-interactive-blue"/></label>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={downloadTemplate} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5 hover:bg-gray-50"><Download size={14}/>Download Attendance CSV</button>
-          <label className={`h-9 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer ${busy ? 'bg-[#073B67]/60 text-white' : 'bg-[#073B67] text-white hover:bg-[#062D4F]'}`}><Upload size={14}/>{busy ? 'Uploading…' : 'Upload Filled Sheet (CSV/XLSX)'}<input type="file" accept=".csv,.xlsx" className="hidden" disabled={busy} onChange={e => { void uploadSheet(e.target.files?.[0]); e.target.value = ''; }}/></label>
-          <span className="text-[11px] text-gray-400 self-center flex items-center gap-1.5"><FileSpreadsheet size={13}/>Codes: P = Present · A = Absent · L = Leave · H = Holiday</span>
+          <button type="button" onClick={downloadTemplate} className="h-10 px-4 rounded-lg border border-bss-border bg-white text-xs font-semibold text-bss-text-primary flex items-center gap-1.5 hover:bg-bss-bg transition-colors shadow-xs"><Download size={14}/>Download Attendance CSV</button>
+          <label className={`h-10 px-4 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm ${busy ? 'bg-bss-interactive-blue/60 text-white' : 'bg-bss-interactive-blue text-white hover:bg-bss-deep-navy'}`}><Upload size={14}/>{busy ? 'Uploading…' : 'Upload Filled Sheet (CSV/XLSX)'}<input type="file" accept=".csv,.xlsx" className="hidden" disabled={busy} onChange={e => { void uploadSheet(e.target.files?.[0]); e.target.value = ''; }}/></label>
+          <span className="text-[11px] text-bss-text-muted self-center flex items-center gap-1.5"><FileSpreadsheet size={13}/>Codes: P = Present · A = Absent · L = Leave · H = Holiday</span>
         </div>
-        {result && <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 text-xs text-emerald-800">
+        {result && <div className="rounded-xl border border-bss-border bg-bss-soft-green p-3 text-xs text-bss-green">
           Synced <strong>{result.rows}</strong> worker row(s) → <strong>{result.created}</strong> new + <strong>{result.updated}</strong> updated attendance entries for <strong>{result.workers}</strong> worker(s){result.site ? ` at ${result.site}` : ''} ({result.start} → {result.end}).{result.unknown.length ? ` ${result.unknown.length} BSS ID(s) not matched to your workers: ${result.unknown.slice(0, 5).join(', ')}.` : ''}
         </div>}
       </div>
     </section>
 
     {recSelected && (
-      <div className="fixed inset-0 z-[120] grid place-items-center bg-black/60 p-4" onClick={() => setRecSelected(null)}>
+      <div className="fixed inset-0 z-[120] grid place-items-center bg-bss-navy/40 backdrop-blur-sm p-4" onClick={() => setRecSelected(null)}>
         <div className="w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-          <header className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+          <header className="flex items-center justify-between px-5 py-4 border-b border-bss-border">
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase">Attendance Detail</p>
-              <h3 className="text-sm font-extrabold text-gray-900">{displayDate(recSelected.date)} · {recSelected.worker}</h3>
+              <p className="text-[10px] font-bold text-bss-text-muted uppercase">Attendance Detail</p>
+              <h3 className="text-sm font-semibold text-bss-text-primary mt-0.5">{displayDate(recSelected.date)} · {recSelected.worker}</h3>
             </div>
-            <button type="button" onClick={() => setRecSelected(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg text-gray-500 hover:bg-gray-100"><X size={18}/></button>
+            <button type="button" onClick={() => setRecSelected(null)} aria-label="Close" className="w-9 h-9 grid place-items-center rounded-lg text-bss-text-secondary hover:bg-bss-bg"><X size={18}/></button>
           </header>
-          <div className="p-4 space-y-2 text-xs">
+          <div className="p-5 space-y-2 text-xs">
             <Detail label="BSS ID" value={recSelected.bssId || '—'} mono />
             <Detail label="Site" value={recSelected.site || '—'} />
             <Detail label="Status" value={STATUS_LABEL[recSelected.statusCode || recSelected.status || ''] ?? (recSelected.statusCode || recSelected.status || '—')} />
@@ -180,13 +188,13 @@ export default function ContractorAttendancePage() {
             {recSelected.gpsAddress && <Detail label="Location" value={recSelected.gpsAddress} />}
             {recSelected.matchStatus && <Detail label="Verification" value={recSelected.matchStatus} />}
             {recSelected.events && recSelected.events.length > 0 && (
-              <div className="p-3 rounded-2xl bg-gray-50 border border-gray-100">
-                <span className="text-[10px] text-gray-500 font-bold uppercase block mb-2">Source records ({recSelected.events.length})</span>
+              <div className="p-3 rounded-2xl bg-bss-bg border border-bss-border">
+                <span className="text-[10px] text-bss-text-muted font-semibold uppercase block mb-2">Source records ({recSelected.events.length})</span>
                 <ul className="space-y-1.5">
                   {recSelected.events.map((ev, i) => (
                     <li key={i} className="flex items-center justify-between text-[11px]">
-                      <span className="text-gray-500">{ev.sourceLabel || ev.source} · {ev.typeLabel || ev.type}</span>
-                      <span className="text-gray-800 font-semibold">{ev.at ? new Date(ev.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                      <span className="text-bss-text-secondary">{ev.sourceLabel || ev.source} · {ev.typeLabel || ev.type}</span>
+                      <span className="text-bss-text-primary font-semibold">{ev.at ? new Date(ev.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                     </li>
                   ))}
                 </ul>
@@ -194,8 +202,8 @@ export default function ContractorAttendancePage() {
             )}
             {recSelected.remarks && <Detail label="Remarks" value={recSelected.remarks} />}
           </div>
-          <div className="p-4 pt-0">
-            <button type="button" onClick={() => setRecSelected(null)} className="w-full h-10 rounded-lg bg-[#073B67] text-white text-sm font-bold">Close</button>
+          <div className="p-5 pt-0">
+            <button type="button" onClick={() => setRecSelected(null)} className="w-full h-10 rounded-lg bg-bss-interactive-blue text-white text-sm font-semibold hover:bg-bss-deep-navy transition-colors">Close</button>
           </div>
         </div>
       </div>
@@ -205,9 +213,9 @@ export default function ContractorAttendancePage() {
 
 function Detail({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-gray-50 border border-gray-100">
-      <span className="text-gray-500 font-semibold">{label}</span>
-      <span className={`font-bold text-gray-900 text-right ${mono ? 'font-mono' : ''}`}>{value}</span>
+    <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-bss-bg border border-bss-border">
+      <span className="text-bss-text-muted font-semibold">{label}</span>
+      <span className={`font-semibold text-bss-text-primary text-right ${mono ? 'font-mono' : ''}`}>{value}</span>
     </div>
   );
 }

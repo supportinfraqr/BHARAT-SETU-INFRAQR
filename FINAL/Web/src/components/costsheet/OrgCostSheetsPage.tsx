@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Calculator, CheckCircle2, Copy, Loader2, Save, Trash2, X } from "lucide-react";
+import { Calculator, CheckCircle2, Clock3, Copy, Loader2, Save, Trash2, X } from "lucide-react";
 import EnterpriseDataTable, { type DataColumn } from "@/components/worker/EnterpriseDataTable";
 
 type Custom = { name:string; amount:number; rateType:string; frequency:string; appliesTo:string; editableByOrg:boolean; isNew?:boolean };
@@ -181,36 +181,37 @@ export default function OrgCostSheetsPage() {
   }
 
   const columns: DataColumn<Template>[] = [
-    { id:"name", header:"Template", value:r => r.name, render:r => <div><strong className="text-gray-900">{r.name}</strong><p className="font-mono text-[10px] text-gray-400">{r.code}</p></div> },
+    { id:"name", header:"Template", value:r => r.name, render:r => <div><strong className="text-bss-text-primary">{r.name}</strong><p className="font-mono text-[10px] text-bss-text-muted">{r.code}</p></div> },
     { id:"state", header:"State / Industry", value:r => `${r.state || "All India"} · ${r.industry || "All"}` },
     { id:"site", header:"Site", value:r => r.siteName || (r.siteId ? `#${r.siteId}` : "—") },
     { id:"category", header:"Category / Designation", value:r => `${r.workerCategory || "—"} · ${r.designation || "—"}` },
     { id:"status", header:"Status", value:r => r.status, render:r => {
-      const label = r.status === "REVIEW" ? "⏳ Pending Employer Acceptance"
+      const label = r.status === "REVIEW" ? "Pending Employer Acceptance"
         : r.status === "DRAFT" ? "Draft — not submitted" : r.status;
-      return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.status === "REVIEW" ? "bg-amber-100 text-amber-800 border border-amber-300" : r.status === "PUBLISHED" ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600"}`}>
+      return <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-bss-border ${r.status === "REVIEW" ? "bg-bss-soft-orange text-bss-orange" : r.status === "PUBLISHED" ? "bg-bss-soft-green text-bss-green" : "bg-bss-bg text-bss-text-secondary"}`}>
+        {r.status === "REVIEW" ? <Clock3 size={11}/> : r.status === "PUBLISHED" ? <CheckCircle2 size={11}/> : <Clock3 size={11}/>}
         {label}
       </span>;
     } },
-    { id:"origin", header:"Origin", value:r => r.ownerId ? "Adopted / Contractor" : "BSS Platform Master", render:r => <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.ownerId ? "bg-blue-50 text-blue-700 border border-blue-200" : "bg-purple-50 text-purple-700 border border-purple-200"}`}>{r.ownerId ? "Contractor Proposal" : "Platform Master"}</span> },
+    { id:"origin", header:"Origin", value:r => r.ownerId ? "Adopted / Contractor" : "BSS Platform Master", render:r => <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-bss-border ${r.ownerId ? "bg-bss-blue-tint text-bss-interactive-blue" : "bg-bss-soft-green text-bss-green"}`}>{r.ownerId ? "Contractor Proposal" : "Platform Master"}</span> },
     { id:"actions", header:"Actions", filterable:false, value:r => r.id, render:r => {
       const isContractor = role === "contractor";
       const isEmployer = role === "employer";
       const canEdit = isContractor && !!r.ownerId && r.status === "DRAFT";
       return <div className="flex items-center gap-2">
         {isContractor && !r.ownerId && <>
-          <select value={adoptSite[r.id] ?? ""} onChange={e => setAdoptSite(s => ({ ...s, [r.id]: e.target.value }))} className="h-8 rounded-lg border border-gray-200 px-2 text-xs bg-white" aria-label="Allotted site">
+          <select value={adoptSite[r.id] ?? ""} onChange={e => setAdoptSite(s => ({ ...s, [r.id]: e.target.value }))} className="h-8 rounded-lg border border-bss-border px-2 text-xs bg-white" aria-label="Allotted site">
             <option value="">{sites.length ? "Select allotted site…" : "No site allotted"}</option>
             {sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.state ? ` · ${s.state}` : ""}</option>)}
           </select>
-          <button disabled={busy || !adoptSite[r.id]} onClick={() => void copy(r, adoptSite[r.id])} className="text-xs font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg inline-flex items-center gap-1 disabled:opacity-50"><Copy size={12}/>Adopt for Site</button>
+          <button disabled={busy || !adoptSite[r.id]} onClick={() => void copy(r, adoptSite[r.id])} className="text-xs font-bold text-bss-interactive-blue hover:text-bss-text-primary bg-bss-blue-tint hover:bg-bss-blue-tint border border-bss-border px-2.5 py-1 rounded-lg inline-flex items-center gap-1 disabled:opacity-50"><Copy size={12}/>Adopt for Site</button>
         </>}
-        {canEdit && <button disabled={busy} onClick={() => void submitProposal(r)} className="text-xs font-bold text-white bg-[#073B67] hover:bg-[#0a4a80] px-2.5 py-1 rounded-lg inline-flex items-center gap-1 disabled:opacity-50"><CheckCircle2 size={12}/>Submit to Employer</button>}
+        {canEdit && <button disabled={busy} onClick={() => void submitProposal(r)} className="text-xs font-bold text-white bg-[#01183A] hover:bg-[#022B5E] px-2.5 py-1 rounded-lg inline-flex items-center gap-1 disabled:opacity-50"><CheckCircle2 size={12}/>Submit to Employer</button>}
         {isEmployer && r.status === "REVIEW" && <>
-          <button disabled={busy} onClick={() => void approveCostSheet(r)} className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 rounded-lg inline-flex items-center gap-1 disabled:opacity-50 shadow-sm"><CheckCircle2 size={12}/>Accept Proposal</button>
-          <button disabled={busy} onClick={() => void rejectCostSheet(r)} className="text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1 rounded-lg disabled:opacity-50">Reject</button>
+          <button disabled={busy} onClick={() => void approveCostSheet(r)} className="text-xs font-bold text-white bg-bss-green hover:bg-bss-green px-2.5 py-1 rounded-lg inline-flex items-center gap-1 disabled:opacity-50 shadow-sm"><CheckCircle2 size={12}/>Accept Proposal</button>
+          <button disabled={busy} onClick={() => void rejectCostSheet(r)} className="text-xs font-bold text-bss-error bg-bss-soft-orange hover:bg-bss-soft-orange border border-bss-border px-2.5 py-1 rounded-lg disabled:opacity-50">Reject</button>
         </>}
-        <button onClick={() => openEditor(r)} className="text-xs font-semibold text-gray-700 hover:text-[#073B67] inline-flex items-center gap-1"><Calculator size={12}/>{canEdit ? "Edit" : "View"}</button>
+        <button onClick={() => openEditor(r)} className="text-xs font-semibold text-bss-text-primary hover:text-[#01183A] inline-flex items-center gap-1"><Calculator size={12}/>{canEdit ? "Edit" : "View"}</button>
       </div>;
     } },
   ];
@@ -218,29 +219,29 @@ export default function OrgCostSheetsPage() {
   const masterTemplates = rows.filter(r => !r.ownerId);
 
   return <div className="space-y-6 pb-10">
-    <header><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Payroll</p><h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Cost Sheets</h1><p className="text-sm text-gray-500 mt-1">Published BSS cost sheet templates plus your own customised copies. Statutory and minimum-wage values are locked; you can adjust your own cost heads (where &ldquo;editable by org&rdquo; is allowed).</p></header>
+    <header className="bss-reveal"><p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Payroll</p><h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-bss-navy mt-1">Cost Sheets</h1><p className="text-sm text-bss-text-muted mt-1">Published BSS cost sheet templates plus your own customised copies. Statutory and minimum-wage values are locked; you can adjust your own cost heads (where &ldquo;editable by org&rdquo; is allowed).</p></header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
     {notice && <p role="status" className="bss-alert bss-alert-success">{notice}</p>}
 
     {role === "contractor" && masterTemplates.length > 0 && (
-      <section className="bg-gradient-to-r from-blue-50/80 via-white to-indigo-50/80 border border-blue-200/80 rounded-2xl p-5 shadow-sm space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-100/80 pb-3">
+      <section className="bss-reveal bss-card p-5 space-y-3" style={{ ['--bss-delay' as string]: '80ms' }}>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-bss-border/80 pb-3">
           <div>
-            <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2"><Copy size={16} className="text-[#073B67]"/>Quick Adopt Platform Master Template</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Select a master template and your allotted site to adopt it immediately into your cost sheet workspace.</p>
+            <h2 className="text-sm font-bold text-bss-text-primary flex items-center gap-2"><Copy size={16} className="text-[#01183A]"/>Quick Adopt Platform Master Template</h2>
+            <p className="text-xs text-bss-text-muted mt-0.5">Select a master template and your allotted site to adopt it immediately into your cost sheet workspace.</p>
           </div>
-          <span className="text-[11px] font-semibold text-blue-800 bg-blue-100/70 px-2.5 py-1 rounded-full">{masterTemplates.length} Master Template{masterTemplates.length === 1 ? '' : 's'} available</span>
+          <span className="text-[11px] font-semibold text-bss-interactive-blue bg-bss-blue-tint/70 px-2.5 py-1 rounded-full">{masterTemplates.length} Master Template{masterTemplates.length === 1 ? '' : 's'} available</span>
         </div>
         <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-3 items-end pt-1">
-          <label className="block text-xs font-semibold text-gray-700">1. Master Template
-            <select value={selectedMasterId} onChange={e => setSelectedMasterId(e.target.value)} className="mt-1 block w-full h-10 rounded-xl border border-gray-200 px-3 text-xs bg-white focus:ring-2 focus:ring-[#073B67] font-medium">
+          <label className="block text-xs font-semibold text-bss-text-primary">1. Master Template
+            <select value={selectedMasterId} onChange={e => setSelectedMasterId(e.target.value)} className="mt-1 block w-full h-10 rounded-xl border border-bss-border px-3 text-xs bg-white focus:ring-2 focus:ring-[#01183A] font-medium">
               <option value="">Choose Platform Master template…</option>
               {masterTemplates.map(t => <option key={t.id} value={t.id}>{t.name} ({t.state || "All India"} · {t.workerCategory || "All"})</option>)}
             </select>
           </label>
-          <label className="block text-xs font-semibold text-gray-700">2. Allotted Site
-            <select value={selectedSiteId} onChange={e => setSelectedSiteId(e.target.value)} className="mt-1 block w-full h-10 rounded-xl border border-gray-200 px-3 text-xs bg-white focus:ring-2 focus:ring-[#073B67] font-medium">
+          <label className="block text-xs font-semibold text-bss-text-primary">2. Allotted Site
+            <select value={selectedSiteId} onChange={e => setSelectedSiteId(e.target.value)} className="mt-1 block w-full h-10 rounded-xl border border-bss-border px-3 text-xs bg-white focus:ring-2 focus:ring-[#01183A] font-medium">
               <option value="">{sites.length ? "Select allotted site…" : "No site allotted"}</option>
               {sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.state ? ` · ${s.state}` : ""}</option>)}
             </select>
@@ -251,7 +252,7 @@ export default function OrgCostSheetsPage() {
               const tmpl = masterTemplates.find(t => String(t.id) === selectedMasterId);
               if (tmpl && selectedSiteId) void copy(tmpl, selectedSiteId);
             }}
-            className="h-10 px-5 rounded-xl bg-[#073B67] hover:bg-[#0a4a80] text-white text-xs font-bold shadow-sm disabled:opacity-50 inline-flex items-center gap-2 transition-colors whitespace-nowrap"
+            className="h-10 px-5 rounded-xl bg-[#01183A] hover:bg-[#022B5E] text-white text-xs font-bold shadow-sm disabled:opacity-50 inline-flex items-center gap-2 transition-colors whitespace-nowrap"
           >
             <Copy size={14}/>Adopt for Site
           </button>
@@ -259,64 +260,64 @@ export default function OrgCostSheetsPage() {
       </section>
     )}
 
-    {loading ? <p className="flex items-center gap-2 text-sm text-gray-500 py-10"><Loader2 size={16} className="animate-spin"/>Loading cost sheets…</p>
+    {loading ? <p className="flex items-center gap-2 text-sm text-bss-text-muted py-10"><Loader2 size={16} className="animate-spin"/>Loading cost sheets…</p>
       : <EnterpriseDataTable title="Available cost sheet templates" rows={rows} columns={columns} rowKey={r => String(r.id)} filename="org-cost-sheets"/>}
 
     {editing && (() => {
       const editable = role === "contractor" && !!editing.ownerId && editing.status === "DRAFT";
-      return <div className="fixed inset-0 z-[90] bg-black/50 flex justify-end" role="presentation">
-      <section role="dialog" aria-modal="true" aria-label="Cost sheet" className="bg-white w-full max-w-2xl h-full overflow-y-auto">
-        <header className="sticky top-0 z-10 bg-white border-b border-gray-100 px-5 py-4 flex items-start justify-between gap-3">
-          <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Cost sheet</p><input value={editing.name} disabled={!editable} onChange={e => setEditing({ ...editing, name:e.target.value })} className="font-semibold text-gray-950 mt-0.5 w-full border-b border-transparent focus:border-gray-300 disabled:bg-transparent"/><p className="text-xs text-gray-500 mt-0.5">{editing.code} · {editing.state || "All India"} · {editing.workerCategory || "—"}</p></div>
-          <button onClick={() => setEditing(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button>
+      return <div className="fixed inset-0 z-[90] bg-bss-navy/40 backdrop-blur-sm grid place-items-center p-4" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setEditing(null); }}>
+      <section role="dialog" aria-modal="true" aria-label="Cost sheet" className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <header className="sticky top-0 z-10 bg-white border-b border-bss-border px-5 py-4 flex items-start justify-between gap-3">
+          <div><p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted">Cost sheet</p><input value={editing.name} disabled={!editable} onChange={e => setEditing({ ...editing, name:e.target.value })} className="font-semibold text-bss-text-primary mt-0.5 w-full border-b border-transparent focus:border-bss-border disabled:bg-transparent"/><p className="text-xs text-bss-text-muted mt-0.5">{editing.code} · {editing.state || "All India"} · {editing.workerCategory || "—"}</p></div>
+          <button onClick={() => setEditing(null)} aria-label="Close" className="w-9 h-9 grid place-items-center rounded-lg hover:bg-bss-bg text-bss-text-secondary"><X size={18}/></button>
         </header>
         <div className="p-5 space-y-5">
-          <div className="rounded-xl border border-gray-100 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Minimum wage (statutory — locked)</p>
-            <div className="grid grid-cols-3 gap-2 text-xs"><span className="text-gray-500">Basic</span><span className="font-semibold text-right">₹{(editing.minimumWage?.basicWage ?? 0).toLocaleString("en-IN")}</span><span/><span className="text-gray-500">VDA</span><span className="font-semibold text-right">₹{(editing.minimumWage?.vda ?? 0).toLocaleString("en-IN")}</span><span/><span className="text-gray-500">Monthly minimum</span><span className="font-semibold text-right">₹{(editing.minimumWage?.minimumMonthlyWage ?? 0).toLocaleString("en-IN")}</span>{editing.minimumWage?.notificationNumber ? <><span className="text-gray-500">Notification no.</span><span className="font-semibold text-right col-span-2">{editing.minimumWage.notificationNumber}</span></> : null}</div>
+          <div className="rounded-xl border border-bss-border p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted mb-2">Minimum wage (statutory — locked)</p>
+            <div className="grid grid-cols-3 gap-2 text-xs"><span className="text-bss-text-muted">Basic</span><span className="font-semibold text-right">₹{(editing.minimumWage?.basicWage ?? 0).toLocaleString("en-IN")}</span><span/><span className="text-bss-text-muted">VDA</span><span className="font-semibold text-right">₹{(editing.minimumWage?.vda ?? 0).toLocaleString("en-IN")}</span><span/><span className="text-bss-text-muted">Monthly minimum</span><span className="font-semibold text-right">₹{(editing.minimumWage?.minimumMonthlyWage ?? 0).toLocaleString("en-IN")}</span>{editing.minimumWage?.notificationNumber ? <><span className="text-bss-text-muted">Notification no.</span><span className="font-semibold text-right col-span-2">{editing.minimumWage.notificationNumber}</span></> : null}</div>
           </div>
 
-          <div className="rounded-xl border border-gray-100 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Custom cost heads</p>
+          <div className="rounded-xl border border-bss-border p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted mb-2">Custom cost heads</p>
             <div className="space-y-2">{editing.custom.map((c, i) => {
               const canAmount = c.isNew || c.editableByOrg || c.appliesTo === "contractor" || c.appliesTo === "both";
               return <div key={i} className="grid grid-cols-[1.5fr_110px_120px_auto] gap-2 items-center text-xs">
                 {c.isNew
-                  ? <input value={c.name} onChange={e => setCustom(i, { name:e.target.value })} placeholder="Cost head" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
-                  : <span className="font-semibold text-gray-800">{c.name}{!canAmount && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Platform fixed</span>}</span>}
-                <input type="number" disabled={!editable || !canAmount} value={c.isNew ? c.amount : (amounts[c.name] ?? c.amount)} onChange={e => c.isNew ? setCustom(i, { amount:Number(e.target.value) }) : setAmounts(a => ({ ...a, [c.name]:Number(e.target.value) }))} className="h-9 border border-gray-200 rounded-lg px-2 text-xs disabled:bg-gray-50"/>
+                  ? <input value={c.name} onChange={e => setCustom(i, { name:e.target.value })} placeholder="Cost head" className="h-9 border border-bss-border rounded-lg px-2 text-xs"/>
+                  : <span className="font-semibold text-bss-text-primary">{c.name}{!canAmount && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-bss-bg text-bss-text-muted">Platform fixed</span>}</span>}
+                <input type="number" disabled={!editable || !canAmount} value={c.isNew ? c.amount : (amounts[c.name] ?? c.amount)} onChange={e => c.isNew ? setCustom(i, { amount:Number(e.target.value) }) : setAmounts(a => ({ ...a, [c.name]:Number(e.target.value) }))} className="h-9 border border-bss-border rounded-lg px-2 text-xs disabled:bg-bss-bg"/>
                 {c.isNew
-                  ? <select value={c.frequency} onChange={e => setCustom(i, { frequency:e.target.value })} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white"><option value="ONE_TIME">One-time</option><option value="MONTHLY">Monthly</option><option value="ANNUAL">Annual</option></select>
-                  : <span className="text-gray-400">{c.frequency === "ONE_TIME" ? "one-time" : c.frequency.toLowerCase()} · {c.appliesTo}</span>}
+                  ? <select value={c.frequency} onChange={e => setCustom(i, { frequency:e.target.value })} className="h-9 border border-bss-border rounded-lg px-2 text-xs bg-white"><option value="ONE_TIME">One-time</option><option value="MONTHLY">Monthly</option><option value="ANNUAL">Annual</option></select>
+                  : <span className="text-bss-text-muted">{c.frequency === "ONE_TIME" ? "one-time" : c.frequency.toLowerCase()} · {c.appliesTo}</span>}
                 {editable && c.isNew
-                  ? <button type="button" onClick={() => removeCustom(i)} aria-label="Remove cost head" className="text-gray-400 hover:text-red-600 justify-self-center"><Trash2 size={13}/></button>
+                  ? <button type="button" onClick={() => removeCustom(i)} aria-label="Remove cost head" className="text-bss-text-muted hover:text-bss-error justify-self-center"><Trash2 size={13}/></button>
                   : <span/>}
               </div>;
             })}</div>
             {editable && <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={addCustomHead} className="text-xs font-semibold text-[#073B67] border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50">Add cost head</button>
+              <button type="button" onClick={addCustomHead} className="text-xs font-semibold text-[#01183A] border border-bss-border rounded-lg px-2.5 py-1.5 hover:bg-bss-bg">Add cost head</button>
             </div>}
           </div>
 
-          {preview && <div className="rounded-xl border border-gray-100 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Computed cost</p>
+          {preview && <div className="rounded-xl border border-bss-border p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted mb-2">Computed cost</p>
             <div className="grid grid-cols-2 gap-y-1.5 text-xs">
-              <span className="text-gray-500">Basic + VDA (wage)</span><span className="font-semibold text-right">₹{preview.minimumWage.toLocaleString("en-IN")}</span>
-              <span className="text-gray-500">Statutory total</span><span className="font-semibold text-right">₹{preview.statutoryTotal.toLocaleString("en-IN")}</span>
-              <span className="text-gray-500">Custom total</span><span className="font-semibold text-right">₹{preview.customTotal.toLocaleString("en-IN")}</span>
-              <span className="text-gray-700 font-bold border-t border-gray-100 pt-1.5">Employer cost</span><span className="font-bold text-right border-t border-gray-100 pt-1.5">₹{preview.employerCost.toLocaleString("en-IN")}</span>
-              <span className="text-gray-700 font-bold">CTC</span><span className="font-bold text-right text-[#073B67]">₹{preview.ctc.toLocaleString("en-IN")}</span>
+              <span className="text-bss-text-muted">Basic + VDA (wage)</span><span className="font-semibold text-right">₹{preview.minimumWage.toLocaleString("en-IN")}</span>
+              <span className="text-bss-text-muted">Statutory total</span><span className="font-semibold text-right">₹{preview.statutoryTotal.toLocaleString("en-IN")}</span>
+              <span className="text-bss-text-muted">Custom total</span><span className="font-semibold text-right">₹{preview.customTotal.toLocaleString("en-IN")}</span>
+              <span className="text-bss-text-primary font-bold border-t border-bss-border pt-1.5">Employer cost</span><span className="font-bold text-right border-t border-bss-border pt-1.5">₹{preview.employerCost.toLocaleString("en-IN")}</span>
+              <span className="text-bss-text-primary font-bold">CTC</span><span className="font-bold text-right text-[#01183A]">₹{preview.ctc.toLocaleString("en-IN")}</span>
             </div>
-            <div className="mt-3 flex flex-wrap gap-1.5">{preview.statutory.map(s => <span key={s.component} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-50 border border-gray-100 text-gray-600">{s.component} ₹{s.amount.toLocaleString("en-IN")}</span>)}</div>
+            <div className="mt-3 flex flex-wrap gap-1.5">{preview.statutory.map(s => <span key={s.component} className="text-[10px] px-2 py-0.5 rounded-full bg-bss-bg border border-bss-border text-bss-text-secondary">{s.component} ₹{s.amount.toLocaleString("en-IN")}</span>)}</div>
           </div>}
         </div>
-        <footer className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-4 flex justify-end gap-2">
-          <button onClick={() => setEditing(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Close</button>
-          {editable && <button disabled={busy} onClick={() => void saveEditor()} className="h-10 px-4 rounded-lg border border-[#073B67] text-[#073B67] text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5"><Save size={14}/>{busy ? "Saving…" : "Save draft"}</button>}
-          {editable && <button disabled={busy} onClick={() => void submitProposal(editing)} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5"><CheckCircle2 size={14}/>Submit to Employer</button>}
+        <footer className="sticky bottom-0 bg-white border-t border-bss-border px-5 py-4 flex justify-end gap-2">
+          <button onClick={() => setEditing(null)} className="h-10 px-4 rounded-lg border border-bss-border text-xs font-bold text-bss-text-secondary">Close</button>
+          {editable && <button disabled={busy} onClick={() => void saveEditor()} className="h-10 px-4 rounded-lg border border-[#01183A] text-[#01183A] text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5"><Save size={14}/>{busy ? "Saving…" : "Save draft"}</button>}
+          {editable && <button disabled={busy} onClick={() => void submitProposal(editing)} className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5"><CheckCircle2 size={14}/>Submit to Employer</button>}
           {editing.status === "REVIEW" && role === "employer" && <>
-            <button disabled={busy} onClick={() => void rejectCostSheet(editing)} className="h-10 px-4 rounded-lg border border-red-200 text-red-700 bg-red-50 text-xs font-bold hover:bg-red-100 disabled:opacity-60">Reject</button>
-            <button disabled={busy} onClick={() => void approveCostSheet(editing)} className="h-10 px-4 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 disabled:opacity-60 inline-flex items-center gap-1.5 shadow-sm"><CheckCircle2 size={14}/>Accept Proposal</button>
+            <button disabled={busy} onClick={() => void rejectCostSheet(editing)} className="h-10 px-4 rounded-lg border border-bss-border text-bss-error bg-bss-soft-orange text-xs font-semibold hover:brightness-95 disabled:opacity-60">Reject</button>
+            <button disabled={busy} onClick={() => void approveCostSheet(editing)} className="h-10 px-4 rounded-lg bg-bss-green text-white text-xs font-semibold hover:brightness-110 disabled:opacity-60 inline-flex items-center gap-1.5 shadow-sm"><CheckCircle2 size={14}/>Accept Proposal</button>
           </>}
         </footer>
       </section>

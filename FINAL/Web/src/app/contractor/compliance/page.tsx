@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Clock3, Download, FileCheck2, FileSpreadsheet, FileText, Landmark, Loader2, TriangleAlert } from 'lucide-react';
+import { Activity, Calendar, CheckCircle2, ChevronDown, Clock3, Download, FileCheck2, FileSpreadsheet, FileText, Info, Landmark, Loader2, TriangleAlert } from 'lucide-react';
 import ComplianceSubmissions from '@/components/contractor/ComplianceSubmissions';
 import BatchDrilldown from '@/components/compliance/BatchDrilldown';
 import VersionHistory from '@/components/compliance/VersionHistory';
@@ -68,7 +68,7 @@ export default function ContractorCompliancePage() {
   const [includeNonDue, setIncludeNonDue] = useState(false);
   // PAN-India register template library for the selected state.
   const [templates, setTemplates] = useState<Array<{ id:number; state:string; formCode:string; title:string; columns:string[]; fileName:string; hasFile:boolean }>>([]);
-  const [strength, setStrength] = useState<{ rcPe?:string; licence?:string; lwf?:string; hra?:string; nhFh?:string; ptFrequency?:string }>({});
+
   const [adoption, setAdoption] = useState<Record<string, { adopted:boolean; adoptedCount:number; mandatoryCount:number; total:number }>>({});
   const [siteBoards, setSiteBoards] = useState<Array<{ siteId:number; gated:boolean; adoptedCount:number; total:number }>>([]);
   // Per-site adoption for *every* site the contractor has (the state fetch above
@@ -79,6 +79,7 @@ export default function ContractorCompliancePage() {
   const [batchView, setBatchView] = useState<string | null>(null);
   const [repBusy, setRepBusy] = useState(false);
   const [repError, setRepError] = useState('');
+  const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
 
   // States the contractor is allowed to register for — derived from allotted sites.
   const allowedStates = Array.from(new Set(
@@ -144,10 +145,9 @@ export default function ContractorCompliancePage() {
     let active = true;
     void fetch(`/api/contractor/clra/templates?state=${encodeURIComponent(activeState)}`, { cache:'no-store' })
       .then(response => (response.ok ? response.json() : null))
-      .then((body: { rows?: typeof templates; strength?: typeof strength; adoption?: typeof adoption; sites?: typeof siteBoards } | null) => {
+      .then((body: { rows?: typeof templates; adoption?: typeof adoption; sites?: typeof siteBoards } | null) => {
         if (!active || !body) return;
         if (body.rows) setTemplates(body.rows);
-        if (body.strength) setStrength(body.strength);
         if (body.adoption) setAdoption(body.adoption);
         if (body.sites) setSiteBoards(body.sites);
       })
@@ -261,60 +261,62 @@ export default function ContractorCompliancePage() {
 
   return <div className="space-y-6 pb-12">
     <header className="flex flex-col sm:flex-row justify-between gap-4">
-      <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Master data</p><h1 className="text-2xl font-bold mt-1">Contractor Compliance</h1><p className="text-sm text-gray-500 mt-1">Statutory, site and worker-level evidence — registers, master file CLRA generation and contractor reports.</p></div>
+      <div><p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Master data</p><h1 className="text-2xl font-bold mt-1 text-bss-navy">Contractor Compliance</h1><p className="text-sm text-bss-text-secondary mt-1">Statutory, site and worker-level evidence — registers, master file CLRA generation and contractor reports.</p></div>
     </header>
 
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
 
-    {/* Registration eligibility — the states the contractor's sites are in */}
-    <section className="bg-white border border-gray-200 rounded-2xl p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+    {/* Registration eligibility + tab bar — one cohesive control zone */}
+    <div className="rounded-2xl bg-white border border-bss-border overflow-hidden">
+    <section className="p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Registration eligibility</p>
-          <h2 className="text-sm font-semibold text-gray-950 mt-0.5">States you can register for</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Derived from the sites allotted to you. A state becomes ready to generate once its principal employer adopts the CLRA forms.</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted">Registration eligibility</p>
+          <h2 className="text-sm font-semibold text-bss-text-primary mt-0.5">States you can register for</h2>
+          <p className="text-xs text-bss-text-secondary mt-1">Derived from the sites allotted to you. A state becomes ready to generate once its principal employer adopts the CLRA forms.</p>
         </div>
-        {allowedStates.length > 0 && <span className="text-xs font-semibold text-gray-500">{allowedStates.length} state{allowedStates.length === 1 ? '' : 's'}</span>}
+        {allowedStates.length > 0 && <span className="text-xs font-semibold text-bss-text-secondary">{allowedStates.length} state{allowedStates.length === 1 ? '' : 's'}</span>}
       </div>
       {allowedStates.length
         ? <div className="mt-3 space-y-2.5">
             <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold">
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 text-emerald-700 px-2.5 py-1"><CheckCircle2 size={12}/>{readyStateCount} ready</span>
-              {pendingStateList.length > 0 && <span className="inline-flex items-center gap-1 rounded-full border border-amber-100 bg-amber-50 text-amber-700 px-2.5 py-1"><TriangleAlert size={12}/>{pendingStateList.length} awaiting adoption</span>}
+              <span className="inline-flex items-center gap-1 rounded-full border border-bss-border bg-bss-soft-green text-bss-green px-2.5 py-1"><CheckCircle2 size={12}/>{readyStateCount} ready</span>
+              {pendingStateList.length > 0 && <span className="inline-flex items-center gap-1 rounded-full border border-bss-border bg-bss-soft-orange text-bss-orange px-2.5 py-1"><TriangleAlert size={12}/>{pendingStateList.length} awaiting adoption</span>}
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-56 overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 max-h-56 overflow-y-auto pr-1">
               {stateStats.map(({ st, ready, total, allReady }) => (
-                <div key={st} className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-xs ${allReady ? 'border-emerald-100 bg-emerald-50/60' : 'border-amber-100 bg-amber-50/60'}`}>
-                  <span className={`truncate font-semibold ${allReady ? 'text-emerald-800' : 'text-amber-800'}`}>{st}</span>
-                  <span className={`flex-shrink-0 text-[10px] font-bold ${allReady ? 'text-emerald-600' : 'text-amber-600'}`}>{ready}/{total}</span>
+                <div key={st} className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs ${allReady ? 'border-bss-border bg-bss-soft-green' : 'border-bss-border bg-bss-soft-orange'}`}>
+                  <span className={`truncate font-semibold ${allReady ? 'text-bss-green' : 'text-bss-orange'}`}>{st}</span>
+                  <span className={`flex-shrink-0 text-[10px] font-bold ${allReady ? 'text-bss-green' : 'text-bss-orange'}`}>{ready}/{total}</span>
                 </div>
               ))}
             </div>
           </div>
-        : <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">None of your allotted sites have a state set — add/adopt a site with a state to enable CLRA register generation.</p>}
+        : <p className="mt-3 text-xs text-bss-orange bg-bss-soft-orange border border-bss-border rounded-lg px-3 py-2">None of your allotted sites have a state set — add/adopt a site with a state to enable CLRA register generation.</p>}
     </section>
 
-    <div className="flex border-b overflow-x-auto">
-      {([['master', 'Master File & CLRA Generation'], ['records', 'Compliance Records'], ['report', 'Contractor Report']] as Array<[Tab, string]>).map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${tab === id ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>{label}</button>)}
+    <div className="flex items-center gap-6 border-t border-bss-border bg-bss-bg/50 px-5 overflow-x-auto">
+      {([['master', 'Master File & CLRA Generation'], ['records', 'Compliance Records'], ['report', 'Contractor Report']] as Array<[Tab, string]>).map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`relative px-1 py-3 text-sm font-semibold whitespace-nowrap transition-colors ${tab === id ? 'text-bss-navy' : 'text-bss-text-muted hover:text-bss-navy'}`}>{label}{tab === id && <span className="absolute left-0 right-0 bottom-0 h-0.5 rounded-full bg-bss-orange" />}</button>)}
+    </div>
     </div>
 
-    {tab === 'records' && <div className="space-y-5">
+    {tab === 'records' && <div className="space-y-6">
       <ComplianceSubmissions embedded onSubmitted={() => {
         setTab('report');
         setNotice('Registers submitted — the detailed audit report is ready in the Contractor Report tab.');
       }} />
     </div>}
 
-    {tab === 'master' && <div className="space-y-5">
+    {tab === 'master' && <div className="space-y-6">
       {/* Allowed Site States Banner */}
-      <div className="bg-gradient-to-r from-slate-900 to-[#073B67] rounded-2xl p-4 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="bg-gradient-to-r from-bss-navy to-bss-deep-navy rounded-2xl p-4 text-white flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-500/30 text-blue-200 px-2 py-0.5 rounded border border-blue-400/30">Site Jurisdiction &amp; Compliance Scope</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-white/10 text-bss-blue-tint px-2 py-0.5 rounded border border-white/15">Site Jurisdiction &amp; Compliance Scope</span>
           </div>
           <h3 className="text-sm font-bold">State Register Scope: {allowedStates.length ? `${allowedStates.length} state${allowedStates.length === 1 ? '' : 's'}` : 'No Allotted Sites'}</h3>
-          <p className="text-xs text-slate-300">
+          <p className="text-xs text-white/70">
             {pendingSites.length === 0
               ? <>All {contractor.sites.length} allotted site{contractor.sites.length === 1 ? '' : 's'} are adopted — you can generate and register CLRA templates for {allowedStates.length ? `all ${allowedStates.length} state${allowedStates.length === 1 ? '' : 's'}` : 'your sites'}.</>
               : <>CLRA generation is enabled only for <strong>adopted</strong> sites. {pendingSites.length} of {contractor.sites.length} site{contractor.sites.length === 1 ? '' : 's'} still {pendingSites.length === 1 ? 'needs' : 'need'} the principal employer to adopt the CLRA forms: <strong>{pendingSites.map(s => s.name).join(', ')}</strong>.</>}
@@ -322,17 +324,17 @@ export default function ContractorCompliancePage() {
         </div>
         {allowedStates.length > 0 && (
           <div className="flex flex-wrap gap-1.5 shrink-0 max-w-full md:max-w-xs md:justify-end">
-            <span className="px-2.5 py-1 bg-white/10 backdrop-blur-md rounded-lg text-xs font-semibold border border-emerald-400/30 text-emerald-300 inline-flex items-center gap-1"><CheckCircle2 size={12}/>{readyStateCount} state{readyStateCount === 1 ? '' : 's'} ready</span>
+            <span className="px-2.5 py-1 bg-white/10 backdrop-blur-md rounded-lg text-xs font-semibold border border-white/15 text-bss-soft-green inline-flex items-center gap-1"><CheckCircle2 size={12}/>{readyStateCount} state{readyStateCount === 1 ? '' : 's'} ready</span>
             {pendingStateList.map(({ st, ready, total }) => (
-              <span key={st} className="px-2.5 py-1 bg-white/10 backdrop-blur-md rounded-lg text-xs font-semibold border border-amber-400/30 text-amber-300 inline-flex items-center gap-1"><TriangleAlert size={12}/>{st} ({ready}/{total})</span>
+              <span key={st} className="px-2.5 py-1 bg-white/10 backdrop-blur-md rounded-lg text-xs font-semibold border border-white/15 text-bss-soft-orange inline-flex items-center gap-1"><TriangleAlert size={12}/>{st} ({ready}/{total})</span>
             ))}
           </div>
         )}
       </div>
 
-      <div className="grid gap-5">
-      <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#073B67] via-[#0b4c86] to-[#062D4F] text-white p-5">
+      <div className="grid gap-6">
+      <section className="bg-white rounded-2xl overflow-hidden border border-bss-border shadow-sm">
+        <div className="relative overflow-hidden bg-gradient-to-br from-bss-navy via-bss-deep-navy to-[#022B5E] text-white p-5">
           <div className="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-white/5" />
           <div className="relative flex items-start justify-between gap-3">
             <div>
@@ -344,98 +346,141 @@ export default function ContractorCompliancePage() {
           </div>
         </div>
         <div className="p-5 space-y-4">
-          <div className="grid sm:grid-cols-3 gap-3">
-            <label className="block"><span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Year</span><select value={year} onChange={e => { const y = e.target.value; setYearChoice(y); if (isFuturePeriod(period, Number(y))) setPeriod(periodsFor(freq)[0]); }} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-sm bg-slate-50 font-semibold">{yearOptions.map(y => <option key={y}>{y}</option>)}</select></label>
-            <label className="block"><span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Frequency</span><select value={freq} onChange={e => { const f = e.target.value as Frequency; setFreq(f); setPeriod(periodsFor(f)[0]); }} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-sm bg-slate-50 font-semibold">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select></label>
-            <label className="block"><span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Period</span><select value={period} onChange={e => setPeriod(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-xl px-3 text-sm bg-slate-50 font-semibold">{periodsFor(freq).map(p => { const future = isFuturePeriod(p, Number(year)); return <option key={p} value={p} disabled={future}>{p}{future ? ' — not yet due' : ''}</option>; })}</select></label>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted mb-2">Step 1 · Select period</p>
+            <div className="grid sm:grid-cols-3 gap-3">
+              <label className="block"><span className="text-[11px] font-semibold text-bss-text-secondary">Year</span><select value={year} onChange={e => { const y = e.target.value; setYearChoice(y); if (isFuturePeriod(period, Number(y))) setPeriod(periodsFor(freq)[0]); }} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm bg-white font-medium text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 focus:border-bss-interactive-blue transition-shadow">{yearOptions.map(y => <option key={y}>{y}</option>)}</select></label>
+              <label className="block"><span className="text-[11px] font-semibold text-bss-text-secondary">Frequency</span><select value={freq} onChange={e => { const f = e.target.value as Frequency; setFreq(f); setPeriod(periodsFor(f)[0]); }} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm bg-white font-medium text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 focus:border-bss-interactive-blue transition-shadow">{FREQUENCIES.map(f => <option key={f}>{f}</option>)}</select></label>
+              <label className="block"><span className="text-[11px] font-semibold text-bss-text-secondary">Period</span><select value={period} onChange={e => setPeriod(e.target.value)} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm bg-white font-medium text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30 focus:border-bss-interactive-blue transition-shadow">{periodsFor(freq).map(p => { const future = isFuturePeriod(p, Number(year)); return <option key={p} value={p} disabled={future}>{p}{future ? ' — not yet due' : ''}</option>; })}</select></label>
+            </div>
           </div>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <label className="text-xs font-semibold text-gray-600 flex items-center gap-2 border border-dashed border-gray-300 rounded-xl bg-slate-50 px-3 py-2.5 cursor-pointer hover:border-[#073B67]"><FileSpreadsheet size={16} className="text-[#073B67]"/>{masterFile ? masterFile.name : 'Choose Master File (CSV/XLSX)'}<input type="file" accept=".xlsx,.csv" className="hidden" onChange={e => { setMasterFile(e.target.files?.[0] ?? null); setError(''); }}/></label>
-            <label className="text-xs font-semibold text-gray-600 flex items-center gap-2 border border-dashed border-gray-300 rounded-xl bg-slate-50 px-3 py-2.5 cursor-pointer hover:border-[#073B67]"><FileText size={16} className="text-[#073B67]"/>{signatureFile ? signatureFile.name : 'Choose Signature Upload (optional)'}<input type="file" accept=".png,.jpg,.jpeg,.pdf" className="hidden" onChange={e => setSignatureFile(e.target.files?.[0] ?? null)}/></label>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted mb-2">Step 2 · Upload files</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+            <label className="group flex items-center gap-3 border-2 border-dashed border-bss-border rounded-xl bg-bss-bg/60 px-4 py-3 cursor-pointer hover:border-bss-interactive-blue hover:bg-bss-blue-tint/40 transition-colors">
+              <span className="w-10 h-10 rounded-lg bg-white border border-bss-border grid place-items-center flex-shrink-0 group-hover:border-bss-interactive-blue"><FileSpreadsheet size={18} className="text-bss-interactive-blue"/></span>
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold text-bss-text-primary truncate">{masterFile ? masterFile.name : 'Choose Master File'}</span>
+                <span className="block text-[11px] text-bss-text-secondary mt-0.5">CSV / XLSX · required</span>
+              </span>
+              <input type="file" accept=".xlsx,.csv" className="hidden" onChange={e => { setMasterFile(e.target.files?.[0] ?? null); setError(''); }}/>
+            </label>
+            <label className="group flex items-center gap-3 border-2 border-dashed border-bss-border rounded-xl bg-bss-bg/60 px-4 py-3 cursor-pointer hover:border-bss-interactive-blue hover:bg-bss-blue-tint/40 transition-colors">
+              <span className="w-10 h-10 rounded-lg bg-white border border-bss-border grid place-items-center flex-shrink-0 group-hover:border-bss-interactive-blue"><FileText size={18} className="text-bss-interactive-blue"/></span>
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold text-bss-text-primary truncate">{signatureFile ? signatureFile.name : 'Choose Signature Upload'}</span>
+                <span className="block text-[11px] text-bss-text-secondary mt-0.5">PNG / JPG / PDF · optional</span>
+              </span>
+              <input type="file" accept=".png,.jpg,.jpeg,.pdf" className="hidden" onChange={e => setSignatureFile(e.target.files?.[0] ?? null)}/>
+            </label>
+            </div>
           </div>
           {error && tab === 'master' && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
-          <div className="flex flex-wrap gap-2">
-            <button onClick={downloadMasterTemplate} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5"><Download size={14}/>Download Master Template</button>
-            <button onClick={validateMaster} disabled={busy || !masterFile} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"><CheckCircle2 size={14}/>Validate File</button>
-            <button onClick={generateRegisters} disabled={busy} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"><Landmark size={14}/>{busy ? 'Generating registers…' : 'Generate CLRA Registers'}</button>
-            <label className="flex items-center gap-2 text-[11px] font-semibold text-gray-600 ml-1"><input type="checkbox" checked={includeNonDue} onChange={e => setIncludeNonDue(e.target.checked)} className="accent-[#073B67] w-4 h-4"/>Include forms not due this period</label>
-          </div>
-          {siteStatus.length > 0 && (
-            <div className="rounded-xl border border-gray-200 bg-white p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Generation status · {period} · {freq}</p>
-                <span className="text-[11px] font-semibold text-gray-500">{doneCount} of {siteStatus.length} generated</span>
-              </div>
-              <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                {siteStatus.map(s => (
-                  <li key={`${s.state}-${s.name}-${s.code}`} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 px-2.5 py-1.5 text-xs">
-                    <span className="min-w-0 truncate text-gray-700">{s.name}{s.state ? <span className="text-gray-400"> · {s.state}</span> : null}</span>
-                    {s.done ? (
-                      <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" title={s.status ? `Status: ${s.status}` : 'Already generated'}><CheckCircle2 size={11}/>Done{s.version > 1 ? ` · V${s.version}` : ''}</span>
-                    ) : (
-                      <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200"><Clock3 size={11}/>Pending</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              <button onClick={downloadMasterTemplate} className="h-9 px-3 rounded-lg border border-bss-border bg-white text-xs font-semibold text-bss-text-primary flex items-center gap-1.5 hover:bg-bss-bg hover:border-bss-interactive-blue transition-colors shadow-xs"><Download size={14}/>Download Master Template</button>
+              <button onClick={validateMaster} disabled={busy || !masterFile} className="h-9 px-3 rounded-lg border border-bss-border bg-white text-xs font-semibold text-bss-text-primary flex items-center gap-1.5 disabled:opacity-50 hover:bg-bss-bg hover:border-bss-interactive-blue transition-colors shadow-xs"><CheckCircle2 size={14}/>Validate File</button>
+              <button onClick={generateRegisters} disabled={busy} className="h-9 px-4 rounded-lg bg-bss-interactive-blue text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-50 hover:bg-bss-deep-navy shadow-sm transition-colors"><Landmark size={14}/>{busy ? 'Generating registers…' : 'Generate CLRA Registers'}</button>
             </div>
-          )}
-          <p className="text-[11px] text-gray-400">Pick a <strong>Frequency</strong> and <strong>Period</strong>. Monthly generates every month; choosing Quarterly / Half-Yearly / Yearly generates only those forms for the selected period (a not-yet-due period is forced). Tick below to also include other forms not due this period.</p>
-          {report && <div className="rounded-xl border border-gray-100 overflow-hidden">
-            <div className={`px-4 py-2.5 text-xs font-bold flex items-center gap-2 ${report.errors.length ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+            <label className="flex items-center gap-2 text-[11px] font-semibold text-bss-text-secondary"><input type="checkbox" checked={includeNonDue} onChange={e => setIncludeNonDue(e.target.checked)} className="accent-bss-interactive-blue w-4 h-4"/>Include forms not due this period</label>
+          </div>
+          <p className="flex items-start gap-2 text-[11px] text-bss-text-secondary bg-bss-bg rounded-lg px-3 py-2 border border-bss-border"><Info size={14} className="text-bss-interactive-blue mt-0.5 flex-shrink-0"/><span>Pick a <strong className="text-bss-text-primary">Frequency</strong> and <strong className="text-bss-text-primary">Period</strong>. Monthly generates every month; choosing Quarterly / Half-Yearly / Yearly generates only those forms for the selected period (a not-yet-due period is forced). Tick below to also include other forms not due this period.</span></p>
+          {report && <div className="rounded-xl border border-bss-border overflow-hidden">
+            <div className={`px-4 py-2.5 text-xs font-bold flex items-center gap-2 ${report.errors.length ? 'bg-bss-soft-orange text-bss-error' : 'bg-bss-soft-green text-bss-green'}`}>
               {report.errors.length ? <TriangleAlert size={14}/> : <CheckCircle2 size={14}/>}
               {report.errors.length ? `${report.errors.length} error(s) — generation is blocked` : 'Validation passed'}
-              <span className="ml-auto font-semibold text-gray-500">{report.rowCount} rows · {report.validRows} valid · {report.siteCount} site(s) · {report.locationCount} location(s)</span>
-              <button type="button" onClick={downloadValidationErrors} className="ml-3 shrink-0 inline-flex items-center gap-1 font-semibold text-gray-700 hover:underline"><Download size={12}/>Errors (CSV)</button>
+              <span className="ml-auto font-semibold text-bss-text-secondary">{report.rowCount} rows · {report.validRows} valid · {report.siteCount} site(s) · {report.locationCount} location(s)</span>
+              <button type="button" onClick={downloadValidationErrors} className="ml-3 shrink-0 inline-flex items-center gap-1 font-semibold text-bss-text-secondary hover:underline"><Download size={12}/>Errors (CSV)</button>
             </div>
-            {report.errors.length > 0 && <ul className="divide-y divide-gray-100 max-h-40 overflow-y-auto">{report.errors.map((issue, i) => <li key={i} className="px-4 py-2 text-[11px] text-red-700"><strong>Row {issue.row || '—'}{issue.field ? ` · ${issue.field}` : ''}:</strong> {issue.message}</li>)}</ul>}
-            {report.warnings.length > 0 && <ul className="divide-y divide-gray-100 max-h-32 overflow-y-auto border-t border-gray-100">{report.warnings.map((issue, i) => <li key={i} className="px-4 py-2 text-[11px] text-amber-700"><strong>Row {issue.row || '—'}{issue.field ? ` · ${issue.field}` : ''}:</strong> {issue.message}</li>)}</ul>}
-            <div className="border-t border-gray-100 px-4 py-3 space-y-2 text-[11px]">
-              <div className="flex flex-wrap gap-x-6 gap-y-1 text-gray-600">
-                <span>Detected state: <strong className="text-gray-900">{report.state || '—'}</strong></span>
-                {report.bss && <span>BSS IDs: <strong className="text-green-700">{report.bss.known}</strong> registered · <strong className={report.bss.unknown ? 'text-amber-700' : 'text-gray-500'}>{report.bss.unknown}</strong> unknown{report.bss.checked ? ` of ${report.bss.checked}` : ''}</span>}
-                <span>Templates in flow: <strong className="text-gray-900">{report.templates?.length ?? 0}</strong></span>
+            {report.errors.length > 0 && <ul className="divide-y divide-bss-border max-h-40 overflow-y-auto">{report.errors.map((issue, i) => <li key={i} className="px-4 py-2 text-[11px] text-bss-error"><strong>Row {issue.row || '—'}{issue.field ? ` · ${issue.field}` : ''}:</strong> {issue.message}</li>)}</ul>}
+            {report.warnings.length > 0 && <ul className="divide-y divide-bss-border max-h-32 overflow-y-auto border-t border-bss-border">{report.warnings.map((issue, i) => <li key={i} className="px-4 py-2 text-[11px] text-bss-orange"><strong>Row {issue.row || '—'}{issue.field ? ` · ${issue.field}` : ''}:</strong> {issue.message}</li>)}</ul>}
+            <div className="border-t border-bss-border px-4 py-3 space-y-2 text-[11px]">
+              <div className="flex flex-wrap gap-x-6 gap-y-1 text-bss-text-secondary">
+                <span>Detected state: <strong className="text-bss-text-primary">{report.state || '—'}</strong></span>
+                {report.bss && <span>BSS IDs: <strong className="text-bss-green">{report.bss.known}</strong> registered · <strong className={report.bss.unknown ? 'text-bss-orange' : 'text-bss-text-secondary'}>{report.bss.unknown}</strong> unknown{report.bss.checked ? ` of ${report.bss.checked}` : ''}</span>}
+                <span>Templates in flow: <strong className="text-bss-text-primary">{report.templates?.length ?? 0}</strong></span>
               </div>
-              {(report.templates?.length ?? 0) > 0 && <div className="rounded-lg border border-gray-100 overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-50 text-gray-500"><tr><th className="px-3 py-1.5">Form</th><th className="px-3 py-1.5">Title</th><th className="px-3 py-1.5">Columns</th><th className="px-3 py-1.5">Mapped</th></tr></thead>
-                <tbody className="divide-y divide-gray-100">{report.templates!.map(t => <tr key={t.formCode}><td className="px-3 py-1.5 font-mono text-[#073B67]">{t.formCode}</td><td className="px-3 py-1.5 text-gray-700">{t.title || '—'}</td><td className="px-3 py-1.5 text-gray-500">{t.columns}</td><td className="px-3 py-1.5">{t.columns === 0 ? <span className="text-gray-400">—</span> : <><span className={t.coverage === 100 ? 'text-green-700 font-semibold' : 'text-amber-700 font-semibold'}>{t.coverage}%</span>{t.unmapped.length ? <span className="text-gray-400"> · {t.unmapped.length} unmapped</span> : null}</>}</td></tr>)}</tbody></table></div>}
+              {(report.templates?.length ?? 0) > 0 && <div className="rounded-lg border border-bss-border overflow-hidden"><table className="w-full text-left"><thead className="bg-bss-bg text-bss-text-secondary"><tr><th className="px-3 py-1.5">Form</th><th className="px-3 py-1.5">Title</th><th className="px-3 py-1.5">Columns</th><th className="px-3 py-1.5">Mapped</th></tr></thead>
+                <tbody className="divide-y divide-bss-border">{report.templates!.map(t => <tr key={t.formCode}><td className="px-3 py-1.5 font-mono text-bss-interactive-blue">{t.formCode}</td><td className="px-3 py-1.5 text-bss-text-secondary">{t.title || '—'}</td><td className="px-3 py-1.5 text-bss-text-muted">{t.columns}</td><td className="px-3 py-1.5">{t.columns === 0 ? <span className="text-bss-text-muted">—</span> : <><span className={t.coverage === 100 ? 'text-bss-green font-semibold' : 'text-bss-orange font-semibold'}>{t.coverage}%</span>{t.unmapped.length ? <span className="text-bss-text-muted"> · {t.unmapped.length} unmapped</span> : null}</>}</td></tr>)}</tbody></table></div>}
             </div>
           </div>}
-          <p className="text-[11px] text-gray-400">Registers are generated in bulk from the uploaded master data, keyed by State and Site/Location, and listed under the <strong>Generated Compliance Batches</strong> tab.</p>
+          <p className="text-[11px] text-bss-text-muted pt-3 border-t border-bss-border">Registers are generated in bulk from the uploaded master data, keyed by State and Site/Location, and listed under the <strong className="text-bss-text-secondary">Generated Compliance Batches</strong> tab.</p>
         </div>
       </section>
       </div>
 
+      {/* Generation status — per-site, for the selected period + frequency */}
+      {siteStatus.length > 0 && (
+        <section className="bg-white rounded-2xl overflow-hidden border border-bss-border">
+          <header className="px-5 pt-4 pb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><Activity size={16} className="text-bss-interactive-blue" />Generation Status</h2>
+              <p className="text-xs text-bss-text-muted mt-0.5">Registers generated for each allotted site in the selected period.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-bss-interactive-blue bg-bss-blue-tint border border-bss-border rounded-full px-2.5 py-1"><Calendar size={12} />{period}</span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-bss-text-secondary bg-bss-bg border border-bss-border rounded-full px-2.5 py-1">{freq}</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-bss-text-secondary ml-1"><CheckCircle2 size={13} className={doneCount === siteStatus.length ? 'text-bss-green' : 'text-bss-text-muted'} />{doneCount} of {siteStatus.length} generated</span>
+            </div>
+          </header>
+          <ul className="divide-y divide-bss-border">
+            {siteStatus.map(s => (
+              <li key={`${s.state}-${s.name}-${s.code}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-bss-bg">
+                <div className="min-w-0 flex items-center gap-3">
+                  <span className={`w-8 h-8 rounded-lg grid place-items-center flex-shrink-0 ${s.done ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-bss-orange'}`}>
+                    {s.done ? <CheckCircle2 size={16}/> : <Clock3 size={16}/>}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-bss-text-primary">{s.name}</p>
+                    <p className="truncate text-[11px] text-bss-text-muted">{s.state}{s.code ? ` · ${s.code}` : ''}</p>
+                  </div>
+                </div>
+                {s.done ? (
+                  <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-bss-soft-green text-bss-green" title={s.status ? `Status: ${s.status}` : 'Already generated'}>Generated{s.version > 1 ? ` · V${s.version}` : ''}</span>
+                ) : (
+                  <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-bss-soft-orange text-bss-orange">Pending</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* PAN-India register template library for the selected state */}
-      <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <header className="px-5 py-4 border-b border-gray-100 flex flex-wrap justify-between gap-2 items-center">
-          <div><h2 className="text-sm font-semibold text-gray-950">Register Template Library — {activeState}</h2><p className="text-xs text-gray-400 mt-0.5">State-wise register templates used to render your registers (one sheet per form).</p></div>
-          <div className="flex items-center gap-3">
-            <label className="text-xs font-semibold text-gray-600">Site
-              <select value={activeSite?.name || ''} onChange={e => setSiteName(e.target.value)} className="ml-2 h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white">{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}</select>
-            </label>
-            <span className="text-xs font-semibold text-gray-500">{templates.length} template{templates.length === 1 ? '' : 's'}</span>
-            {activeAdopted
-              ? <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">Adopted</span>
-              : <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700">Not adopted</span>}
+      <section className="bg-white rounded-2xl overflow-hidden border border-bss-border">
+        <button type="button" onClick={() => setTemplateLibraryOpen(o => !o)} className="w-full px-5 py-4 flex flex-wrap justify-between gap-2 items-center text-left hover:bg-bss-bg/60 transition-colors">
+          <div className="flex items-start gap-3 min-w-0">
+            <ChevronDown size={18} className={`mt-0.5 flex-shrink-0 text-bss-text-muted transition-transform ${templateLibraryOpen ? 'rotate-180' : ''}`} />
+            <div>
+              <h2 className="text-sm font-semibold text-bss-text-primary">Register Template Library — {activeState}</h2>
+              <p className="text-xs text-bss-text-muted mt-0.5">State-wise register templates used to render your registers (one sheet per form).</p>
+            </div>
           </div>
-        </header>
-        {(strength.rcPe || strength.licence || strength.ptFrequency || strength.lwf || strength.nhFh) && <div className="px-5 py-3 border-b border-gray-100 flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-gray-600 bg-blue-50/40">
-          {strength.rcPe && <span>CLRA RC / PE required at <strong>{strength.rcPe}</strong> workers</span>}
-          {strength.licence && <span>Labour licence at <strong>{strength.licence}</strong> workers</span>}
-          {strength.ptFrequency && strength.ptFrequency !== 'N/A' && <span>Professional Tax: <strong>{strength.ptFrequency}</strong></span>}
-          {strength.lwf && strength.lwf !== 'N/A' && <span>LWF: <strong>{strength.lwf}</strong></span>}
-          {strength.nhFh && <span>NH / FH: <strong>{strength.nhFh}</strong></span>}
-        </div>}
-        {templates.length
-          ? <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-50 text-xs text-gray-500 font-semibold border-b border-gray-100"><tr><th className="px-5 py-3">Form</th><th className="px-5 py-3">Title</th><th className="px-5 py-3">Columns</th></tr></thead>
-            <tbody className="divide-y divide-gray-100">{templates.map(t => <tr key={t.id} className="hover:bg-gray-50"><td className="px-5 py-3 font-mono font-semibold text-[#073B67]">{t.formCode}</td><td className="px-5 py-3 text-gray-700">{t.title || '—'}</td><td className="px-5 py-3 text-gray-500">{t.columns.length} field{t.columns.length === 1 ? '' : 's'}</td></tr>)}</tbody></table></div>
-          : <p className="p-5 text-xs text-gray-400">{activeAdopted ? `No register templates configured for ${activeState} yet.` : `${activeState}: the principal employer hasn't adopted CLRA forms — nothing is available until they adopt on their CLRA Registers page.`}</p>}
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-bss-text-secondary">{templates.length} template{templates.length === 1 ? '' : 's'}</span>
+            {activeAdopted
+              ? <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-bss-soft-green text-bss-green">Adopted</span>
+              : <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-bss-soft-orange text-bss-orange">Not adopted</span>}
+          </div>
+        </button>
+
+        {templateLibraryOpen && <>
+          <div className="px-5 py-3 flex flex-wrap items-center gap-3">
+            <label className="text-xs font-semibold text-bss-text-secondary">Site
+              <select value={activeSite?.name || ''} onChange={e => setSiteName(e.target.value)} className="ml-2 h-9 rounded-lg border border-bss-border px-3 text-xs bg-white text-bss-text-primary">{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.state ? ` — ${s.state}` : ''}</option>)}</select>
+            </label>
+          </div>
+          {templates.length
+            ? <div className="overflow-x-auto border-t border-bss-border"><table className="w-full text-sm text-left"><thead className="bg-bss-bg text-xs text-bss-text-secondary font-semibold"><tr><th className="px-5 py-3">Form</th><th className="px-5 py-3">Title</th></tr></thead>
+              <tbody className="divide-y divide-bss-border">{templates.map(t => <tr key={t.id} className="hover:bg-bss-bg"><td className="px-5 py-3 font-mono font-semibold text-bss-interactive-blue">{t.formCode}</td><td className="px-5 py-3 text-bss-text-secondary">{t.title || '—'}</td></tr>)}</tbody></table></div>
+            : <p className="p-5 text-xs text-bss-text-muted border-t border-bss-border">{activeAdopted ? `No register templates configured for ${activeState} yet.` : `${activeState}: the principal employer hasn't adopted CLRA forms — nothing is available until they adopt on their CLRA Registers page.`}</p>}
+        </>}
       </section>
     </div>}
 
-    {tab === 'report' && <div className="space-y-5">
-      <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#073B67] via-[#0b4c86] to-[#062D4F] text-white p-5">
+    {tab === 'report' && <div className="space-y-6">
+      <section className="bg-white rounded-2xl overflow-hidden border border-bss-border">
+        <div className="relative overflow-hidden bg-gradient-to-br from-bss-navy via-bss-deep-navy to-[#022B5E] text-white p-5">
           <div className="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-white/5" />
           <div className="relative flex items-start justify-between gap-3">
             <div>
@@ -446,14 +491,14 @@ export default function ContractorCompliancePage() {
             <span className="w-12 h-12 rounded-2xl bg-white/10 border border-white/15 grid place-items-center flex-shrink-0"><FileCheck2 size={22}/></span>
           </div>
         </div>
-        {repError && <p className="px-4 pt-4 text-sm text-red-700">{repError}</p>}
-        {repBusy && <p className="px-4 pt-4 text-xs text-gray-400 inline-flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Generating detailed report…</p>}
+        {repError && <p className="px-4 pt-4 text-sm text-bss-error">{repError}</p>}
+        {repBusy && <p className="px-4 pt-4 text-xs text-bss-text-muted inline-flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Generating detailed report…</p>}
         <div className="p-4">
           {contractor.auditReports.length === 0
-            ? <p className="text-sm text-gray-400 py-4 text-center">No submissions yet — submit a register package and its detailed report will appear here.</p>
+            ? <p className="text-sm text-bss-text-muted py-4 text-center">No submissions yet — submit a register package and its detailed report will appear here.</p>
             : <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
-                  <thead><tr className="bg-slate-50 border-b border-gray-200 text-[11px] font-extrabold text-slate-600 uppercase tracking-wider">
+                  <thead><tr className="bg-bss-bg border-b border-bss-border text-[11px] font-extrabold text-bss-text-secondary uppercase tracking-wider">
                     <th className="py-2.5 px-3">Ref No.</th>
                     <th className="py-2.5 px-3">Site</th>
                      <th className="py-2.5 px-3">Period</th>
@@ -462,17 +507,17 @@ export default function ContractorCompliancePage() {
                     <th className="py-2.5 px-3">Score</th>
                     <th className="py-2.5 px-3">Detailed AI Report</th>
                   </tr></thead>
-                  <tbody className="divide-y divide-gray-100 text-xs">
-                    {contractor.auditReports.map(r => <tr key={r.id} className="hover:bg-slate-50/70">
-                      <td className="py-2.5 px-3 font-mono font-semibold text-blue-700">{r.uniqueNo || '—'}</td>
-                      <td className="py-2.5 px-3 text-gray-700">{r.site || '—'}</td>
-                      <td className="py-2.5 px-3 text-gray-600">{r.period || '—'}</td>
+                  <tbody className="divide-y divide-bss-border text-xs">
+                    {contractor.auditReports.map(r => <tr key={r.id} className="hover:bg-bss-bg">
+                      <td className="py-2.5 px-3 font-mono font-semibold text-bss-interactive-blue">{r.uniqueNo || '—'}</td>
+                      <td className="py-2.5 px-3 text-bss-text-secondary">{r.site || '—'}</td>
+                      <td className="py-2.5 px-3 text-bss-text-secondary">{r.period || '—'}</td>
                       <td className="py-2.5 px-3"><VersionHistory versions={(r.versions || []).map(v => ({ version:v.version, isCurrent:v.isCurrent, status:v.uniqueNo, date:v.reportDate }))} /></td>
-                      <td className="py-2.5 px-3 text-gray-500">{r.reportDate || '—'}</td>
-                      <td className="py-2.5 px-3 font-bold text-[#073B67]">{r.scorePercent != null ? `${r.scorePercent}%` : (r.score || '—')}</td>
+                      <td className="py-2.5 px-3 text-bss-text-muted">{r.reportDate || '—'}</td>
+                      <td className="py-2.5 px-3 font-bold text-bss-navy">{r.scorePercent != null ? `${r.scorePercent}%` : (r.score || '—')}</td>
                       <td className="py-2.5 px-3"><div className="flex items-center gap-3">
-                        <button type="button" disabled={repBusy} onClick={() => void viewDetailedReport(r.id, r.uniqueNo || r.site || 'Submission')} className="text-blue-700 font-semibold hover:underline disabled:opacity-50">View report</button>
-                        <a href={`/api/contractor/compliance-report?reportId=${r.id}&download=pdf`} className="text-gray-600 font-semibold hover:underline inline-flex items-center gap-1"><Download size={12}/>PDF</a>
+                        <button type="button" disabled={repBusy} onClick={() => void viewDetailedReport(r.id, r.uniqueNo || r.site || 'Submission')} className="text-bss-interactive-blue font-semibold hover:underline disabled:opacity-50">View report</button>
+                        <a href={`/api/contractor/compliance-report?reportId=${r.id}&download=pdf`} className="text-bss-text-secondary font-semibold hover:underline inline-flex items-center gap-1"><Download size={12}/>PDF</a>
                       </div></td>
                     </tr>)}
                   </tbody>

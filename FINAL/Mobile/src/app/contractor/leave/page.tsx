@@ -42,44 +42,44 @@ export default function ContractorLeavePage() {
   return (
     <div className="p-4 lg:p-6 space-y-5">
       <header>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Master data</p>
-        <h1 className="text-2xl font-bold mt-1">Leave Approvals</h1>
-        <p className="text-sm text-gray-500 mt-1">Approve or reject leave requests (including Restricted Holidays) from workers bound to you.</p>
+        <p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Master data</p>
+        <h1 className="text-2xl font-bold mt-1 text-bss-navy">Leave Approvals</h1>
+        <p className="text-sm text-bss-text-secondary mt-1">Approve or reject leave requests (including Restricted Holidays) from workers bound to you.</p>
       </header>
 
-      {notice && <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>{notice}</p>}
-      {error && <p className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm font-semibold">{error}</p>}
+      {notice && <p className="p-3 bg-bss-soft-green border border-bss-border text-bss-green rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>{notice}</p>}
+      {error && <p className="p-3 bg-bss-soft-orange border border-bss-border text-bss-error rounded-xl text-sm font-semibold">{error}</p>}
 
       <div className="grid grid-cols-3 gap-3">
-        {([['Pending', 'text-orange-600'], ['Approved', 'text-green-700'], ['Rejected', 'text-red-600']] as const).map(([label, tone]) => (
-          <div key={label} className="bg-white border border-gray-200 rounded-xl p-3">
-            <strong className={`text-lg ${tone}`}>{rows.filter(r => r.status === label).length}</strong>
-            <p className="text-[11px] text-gray-500">{label}</p>
+        {([['Pending', 'text-bss-orange'], ['Approved', 'text-bss-green'], ['Rejected', 'text-bss-error']] as const).map(([label, tone]) => (
+          <div key={label} className="bg-white border border-bss-border rounded-xl p-4 shadow-sm">
+            <strong className={`text-xl font-bold text-bss-text-primary`}>{rows.filter(r => r.status === label).length}</strong>
+            <p className="text-[11px] text-bss-text-secondary mt-1">{label}</p>
           </div>
         ))}
       </div>
 
-      <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <h2 className="p-4 border-b border-gray-100 font-semibold text-sm">Requests</h2>
+      <section className="bss-card rounded-2xl overflow-hidden">
+        <h2 className="p-4 border-b border-bss-border font-semibold text-sm text-bss-text-primary">Requests</h2>
         {rows.length ? rows.map(r => (
-          <article key={`${r.kind}-${r.id}`} className="p-4 border-b border-gray-50 flex flex-wrap justify-between gap-3">
+          <article key={`${r.kind}-${r.id}`} className="p-4 border-b border-bss-border flex flex-wrap justify-between gap-3 hover:bg-bss-bg/60">
             <div>
-              <strong className="text-sm">{r.worker}</strong> <span className="text-xs text-gray-400 font-mono">{r.bssId}</span>
-              <p className="text-xs text-gray-500 mt-1">
-                {r.kind === 'rh' && <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded mr-1.5 uppercase">RH</span>}
+              <strong className="text-sm text-bss-text-primary">{r.worker}</strong> <span className="text-xs text-bss-text-muted font-mono">{r.bssId}</span>
+              <p className="text-xs text-bss-text-secondary mt-1">
+                {r.kind === 'rh' && <span className="text-[10px] font-semibold text-bss-orange bg-bss-soft-orange px-1.5 py-0.5 rounded mr-1.5 uppercase">RH</span>}
                 {r.type} · {r.from} – {r.to} · {r.days} day{r.days > 1 ? 's' : ''}
               </p>
-              {r.reason && <p className="text-xs text-gray-500 mt-1">{r.reason}</p>}
+              {r.reason && <p className="text-xs text-bss-text-secondary mt-1">{r.reason}</p>}
             </div>
             <div className="flex items-center gap-2">
-              <span className={`h-fit text-[10px] font-bold px-2 py-1 rounded-full ${r.status === 'Approved' ? 'bg-green-50 text-green-700' : r.status === 'Rejected' ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'}`}>{r.status}</span>
+              <span className={`h-fit text-[10px] font-semibold px-2 py-1 rounded-full ${r.status === 'Approved' ? 'bg-bss-soft-green text-bss-green' : r.status === 'Rejected' ? 'bg-bss-soft-orange text-bss-error' : 'bg-bss-soft-orange text-bss-orange'}`}>{r.status}</span>
               {r.status === 'Pending' && <>
-                <button type="button" disabled={busy === `${r.kind}-${r.id}`} onClick={() => decide(r, 'Approved')} className="h-9 px-3 rounded-lg bg-green-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-green-700 disabled:opacity-60"><CheckCircle2 size={14}/>Approve</button>
-                <button type="button" disabled={busy === `${r.kind}-${r.id}`} onClick={() => decide(r, 'Rejected')} className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold flex items-center gap-1.5 hover:bg-red-50 disabled:opacity-60"><XCircle size={14}/>Reject</button>
+                <button type="button" disabled={busy === `${r.kind}-${r.id}`} onClick={() => decide(r, 'Approved')} className="h-9 px-3 rounded-lg bg-bss-green text-white text-xs font-semibold flex items-center gap-1.5 hover:bg-[#0f6b30] disabled:opacity-60"><CheckCircle2 size={14}/>Approve</button>
+                <button type="button" disabled={busy === `${r.kind}-${r.id}`} onClick={() => decide(r, 'Rejected')} className="h-9 px-3 rounded-lg border border-bss-border text-bss-error text-xs font-semibold flex items-center gap-1.5 hover:bg-bss-soft-orange disabled:opacity-60"><XCircle size={14}/>Reject</button>
               </>}
             </div>
           </article>
-        )) : <p className="p-8 text-center text-sm text-gray-500">No leave requests.</p>}
+        )) : <p className="p-8 text-center text-sm text-bss-text-muted">No leave requests.</p>}
       </section>
     </div>
   );

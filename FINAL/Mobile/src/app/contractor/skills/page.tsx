@@ -79,63 +79,63 @@ export default function ContractorSkillsPage() {
   }
 
   const columns: DataColumn<ContractorCourse>[] = [
-    { id:'course', header:'Course', value:r => r.title, render:r => <div><strong className="text-gray-900">{r.title}</strong><p className="text-[11px] text-gray-500 mt-0.5">{r.category} · {r.provider}</p></div> },
-    { id:'modules', header:'Video modules', value:r => r.modules.length, render:r => <span className="inline-flex items-center gap-1 text-gray-700"><Video size={13}/>{r.modules.length}</span> },
+    { id:'course', header:'Course', value:r => r.title, render:r => <div><strong className="text-bss-text-primary">{r.title}</strong><p className="text-[11px] text-bss-text-muted mt-0.5">{r.category} · {r.provider}</p></div> },
+    { id:'modules', header:'Video modules', value:r => r.modules.length, render:r => <span className="inline-flex items-center gap-1 text-bss-text-primary"><Video size={13}/>{r.modules.length}</span> },
     { id:'duration', header:'Duration', value:r => r.duration },
     { id:'learners', header:'Learners', value:r => r.status === 'Published' ? boundWorkersCount : 0 },
-    { id:'completion', header:'Completion', value:r => `${r.completedLearners}/${r.status === 'Published' ? boundWorkersCount : 0}`, render:r => (r.status === 'Published' && boundWorkersCount > 0) ? <span className="font-semibold text-gray-800">{r.completedLearners}/{boundWorkersCount}</span> : <span className="text-gray-300">—</span> },
-    { id:'certificates', header:'Certificates issued', value:r => r.certificatesIssued, render:r => <span className={r.certificatesIssued ? 'text-green-700 font-semibold' : 'text-gray-400'}>{r.certificatesIssued}</span> },
-    { id:'status', header:'Status', value:r => r.status, render:r => <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.status === 'Published' ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'}`}>{r.status}</span> },
+    { id:'completion', header:'Completion', value:r => `${r.completedLearners}/${r.status === 'Published' ? boundWorkersCount : 0}`, render:r => (r.status === 'Published' && boundWorkersCount > 0) ? <span className="font-semibold text-bss-text-primary">{r.completedLearners}/{boundWorkersCount}</span> : <span className="text-bss-text-muted">—</span> },
+    { id:'certificates', header:'Certificates issued', value:r => r.certificatesIssued, render:r => <span className={r.certificatesIssued ? 'text-bss-green font-semibold' : 'text-bss-text-muted'}>{r.certificatesIssued}</span> },
+    { id:'status', header:'Status', value:r => r.status, render:r => <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.status === 'Published' ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-blue-tint text-bss-interactive-blue'}`}>{r.status}</span> },
     { id:'published', header:'Published', value:r => r.publishedOn ?? '—' },
-    { id:'actions', header:'Action', filterable:false, value:r => r.id, render:r => <Link href={`/contractor/skills/${r.id}`} className="inline-flex items-center gap-1 text-blue-700 font-semibold text-xs">Open course<ArrowRight size={13}/></Link> },
+    { id:'actions', header:'Action', filterable:false, value:r => r.id, render:r => <Link href={`/contractor/skills/${r.id}`} className="inline-flex items-center gap-1 text-bss-interactive-blue font-semibold text-xs">Open course<ArrowRight size={13}/></Link> },
   ];
 
-  const input = 'mt-1 w-full h-10 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/20';
-  const stepHead = (n: 1 | 2 | 3, label: string) => <span className={`flex items-center gap-2 text-xs font-bold ${step === n ? 'text-blue-700' : step > n ? 'text-green-700' : 'text-gray-400'}`}><span className={`w-6 h-6 rounded-full grid place-items-center ${step === n ? 'bg-blue-700 text-white' : step > n ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-500'}`}>{step > n ? '✓' : n}</span>{label}</span>;
+  const input = 'mt-1 w-full h-10 rounded-lg border border-bss-border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/20';
+  const stepHead = (n: 1 | 2 | 3, label: string) => <span className={`flex items-center gap-2 text-xs font-bold ${step === n ? 'text-bss-interactive-blue' : step > n ? 'text-bss-green' : 'text-bss-text-muted'}`}><span className={`w-6 h-6 rounded-full grid place-items-center ${step === n ? 'bg-bss-interactive-blue text-white' : step > n ? 'bg-bss-green text-white' : 'bg-bss-bg text-bss-text-muted'}`}>{step > n ? '✓' : n}</span>{label}</span>;
 
   return <div className="space-y-6 pb-12">
     <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Master data</p>
-        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Skills & Courses</h1>
-        <p className="text-sm text-gray-500 mt-1">Create course modules with video lectures — completion auto-generates a certificate in the worker&apos;s panel.</p>
+        <p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Master data</p>
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-bss-text-primary mt-1">Skills & Courses</h1>
+        <p className="text-sm text-bss-text-muted mt-1">Create course modules with video lectures — completion auto-generates a certificate in the worker&apos;s panel.</p>
       </div>
-      <button onClick={() => { setCreateOpen(true); setStep(1); setError(''); }} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 self-start hover:bg-black"><Plus size={16}/>Create course</button>
+      <button onClick={() => { setCreateOpen(true); setStep(1); setError(''); }} className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-sm font-semibold flex items-center gap-2 self-start hover:bg-black"><Plus size={16}/>Create course</button>
     </header>
 
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
     {error && !createOpen && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
 
     <section className="bss-kpi-grid grid grid-cols-2 md:grid-cols-4 gap-3">
-      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Courses created</span><span className="bss-kpi-icon bg-blue-50 text-blue-700"><BookOpenCheck size={16}/></span></div><strong>{courses.length}</strong><p>{published.length} published · {courses.length - published.length} draft</p></article>
-      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Video modules</span><span className="bss-kpi-icon bg-indigo-50 text-indigo-700"><Video size={16}/></span></div><strong>{totalModules}</strong><p>Across all courses</p></article>
-      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Certificates issued</span><span className="bss-kpi-icon bg-green-50 text-green-700"><Award size={16}/></span></div><strong>{totalCertificates}</strong><p>Auto-generated on completion</p></article>
-      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Learners enrolled</span><span className="bss-kpi-icon bg-orange-50 text-orange-700"><Users size={16}/></span></div><strong>{totalLearners}</strong><p>Bound workers</p></article>
+      <article className="bss-kpi-card bss-hover-lift"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-bss-text-muted">Courses created</span><span className="bss-kpi-icon bg-bss-blue-tint text-bss-interactive-blue"><BookOpenCheck size={16}/></span></div><strong>{courses.length}</strong><p>{published.length} published · {courses.length - published.length} draft</p></article>
+      <article className="bss-kpi-card bss-hover-lift"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-bss-text-muted">Video modules</span><span className="bss-kpi-icon bg-bss-blue-tint text-bss-interactive-blue"><Video size={16}/></span></div><strong>{totalModules}</strong><p>Across all courses</p></article>
+      <article className="bss-kpi-card bss-hover-lift"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-bss-text-muted">Certificates issued</span><span className="bss-kpi-icon bg-bss-soft-green text-bss-green"><Award size={16}/></span></div><strong>{totalCertificates}</strong><p>Auto-generated on completion</p></article>
+      <article className="bss-kpi-card bss-hover-lift"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-bss-text-muted">Learners enrolled</span><span className="bss-kpi-icon bg-bss-soft-orange text-bss-orange"><Users size={16}/></span></div><strong>{totalLearners}</strong><p>Bound workers</p></article>
     </section>
 
     <div className="flex border-b">
-      <button onClick={() => setTab('dashboard')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'dashboard' ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>Course Dashboard</button>
-      <button onClick={() => setTab('history')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'history' ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>Course History</button>
+      <button onClick={() => setTab('dashboard')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'dashboard' ? 'border-bss-interactive-blue text-bss-interactive-blue' : 'border-transparent text-bss-text-muted hover:text-bss-text-primary'}`}>Course Dashboard</button>
+      <button onClick={() => setTab('history')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'history' ? 'border-bss-interactive-blue text-bss-interactive-blue' : 'border-transparent text-bss-text-muted hover:text-bss-text-primary'}`}>Course History</button>
     </div>
 
     {tab === 'dashboard' && <>
-      <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">Courses you create appear in the <strong>worker Skills catalogue</strong>. When a worker completes every video module, the certificate is <strong>auto-generated</strong> and stored with the worker&apos;s BSS profile.</div>
+      <div className="bg-bss-blue-tint border border-bss-border text-bss-text-primary rounded-xl px-4 py-3 text-xs">Courses you create appear in the <strong>worker Skills catalogue</strong>. When a worker completes every video module, the certificate is <strong>auto-generated</strong> and stored with the worker&apos;s BSS profile.</div>
       <EnterpriseDataTable title="Created courses" rows={courses} columns={columns} rowKey={r => r.id} filename="contractor-courses"/>
     </>}
 
-    {tab === 'history' && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-      <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Course History & Certificates</h2><p className="text-xs text-gray-400 mt-0.5">Certificates auto-generated per course once a learner completes all video lessons.</p></header>
-      <div className="divide-y divide-gray-100">{courses.map(course => (
-        <div key={course.id} className="px-5 py-4 flex flex-wrap items-center justify-between gap-3 hover:bg-gray-50">
+    {tab === 'history' && <section className="bss-card rounded-2xl overflow-hidden">
+      <header className="px-5 py-4 border-b border-bss-border"><h2 className="text-sm font-semibold text-bss-text-primary">Course History & Certificates</h2><p className="text-xs text-bss-text-muted mt-0.5">Certificates auto-generated per course once a learner completes all video lessons.</p></header>
+      <div className="divide-y divide-bss-border">{courses.map(course => (
+        <div key={course.id} className="px-5 py-4 flex flex-wrap items-center justify-between gap-3 hover:bg-bss-bg">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 grid place-items-center flex-shrink-0"><GraduationCap size={17}/></span>
-            <div className="min-w-0"><p className="text-sm font-semibold text-gray-900">{course.title}</p><p className="text-xs text-gray-400 mt-0.5">{course.certification} · {course.duration} · {course.modules.length} video modules</p></div>
+            <span className="w-9 h-9 rounded-lg bg-bss-blue-tint text-bss-interactive-blue grid place-items-center flex-shrink-0"><GraduationCap size={17}/></span>
+            <div className="min-w-0"><p className="text-sm font-semibold text-bss-text-primary">{course.title}</p><p className="text-xs text-bss-text-muted mt-0.5">{course.certification} · {course.duration} · {course.modules.length} video modules</p></div>
           </div>
           <div className="flex items-center gap-3">
             {course.certificatesIssued > 0
-              ? <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-700 bg-green-50 border border-green-100 rounded-full px-2 py-0.5"><Award size={11}/>{course.certificatesIssued} certificate{course.certificatesIssued === 1 ? '' : 's'} issued</span>
-              : <span className="text-[10px] font-bold text-gray-400 border border-gray-200 rounded-full px-2 py-0.5">No certificates yet</span>}
-            <Link href={`/contractor/skills/${course.id}`} className="h-8 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1 hover:bg-gray-50">View<ArrowRight size={13}/></Link>
+              ? <span className="inline-flex items-center gap-1 text-[10px] font-bold text-bss-green bg-bss-soft-green border border-bss-border rounded-full px-2 py-0.5"><Award size={11}/>{course.certificatesIssued} certificate{course.certificatesIssued === 1 ? '' : 's'} issued</span>
+              : <span className="text-[10px] font-bold text-bss-text-muted border border-bss-border rounded-full px-2 py-0.5">No certificates yet</span>}
+            <Link href={`/contractor/skills/${course.id}`} className="h-8 px-3 rounded-lg border border-bss-border text-xs font-semibold flex items-center gap-1 hover:bg-bss-bg">View<ArrowRight size={13}/></Link>
           </div>
         </div>
       ))}</div>
@@ -143,7 +143,7 @@ export default function ContractorSkillsPage() {
 
     {/* Create course — multi-step wizard */}
     {createOpen && <div className="fixed inset-0 z-[80] bg-black/50 grid place-items-center p-4"><section role="dialog" aria-modal="true" aria-label="Create course" className="w-full max-w-2xl bg-white rounded-2xl overflow-hidden">
-      <header className="p-5 border-b border-gray-100 flex justify-between items-center"><div><h2 className="font-semibold text-sm">Create course</h2><p className="text-xs text-gray-500 mt-1">Define course details, then add video lesson modules. Certificates auto-generate when learners complete all modules.</p></div><button onClick={() => setCreateOpen(false)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button></header>
+      <header className="p-5 border-b border-bss-border flex justify-between items-center"><div><h2 className="font-semibold text-sm">Create course</h2><p className="text-xs text-bss-text-muted mt-1">Define course details, then add video lesson modules. Certificates auto-generate when learners complete all modules.</p></div><button onClick={() => setCreateOpen(false)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-bss-bg"><X size={16}/></button></header>
       <div className="px-5 pt-4 flex gap-6">{stepHead(1, 'Course Info')}{stepHead(2, 'Video Modules')}{stepHead(3, 'Final Review')}</div>
       <div className="p-5 space-y-4 max-h-[58vh] overflow-y-auto">
         {step === 1 && <div className="grid sm:grid-cols-2 gap-4">
@@ -153,39 +153,39 @@ export default function ContractorSkillsPage() {
           <label className="sm:col-span-2 text-xs font-semibold">Provider / Academy<input value={draft.provider} onChange={e => setDraft(c => ({ ...c, provider: e.target.value }))} className={input}/></label>
           <label className="text-xs font-semibold">Instructor<input value={draft.instructor} onChange={e => setDraft(c => ({ ...c, instructor: e.target.value }))} placeholder="e.g. Rajesh Kumar, Safety Officer" className={input}/></label>
           <label className="text-xs font-semibold">Certification Name<input value={draft.certification} onChange={e => setDraft(c => ({ ...c, certification: e.target.value }))} placeholder="e.g. RK Buildcon Safety Badge" className={input}/></label>
-          <label className="sm:col-span-2 text-xs font-semibold">Course Description<textarea value={draft.description} onChange={e => setDraft(c => ({ ...c, description: e.target.value }))} rows={3} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/20"/></label>
+          <label className="sm:col-span-2 text-xs font-semibold">Course Description<textarea value={draft.description} onChange={e => setDraft(c => ({ ...c, description: e.target.value }))} rows={3} className="mt-1 w-full border border-bss-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/20"/></label>
         </div>}
         {step === 2 && <div className="space-y-3">
-          <p className="text-xs text-gray-500">Add the video lessons that make up this course. Each lesson can be watched and marked complete by the learner.</p>
+          <p className="text-xs text-bss-text-muted">Add the video lessons that make up this course. Each lesson can be watched and marked complete by the learner.</p>
           {draft.modules.map((module, index) => (
-            <div key={index} className="flex items-center gap-3 rounded-xl border border-gray-100 p-3">
-              <span className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 grid place-items-center text-xs font-bold flex-shrink-0"><Video size={15}/></span>
-              <input value={module.title} onChange={e => setModule(index, 'title', e.target.value)} placeholder={`Video lesson ${index + 1} title`} className="flex-1 h-9 border border-gray-200 rounded-lg px-2 text-xs min-w-0"/>
-              <select value={module.duration} onChange={e => setModule(index, 'duration', e.target.value)} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white">{[ '30 mins','45 mins','60 mins','90 mins','2 Hours','3 Hours','4 Hours','5 Hours' ].map(d => <option key={d}>{d}</option>)}</select>
-              <button onClick={() => removeModule(index)} className="w-8 h-9 grid place-items-center text-gray-400 hover:text-red-600" aria-label="Remove module"><Trash2 size={15}/></button>
+            <div key={index} className="flex items-center gap-3 rounded-xl border border-bss-border p-3">
+              <span className="w-8 h-8 rounded-lg bg-bss-blue-tint text-bss-interactive-blue grid place-items-center text-xs font-bold flex-shrink-0"><Video size={15}/></span>
+              <input value={module.title} onChange={e => setModule(index, 'title', e.target.value)} placeholder={`Video lesson ${index + 1} title`} className="flex-1 h-9 border border-bss-border rounded-lg px-2 text-xs min-w-0"/>
+              <select value={module.duration} onChange={e => setModule(index, 'duration', e.target.value)} className="h-9 border border-bss-border rounded-lg px-2 text-xs bg-white">{[ '30 mins','45 mins','60 mins','90 mins','2 Hours','3 Hours','4 Hours','5 Hours' ].map(d => <option key={d}>{d}</option>)}</select>
+              <button onClick={() => removeModule(index)} className="w-8 h-9 grid place-items-center text-bss-text-muted hover:text-bss-error" aria-label="Remove module"><Trash2 size={15}/></button>
             </div>
           ))}
-          <button onClick={addModule} className="h-9 px-3 rounded-lg border border-dashed border-gray-300 text-xs font-semibold flex items-center gap-1.5 hover:border-blue-400 hover:text-blue-700"><Plus size={14}/>Add video module</button>
+          <button onClick={addModule} className="h-9 px-3 rounded-lg border border-dashed border-bss-border text-xs font-semibold flex items-center gap-1.5 hover:border-bss-border hover:text-bss-interactive-blue"><Plus size={14}/>Add video module</button>
         </div>}
-        {step === 3 && <div className="rounded-xl border border-gray-100 p-5 space-y-4">
-          <div className="flex items-start justify-between gap-3"><div><h3 className="text-base font-bold text-gray-950">{draft.title || 'Untitled course'}</h3><p className="text-xs text-gray-500 mt-1">{draft.category} · {draft.duration} · {draft.provider}</p></div><span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5 flex-shrink-0">Review before publish</span></div>
+        {step === 3 && <div className="rounded-xl border border-bss-border p-5 space-y-4">
+          <div className="flex items-start justify-between gap-3"><div><h3 className="text-base font-bold text-bss-text-primary">{draft.title || 'Untitled course'}</h3><p className="text-xs text-bss-text-muted mt-1">{draft.category} · {draft.duration} · {draft.provider}</p></div><span className="text-[10px] font-bold text-bss-interactive-blue bg-bss-blue-tint border border-bss-border rounded-full px-2 py-0.5 flex-shrink-0">Review before publish</span></div>
           <dl className="grid grid-cols-2 gap-3 text-xs"><Fact label="Instructor" value={draft.instructor || '—'}/><Fact label="Certification" value={draft.certification || '—'}/><Fact label="Video modules" value={String(draft.modules.filter(m => m.title.trim()).length)}/><Fact label="Total duration" value={draft.duration}/></dl>
-          <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Description</p><p className="text-xs text-gray-700 leading-5">{draft.description || '—'}</p></div>
-          <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Video lessons</p><ul className="space-y-1.5">{draft.modules.filter(m => m.title.trim()).map((m, i) => <li key={i} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 text-xs"><span className="flex items-center gap-2"><Video size={13} className="text-gray-400"/>{m.title}</span><span className="text-gray-400">{m.duration}</span></li>)}</ul></div>
-          <p className="text-[11px] text-gray-400 flex items-center gap-1.5"><Sparkles size={13}/>Publishing makes this course available to bound workers. When every video lesson is completed, the certificate &quot;{draft.certification || 'course certificate'}&quot; is auto-generated in the worker&apos;s panel.</p>
+          <div><p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted mb-1">Description</p><p className="text-xs text-bss-text-primary leading-5">{draft.description || '—'}</p></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted mb-1.5">Video lessons</p><ul className="space-y-1.5">{draft.modules.filter(m => m.title.trim()).map((m, i) => <li key={i} className="flex items-center justify-between rounded-lg border border-bss-border px-3 py-2 text-xs"><span className="flex items-center gap-2"><Video size={13} className="text-bss-text-muted"/>{m.title}</span><span className="text-bss-text-muted">{m.duration}</span></li>)}</ul></div>
+          <p className="text-[11px] text-bss-text-muted flex items-center gap-1.5"><Sparkles size={13}/>Publishing makes this course available to bound workers. When every video lesson is completed, the certificate &quot;{draft.certification || 'course certificate'}&quot; is auto-generated in the worker&apos;s panel.</p>
         </div>}
         {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
       </div>
-      <footer className="p-5 border-t border-gray-100 flex flex-wrap justify-between gap-2">
+      <footer className="p-5 border-t border-bss-border flex flex-wrap justify-between gap-2">
         <button onClick={() => setCreateOpen(false)} className="px-4 py-2 text-sm">Cancel</button>
         <div className="flex gap-2">
           {step > 1 && <button onClick={() => setStep(s => (s - 1) as 1 | 2 | 3)} className="px-4 py-2 rounded-lg border text-sm font-semibold flex items-center gap-1"><ChevronLeft size={15}/>Back</button>}
-          {step < 3 && <button onClick={() => setStep(s => (s + 1) as 1 | 2 | 3)} className="px-4 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold flex items-center gap-1">Next<ArrowRight size={15}/></button>}
-          {step === 3 && <><button onClick={() => finish('draft')} disabled={busy} className="px-4 py-2 rounded-lg border text-sm font-semibold flex items-center gap-1.5"><FilePen size={14}/>{busy ? 'Saving…' : 'Save Draft'}</button><button onClick={() => finish('publish')} disabled={busy} className="px-4 py-2 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-1.5"><Send size={14}/>{busy ? 'Publishing…' : 'Publish Course'}</button></>}
+          {step < 3 && <button onClick={() => setStep(s => (s + 1) as 1 | 2 | 3)} className="px-4 py-2 rounded-lg bg-bss-interactive-blue text-white text-sm font-semibold flex items-center gap-1">Next<ArrowRight size={15}/></button>}
+          {step === 3 && <><button onClick={() => finish('draft')} disabled={busy} className="px-4 py-2 rounded-lg border text-sm font-semibold flex items-center gap-1.5"><FilePen size={14}/>{busy ? 'Saving…' : 'Save Draft'}</button><button onClick={() => finish('publish')} disabled={busy} className="px-4 py-2 rounded-lg bg-[#01183A] text-white text-sm font-semibold flex items-center gap-1.5"><Send size={14}/>{busy ? 'Publishing…' : 'Publish Course'}</button></>}
         </div>
       </footer>
     </section></div>}
   </div>;
 }
 
-function Fact({ label, value }: { label: string; value: string }) { return <div><p className="text-[10px] uppercase text-gray-400 font-bold">{label}</p><p className="mt-1 text-sm font-semibold text-gray-800">{value}</p></div>; }
+function Fact({ label, value }: { label: string; value: string }) { return <div><p className="text-[10px] uppercase text-bss-text-muted font-bold">{label}</p><p className="mt-1 text-sm font-semibold text-bss-text-primary">{value}</p></div>; }

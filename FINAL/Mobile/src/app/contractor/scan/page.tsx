@@ -276,54 +276,54 @@ export default function ContractorScanPage() {
 
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
     <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
-      <div><h1 className="text-2xl font-bold text-[#062D4F]">QR Scan & Bind</h1><p className="text-sm text-gray-500 mt-1">Scan a Worker QR to request binding · scan an Employer QR to request employer binding.</p></div>
-      <div className="flex gap-2"><ListenButton /><Link href="/contractor/dashboard" className="p-2.5 rounded-full bg-white border" aria-label="Dashboard"><Home size={18}/></Link><Link href="/contractor/qr/requests" className="bg-[#073B67] text-white px-4 py-2.5 rounded-lg font-bold text-sm">Binding requests</Link></div>
+      <div><h1 className="text-2xl font-bold text-[#022B5E]">QR Scan & Bind</h1><p className="text-sm text-bss-text-muted mt-1">Scan a Worker QR to request binding · scan an Employer QR to request employer binding.</p></div>
+      <div className="flex gap-2"><ListenButton /><Link href="/contractor/dashboard" className="p-2.5 rounded-full bg-white border" aria-label="Dashboard"><Home size={18}/></Link><Link href="/contractor/qr/requests" className="bg-[#01183A] text-white px-4 py-2.5 rounded-lg font-bold text-sm">Binding requests</Link></div>
     </div>
 
     <div className="grid md:grid-cols-2 gap-6">
       <section className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-        <header className="p-4 border-b bg-gray-50 flex items-center gap-2 font-bold"><Camera size={18}/> Scanner</header>
+        <header className="p-4 border-b bg-bss-bg flex items-center gap-2 font-bold"><Camera size={18}/> Scanner</header>
         <div className="p-5 space-y-4">
           <div className="relative bg-black rounded-xl h-64 overflow-hidden flex items-center justify-center">
             <video ref={videoRef} className={`w-full h-full object-cover ${state==="scanning"?"block":"hidden"}`} muted playsInline/>
             <ScanFrame active={state==="scanning"} />
-            {state!=="scanning"&&<div className="text-center text-white px-6">{state==="verified"?<CheckCircle2 size={48} className="mx-auto text-green-400"/>:state==="error"?<XCircle size={48} className="mx-auto text-red-400"/>:state==="binding"?<Handshake size={48} className="mx-auto text-orange-300"/>:<ScanLine size={48} className="mx-auto text-gray-400"/>}<p className="mt-3 text-sm font-semibold">{message||"Ready to scan a secure credential"}</p></div>}
+            {state!=="scanning"&&<div className="text-center text-white px-6">{state==="verified"?<CheckCircle2 size={48} className="mx-auto text-bss-soft-green"/>:state==="error"?<XCircle size={48} className="mx-auto text-bss-orange"/>:state==="binding"?<Handshake size={48} className="mx-auto text-bss-soft-orange"/>:<ScanLine size={48} className="mx-auto text-bss-text-muted"/>}<p className="mt-3 text-sm font-semibold">{message||"Ready to scan a secure credential"}</p></div>}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <button onClick={state==="idle"||state==="error"||state==="verified"||state==="binding"?startCamera:reset} className="bg-[#073B67] text-white py-2.5 rounded-lg font-bold text-sm"><Camera size={16} className="inline mr-2"/>{state==="scanning"?"Reset":"Use camera"}</button>
+            <button onClick={state==="idle"||state==="error"||state==="verified"||state==="binding"?startCamera:reset} className="bg-[#01183A] text-white py-2.5 rounded-lg font-bold text-sm"><Camera size={16} className="inline mr-2"/>{state==="scanning"?"Reset":"Use camera"}</button>
             <button onClick={()=>fileRef.current?.click()} className="border py-2.5 rounded-lg font-bold text-sm"><Upload size={16} className="inline mr-2"/>Upload image</button>
           </div>
-          <button type="button" onClick={() => setManualOpen(true)} className="w-full py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"><KeyRound size={14}/>Enter BSS ID manually</button>
+          <button type="button" onClick={() => setManualOpen(true)} className="w-full py-2 bg-bss-bg hover:bg-bss-bg border border-bss-border text-bss-text-primary rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"><KeyRound size={14}/>Enter BSS ID manually</button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e=>scanFile(e.target.files?.[0])}/>
-          <p className="text-xs text-gray-500">Camera permission is requested only while scanning. Scans are processed locally — no scan-to-autobind.</p>
+          <p className="text-xs text-bss-text-muted">Camera permission is requested only while scanning. Scans are processed locally — no scan-to-autobind.</p>
         </div>
       </section>
 
       <section className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-        <header className="p-4 border-b bg-gray-50 flex gap-2 items-center font-bold"><ShieldCheck size={18}/> {state==="binding"?"Binding request":"Identified entity"}</header>
+        <header className="p-4 border-b bg-bss-bg flex gap-2 items-center font-bold"><ShieldCheck size={18}/> {state==="binding"?"Binding request":"Identified entity"}</header>
         <div className="p-5">
           {state==="binding"&&entity?(
             <div className="space-y-4">
-              <div className="flex items-center gap-4"><span className={`w-14 h-14 rounded-full grid place-items-center ${entity.kind === 'worker' ? 'bg-orange-50 text-[#F47A32]' : 'bg-blue-50 text-blue-700'}`}>{entity.kind === 'worker' ? <UserRound size={26}/> : <Building2 size={26}/>}</span><div><h2 className="font-bold text-lg">{entity.name}</h2><code className="text-xs text-[#073B67]">{entity.bssId}</code><p className="text-xs text-orange-600 mt-1 font-semibold">{entity.kind === 'worker' ? 'Worker QR identified' : 'Employer QR identified'}</p></div></div>
+              <div className="flex items-center gap-4"><span className={`w-14 h-14 rounded-full grid place-items-center ${entity.kind === 'worker' ? 'bg-bss-soft-orange text-[#E45D24]' : 'bg-bss-blue-tint text-bss-interactive-blue'}`}>{entity.kind === 'worker' ? <UserRound size={26}/> : <Building2 size={26}/>}</span><div><h2 className="font-bold text-lg">{entity.name}</h2><code className="text-xs text-[#01183A]">{entity.bssId}</code><p className="text-xs text-bss-orange mt-1 font-semibold">{entity.kind === 'worker' ? 'Worker QR identified' : 'Employer QR identified'}</p></div></div>
               <dl className="grid grid-cols-2 gap-3 text-xs">
-                <div><dt className="text-gray-400">Principal employer</dt><dd className="font-semibold text-gray-800 mt-0.5">{entity.employer}</dd></div>
-                <div><dt className="text-gray-400">Site</dt><dd className="font-semibold text-gray-800 mt-0.5">{entity.site}</dd></div>
-                <div><dt className="text-gray-400">Designation</dt><dd className="font-semibold text-gray-800 mt-0.5">{entity.designation}</dd></div>
-                <div><dt className="text-gray-400">Current relationship</dt><dd className="font-semibold text-gray-800 mt-0.5">{contractor.workers.some(w => w.bssId === entity.bssId) ? 'Already bound' : alreadyPending ? 'Binding request pending' : 'Not bound — request required'}</dd></div>
+                <div><dt className="text-bss-text-muted">Principal employer</dt><dd className="font-semibold text-bss-text-primary mt-0.5">{entity.employer}</dd></div>
+                <div><dt className="text-bss-text-muted">Site</dt><dd className="font-semibold text-bss-text-primary mt-0.5">{entity.site}</dd></div>
+                <div><dt className="text-bss-text-muted">Designation</dt><dd className="font-semibold text-bss-text-primary mt-0.5">{entity.designation}</dd></div>
+                <div><dt className="text-bss-text-muted">Current relationship</dt><dd className="font-semibold text-bss-text-primary mt-0.5">{contractor.workers.some(w => w.bssId === entity.bssId) ? 'Already bound' : alreadyPending ? 'Binding request pending' : 'Not bound — request required'}</dd></div>
               </dl>
               {verifyData && <ScanIdentityCard data={verifyData} />}
-              <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">{entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId) ? 'This worker is bound to you. Mark attendance for today; it syncs to the worker\u2019s Attendance page.' : entity.kind === 'worker' && alreadyPending ? 'A binding request is already pending with this worker. Binding completes once the worker approves it.' : `A binding request asks ${entity.kind === 'worker' ? 'the worker to accept employment' : 'the principal employer to accept the contractor relationship'}. Binding completes only after both parties approve.`}</p>
+              <p className="text-xs text-bss-text-muted bg-bss-bg rounded-xl p-3">{entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId) ? 'This worker is bound to you. Mark attendance for today; it syncs to the worker\u2019s Attendance page.' : entity.kind === 'worker' && alreadyPending ? 'A binding request is already pending with this worker. Binding completes once the worker approves it.' : `A binding request asks ${entity.kind === 'worker' ? 'the worker to accept employment' : 'the principal employer to accept the contractor relationship'}. Binding completes only after both parties approve.`}</p>
               {entity.kind === 'worker' && !contractor.workers.some(w => w.bssId === entity.bssId) && !alreadyPending && contractor.sites.length > 0 && (
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Site for this binding</label>
-                  <select value={selectedSite} onChange={e => setSelectedSite(e.target.value)} className="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-bss-text-muted mb-1">Site for this binding</label>
+                  <select value={selectedSite} onChange={e => setSelectedSite(e.target.value)} className="w-full h-10 rounded-lg border border-bss-border px-3 text-sm bg-white">
                     {contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.employer ? ` — ${s.employer}` : ''}</option>)}
                   </select>
-                  {contractor.defaultSite && <p className="text-[11px] text-gray-400 mt-1">Default site: {contractor.defaultSite.name}</p>}
+                  {contractor.defaultSite && <p className="text-[11px] text-bss-text-muted mt-1">Default site: {contractor.defaultSite.name}</p>}
                 </div>
               )}
               {entity.kind === 'worker' && !contractor.workers.some(w => w.bssId === entity.bssId) && !alreadyPending && contractor.sites.length === 0 && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-start gap-2">
+                <div className="rounded-xl border border-bss-border bg-bss-soft-orange p-3 text-xs text-bss-orange flex items-start gap-2">
                   <TriangleAlert size={15} className="mt-0.5 flex-shrink-0"/>
                   <div>
                     <p className="font-bold">No site available for this binding.</p>
@@ -335,52 +335,52 @@ export default function ContractorScanPage() {
               {entity.kind === 'worker' && !contractor.workers.some(w => w.bssId === entity.bssId) && !alreadyPending && (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Cost sheet (required)</label>
-                    <select value={costSheetId} onChange={e => { setCostSheetId(e.target.value); setWageError(''); }} disabled={!availableCostSheets.length} className="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white disabled:bg-gray-50 disabled:text-gray-500">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-bss-text-muted mb-1">Cost sheet (required)</label>
+                    <select value={costSheetId} onChange={e => { setCostSheetId(e.target.value); setWageError(''); }} disabled={!availableCostSheets.length} className="w-full h-10 rounded-lg border border-bss-border px-3 text-sm bg-white disabled:bg-bss-bg disabled:text-bss-text-muted">
                       <option value="">{availableCostSheets.length ? "Select an employer-accepted cost sheet…" : "No accepted cost sheet for this site"}</option>
                       {availableCostSheets.map(s => <option key={s.id} value={s.id}>{s.name}{s.siteName ? ` · ${s.siteName}` : ""} · {s.code}</option>)}
                     </select>
                     {costSheetId ? (
-                      <p className="text-[11px] text-[#073B67] font-semibold mt-1">Wage, statutory, custom costs and CTC are auto-computed from the cost sheet.</p>
+                      <p className="text-[11px] text-[#01183A] font-semibold mt-1">Wage, statutory, custom costs and CTC are auto-computed from the cost sheet.</p>
                     ) : (
-                      <p className="text-[11px] text-gray-400 mt-1">{availableCostSheets.length ? "Only employer-accepted cost sheets for this site can be used. Pick one to auto-compute the wage and CTC." : "Adopt a published template for this site and get the employer's acceptance before you can bind a worker."}</p>
+                      <p className="text-[11px] text-bss-text-muted mt-1">{availableCostSheets.length ? "Only employer-accepted cost sheets for this site can be used. Pick one to auto-compute the wage and CTC." : "Adopt a published template for this site and get the employer's acceptance before you can bind a worker."}</p>
                     )}
-                    {wageError && <p className="text-[11px] text-red-600 font-semibold mt-1">{wageError}</p>}
+                    {wageError && <p className="text-[11px] text-bss-error font-semibold mt-1">{wageError}</p>}
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Date of joining (optional)</label>
-                    <input type="date" value={dateOfJoining} max={todayIso()} onChange={e => { setDateOfJoining(e.target.value); setDojError(''); }} className="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white" />
-                    <p className="text-[11px] text-gray-400 mt-1">The worker&apos;s real employment start date. Leave blank to use the binding date. Must be today or earlier.</p>
-                    {dojError && <p className="text-[11px] text-red-600 font-semibold mt-1">{dojError}</p>}
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-bss-text-muted mb-1">Date of joining (optional)</label>
+                    <input type="date" value={dateOfJoining} max={todayIso()} onChange={e => { setDateOfJoining(e.target.value); setDojError(''); }} className="w-full h-10 rounded-lg border border-bss-border px-3 text-sm bg-white" />
+                    <p className="text-[11px] text-bss-text-muted mt-1">The worker&apos;s real employment start date. Leave blank to use the binding date. Must be today or earlier.</p>
+                    {dojError && <p className="text-[11px] text-bss-error font-semibold mt-1">{dojError}</p>}
                   </div>
                 </div>
               )}
               {entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId)
                 ? <div className="space-y-3">
-                    <p className="text-xs text-gray-600 bg-gray-50 rounded-xl p-3">This worker is bound to you at <strong>{entity.site}</strong>. A worker holds one active site at a time — bind this worker at another site to move them there directly; no unbind needed.</p>
-                    {boundWorker?.costSheetName && <p className="text-xs text-[#073B67] bg-blue-50 rounded-xl p-3">Cost sheet: <strong>{boundWorker.costSheetName}</strong>{boundWorker.costSheet ? <span className="text-gray-500"> · {boundWorker.costSheet}</span> : null}</p>}
+                    <p className="text-xs text-bss-text-secondary bg-bss-bg rounded-xl p-3">This worker is bound to you at <strong>{entity.site}</strong>. A worker holds one active site at a time — bind this worker at another site to move them there directly; no unbind needed.</p>
+                    {boundWorker?.costSheetName && <p className="text-xs text-[#01183A] bg-bss-blue-tint rounded-xl p-3">Cost sheet: <strong>{boundWorker.costSheetName}</strong>{boundWorker.costSheet ? <span className="text-bss-text-muted"> · {boundWorker.costSheet}</span> : null}</p>}
                     {attendanceMarked
-                      ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Attendance marked for {entity.name}. It is now visible on the worker&apos;s Attendance page.</p>
-                      : <button onClick={markAttendance} className="w-full h-11 rounded-xl bg-green-600 text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-700"><CheckCircle2 size={17}/>Mark today&apos;s attendance</button>}
+                      ? <p className="p-3 bg-bss-soft-green border border-bss-border text-bss-green rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Attendance marked for {entity.name}. It is now visible on the worker&apos;s Attendance page.</p>
+                      : <button onClick={markAttendance} className="w-full h-11 rounded-xl bg-bss-green text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-bss-green"><CheckCircle2 size={17}/>Mark today&apos;s attendance</button>}
                   </div>
                 : alreadyPending
-                  ? <p className="p-3 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>Binding request already sent — awaiting {entity.name}&apos;s approval. Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
+                  ? <p className="p-3 bg-bss-soft-orange border border-bss-border text-bss-orange rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>Binding request already sent — awaiting {entity.name}&apos;s approval. Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
                   : requestSent
-                    ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request sent! Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
+                    ? <p className="p-3 bg-bss-soft-green border border-bss-border text-bss-green rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request sent! Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
                     : <div className="space-y-3">
-                        {sendError && <p role="alert" className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-xl text-xs font-semibold flex items-start gap-2"><XCircle size={14} className="mt-0.5 flex-shrink-0"/><span>{sendError}</span></p>}
+                        {sendError && <p role="alert" className="p-3 bg-bss-soft-orange border border-bss-border text-bss-error rounded-xl text-xs font-semibold flex items-start gap-2"><XCircle size={14} className="mt-0.5 flex-shrink-0"/><span>{sendError}</span></p>}
                         {entity.kind === 'worker' && (contractor.sites.length === 0 || !costSheetId)
-                          ? <button type="button" disabled className="w-full h-11 rounded-xl bg-gray-200 text-gray-500 text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed"><TriangleAlert size={17}/>{contractor.sites.length === 0 ? 'No site allotted — cannot bind' : 'Pick an accepted cost sheet to bind'}</button>
-                          : <button onClick={() => { setWageError(''); setDojError(''); setConfirmOpen(true); }} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>Send binding request</button>}
+                          ? <button type="button" disabled className="w-full h-11 rounded-xl bg-bss-surface text-bss-text-muted text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed"><TriangleAlert size={17}/>{contractor.sites.length === 0 ? 'No site allotted — cannot bind' : 'Pick an accepted cost sheet to bind'}</button>
+                          : <button onClick={() => { setWageError(''); setDojError(''); setConfirmOpen(true); }} className="w-full h-11 rounded-xl bg-[#01183A] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#022B5E]"><Link2 size={17}/>Send binding request</button>}
                       </div>}
             </div>
           ):result?(
             <div className="space-y-5">
-              <div className="flex items-center gap-4">{result.identity.photoUrl ? <img src={result.identity.photoUrl} alt="Worker" className="w-16 h-16 rounded-full object-cover"/> : <span className="w-16 h-16 rounded-full bg-gray-100 border border-gray-200 grid place-items-center text-gray-400"><UserRound size={26}/></span>}<div><h2 className="font-bold text-lg">{result.identity.name}</h2><code className="text-xs text-[#073B67]">{result.identity.bssId}</code><p className="text-xs text-green-700 mt-1">Verified BSS credential</p></div></div>
-              <dl className="grid grid-cols-2 gap-3 text-sm">{result.identity.category&&<><dt className="text-gray-500">Category</dt><dd className="font-semibold">{result.identity.category}</dd></>}{result.employment?.status&&<><dt className="text-gray-500">Employment</dt><dd className="font-semibold">{result.employment.status}</dd></>}{result.employment?.site&&<><dt className="text-gray-500">Site</dt><dd className="font-semibold">{result.employment.site}</dd></>}{result.skills?.primary?.name&&<><dt className="text-gray-500">Primary skill</dt><dd className="font-semibold">{result.skills?.primary?.name}</dd></>}</dl>
-              <p className="p-3 bg-blue-50 rounded-lg text-xs text-blue-900">Sensitive identifiers and banking details are withheld according to the selected relationship.</p>
+              <div className="flex items-center gap-4">{result.identity.photoUrl ? <img src={result.identity.photoUrl} alt="Worker" className="w-16 h-16 rounded-full object-cover"/> : <span className="w-16 h-16 rounded-full bg-bss-bg border border-bss-border grid place-items-center text-bss-text-muted"><UserRound size={26}/></span>}<div><h2 className="font-bold text-lg">{result.identity.name}</h2><code className="text-xs text-[#01183A]">{result.identity.bssId}</code><p className="text-xs text-bss-green mt-1">Verified BSS credential</p></div></div>
+              <dl className="grid grid-cols-2 gap-3 text-sm">{result.identity.category&&<><dt className="text-bss-text-muted">Category</dt><dd className="font-semibold">{result.identity.category}</dd></>}{result.employment?.status&&<><dt className="text-bss-text-muted">Employment</dt><dd className="font-semibold">{result.employment.status}</dd></>}{result.employment?.site&&<><dt className="text-bss-text-muted">Site</dt><dd className="font-semibold">{result.employment.site}</dd></>}{result.skills?.primary?.name&&<><dt className="text-bss-text-muted">Primary skill</dt><dd className="font-semibold">{result.skills?.primary?.name}</dd></>}</dl>
+              <p className="p-3 bg-bss-blue-tint rounded-lg text-xs text-bss-text-primary">Sensitive identifiers and banking details are withheld according to the selected relationship.</p>
             </div>
-          ):<div className="py-20 text-center text-gray-400"><ScanLine size={44} className="mx-auto mb-3"/><p className="text-sm">Scanned result will appear here.</p></div>}
+          ):<div className="py-20 text-center text-bss-text-muted"><ScanLine size={44} className="mx-auto mb-3"/><p className="text-sm">Scanned result will appear here.</p></div>}
         </div>
       </section>
     </div>
@@ -414,13 +414,13 @@ export default function ContractorScanPage() {
         <section role="dialog" aria-modal="true" className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
           <header className="p-5 border-b flex justify-between items-center">
             <div>
-              <h2 className="font-semibold text-[#062D4F]">Enter BSS ID Manually</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Enter a Worker BSS ID (BSS-W...) or Employer BSS ID (BSS-E...)</p>
+              <h2 className="font-semibold text-[#022B5E]">Enter BSS ID Manually</h2>
+              <p className="text-xs text-bss-text-muted mt-0.5">Enter a Worker BSS ID (BSS-W...) or Employer BSS ID (BSS-E...)</p>
             </div>
-            <button onClick={() => setManualOpen(false)} className="text-gray-400 hover:text-gray-600" aria-label="Close"><X size={18}/></button>
+            <button onClick={() => setManualOpen(false)} className="text-bss-text-muted hover:text-bss-text-secondary" aria-label="Close"><X size={18}/></button>
           </header>
           <form onSubmit={submitManualBssId} className="p-5 space-y-4">
-            <label className="block text-xs font-semibold text-gray-700">
+            <label className="block text-xs font-semibold text-bss-text-primary">
               BSS ID
               <input
                 required
@@ -428,12 +428,12 @@ export default function ContractorScanPage() {
                 value={manualInput}
                 onChange={e => setManualInput(e.target.value)}
                 placeholder="e.g. BSS-W7KQ2M9X4RT or BSS-E12345678"
-                className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm font-mono uppercase bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm font-mono uppercase bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
             </label>
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setManualOpen(false)} className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 rounded-lg">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-[#073B67] text-white text-xs font-bold rounded-lg hover:bg-[#062D4F]">Identify Entity</button>
+              <button type="button" onClick={() => setManualOpen(false)} className="px-4 py-2 text-xs font-semibold text-bss-text-secondary hover:bg-bss-bg rounded-lg">Cancel</button>
+              <button type="submit" className="px-4 py-2 bg-[#01183A] text-white text-xs font-bold rounded-lg hover:bg-[#022B5E]">Identify Entity</button>
             </div>
           </form>
         </section>

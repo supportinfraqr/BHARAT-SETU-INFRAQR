@@ -14,11 +14,11 @@ type AdvanceItem = {
 };
 
 const STATUS_META: Record<AdvanceStatus, { label: string; tone: string; hint: string }> = {
-  Requested: { label: 'Requested — awaiting approval', tone: 'bg-orange-50 text-orange-700', hint: 'Worker requested an advance. Approve to proceed to disbursement.' },
-  Approved: { label: 'Approved — disburse to worker', tone: 'bg-blue-50 text-blue-700', hint: 'Approved. Disburse the amount in Cash or Online (bank/UPI).' },
+  Requested: { label: 'Requested — awaiting approval', tone: 'bg-bss-soft-orange text-bss-orange', hint: 'Worker requested an advance. Approve to proceed to disbursement.' },
+  Approved: { label: 'Approved — disburse to worker', tone: 'bg-bss-blue-tint text-bss-interactive-blue', hint: 'Approved. Disburse the amount in Cash or Online (bank/UPI).' },
   Disbursed: { label: 'Disbursed — awaiting worker acceptance', tone: 'bg-purple-50 text-purple-700', hint: 'Disbursed. The worker confirms receipt in the BSS app before payroll adjustment.' },
-  Rejected: { label: 'Rejected', tone: 'bg-red-50 text-red-600', hint: 'Request declined.' },
-  Adjusted: { label: 'Adjusted in Payroll', tone: 'bg-green-50 text-green-700', hint: 'Recovered through payroll deduction after worker acceptance.' },
+  Rejected: { label: 'Rejected', tone: 'bg-bss-soft-orange text-bss-error', hint: 'Request declined.' },
+  Adjusted: { label: 'Adjusted in Payroll', tone: 'bg-bss-soft-green text-bss-green', hint: 'Recovered through payroll deduction after worker acceptance.' },
 };
 
 function today() { return new Date().toISOString().slice(0, 10); }
@@ -61,72 +61,72 @@ export default function AdvanceRequests() {
   const current = items.find(i => i.status === 'Requested' || i.status === 'Approved' || i.status === 'Disbursed');
   const worker = items[0]?.workerId ? contractor.workers.find(w => w.bssId === items[0].workerId) : undefined;
 
-  return <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-    <header className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+  return <section className="bg-white border border-bss-border rounded-2xl overflow-hidden">
+    <header className="px-5 py-4 border-b border-bss-border flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-3">
-        <span className="w-9 h-9 rounded-lg bg-orange-50 text-orange-700 grid place-items-center"><Wallet size={17} /></span>
+        <span className="w-9 h-9 rounded-lg bg-bss-soft-orange text-bss-orange grid place-items-center"><Wallet size={17} /></span>
         <div>
-          <h2 className="font-semibold text-gray-950">Advance Payment Requests</h2>
-          <p className="text-xs text-gray-400 mt-0.5">Worker salary advances — approve, disburse (Cash/Online), worker acceptance, then adjustment in Payroll. Showing bound workers {contractor.sites[0] ? `at ${contractor.sites[0].name}` : ''}.</p>
+          <h2 className="font-semibold text-bss-text-primary">Advance Payment Requests</h2>
+          <p className="text-xs text-bss-text-muted mt-0.5">Worker salary advances — approve, disburse (Cash/Online), worker acceptance, then adjustment in Payroll. Showing bound workers {contractor.sites[0] ? `at ${contractor.sites[0].name}` : ''}.</p>
         </div>
       </div>
-      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-orange-700 bg-orange-50 border border-orange-100 rounded-full px-2.5 py-1">{pending} awaiting action</span>
+      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-bss-orange bg-bss-soft-orange border border-bss-border rounded-full px-2.5 py-1">{pending} awaiting action</span>
     </header>
 
-    {notice && <p role="status" className="mx-5 mt-4 rounded-xl bg-green-50 border border-green-100 text-green-700 px-3 py-2 text-xs font-semibold flex items-center gap-2"><CheckCircle2 size={14} />{notice}</p>}
+    {notice && <p role="status" className="mx-5 mt-4 rounded-xl bg-bss-soft-green border border-bss-border text-bss-green px-3 py-2 text-xs font-semibold flex items-center gap-2"><CheckCircle2 size={14} />{notice}</p>}
 
     <div className="p-5 grid sm:grid-cols-4 gap-3 text-xs">
-      <div className="rounded-xl bg-orange-50 border border-orange-100 p-3"><p className="text-gray-500">Pending approvals</p><strong className="block mt-1 text-lg text-gray-900">{pending}</strong></div>
-      <div className="rounded-xl bg-purple-50 border border-purple-100 p-3"><p className="text-gray-500">Disbursed — awaiting worker acceptance</p><strong className="block mt-1 text-lg text-gray-900">{money(outDisbursed)}</strong></div>
-      <div className="rounded-xl bg-green-50 border border-green-100 p-3"><p className="text-gray-500">Adjusted in Payroll</p><strong className="block mt-1 text-lg text-gray-900">{money(adjusted)}</strong></div>
-      <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 text-[11px] text-gray-500 leading-5"><strong className="text-gray-700">Flow</strong><p className="mt-1">Approve → Disburse (Cash/Online) → worker accepts → auto-adjustment as advance recovery in Payroll.</p></div>
+      <div className="rounded-xl bg-bss-soft-orange border border-bss-border p-3"><p className="text-bss-text-muted">Pending approvals</p><strong className="block mt-1 text-lg text-bss-text-primary">{pending}</strong></div>
+      <div className="rounded-xl bg-purple-50 border border-purple-100 p-3"><p className="text-bss-text-muted">Disbursed — awaiting worker acceptance</p><strong className="block mt-1 text-lg text-bss-text-primary">{money(outDisbursed)}</strong></div>
+      <div className="rounded-xl bg-bss-soft-green border border-bss-border p-3"><p className="text-bss-text-muted">Adjusted in Payroll</p><strong className="block mt-1 text-lg text-bss-text-primary">{money(adjusted)}</strong></div>
+      <div className="rounded-xl bg-bss-bg border border-bss-border p-3 text-[11px] text-bss-text-muted leading-5"><strong className="text-bss-text-primary">Flow</strong><p className="mt-1">Approve → Disburse (Cash/Online) → worker accepts → auto-adjustment as advance recovery in Payroll.</p></div>
     </div>
 
-    <div className="border-t border-gray-100 divide-y divide-gray-100">
+    <div className="border-t border-bss-border divide-y divide-bss-border">
       {items.map(item => (
         <div key={item.id} className="px-5 py-4 flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-[11px] font-bold text-[#073B67]">{item.id}</span>
+              <span className="font-mono text-[11px] font-bold text-[#01183A]">{item.id}</span>
               <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_META[item.status].tone}`}>{STATUS_META[item.status].label}</span>
             </div>
-            <p className="text-sm font-semibold text-gray-900 mt-1">{money(item.amount)} · {item.worker} ({item.workerId}) · {item.reason}</p>
-            <p className="text-[11px] text-gray-400 mt-0.5">{item.site} · {item.employer} · Requested {item.requestedOn}{item.approvedOn && ` · Approved ${item.approvedOn}`}{item.disbursedOn && ` · Disbursed ${item.disbursedOn} (${item.mode}${item.reference ? ` · ${item.reference}` : ''})`}{item.payrollPeriod && ` · Recovered in ${item.payrollPeriod} payroll`}</p>
+            <p className="text-sm font-semibold text-bss-text-primary mt-1">{money(item.amount)} · {item.worker} ({item.workerId}) · {item.reason}</p>
+            <p className="text-[11px] text-bss-text-muted mt-0.5">{item.site} · {item.employer} · Requested {item.requestedOn}{item.approvedOn && ` · Approved ${item.approvedOn}`}{item.disbursedOn && ` · Disbursed ${item.disbursedOn} (${item.mode}${item.reference ? ` · ${item.reference}` : ''})`}{item.payrollPeriod && ` · Recovered in ${item.payrollPeriod} payroll`}</p>
             {item.status === 'Disbursed' && <p className="text-[11px] text-purple-700 mt-1 flex items-center gap-1.5"><HandCoins size={12}/>Worker must accept in the BSS app — acceptance automatically queues the advance recovery in the next Payroll run.</p>}
-            {item.status === 'Adjusted' && <p className="text-[11px] text-green-700 mt-1 flex items-center gap-1.5"><Landmark size={12}/>Shown as an advance-recovery deduction on the worker&apos;s Payroll record for {item.payrollPeriod}.</p>}
+            {item.status === 'Adjusted' && <p className="text-[11px] text-bss-green mt-1 flex items-center gap-1.5"><Landmark size={12}/>Shown as an advance-recovery deduction on the worker&apos;s Payroll record for {item.payrollPeriod}.</p>}
           </div>
           <div className="flex flex-wrap gap-2 flex-shrink-0">
             {item.status === 'Requested' && <>
-              <button onClick={() => approve(item.id)} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1.5 hover:bg-[#062D4F]"><CheckCircle2 size={14}/>Approve</button>
-              <button onClick={() => decline(item.id)} className="h-9 px-4 rounded-lg border border-red-200 text-red-600 text-xs font-bold inline-flex items-center gap-1.5 hover:bg-red-50"><X size={14}/>Decline</button>
+              <button onClick={() => approve(item.id)} className="h-9 px-4 rounded-lg bg-[#01183A] text-white text-xs font-bold inline-flex items-center gap-1.5 hover:bg-[#022B5E]"><CheckCircle2 size={14}/>Approve</button>
+              <button onClick={() => decline(item.id)} className="h-9 px-4 rounded-lg border border-bss-border text-bss-error text-xs font-bold inline-flex items-center gap-1.5 hover:bg-bss-soft-orange"><X size={14}/>Decline</button>
             </>}
-            {item.status === 'Approved' && <button onClick={() => { setDisburseId(item.id); setReference(''); setMode('Cash'); }} className="h-9 px-4 rounded-lg bg-[#2F9E67] text-white text-xs font-bold inline-flex items-center gap-1.5 hover:brightness-95"><Banknote size={14}/>Disburse (Cash/Online)</button>}
-            {item.status === 'Disbursed' && <span className="text-[11px] font-semibold text-gray-400 inline-flex items-center gap-1.5"><Send size={13}/>Awaiting worker acceptance</span>}
+            {item.status === 'Approved' && <button onClick={() => { setDisburseId(item.id); setReference(''); setMode('Cash'); }} className="h-9 px-4 rounded-lg bg-[#14843C] text-white text-xs font-bold inline-flex items-center gap-1.5 hover:brightness-95"><Banknote size={14}/>Disburse (Cash/Online)</button>}
+            {item.status === 'Disbursed' && <span className="text-[11px] font-semibold text-bss-text-muted inline-flex items-center gap-1.5"><Send size={13}/>Awaiting worker acceptance</span>}
           </div>
         </div>
       ))}
-      {!items.length && <p className="p-6 text-center text-xs text-gray-400">No advance requests from bound workers.</p>}
+      {!items.length && <p className="p-6 text-center text-xs text-bss-text-muted">No advance requests from bound workers.</p>}
     </div>
-    {current && worker && <p className="px-5 pb-4 text-[11px] text-gray-400">Demo record bound to {worker.name} ({worker.bssId}) · {worker.site}.</p>}
+    {current && worker && <p className="px-5 pb-4 text-[11px] text-bss-text-muted">Demo record bound to {worker.name} ({worker.bssId}) · {worker.site}.</p>}
 
     {/* Disbursement modal — Cash or Online */}
     {disburseId && (
       <div className="fixed inset-0 z-[90] bg-black/55 backdrop-blur-sm grid place-items-center p-4" role="dialog" aria-modal="true" aria-label="Disburse advance">
         <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-          <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <div><h2 className="font-semibold text-gray-900">Disburse Advance {disburseId}</h2><p className="text-xs text-gray-500 mt-0.5">Choose the disbursement mode used by your office.</p></div>
-            <button onClick={() => setDisburseId(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:bg-gray-100"><X size={16}/></button>
+          <header className="px-5 py-4 border-b border-bss-border flex items-center justify-between">
+            <div><h2 className="font-semibold text-bss-text-primary">Disburse Advance {disburseId}</h2><p className="text-xs text-bss-text-muted mt-0.5">Choose the disbursement mode used by your office.</p></div>
+            <button onClick={() => setDisburseId(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-full text-bss-text-muted hover:bg-bss-bg"><X size={16}/></button>
           </header>
           <div className="p-5 space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => setMode('Cash')} className={`rounded-xl border p-4 text-left transition ${mode === 'Cash' ? 'border-[#2F9E67] bg-green-50 ring-1 ring-[#2F9E67]' : 'border-gray-200 hover:border-gray-300'}`}><Banknote size={20} className="mb-2 text-[#2F9E67]"/><strong className="block text-sm">Cash</strong><small className="text-[11px] text-gray-500">Paid at site office</small></button>
-              <button type="button" onClick={() => setMode('Online')} className={`rounded-xl border p-4 text-left transition ${mode === 'Online' ? 'border-[#073B67] bg-blue-50 ring-1 ring-[#073B67]' : 'border-gray-200 hover:border-gray-300'}`}><HandCoins size={20} className="mb-2 text-[#073B67]"/><strong className="block text-sm">Online</strong><small className="text-[11px] text-gray-500">Bank / UPI transfer</small></button>
+              <button type="button" onClick={() => setMode('Cash')} className={`rounded-xl border p-4 text-left transition ${mode === 'Cash' ? 'border-[#14843C] bg-bss-soft-green ring-1 ring-[#14843C]' : 'border-bss-border hover:border-bss-border'}`}><Banknote size={20} className="mb-2 text-[#14843C]"/><strong className="block text-sm">Cash</strong><small className="text-[11px] text-bss-text-muted">Paid at site office</small></button>
+              <button type="button" onClick={() => setMode('Online')} className={`rounded-xl border p-4 text-left transition ${mode === 'Online' ? 'border-[#01183A] bg-bss-blue-tint ring-1 ring-[#01183A]' : 'border-bss-border hover:border-bss-border'}`}><HandCoins size={20} className="mb-2 text-[#01183A]"/><strong className="block text-sm">Online</strong><small className="text-[11px] text-bss-text-muted">Bank / UPI transfer</small></button>
             </div>
-            {mode === 'Online' && <label className="block text-xs font-semibold text-gray-600">Transaction / UTR reference (optional)<input value={reference} onChange={e => setReference(e.target.value)} placeholder="e.g. UTR-HDFC2609011234" className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/></label>}
-            <p className="text-[11px] text-gray-400 leading-5"><HandCoins size={12} className="inline mr-1"/>After disbursement the worker accepts the receipt in their app; the amount is then recovered as an advance deduction in the Payroll.</p>
+            {mode === 'Online' && <label className="block text-xs font-semibold text-bss-text-secondary">Transaction / UTR reference (optional)<input value={reference} onChange={e => setReference(e.target.value)} placeholder="e.g. UTR-HDFC2609011234" className="mt-1.5 w-full rounded-xl border border-bss-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/></label>}
+            <p className="text-[11px] text-bss-text-muted leading-5"><HandCoins size={12} className="inline mr-1"/>After disbursement the worker accepts the receipt in their app; the amount is then recovered as an advance deduction in the Payroll.</p>
             <div className="flex gap-2">
-              <button onClick={confirmDisbursement} className="flex-1 h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold inline-flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Banknote size={15}/>Confirm {mode} disbursement</button>
-              <button onClick={() => setDisburseId(null)} className="h-11 px-4 rounded-xl border border-gray-200 text-gray-600 text-sm font-bold hover:bg-gray-50">Cancel</button>
+              <button onClick={confirmDisbursement} className="flex-1 h-11 rounded-xl bg-[#01183A] text-white text-sm font-bold inline-flex items-center justify-center gap-2 hover:bg-[#022B5E]"><Banknote size={15}/>Confirm {mode} disbursement</button>
+              <button onClick={() => setDisburseId(null)} className="h-11 px-4 rounded-xl border border-bss-border text-bss-text-secondary text-sm font-bold hover:bg-bss-bg">Cancel</button>
             </div>
           </div>
         </div>

@@ -41,33 +41,33 @@ export default function ContractorSiteDetailDialog({
   };
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-950/65 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-bss-navy/40 backdrop-blur-sm overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-label="Site details"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden my-auto"
+        className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-bss-border overflow-hidden my-auto"
         onClick={event => event.stopPropagation()}
       >
-        <header className="relative px-6 pt-6 pb-4 border-b border-gray-100">
-          <button type="button" onClick={onClose} aria-label="Close" className="absolute right-4 top-4 w-8 h-8 grid place-items-center rounded-full bg-gray-50 border border-gray-200/60 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"><X size={16} /></button>
-          <span className="w-11 h-11 rounded-2xl bg-[#073B67]/5 text-[#073B67] grid place-items-center"><Building2 size={20} /></span>
-          <h2 className="mt-3 text-lg font-bold text-gray-950">{site.name}</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {site.bssId ? <span className="font-mono text-[#073B67]">{site.bssId}</span> : null}
+        <header className="relative px-6 pt-6 pb-4 border-b border-bss-border">
+          <button type="button" onClick={onClose} aria-label="Close" className="absolute right-4 top-4 w-9 h-9 grid place-items-center rounded-full bg-bss-bg border border-bss-border text-bss-text-muted hover:bg-bss-blue-tint hover:text-bss-text-primary transition-colors"><X size={18} /></button>
+          <span className="w-11 h-11 rounded-2xl bg-bss-blue-tint text-bss-interactive-blue grid place-items-center"><Building2 size={20} /></span>
+          <h2 className="mt-3 text-lg font-bold text-bss-text-primary">{site.name}</h2>
+          <p className="text-xs text-bss-text-secondary mt-0.5">
+            {site.bssId ? <span className="font-mono text-bss-interactive-blue">{site.bssId}</span> : null}
             {site.code ? `${site.bssId ? " · " : ""}${site.code}` : ""}
             {site.employer ? ` · ${site.employer}` : ""}
           </p>
           {(site.location || site.state) && (
-            <p className="text-xs text-gray-500 flex items-center gap-1 mt-1"><MapPin size={12} />{[site.location, site.state].filter(Boolean).join(", ")}</p>
+            <p className="text-xs text-bss-text-secondary flex items-center gap-1 mt-1"><MapPin size={12} />{[site.location, site.state].filter(Boolean).join(", ")}</p>
           )}
         </header>
 
-        <nav className="flex gap-1 overflow-x-auto px-4 py-2 border-b border-gray-100">
+        <nav className="flex gap-1 overflow-x-auto px-4 py-2 border-b border-bss-border">
           {tabs.map(([id, label, Icon]) => (
-            <button key={id} type="button" onClick={() => setTab(id)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap ${tab === id ? "bg-gray-950 text-white" : "text-gray-600 hover:bg-gray-50"}`}>
+            <button key={id} type="button" onClick={() => setTab(id)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${tab === id ? "bg-bss-navy text-white" : "text-bss-text-secondary hover:bg-bss-bg"}`}>
               <Icon size={14} />{label}
             </button>
           ))}
@@ -79,16 +79,16 @@ export default function ContractorSiteDetailDialog({
               const def = FIELD_DEFS[name] ?? { label: LABELS[name] ?? name };
               return (
                 <div key={name}>
-                  <dt className="text-[11px] uppercase font-semibold text-gray-400">{def.label ?? name}</dt>
-                  <dd className="text-sm font-medium mt-1 text-gray-800 break-words">{fieldValue(name)}</dd>
+                  <dt className="text-[11px] uppercase font-semibold text-bss-text-muted">{def.label ?? name}</dt>
+                  <dd className="text-sm font-medium mt-1 text-bss-text-primary break-words">{fieldValue(name)}</dd>
                 </div>
               );
             })}
           </dl>
         </div>
 
-        <footer className="px-6 py-4 border-t border-gray-100 flex justify-end">
-          <button type="button" onClick={onClose} className="h-10 px-5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors">Close</button>
+        <footer className="px-6 py-4 border-t border-bss-border flex justify-end">
+          <button type="button" onClick={onClose} className="h-10 px-5 rounded-xl border border-bss-border text-sm font-semibold text-bss-text-primary hover:bg-bss-bg transition-colors">Close</button>
         </footer>
       </div>
     </div>,

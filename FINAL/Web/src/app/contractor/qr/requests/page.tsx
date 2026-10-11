@@ -234,16 +234,16 @@ export default function ContractorBindingRequestsPage() {
   }
 
   const columns: DataColumn<ContractorBindingRequest>[] = [
-    { id:'entity', header:'Entity', value:r => r.entityName, render:r => <div><strong className="text-gray-900">{r.entityName}</strong><p className="font-mono text-[10px] text-gray-400">{r.bssId}</p></div> },
-    { id:'type', header:'Request type', value:r => r.type, render:r => <span className={`px-2 py-1 rounded text-[10px] font-semibold ${r.type === 'Employer' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>{r.type === 'Employer' ? 'Contractor ↔ Employer' : 'Contractor ↔ Worker'}</span> },
+    { id:'entity', header:'Entity', value:r => r.entityName, render:r => <div><strong className="text-bss-text-primary">{r.entityName}</strong><p className="font-mono text-[10px] text-bss-text-muted">{r.bssId}</p></div> },
+    { id:'type', header:'Request type', value:r => r.type, render:r => <span className={`px-2 py-1 rounded text-[10px] font-semibold ${r.type === 'Employer' ? 'bg-bss-blue-tint text-bss-interactive-blue' : 'bg-bss-soft-orange text-bss-orange'}`}>{r.type === 'Employer' ? 'Contractor ↔ Employer' : 'Contractor ↔ Worker'}</span> },
     { id:'site', header:'Site', value:r => r.site, export:{split:','}, render:r => {
       const names = r.site.split(',').map(s => s.trim()).filter(Boolean);
-      if (!names.length) return <span className="text-gray-400">—</span>;
+      if (!names.length) return <span className="text-bss-text-muted">—</span>;
       const statusOf = (name: string) => (r.allotments ?? []).find(a => a.site === name)?.status;
-      const tone = (s?: string) => s === 'Approved' ? 'bg-green-50 text-green-700 border-green-200'
-        : s === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200'
-        : s === 'Released' ? 'bg-slate-100 text-slate-500 border-slate-200'
-        : 'bg-amber-50 text-amber-700 border-amber-200';
+      const tone = (s?: string) => s === 'Approved' ? 'bg-bss-soft-green text-bss-green border-bss-border'
+        : s === 'Rejected' ? 'bg-bss-soft-orange text-bss-error border-bss-border'
+        : s === 'Released' ? 'bg-bss-bg text-bss-text-muted border-bss-border'
+        : 'bg-bss-soft-orange text-bss-orange border-bss-border';
       
       if (names.length <= 3) {
         return <div className="flex max-w-[220px] flex-wrap gap-1">{names.map(n => { const s = statusOf(n); return <span key={n} title={`${n} (${s || 'Pending'})`} className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${tone(s)}`}>{n}</span>; })}</div>;
@@ -256,79 +256,79 @@ export default function ContractorBindingRequestsPage() {
           <div className="flex flex-wrap gap-1">
             {visible.map(n => { const s = statusOf(n); return <span key={n} title={`${n} (${s || 'Pending'})`} className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${tone(s)}`}>{n}</span>; })}
           </div>
-          <button type="button" onClick={() => setSitesFor(r)} className="text-left text-[11px] font-bold text-[#073B67] hover:underline cursor-pointer">
+          <button type="button" onClick={() => setSitesFor(r)} className="text-left text-[11px] font-bold text-[#01183A] hover:underline cursor-pointer">
             + {remaining} more sites
           </button>
         </div>
       );
     } },
     { id:'employer', header:'Employer', value:r => r.employer },
-    { id:'detail', header:'Designation / Wage', value:r => r.designation, render:r => <div><p className="text-gray-800">{r.designation}</p><p className="text-[10px] text-gray-400">{r.wage}</p></div> },
+    { id:'detail', header:'Designation / Wage', value:r => r.designation, render:r => <div><p className="text-bss-text-primary">{r.designation}</p><p className="text-[10px] text-bss-text-muted">{r.wage}</p></div> },
     { id:'joining', header:'Date of joining', value:r => r.type === 'Worker' ? (r.joiningDate || '—') : '—' },
     { id:'requested', header:'Requested', value:r => r.requestedOn },
-    { id:'initiated', header:'Initiated by', value:r => r.initiatedBy || '—', render:r => <span className="font-semibold text-gray-700">{r.initiatedBy || '—'}</span> },
-    { id:'accepted', header:'Accepted by', value:r => r.acceptedBy || '—', render:r => <span className={r.acceptedBy ? 'font-semibold text-green-700' : 'text-gray-400'}>{r.acceptedBy || '—'}</span> },
-    { id:'status', header:'Relationship', value:r => r.status, render:r => <span className={r.status === 'Accepted' ? 'text-green-700' : r.status === 'Rejected' || r.status === 'Cancelled' ? 'text-red-700' : r.status === 'Site Changed' ? 'text-slate-500' : 'text-orange-700'}>{r.status}</span> },
+    { id:'initiated', header:'Initiated by', value:r => r.initiatedBy || '—', render:r => <span className="font-semibold text-bss-text-primary">{r.initiatedBy || '—'}</span> },
+    { id:'accepted', header:'Accepted by', value:r => r.acceptedBy || '—', render:r => <span className={r.acceptedBy ? 'font-semibold text-bss-green' : 'text-bss-text-muted'}>{r.acceptedBy || '—'}</span> },
+    { id:'status', header:'Relationship', value:r => r.status, render:r => <span className={r.status === 'Accepted' ? 'text-bss-green' : r.status === 'Rejected' || r.status === 'Cancelled' ? 'text-bss-error' : r.status === 'Site Changed' ? 'text-bss-text-muted' : 'text-bss-orange'}>{r.status}</span> },
     { id:'actions', header:'Action', filterable:false, value:r => r.status, render:r => {
       if (r.type === 'Employer') {
-        if (r.status === 'Pending' && !r.consentContractor) return <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'approve' })} className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Accept binding</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'reject' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Decline</button></div>;
-        if (r.status === 'Pending') return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting employer</span>;
+        if (r.status === 'Pending' && !r.consentContractor) return <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'approve' })} className="h-8 px-3 rounded-lg bg-bss-green hover:bg-bss-green active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Accept binding</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'reject' })} className="h-8 px-3 rounded-lg border border-bss-border bg-bss-soft-orange hover:bg-bss-soft-orange text-bss-error active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Decline</button></div>;
+        if (r.status === 'Pending') return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-bss-soft-orange text-bss-orange border border-bss-border/60">Awaiting employer</span>;
         if (r.status === 'Accepted') {
           if (r.unbindRequested) {
             return r.unbindConsentContractor
-              ? <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting employer</span>
-              : <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'ce-unbind' })} className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Confirm unbind</button><button disabled={busy} onClick={() => void rejectCeUnbind(r)} className="h-8 px-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Reject request</button></div>;
+              ? <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-bss-soft-orange text-bss-orange border border-bss-border/60">Awaiting employer</span>
+              : <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'ce-unbind' })} className="h-8 px-3 rounded-lg bg-bss-error hover:bg-bss-error active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Confirm unbind</button><button disabled={busy} onClick={() => void rejectCeUnbind(r)} className="h-8 px-3 rounded-lg border border-bss-border bg-white hover:bg-bss-bg text-bss-text-primary active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Reject request</button></div>;
           }
-          return <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setSitesFor(r)} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'ce-unbind' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Request unbind</button></div>;
+          return <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setSitesFor(r)} className="h-8 px-3 rounded-lg border border-bss-border bg-bss-blue-tint hover:bg-bss-blue-tint text-[#01183A] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'ce-unbind' })} className="h-8 px-3 rounded-lg border border-bss-border bg-bss-soft-orange hover:bg-bss-soft-orange text-bss-error active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Request unbind</button></div>;
         }
-        return <span className="text-gray-400">—</span>;
+        return <span className="text-bss-text-muted">—</span>;
       }
-      if (r.status === 'Accepted' && r.unbindRequested && !r.unbindConsentContractor) return <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Confirm unbind</button><button disabled={busy} onClick={() => void rejectWorkerUnbind(r)} className="h-8 px-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Reject request</button></div>;
-      if (r.status === 'Accepted' && r.unbindRequested) return <div className="flex items-center gap-2"><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting worker</span><button disabled={busy} onClick={() => void sendWorkerOtp(r, 'unbind')} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold inline-flex items-center gap-1 transition-all disabled:opacity-50"><KeyRound size={13}/>Send OTP</button></div>;
-      if (r.status === 'Pending' && r.consentWorker && !r.consentContractor) return <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => openWagePrompt(r)} className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Accept binding</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-decline' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Decline</button></div>;
-      if (r.status === 'Pending' && !r.consentWorker && r.type === 'Worker') return <button disabled={busy} onClick={() => void sendWorkerOtp(r, 'bind')} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold inline-flex items-center gap-1 transition-all disabled:opacity-50"><KeyRound size={13}/>Send OTP</button>;
-      if (r.status === 'Pending' && !r.consentWorker) return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200/60">Awaiting worker</span>;
-      if (r.status === 'Accepted') return <div className="flex items-center gap-2"><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">Active</span><button disabled={busy} onClick={() => { setSiteMoveFor(r); setSiteMoveChoice(''); setSiteMoveError(''); }} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold inline-flex items-center gap-1 transition-all disabled:opacity-50"><MapPin size={13}/>Change Site</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Request unbind</button></div>;
-      return <span className="text-gray-400">—</span>;
+      if (r.status === 'Accepted' && r.unbindRequested && !r.unbindConsentContractor) return <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="h-8 px-3 rounded-lg bg-bss-error hover:bg-bss-error active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Confirm unbind</button><button disabled={busy} onClick={() => void rejectWorkerUnbind(r)} className="h-8 px-3 rounded-lg border border-bss-border bg-white hover:bg-bss-bg text-bss-text-primary active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Reject request</button></div>;
+      if (r.status === 'Accepted' && r.unbindRequested) return <div className="flex items-center gap-2"><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-bss-soft-orange text-bss-orange border border-bss-border/60">Awaiting worker</span><button disabled={busy} onClick={() => void sendWorkerOtp(r, 'unbind')} className="h-8 px-3 rounded-lg border border-bss-border bg-bss-blue-tint hover:bg-bss-blue-tint text-[#01183A] active:scale-95 text-xs font-bold inline-flex items-center gap-1 transition-all disabled:opacity-50"><KeyRound size={13}/>Send OTP</button></div>;
+      if (r.status === 'Pending' && r.consentWorker && !r.consentContractor) return <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => openWagePrompt(r)} className="h-8 px-3 rounded-lg bg-bss-green hover:bg-bss-green active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Accept binding</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-decline' })} className="h-8 px-3 rounded-lg border border-bss-border bg-bss-soft-orange hover:bg-bss-soft-orange text-bss-error active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Decline</button></div>;
+      if (r.status === 'Pending' && !r.consentWorker && r.type === 'Worker') return <button disabled={busy} onClick={() => void sendWorkerOtp(r, 'bind')} className="h-8 px-3 rounded-lg border border-bss-border bg-bss-blue-tint hover:bg-bss-blue-tint text-[#01183A] active:scale-95 text-xs font-bold inline-flex items-center gap-1 transition-all disabled:opacity-50"><KeyRound size={13}/>Send OTP</button>;
+      if (r.status === 'Pending' && !r.consentWorker) return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-bss-bg text-bss-text-secondary border border-bss-border/60">Awaiting worker</span>;
+      if (r.status === 'Accepted') return <div className="flex items-center gap-2"><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-bss-soft-green text-bss-green border border-bss-border/60">Active</span><button disabled={busy} onClick={() => { setSiteMoveFor(r); setSiteMoveChoice(''); setSiteMoveError(''); }} className="h-8 px-3 rounded-lg border border-bss-border bg-bss-blue-tint hover:bg-bss-blue-tint text-[#01183A] active:scale-95 text-xs font-bold inline-flex items-center gap-1 transition-all disabled:opacity-50"><MapPin size={13}/>Change Site</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="h-8 px-3 rounded-lg border border-bss-border bg-bss-soft-orange hover:bg-bss-soft-orange text-bss-error active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Request unbind</button></div>;
+      return <span className="text-bss-text-muted">—</span>;
     } },
-    { id:'history', header:'History', filterable:false, value:() => '', render:r => <button disabled={busy} onClick={() => setHistoryFor(r)} className="inline-flex items-center gap-1 text-xs font-semibold text-[#073B67] hover:underline"><History size={13}/>History</button> },
+    { id:'history', header:'History', filterable:false, value:() => '', render:r => <button disabled={busy} onClick={() => setHistoryFor(r)} className="inline-flex items-center gap-1 text-xs font-semibold text-[#01183A] hover:underline"><History size={13}/>History</button> },
   ];
 
   const pending = rows.filter(r => r.status === 'Pending').length;
 
   return <div className="space-y-6">
-    <header><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">QR system</p><h1 className="text-2xl font-bold mt-1">Binding Requests</h1><p className="text-sm text-gray-500 mt-1">Contractor ↔ Worker and Contractor ↔ Employer binding requests. Approval is never automatic — both parties must accept before binding is complete.</p></header>
+    <header><p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">QR system</p><h1 className="text-2xl font-bold mt-1">Binding Requests</h1><p className="text-sm text-bss-text-muted mt-1">Contractor ↔ Worker and Contractor ↔ Employer binding requests. Approval is never automatic — both parties must accept before binding is complete.</p></header>
 
     {/* How binding works — reuses Worker portal pattern */}
-    <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-      <span className="w-11 h-11 rounded-xl bg-white border border-blue-100 text-[#073B67] flex items-center justify-center flex-shrink-0"><Handshake size={20}/></span>
-      <div className="flex-1"><h2 className="text-sm font-semibold text-gray-900">How binding works</h2><p className="text-xs text-gray-500 mt-0.5">Scan a Worker QR to send a binding request, or accept a request raised by a worker or principal employer. Binding is recorded as E-C-S-W only after both parties approve — no scan-to-autobind.</p></div>
-      <a href="/contractor/scan" className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-semibold flex items-center gap-2 hover:bg-[#062D4F] flex-shrink-0"><Link2 size={16}/>Scan QR to bind</a>
+    <section className="rounded-xl border border-bss-border bg-bss-blue-tint/60 p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+      <span className="w-11 h-11 rounded-xl bg-white border border-bss-border text-[#01183A] flex items-center justify-center flex-shrink-0"><Handshake size={20}/></span>
+      <div className="flex-1"><h2 className="text-sm font-semibold text-bss-text-primary">How binding works</h2><p className="text-xs text-bss-text-muted mt-0.5">Scan a Worker QR to send a binding request, or accept a request raised by a worker or principal employer. Binding is recorded as E-C-S-W only after both parties approve — no scan-to-autobind.</p></div>
+      <a href="/contractor/scan" className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-[#022B5E] flex-shrink-0"><Link2 size={16}/>Scan QR to bind</a>
     </section>
 
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <Metric label="Pending" value={pending} icon={Clock3} tone="bg-orange-50 text-orange-700"/>
-      <Metric label="Workers" value={new Set(rows.filter(r => r.type === 'Worker').map(r => r.bssId || r.entityName)).size} icon={UserRound} tone="bg-blue-50 text-blue-700"/>
-      <Metric label="Employers" value={new Set(rows.filter(r => r.type === 'Employer').map(r => r.bssId || r.entityName)).size} icon={Building2} tone="bg-indigo-50 text-indigo-700"/>
-      <Metric label="Active bindings" value={rows.filter(r => r.status === 'Accepted').length} icon={CheckCircle2} tone="bg-green-50 text-green-700"/>
+      <Metric label="Pending" value={pending} icon={Clock3} tone="bg-bss-soft-orange text-bss-orange"/>
+      <Metric label="Workers" value={new Set(rows.filter(r => r.type === 'Worker').map(r => r.bssId || r.entityName)).size} icon={UserRound} tone="bg-bss-blue-tint text-bss-interactive-blue"/>
+      <Metric label="Employers" value={new Set(rows.filter(r => r.type === 'Employer').map(r => r.bssId || r.entityName)).size} icon={Building2} tone="bg-bss-blue-tint text-bss-interactive-blue"/>
+      <Metric label="Active bindings" value={rows.filter(r => r.status === 'Accepted').length} icon={CheckCircle2} tone="bg-bss-soft-green text-bss-green"/>
     </div>
 
-    {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">{error}</p>}
-    {notice && <p role="status" className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl p-3">{notice}</p>}
+    {error && <p role="alert" className="text-sm text-bss-error bg-bss-soft-orange border border-bss-border rounded-xl p-3">{error}</p>}
+    {notice && <p role="status" className="text-sm text-bss-green bg-bss-soft-green border border-bss-border rounded-xl p-3">{notice}</p>}
 
     <EnterpriseDataTable title="Binding request register" rows={rows} columns={columns} rowKey={r => r.id} filename="contractor-binding-requests" showDownload={false}/>
 
     {otpFor && (
       <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4">
         <section role="dialog" aria-modal="true" className="bg-white rounded-2xl p-6 w-full max-w-sm">
-          <h2 className="font-semibold text-gray-900">{otpMode === 'unbind' ? 'Confirm unbinding via worker OTP' : 'Approve binding via worker OTP'}</h2>
-          <p className="text-xs text-gray-500 mt-1">{otpFor.entityName} · {otpFor.site}</p>
-          <p className="text-[11px] text-gray-400 mt-2">The OTP is sent to the worker&apos;s mobile. If the worker has no smartphone, ask them to read it out and enter it here to record their {otpMode === 'unbind' ? 'unbinding' : 'binding'} consent.</p>
-          {otpSent && <input value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" placeholder="6-digit OTP" className="mt-4 w-full bg-[#F5F5F7] border border-gray-200 rounded-xl px-4 py-3 text-center tracking-[0.4em] font-bold focus:outline-none"/>}
+          <h2 className="font-semibold text-bss-text-primary">{otpMode === 'unbind' ? 'Confirm unbinding via worker OTP' : 'Approve binding via worker OTP'}</h2>
+          <p className="text-xs text-bss-text-muted mt-1">{otpFor.entityName} · {otpFor.site}</p>
+          <p className="text-[11px] text-bss-text-muted mt-2">The OTP is sent to the worker&apos;s mobile. If the worker has no smartphone, ask them to read it out and enter it here to record their {otpMode === 'unbind' ? 'unbinding' : 'binding'} consent.</p>
+          {otpSent && <input value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" placeholder="6-digit OTP" className="mt-4 w-full bg-[#F5F5F7] border border-bss-border rounded-xl px-4 py-3 text-center tracking-[0.4em] font-bold focus:outline-none"/>}
           {otpSent && <ResendOtp onSend={() => sendWorkerOtp(otpFor, otpMode)} className="mt-2 text-center" />}
           <div className="mt-4 flex gap-2 justify-end">
-            <button onClick={() => { setOtpFor(null); setOtpSent(false); setOtp(''); }} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold">Cancel</button>
-            {otpSent && <button onClick={() => void verifyWorkerOtp()} disabled={busy} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Verifying…' : otpMode === 'unbind' ? 'Verify & Unbind' : 'Verify & Approve'}</button>}
+            <button onClick={() => { setOtpFor(null); setOtpSent(false); setOtp(''); }} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-semibold">Cancel</button>
+            {otpSent && <button onClick={() => void verifyWorkerOtp()} disabled={busy} className="h-9 px-4 rounded-lg bg-[#01183A] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Verifying…' : otpMode === 'unbind' ? 'Verify & Unbind' : 'Verify & Approve'}</button>}
           </div>
         </section>
       </div>
@@ -336,18 +336,18 @@ export default function ContractorBindingRequestsPage() {
     {wageFor && (
       <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4">
         <section role="dialog" aria-modal="true" className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl">
-          <h2 className="font-semibold text-gray-900">Approve binding — cost sheet</h2>
-          <p className="text-xs text-gray-500 mt-1">{wageFor.entityName} · {wageFor.site}</p>
-          <p className="text-[11px] text-gray-400 mt-2">Pick the employer-accepted cost sheet for this site. The wage, statutory components, custom costs and CTC are auto-computed and printed on the worker&apos;s appointment letter.</p>
-          <label className="block mt-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">Cost sheet (required)</label>
-          <select value={acceptSheet} onChange={e => { setAcceptSheet(e.target.value); setWageError(''); }} disabled={!acceptSheets.length} className="mt-1.5 w-full bg-[#F5F5F7] border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#073B67] disabled:text-gray-500 truncate">
+          <h2 className="font-semibold text-bss-text-primary">Approve binding — cost sheet</h2>
+          <p className="text-xs text-bss-text-muted mt-1">{wageFor.entityName} · {wageFor.site}</p>
+          <p className="text-[11px] text-bss-text-muted mt-2">Pick the employer-accepted cost sheet for this site. The wage, statutory components, custom costs and CTC are auto-computed and printed on the worker&apos;s appointment letter.</p>
+          <label className="block mt-4 text-[11px] font-bold uppercase tracking-wider text-bss-text-muted">Cost sheet (required)</label>
+          <select value={acceptSheet} onChange={e => { setAcceptSheet(e.target.value); setWageError(''); }} disabled={!acceptSheets.length} className="mt-1.5 w-full bg-[#F5F5F7] border border-bss-border rounded-xl px-3.5 py-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#01183A] disabled:text-bss-text-muted truncate">
             <option value="">{acceptSheets.length ? 'Select an employer-accepted cost sheet…' : 'No accepted cost sheet for this site'}</option>
             {acceptSheets.map(s => <option key={s.id} value={s.id}>{s.name}{s.siteName ? ` · ${s.siteName}` : ''} · {s.code}</option>)}
           </select>
-          {wageError && <p className="text-[11px] text-red-600 font-semibold mt-2">{wageError}</p>}
+          {wageError && <p className="text-[11px] text-bss-error font-semibold mt-2">{wageError}</p>}
           <div className="mt-5 flex gap-2 justify-end">
-            <button onClick={() => setWageFor(null)} className="h-9 px-4 rounded-lg border border-gray-200 text-xs font-semibold hover:bg-gray-50">Cancel</button>
-            <button onClick={() => void confirmWage()} disabled={busy} className="h-9 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold disabled:opacity-60 transition-colors">{busy ? 'Approving…' : 'Approve & Bind'}</button>
+            <button onClick={() => setWageFor(null)} className="h-9 px-4 rounded-lg border border-bss-border text-xs font-semibold hover:bg-bss-bg">Cancel</button>
+            <button onClick={() => void confirmWage()} disabled={busy} className="h-9 px-4 rounded-lg bg-bss-green hover:bg-bss-green text-white text-xs font-bold disabled:opacity-60 transition-colors">{busy ? 'Approving…' : 'Approve & Bind'}</button>
           </div>
         </section>
       </div>
@@ -393,18 +393,18 @@ export default function ContractorBindingRequestsPage() {
     {siteMoveFor && (
       <div className="fixed inset-0 z-[60] bg-black/50 grid place-items-center p-4">
         <section role="dialog" aria-modal="true" className="bg-white rounded-2xl p-6 w-full max-w-sm">
-          <h2 className="font-semibold text-gray-900">Change worker site</h2>
-          <p className="text-xs text-gray-500 mt-1">{siteMoveFor.entityName} · current site {siteMoveFor.site || '—'}</p>
-          <p className="text-[11px] text-gray-400 mt-2">Moving the worker closes the current binding and creates a new one at the selected site of the same employer. As the contractor you can do this yourself — the worker&apos;s consent is not required again.</p>
-          <label className="block mt-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">New site</label>
-          <select value={siteMoveChoice} onChange={e => { setSiteMoveChoice(e.target.value); setSiteMoveError(''); }} disabled={busy} className="mt-1 w-full bg-white border border-gray-200 rounded-xl px-3 py-3 text-sm font-semibold focus:outline-none">
+          <h2 className="font-semibold text-bss-text-primary">Change worker site</h2>
+          <p className="text-xs text-bss-text-muted mt-1">{siteMoveFor.entityName} · current site {siteMoveFor.site || '—'}</p>
+          <p className="text-[11px] text-bss-text-muted mt-2">Moving the worker closes the current binding and creates a new one at the selected site of the same employer. As the contractor you can do this yourself — the worker&apos;s consent is not required again.</p>
+          <label className="block mt-4 text-[11px] font-bold uppercase tracking-wider text-bss-text-muted">New site</label>
+          <select value={siteMoveChoice} onChange={e => { setSiteMoveChoice(e.target.value); setSiteMoveError(''); }} disabled={busy} className="mt-1 w-full bg-white border border-bss-border rounded-xl px-3 py-3 text-sm font-semibold focus:outline-none">
             <option value="">Select site</option>
             {contractor.sites.filter(s => String(s.id) !== String(siteMoveFor.siteId) && (!siteMoveFor.employer || s.employer === siteMoveFor.employer)).map(s => <option key={s.id} value={s.id}>{s.name} — {s.employer}</option>)}
           </select>
-          {siteMoveError && <p className="text-[11px] text-red-600 font-semibold mt-2">{siteMoveError}</p>}
+          {siteMoveError && <p className="text-[11px] text-bss-error font-semibold mt-2">{siteMoveError}</p>}
           <div className="mt-4 flex gap-2 justify-end">
-            <button onClick={() => { setSiteMoveFor(null); setSiteMoveChoice(''); setSiteMoveError(''); }} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold">Cancel</button>
-            <button onClick={() => void changeWorkerSite()} disabled={busy || !siteMoveChoice} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Moving…' : 'Move worker'}</button>
+            <button onClick={() => { setSiteMoveFor(null); setSiteMoveChoice(''); setSiteMoveError(''); }} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-semibold">Cancel</button>
+            <button onClick={() => void changeWorkerSite()} disabled={busy || !siteMoveChoice} className="h-9 px-4 rounded-lg bg-[#01183A] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Moving…' : 'Move worker'}</button>
           </div>
         </section>
       </div>
@@ -432,4 +432,4 @@ export default function ContractorBindingRequestsPage() {
   </div>;
 }
 
-function Metric({ label, value, icon:Icon, tone }: { label:string; value:number; icon:typeof Clock3; tone:string }) { return <div className="bg-white border border-gray-200 rounded-xl p-4"><span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon size={16}/></span><strong className="block text-2xl mt-2">{value}</strong><p className="text-xs text-gray-500">{label}</p></div>; }
+function Metric({ label, value, icon:Icon, tone }: { label:string; value:number; icon:typeof Clock3; tone:string }) { return <div className="bg-white border border-bss-border rounded-xl p-4"><span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon size={16}/></span><strong className="block text-2xl mt-2">{value}</strong><p className="text-xs text-bss-text-muted">{label}</p></div>; }

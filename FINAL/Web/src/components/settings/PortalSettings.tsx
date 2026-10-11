@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, ChevronRight, Download, Eye, Globe2, LockKeyhole, MessageCircle, MonitorCog, ShieldCheck } from "lucide-react";
+import { Bell, ChevronRight, Download, Eye, Globe2, LockKeyhole, MessageCircle, MonitorCog, ShieldCheck, Sparkles, Sliders } from "lucide-react";
 import LanguageSelect from "@/components/i18n/LanguageSelect";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import ConsentPanel from "@/components/ConsentPanel";
@@ -59,40 +59,62 @@ const ROLE_CONFIG: Record<Role, {
   },
 };
 
-function SettingSection({ icon: Icon, title, subtitle, children }: { icon: typeof Globe2; title: string; subtitle: string; children: React.ReactNode }) {
+function SettingSection({
+  icon: Icon,
+  title,
+  subtitle,
+  children,
+  badge,
+}: {
+  icon: typeof Globe2;
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+  badge?: string;
+}) {
   return (
-    <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-      <header className="p-4 border-b border-gray-100 flex items-center gap-3">
-        <span className="w-9 h-9 rounded-lg bg-gray-50 text-[#073B67] flex items-center justify-center"><Icon size={17} /></span>
-        <div>
-          <h2 className="text-sm font-semibold text-gray-950">{title}</h2>
-          <p className="text-[11px] text-gray-400 mt-0.5">{subtitle}</p>
+    <section className="bss-card rounded-2xl overflow-hidden bss-hover-lift transition-all duration-300">
+      <header className="p-4 sm:p-5 border-b border-bss-border bg-gradient-to-r from-white via-white to-bss-bg/40 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="w-10 h-10 rounded-xl bg-bss-blue-tint text-bss-navy flex items-center justify-center shrink-0 shadow-xs ring-1 ring-bss-border/50">
+            <Icon size={18} />
+          </span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm sm:text-base font-bold text-bss-text-primary tracking-tight">{title}</h2>
+              {badge && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-bss-blue-tint text-bss-interactive-blue border border-bss-border">
+                  {badge}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-bss-text-muted mt-0.5 truncate">{subtitle}</p>
+          </div>
         </div>
       </header>
-      <div className="p-4">{children}</div>
+      <div className="p-4 sm:p-5">{children}</div>
     </section>
   );
 }
 
 function ToggleRow({ label, detail, checked, onChange }: { label: string; detail: string; checked: boolean; onChange: (value: boolean) => void }) {
   return (
-    <label className="flex items-center justify-between gap-3 py-3 border-b border-gray-50 last:border-0 cursor-pointer select-none">
-      <span>
-        <strong className="block text-xs font-semibold text-gray-800">{label}</strong>
-        <small className="block text-[11px] text-gray-400 mt-0.5">{detail}</small>
+    <label className="group flex items-center justify-between gap-4 py-3.5 px-3 rounded-xl hover:bg-bss-bg/70 transition-colors cursor-pointer select-none border-b border-bss-border/40 last:border-0">
+      <span className="min-w-0 flex-1">
+        <strong className="block text-xs sm:text-sm font-semibold text-bss-text-primary group-hover:text-bss-navy transition-colors">{label}</strong>
+        <small className="block text-[11px] text-bss-text-muted mt-0.5 leading-relaxed">{detail}</small>
       </span>
       <input type="checkbox" className="sr-only" checked={checked} onChange={e => onChange(e.target.checked)} />
-      <span className={`w-10 h-6 rounded-full p-0.5 transition ${checked ? 'bg-[#073B67]' : 'bg-gray-200'}`}>
-        <span className={`block w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
+      <span className={`w-11 h-6 rounded-full p-0.5 transition-all duration-200 shrink-0 shadow-inner ${checked ? 'bg-bss-navy' : 'bg-gray-200'}`}>
+        <span className={`block w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
       </span>
     </label>
   );
 }
 
 /**
- * Full role-aware Settings page for the employer and contractor portals:
- * language, notifications, communication, accessibility, privacy, security
- * (MPIN/password), consents and data export.
+ * Enhanced role-aware Settings panel for Employer & Contractor portals:
+ * refined typography, subtle gradients, soft rounded corners, centered balances.
  */
 export default function PortalSettingsPanel({
   role,
@@ -129,70 +151,127 @@ export default function PortalSettingsPanel({
   }
 
   return (
-    <div className="space-y-5">
-      <SettingSection icon={Globe2} title="Interface Language" subtitle={`${locale.abbreviation} · ${locale.nativeName} · ${locale.name}`}>
-        <LanguageSelect label="Interface Language" />
-        <p className="text-xs text-gray-400 mt-3">Used consistently before and after login on this device.</p>
+    <div className="space-y-6">
+      {/* Top Banner Overview Card */}
+      <div className="bss-card rounded-2xl p-5 sm:p-6 bg-gradient-to-br from-white via-bss-bg/30 to-bss-blue-tint/30 flex flex-col md:flex-row md:items-center justify-between gap-5 border border-bss-border shadow-xs">
+        <div className="flex items-center gap-4">
+          <div className="w-13 h-13 rounded-2xl bg-bss-navy text-white flex items-center justify-center font-bold text-lg shadow-sm shrink-0">
+            {identity.company ? identity.company.charAt(0).toUpperCase() : 'C'}
+          </div>
+          <div className="min-w-0">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted">Managed Credentials</span>
+            <h3 className="text-base sm:text-lg font-bold text-bss-text-primary mt-0.5 truncate">{identity.company}</h3>
+            <p className="text-xs font-mono text-bss-text-secondary mt-0.5">{identity.bssId || 'BSS-VERIFIED-ID'}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={exportData}
+            className="h-10 px-4 rounded-xl border border-bss-border bg-white hover:bg-bss-bg text-bss-text-primary text-xs font-bold inline-flex items-center gap-2 transition-all shadow-2xs hover:border-[#c7d5ea]"
+          >
+            <Download size={15} className="text-bss-interactive-blue" /> Download Data Copy
+          </button>
+          <SignOutButton
+            label="Sign Out"
+            className="h-10 px-4 rounded-xl border border-red-200 bg-red-50/50 hover:bg-red-50 text-red-700 text-xs font-bold inline-flex items-center gap-1.5 transition-all shadow-2xs"
+          />
+        </div>
+      </div>
+
+      {/* Language Section */}
+      <SettingSection icon={Globe2} title="Interface Language" subtitle={`${locale.abbreviation} · ${locale.nativeName} · ${locale.name}`} badge="16 Languages">
+        <div className="max-w-md">
+          <LanguageSelect label="Interface Language" />
+        </div>
+        <p className="text-xs text-bss-text-muted mt-3">Applied consistently across all web views, reports and confirmation dialogues.</p>
       </SettingSection>
 
-      <div className="grid lg:grid-cols-2 gap-5">
+      {/* Grid: Notifications & Communications */}
+      <div className="grid lg:grid-cols-2 gap-6">
         <SettingSection icon={Bell} title="Notification Preferences" subtitle={config.notificationSubtitle}>
-          {config.notifications.map(([key, label, detail]) => (
-            <ToggleRow key={key} label={label} detail={detail} checked={Boolean(settings[key])} onChange={v => set(key, v)} />
-          ))}
+          <div className="divide-y divide-bss-border/40">
+            {config.notifications.map(([key, label, detail]) => (
+              <ToggleRow key={key} label={label} detail={detail} checked={Boolean(settings[key])} onChange={v => set(key, v)} />
+            ))}
+          </div>
         </SettingSection>
 
-        <SettingSection icon={MessageCircle} title="Communication Preferences" subtitle="How BSS should contact you">
-          <label className="block text-xs font-semibold text-gray-600">
-            Preferred channel
-            <select value={String(settings.preferredChannel ?? 'sms')} onChange={e => set('preferredChannel', e.target.value)} className="mt-2 w-full h-10 border border-gray-200 rounded-lg px-3 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+        <SettingSection icon={MessageCircle} title="Communication Channels" subtitle="Verified channels for automated alerts & receipts">
+          <label className="block text-xs font-bold uppercase tracking-wider text-bss-text-muted mb-2">
+            Preferred alert channel
+            <select
+              value={String(settings.preferredChannel ?? 'sms')}
+              onChange={e => set('preferredChannel', e.target.value)}
+              className="mt-2 w-full h-11 border border-bss-border rounded-xl px-3 bg-white text-sm text-bss-text-primary font-medium focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/20 shadow-2xs transition"
+            >
               {CHANNELS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </label>
-          <div className="mt-4 p-3 rounded-lg bg-gray-50 text-xs text-gray-500">
-            <span>Account: <strong className="text-gray-800">{identity.company}</strong></span>
-            <span className="block mt-0.5 font-mono">{identity.bssId}</span>
+          <div className="mt-4 p-3.5 rounded-xl bg-bss-bg/70 border border-bss-border/60 text-xs text-bss-text-secondary space-y-1">
+            <div className="flex justify-between items-center">
+              <span className="text-bss-text-muted">Account Scope:</span>
+              <strong className="text-bss-text-primary">{identity.company}</strong>
+            </div>
+            <div className="flex justify-between items-center font-mono text-[11px]">
+              <span className="text-bss-text-muted font-sans">Identifier:</span>
+              <span>{identity.bssId}</span>
+            </div>
           </div>
         </SettingSection>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-5">
-        <SettingSection icon={Eye} title="Accessibility Settings" subtitle="Make the portal easier to use">
-          <ToggleRow label="Larger interface text" detail="Increase text throughout the portal" checked={Boolean(settings.largeText)} onChange={v => set('largeText', v)} />
-          <ToggleRow label="Higher contrast" detail="Strengthen text and borders" checked={Boolean(settings.highContrast)} onChange={v => set('highContrast', v)} />
-          <ToggleRow label="Reduce motion" detail="Limit animation and transitions" checked={Boolean(settings.reduceMotion)} onChange={v => set('reduceMotion', v)} />
+      {/* Grid: Accessibility & Privacy */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <SettingSection icon={Eye} title="Accessibility Comfort" subtitle="Screen reading, contrast & motion comfort">
+          <div className="divide-y divide-bss-border/40">
+            <ToggleRow label="Larger interface text" detail="Increase font sizing across high-density registers & dashboard lists" checked={Boolean(settings.largeText)} onChange={v => set('largeText', v)} />
+            <ToggleRow label="Higher contrast borders" detail="Strengthen line dividers and label contrast for outdoor/bright sunlight" checked={Boolean(settings.highContrast)} onChange={v => set('highContrast', v)} />
+            <ToggleRow label="Reduce interface motion" detail="Limit parallax, sliding transitions and micro-animations" checked={Boolean(settings.reduceMotion)} onChange={v => set('reduceMotion', v)} />
+          </div>
         </SettingSection>
 
         <SettingSection icon={ShieldCheck} title="Privacy & Data Sharing" subtitle={config.privacySubtitle}>
-          {config.privacy.map(([key, label, detail]) => (
-            <ToggleRow key={key} label={label} detail={detail} checked={Boolean(settings[key])} onChange={v => set(key, v)} />
-          ))}
-          <a href="/policy" className="mt-3 flex items-center justify-between text-xs font-semibold text-[#073B67] hover:underline">Read the privacy policy<ChevronRight size={14} /></a>
-          <a href="/data-sharing" className="mt-2 flex items-center justify-between text-xs font-semibold text-[#073B67] hover:underline">Review data-sharing policy<ChevronRight size={14} /></a>
+          <div className="divide-y divide-bss-border/40">
+            {config.privacy.map(([key, label, detail]) => (
+              <ToggleRow key={key} label={label} detail={detail} checked={Boolean(settings[key])} onChange={v => set(key, v)} />
+            ))}
+          </div>
+          <div className="mt-4 pt-3 border-t border-bss-border/60 flex flex-col sm:flex-row gap-2 justify-between">
+            <a href="/policy" className="inline-flex items-center gap-1 text-xs font-semibold text-bss-interactive-blue hover:underline">
+              Read the Privacy Policy <ChevronRight size={14} />
+            </a>
+            <a href="/data-sharing" className="inline-flex items-center gap-1 text-xs font-semibold text-bss-interactive-blue hover:underline">
+              Data-Sharing Policy <ChevronRight size={14} />
+            </a>
+          </div>
         </SettingSection>
       </div>
 
-      <SettingSection icon={LockKeyhole} title="Security & Sessions" subtitle={`Protect access to your ${role} account`}>
-        <div className="p-3 rounded-lg border border-gray-100 bg-white">
-          <p className="text-xs font-semibold text-gray-800 flex gap-2 items-center"><MonitorCog size={14} />Active Session</p>
-          <p className="text-[11px] text-green-700 font-medium mt-1">{config.sessionLabel}: <span className="font-mono">{identity.bssId || 'Active'}</span></p>
-          <p className="text-[11px] text-gray-600 mt-1">Signed in as <strong className="text-gray-800">{identity.company}</strong></p>
+      {/* Security & Sessions */}
+      <SettingSection icon={LockKeyhole} title="Security & Authentication" subtitle={`Manage MPIN, password protection and active sessions`}>
+        <div className="p-4 rounded-xl border border-bss-border bg-gradient-to-r from-white to-bss-bg/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs mb-5">
+          <div className="flex items-center gap-3">
+            <span className="w-8 h-8 rounded-lg bg-green-50 text-green-700 grid place-items-center shrink-0">
+              <MonitorCog size={16} />
+            </span>
+            <div>
+              <p className="text-xs font-bold text-bss-text-primary flex items-center gap-1.5">
+                Current Active Session <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              </p>
+              <p className="text-[11px] text-bss-text-muted mt-0.5">
+                {config.sessionLabel}: <span className="font-mono text-bss-text-secondary font-semibold">{identity.bssId || 'Active'}</span>
+              </p>
+            </div>
+          </div>
+          <span className="text-[11px] font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+            Authenticated
+          </span>
         </div>
-        <div className="mt-4">
-          <SecuritySettings />
-        </div>
+        <SecuritySettings />
       </SettingSection>
 
+      {/* Consent Governance Drawer */}
       <ConsentPanel role={config.consentsRole} />
-
-      <SettingSection icon={Download} title="Your data" subtitle="Portable and account controlled">
-        <button onClick={exportData} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-gray-50 transition">
-          <Download size={15} />Download My Data
-        </button>
-        <div className="mt-4">
-          <SignOutButton label="Sign Out on This Device" className="h-10 px-4 rounded-lg border border-red-200 bg-white text-red-700 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-red-50 transition" />
-        </div>
-      </SettingSection>
     </div>
   );
 }

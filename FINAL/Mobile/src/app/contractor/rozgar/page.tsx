@@ -109,12 +109,12 @@ export default function ContractorRozgarPage() {
   };
 
   const input = 'mt-1 w-full h-10 border rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/20';
-  const stepHead = (n: 1 | 2 | 3, label: string) => <span className={`flex items-center gap-2 text-xs font-bold ${step === n ? 'text-blue-700' : step > n ? 'text-green-700' : 'text-gray-400'}`}><span className={`w-6 h-6 rounded-full grid place-items-center ${step === n ? 'bg-blue-700 text-white' : step > n ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-500'}`}>{step > n ? '✓' : n}</span>{label}</span>;
+  const stepHead = (n: 1 | 2 | 3, label: string) => <span className={`flex items-center gap-2 text-xs font-bold ${step === n ? 'text-bss-interactive-blue' : step > n ? 'text-bss-green' : 'text-bss-text-muted'}`}><span className={`w-6 h-6 rounded-full grid place-items-center ${step === n ? 'bg-bss-interactive-blue text-white' : step > n ? 'bg-bss-green text-white' : 'bg-bss-bg text-bss-text-muted'}`}>{step > n ? '✓' : n}</span>{label}</span>;
 
   return <div className="space-y-6 pb-12">
     <header className="flex flex-col sm:flex-row justify-between gap-4">
-      <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Master data</p><h1 className="text-2xl font-bold mt-1">Rozgar Setu — Job Management</h1><p className="text-sm text-gray-500 mt-1">Post jobs, track job history and analytics, and source matched applicants for hire & bind.</p></div>
-      <button onClick={() => { setPosting(true); setStep(1); setError(''); }} className="h-10 px-4 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center gap-2 self-start"><Send size={15}/>Post new job</button>
+      <div><p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Master data</p><h1 className="text-2xl font-bold mt-1">Rozgar Setu — Job Management</h1><p className="text-sm text-bss-text-muted mt-1">Post jobs, track job history and analytics, and source matched applicants for hire & bind.</p></div>
+      <button onClick={() => { setPosting(true); setStep(1); setError(''); }} className="h-10 px-4 rounded-lg bg-bss-navy text-white text-sm font-semibold flex items-center gap-2 self-start"><Send size={15}/>Post new job</button>
     </header>
 
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
@@ -122,78 +122,78 @@ export default function ContractorRozgarPage() {
 
     {/* Job analytics */}
     <section className="bss-kpi-grid grid grid-cols-2 md:grid-cols-4 gap-3">
-      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Total Job Posted</span><span className="bss-kpi-icon bg-blue-50 text-blue-700"><Briefcase size={16}/></span></div><strong>{totals.jobs}</strong><p>Across all sites</p></article>
-      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Total Applications</span><span className="bss-kpi-icon bg-orange-50 text-orange-700"><UserRound size={16}/></span></div><strong>{totals.applications}</strong><p>Matched applicants</p></article>
-      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Total Hires</span><span className="bss-kpi-icon bg-green-50 text-green-700"><CheckCircle2 size={16}/></span></div><strong>{totals.hires}</strong><p>Hired & bound</p></article>
-      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Open vacancies</span><span className="bss-kpi-icon bg-indigo-50 text-indigo-700"><FileText size={16}/></span></div><strong>{jobs.filter(j => j.status !== 'Closed').reduce((s, j) => s + j.vacancies, 0)}</strong><p>From active postings</p></article>
+      <article className="bss-kpi-card bss-hover-lift"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-bss-text-muted">Total Job Posted</span><span className="bss-kpi-icon bg-bss-blue-tint text-bss-interactive-blue"><Briefcase size={16}/></span></div><strong>{totals.jobs}</strong><p>Across all sites</p></article>
+      <article className="bss-kpi-card bss-hover-lift"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-bss-text-muted">Total Applications</span><span className="bss-kpi-icon bg-bss-soft-orange text-bss-orange"><UserRound size={16}/></span></div><strong>{totals.applications}</strong><p>Matched applicants</p></article>
+      <article className="bss-kpi-card bss-hover-lift"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-bss-text-muted">Total Hires</span><span className="bss-kpi-icon bg-bss-soft-green text-bss-green"><CheckCircle2 size={16}/></span></div><strong>{totals.hires}</strong><p>Hired & bound</p></article>
+      <article className="bss-kpi-card bss-hover-lift"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-bss-text-muted">Open vacancies</span><span className="bss-kpi-icon bg-bss-blue-tint text-bss-interactive-blue"><FileText size={16}/></span></div><strong>{jobs.filter(j => j.status !== 'Closed').reduce((s, j) => s + j.vacancies, 0)}</strong><p>From active postings</p></article>
     </section>
 
     <div className="flex border-b">
-      <button onClick={() => setTab('jobs')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'jobs' ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500'}`}>Job Dashboard & History</button>
-      <button onClick={() => setTab('applicants')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'applicants' ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500'}`}>Workforce Sourcing — Applicants</button>
-      <button onClick={() => setTab('available')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'available' ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500'}`}>Available Workers ({contractor.availableWorkers?.length ?? 0})</button>
+      <button onClick={() => setTab('jobs')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'jobs' ? 'border-bss-interactive-blue text-bss-interactive-blue' : 'border-transparent text-bss-text-muted'}`}>Job Dashboard & History</button>
+      <button onClick={() => setTab('applicants')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'applicants' ? 'border-bss-interactive-blue text-bss-interactive-blue' : 'border-transparent text-bss-text-muted'}`}>Workforce Sourcing — Applicants</button>
+      <button onClick={() => setTab('available')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'available' ? 'border-bss-interactive-blue text-bss-interactive-blue' : 'border-transparent text-bss-text-muted'}`}>Available Workers ({contractor.availableWorkers?.length ?? 0})</button>
     </div>
 
-    {tab === 'jobs' && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-      <header className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-sm font-semibold text-gray-950">Job History</h2><p className="text-xs text-gray-400 mt-0.5">Posted jobs with state, city, designation, experience and application tracking.</p></div>
-        <div className="flex flex-wrap gap-2">{(Object.entries({ status: jobStatuses, state: jobStates, city: jobCities, site: jobSites }) as Array<[keyof typeof jobFilter, string[]]>).map(([key, options]) => <select key={key} value={jobFilter[key]} onChange={e => setJobFilter(current => ({ ...current, [key]: e.target.value }))} aria-label={`Filter by ${key}`} className="h-9 rounded-lg border border-gray-200 px-2 pr-6 text-xs bg-white"><option value="All">{key === 'status' ? 'Status' : key === 'state' ? 'State' : key === 'city' ? 'City' : 'Site'}: All</option>{options.filter(option => option !== 'All').map(option => <option key={option}>{option}</option>)}</select>)}</div>
+    {tab === 'jobs' && <section className="bss-card rounded-2xl overflow-hidden">
+      <header className="px-5 py-4 border-b border-bss-border flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-sm font-semibold text-bss-text-primary">Job History</h2><p className="text-xs text-bss-text-muted mt-0.5">Posted jobs with state, city, designation, experience and application tracking.</p></div>
+        <div className="flex flex-wrap gap-2">{(Object.entries({ status: jobStatuses, state: jobStates, city: jobCities, site: jobSites }) as Array<[keyof typeof jobFilter, string[]]>).map(([key, options]) => <select key={key} value={jobFilter[key]} onChange={e => setJobFilter(current => ({ ...current, [key]: e.target.value }))} aria-label={`Filter by ${key}`} className="h-9 rounded-lg border border-bss-border px-2 pr-6 text-xs bg-white"><option value="All">{key === 'status' ? 'Status' : key === 'state' ? 'State' : key === 'city' ? 'City' : 'Site'}: All</option>{options.filter(option => option !== 'All').map(option => <option key={option}>{option}</option>)}</select>)}</div>
       </header>
       <div className="overflow-x-auto"><table className="w-full text-sm text-left">
-        <thead className="bg-gray-50 text-xs text-gray-500 font-semibold border-b border-gray-100"><tr><th className="px-5 py-3">Job</th><th className="px-5 py-3">Location</th><th className="px-5 py-3">Experience</th><th className="px-5 py-3">Wage</th><th className="px-5 py-3">Applications</th><th className="px-5 py-3">Hires</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Posted</th><th className="px-5 py-3 text-right">Actions</th></tr></thead>
-        <tbody className="divide-y divide-gray-100">{filteredJobs.map(job => (
-          <tr key={job.id} className="hover:bg-gray-50">
-            <td className="px-5 py-3"><p className="font-semibold text-gray-900">{job.title}</p><p className="text-xs text-gray-500 mt-0.5">{job.trade} · {job.category} · {job.site}</p></td>
-            <td className="px-5 py-3 text-gray-600"><span className="inline-flex items-center gap-1 text-xs"><MapPin size={12}/>{job.city}, {job.state}</span></td>
-            <td className="px-5 py-3 text-gray-600">{job.experience}</td>
-            <td className="px-5 py-3 font-medium text-gray-900">{money.format(job.monthlyWage)}/mo</td>
-            <td className="px-5 py-3 font-medium text-gray-900">{job.applications}</td>
-            <td className="px-5 py-3 font-medium text-green-700">{job.hires}</td>
-            <td className="px-5 py-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${job.status === 'Open' ? 'bg-green-50 text-green-700' : job.status === 'Closed' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-700'}`}>{job.status}</span></td>
-            <td className="px-5 py-3 text-gray-500">{job.postedOn || '—'}</td>
+        <thead className="bg-bss-bg text-xs text-bss-text-muted font-semibold border-b border-bss-border"><tr><th className="px-5 py-3">Job</th><th className="px-5 py-3">Location</th><th className="px-5 py-3">Experience</th><th className="px-5 py-3">Wage</th><th className="px-5 py-3">Applications</th><th className="px-5 py-3">Hires</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Posted</th><th className="px-5 py-3 text-right">Actions</th></tr></thead>
+        <tbody className="divide-y divide-bss-border">{filteredJobs.map(job => (
+          <tr key={job.id} className="hover:bg-bss-bg">
+            <td className="px-5 py-3"><p className="font-semibold text-bss-text-primary">{job.title}</p><p className="text-xs text-bss-text-muted mt-0.5">{job.trade} · {job.category} · {job.site}</p></td>
+            <td className="px-5 py-3 text-bss-text-secondary"><span className="inline-flex items-center gap-1 text-xs"><MapPin size={12}/>{job.city}, {job.state}</span></td>
+            <td className="px-5 py-3 text-bss-text-secondary">{job.experience}</td>
+            <td className="px-5 py-3 font-medium text-bss-text-primary">{money.format(job.monthlyWage)}/mo</td>
+            <td className="px-5 py-3 font-medium text-bss-text-primary">{job.applications}</td>
+            <td className="px-5 py-3 font-medium text-bss-green">{job.hires}</td>
+            <td className="px-5 py-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${job.status === 'Open' ? 'bg-bss-soft-green text-bss-green' : job.status === 'Closed' ? 'bg-bss-bg text-bss-text-muted' : 'bg-bss-blue-tint text-bss-interactive-blue'}`}>{job.status}</span></td>
+            <td className="px-5 py-3 text-bss-text-muted">{job.postedOn || '—'}</td>
             <td className="px-5 py-3 text-right">{job.status === 'Closed'
-              ? <button disabled={busy} onClick={() => void setJobStatus(job, 'Open')} className="h-8 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50">Reopen</button>
-              : <button disabled={busy} onClick={() => void setJobStatus(job, 'Closed')} className="h-8 px-3 rounded-lg border border-red-200 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">{job.hires >= job.vacancies && job.vacancies > 0 ? 'Close (filled)' : 'Close'}</button>}</td>
+              ? <button disabled={busy} onClick={() => void setJobStatus(job, 'Open')} className="h-8 px-3 rounded-lg border border-bss-border text-xs font-semibold text-bss-text-primary hover:bg-bss-bg disabled:opacity-50">Reopen</button>
+              : <button disabled={busy} onClick={() => void setJobStatus(job, 'Closed')} className="h-8 px-3 rounded-lg border border-bss-border text-xs font-semibold text-bss-error hover:bg-bss-soft-orange disabled:opacity-50">{job.hires >= job.vacancies && job.vacancies > 0 ? 'Close (filled)' : 'Close'}</button>}</td>
           </tr>
         ))}</tbody></table></div>
-      {filteredJobs.length === 0 && <p className="p-10 text-center text-sm text-gray-400">No jobs match the selected filters.</p>}
+      {filteredJobs.length === 0 && <p className="p-10 text-center text-sm text-bss-text-muted">No jobs match the selected filters.</p>}
     </section>}
 
     {tab === 'applicants' && <div className="grid md:grid-cols-12 gap-6">
       <section className="md:col-span-5 space-y-3">
-        <label className="relative block"><Search size={16} className="absolute left-3 top-3 text-gray-400"/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search applications" className="w-full h-10 pl-9 pr-3 border rounded-lg"/></label>
-        {apps.length ? apps.map(app => <button key={app.id} onClick={() => setSelectedId(app.id)} className={'w-full text-left p-4 rounded-xl border bg-white ' + (selectedId === app.id ? 'border-blue-700 ring-1 ring-blue-700' : 'border-gray-200')}>
-          <div className="flex justify-between"><span className="text-xs font-semibold text-blue-700">{app.status}</span><span className="text-xs text-green-700">{app.matchScore}% match</span></div>
-          <h2 className="font-semibold mt-2">{app.workerName}</h2><p className="text-xs text-gray-500 mt-1">{app.trade} · {app.location} · Applied {app.dateApplied}</p>
-        </button>) : <p className="p-8 bg-white border rounded-xl text-center text-sm text-gray-500">No matching applications.</p>}
+        <label className="relative block"><Search size={16} className="absolute left-3 top-3 text-bss-text-muted"/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search applications" className="w-full h-10 pl-9 pr-3 border rounded-lg"/></label>
+        {apps.length ? apps.map(app => <button key={app.id} onClick={() => setSelectedId(app.id)} className={'w-full text-left p-4 rounded-xl border bg-white ' + (selectedId === app.id ? 'border-bss-interactive-blue ring-1 ring-blue-700' : 'border-bss-border')}>
+          <div className="flex justify-between"><span className="text-xs font-semibold text-bss-interactive-blue">{app.status}</span><span className="text-xs text-bss-green">{app.matchScore}% match</span></div>
+          <h2 className="font-semibold mt-2">{app.workerName}</h2><p className="text-xs text-bss-text-muted mt-1">{app.trade} · {app.location} · Applied {app.dateApplied}</p>
+        </button>) : <p className="p-8 bg-white border rounded-xl text-center text-sm text-bss-text-muted">No matching applications.</p>}
       </section>
       <section className="md:col-span-7">{selected ? <div className="bg-white border rounded-2xl overflow-hidden">
-        <header className="bg-[#062D4F] text-white p-6"><h2 className="text-xl font-bold">{selected.workerName}</h2><p className="font-mono text-sm text-white/70">{selected.workerId}</p></header>
+        <header className="bg-[#022B5E] text-white p-6"><h2 className="text-xl font-bold">{selected.workerName}</h2><p className="font-mono text-sm text-white/70">{selected.workerId}</p></header>
         <div className="p-6 grid grid-cols-2 gap-5">
           <Fact label="Trade" value={selected.trade} icon={UserRound}/><Fact label="Location" value={selected.location} icon={MapPin}/><Fact label="Experience" value={selected.experience}/><Fact label="Expected wage" value={money.format(selected.expectedWage)}/><Fact label="Applied" value={selected.dateApplied}/><Fact label="Match score" value={selected.matchScore + '%'}/>
-          <div className="col-span-2 flex flex-wrap gap-2 pt-4 border-t">{selected.status === 'Pending' && <button disabled={busy} onClick={() => action('Shortlisted')} className="px-4 py-2 rounded-lg bg-blue-50 text-blue-700 font-semibold">Shortlist</button>}{['Pending', 'Shortlisted'].includes(selected.status) && <button disabled={busy} onClick={() => action('Hired')} className="px-4 py-2 rounded-lg bg-green-700 text-white font-semibold flex gap-2"><CheckCircle2 size={17}/>Hire & bind</button>}{!['Hired', 'Rejected'].includes(selected.status) && <button disabled={busy} onClick={() => action('Rejected')} className="px-4 py-2 rounded-lg border text-red-700 font-semibold">Reject</button>}</div>
+          <div className="col-span-2 flex flex-wrap gap-2 pt-4 border-t">{selected.status === 'Pending' && <button disabled={busy} onClick={() => action('Shortlisted')} className="px-4 py-2 rounded-lg bg-bss-blue-tint text-bss-interactive-blue font-semibold">Shortlist</button>}{['Pending', 'Shortlisted'].includes(selected.status) && <button disabled={busy} onClick={() => action('Hired')} className="px-4 py-2 rounded-lg bg-bss-green text-white font-semibold flex gap-2"><CheckCircle2 size={17}/>Hire & bind</button>}{!['Hired', 'Rejected'].includes(selected.status) && <button disabled={busy} onClick={() => action('Rejected')} className="px-4 py-2 rounded-lg border text-bss-error font-semibold">Reject</button>}</div>
         </div>
-      </div> : <div className="bg-white border rounded-2xl p-10 text-center"><Briefcase className="mx-auto text-gray-300"/><p className="mt-3 text-sm text-gray-500">Select an application.</p></div>}</section>
+      </div> : <div className="bg-white border rounded-2xl p-10 text-center"><Briefcase className="mx-auto text-bss-text-muted"/><p className="mt-3 text-sm text-bss-text-muted">Select an application.</p></div>}</section>
     </div>}
 
-    {tab === 'available' && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-      <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Workers available for work</h2><p className="text-xs text-gray-400 mt-0.5">Workers who turned on Rozgar Setu availability. Send a binding request to engage them at your default site.</p>{!(contractor.sites?.length) && <p className="text-[11px] text-orange-600 mt-2">You have no allotted site yet — a principal employer must allot a site before you can bind workers.</p>}</header>
-      <div className="divide-y divide-gray-100">
+    {tab === 'available' && <section className="bss-card rounded-2xl overflow-hidden">
+      <header className="px-5 py-4 border-b border-bss-border"><h2 className="text-sm font-semibold text-bss-text-primary">Workers available for work</h2><p className="text-xs text-bss-text-muted mt-0.5">Workers who turned on Rozgar Setu availability. Send a binding request to engage them at your default site.</p>{!(contractor.sites?.length) && <p className="text-[11px] text-bss-orange mt-2">You have no allotted site yet — a principal employer must allot a site before you can bind workers.</p>}</header>
+      <div className="divide-y divide-bss-border">
         {(contractor.availableWorkers ?? []).length ? (contractor.availableWorkers ?? []).map(worker => (
           <div key={worker.id} className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="flex items-center gap-2"><h3 className="font-semibold text-gray-900">{worker.workerName}</h3><span className="text-[10px] font-bold uppercase text-green-700 bg-green-50 rounded px-1.5 py-0.5">Available</span></div>
-              <p className="font-mono text-[11px] text-gray-400 mt-0.5">{worker.workerId}</p>
-              <p className="text-xs text-gray-500 mt-1">{[worker.trade, worker.location].filter(Boolean).join(' · ') || '—'}{worker.skills.length ? ` · ${worker.skills.join(', ')}` : ''}</p>
+              <div className="flex items-center gap-2"><h3 className="font-semibold text-bss-text-primary">{worker.workerName}</h3><span className="text-[10px] font-bold uppercase text-bss-green bg-bss-soft-green rounded px-1.5 py-0.5">Available</span></div>
+              <p className="font-mono text-[11px] text-bss-text-muted mt-0.5">{worker.workerId}</p>
+              <p className="text-xs text-bss-text-muted mt-1">{[worker.trade, worker.location].filter(Boolean).join(' · ') || '—'}{worker.skills.length ? ` · ${worker.skills.join(', ')}` : ''}</p>
             </div>
-            <button disabled={busy || !(contractor.sites?.length)} onClick={() => void inviteToBind(worker)} title={!(contractor.sites?.length) ? 'Allot a site first — a principal employer allots sites to you' : undefined} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] disabled:opacity-40 disabled:cursor-not-allowed">Invite to bind</button>
+            <button disabled={busy || !(contractor.sites?.length)} onClick={() => void inviteToBind(worker)} title={!(contractor.sites?.length) ? 'Allot a site first — a principal employer allots sites to you' : undefined} className="h-9 px-4 rounded-lg bg-[#01183A] text-white text-xs font-bold hover:bg-[#022B5E] disabled:opacity-40 disabled:cursor-not-allowed">Invite to bind</button>
           </div>
-        )) : <p className="p-10 text-center text-sm text-gray-400">No workers are currently available. They appear here when a worker turns on “Available for work”.</p>}
+        )) : <p className="p-10 text-center text-sm text-bss-text-muted">No workers are currently available. They appear here when a worker turns on “Available for work”.</p>}
       </div>
     </section>}
 
     {/* Post new job — multi-step wizard */}
     {posting && <div className="fixed inset-0 z-[80] bg-black/50 grid place-items-center p-4"><section role="dialog" aria-modal="true" className="w-full max-w-2xl bg-white rounded-2xl overflow-hidden">
-      <header className="p-5 border-b border-gray-100 flex justify-between items-center"><div><h2 className="font-semibold text-sm">Post new job</h2><p className="text-xs text-gray-500 mt-1">Capture full job specification with a review step before publishing.</p></div><button onClick={() => setPosting(false)} aria-label="Close"><X/></button></header>
+      <header className="p-5 border-b border-bss-border flex justify-between items-center"><div><h2 className="font-semibold text-sm">Post new job</h2><p className="text-xs text-bss-text-muted mt-1">Capture full job specification with a review step before publishing.</p></div><button onClick={() => setPosting(false)} aria-label="Close"><X/></button></header>
       <div className="px-5 pt-4 flex gap-6">{stepHead(1, 'Basic Information')}{stepHead(2, 'Job Specification')}{stepHead(3, 'Final Review')}</div>
       <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
         {step === 1 && <div className="grid sm:grid-cols-2 gap-4">
@@ -212,35 +212,35 @@ export default function ContractorRozgarPage() {
           <label className="sm:col-span-2 text-xs font-semibold">Job Description<textarea value={draft.description} onChange={e => setD('description', e.target.value)} rows={4} className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"/></label>
           <label className="text-xs font-semibold">Required Experience<input value={draft.experience} onChange={e => setD('experience', e.target.value)} placeholder="e.g. 2–8 years" className={input}/></label>
           <label className="text-xs font-semibold">Posting Duration<input value={draft.duration} onChange={e => setD('duration', e.target.value)} placeholder="e.g. 6 months" className={input}/></label>
-          <div className="sm:col-span-2"><p className="text-xs font-semibold">Required Skills</p><div className="mt-2 flex flex-wrap gap-2">{SKILL_OPTIONS.map(skill => <button key={skill} type="button" onClick={() => toggleSkill(skill)} className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${draft.skills.includes(skill) ? 'bg-blue-700 text-white border-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'}`}>{skill}</button>)}</div>
-            {draft.skills.some(s => !SKILL_OPTIONS.includes(s)) && <div className="mt-2 flex flex-wrap gap-2">{draft.skills.filter(s => !SKILL_OPTIONS.includes(s)).map(skill => <span key={skill} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border bg-blue-700 text-white border-blue-700">{skill}<button type="button" onClick={() => removeSkill(skill)} aria-label={`Remove ${skill}`} className="hover:text-blue-100"><X size={12}/></button></span>)}</div>}
-            <div className="mt-2 flex gap-2"><input value={customSkill} onChange={e => setCustomSkill(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomSkill(); } }} placeholder="Add another skill (e.g. Tower crane operation)" className="flex-1 h-9 border border-gray-200 rounded-lg px-3 text-xs"/><button type="button" onClick={addCustomSkill} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50">Add skill</button></div>
-            <p className="text-[11px] text-gray-400 mt-1.5">Pick from the list or type your own — custom skills are matched fuzzily against worker skills.</p>
+          <div className="sm:col-span-2"><p className="text-xs font-semibold">Required Skills</p><div className="mt-2 flex flex-wrap gap-2">{SKILL_OPTIONS.map(skill => <button key={skill} type="button" onClick={() => toggleSkill(skill)} className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${draft.skills.includes(skill) ? 'bg-bss-interactive-blue text-white border-bss-interactive-blue' : 'bg-white border-bss-border text-bss-text-secondary hover:border-bss-border'}`}>{skill}</button>)}</div>
+            {draft.skills.some(s => !SKILL_OPTIONS.includes(s)) && <div className="mt-2 flex flex-wrap gap-2">{draft.skills.filter(s => !SKILL_OPTIONS.includes(s)).map(skill => <span key={skill} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border bg-bss-interactive-blue text-white border-bss-interactive-blue">{skill}<button type="button" onClick={() => removeSkill(skill)} aria-label={`Remove ${skill}`} className="hover:text-bss-bg"><X size={12}/></button></span>)}</div>}
+            <div className="mt-2 flex gap-2"><input value={customSkill} onChange={e => setCustomSkill(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomSkill(); } }} placeholder="Add another skill (e.g. Tower crane operation)" className="flex-1 h-9 border border-bss-border rounded-lg px-3 text-xs"/><button type="button" onClick={addCustomSkill} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-semibold text-bss-text-primary hover:bg-bss-bg">Add skill</button></div>
+            <p className="text-[11px] text-bss-text-muted mt-1.5">Pick from the list or type your own — custom skills are matched fuzzily against worker skills.</p>
           </div>
           <label className="text-xs font-semibold">Annual Salary Range — Min (₹)<input value={draft.minSalary} onChange={e => setD('minSalary', e.target.value.replace(/\D/g, ''))} type="number" min="0" className={input}/></label>
           <label className="text-xs font-semibold">Annual Salary Range — Max (₹)<input value={draft.maxSalary} onChange={e => setD('maxSalary', e.target.value.replace(/\D/g, ''))} type="number" min="0" className={input}/></label>
           <label className="text-xs font-semibold">Salary Visibility<select value={draft.salaryVisibility} onChange={e => setD('salaryVisibility', e.target.value)} className={input}><option>Visible to all</option><option>Visible to matched only</option><option>Hidden</option></select></label>
           <label className="text-xs font-semibold">Posting Visibility<select value={draft.visibility} onChange={e => setD('visibility', e.target.value)} className={input}>{VISIBILITY.map(v => <option key={v}>{v}</option>)}</select></label>
         </div>}
-        {step === 3 && <div className="rounded-xl border border-gray-100 p-5 space-y-4">
-          <div className="flex items-start justify-between"><div><h3 className="text-base font-bold text-gray-950">{draft.title || 'Untitled job'}</h3><p className="text-xs text-gray-500 mt-1">{draft.trade} · {draft.category} · {draft.workplaceType}</p></div><span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">Review before publish</span></div>
+        {step === 3 && <div className="rounded-xl border border-bss-border p-5 space-y-4">
+          <div className="flex items-start justify-between"><div><h3 className="text-base font-bold text-bss-text-primary">{draft.title || 'Untitled job'}</h3><p className="text-xs text-bss-text-muted mt-1">{draft.trade} · {draft.category} · {draft.workplaceType}</p></div><span className="text-[10px] font-bold text-bss-interactive-blue bg-bss-blue-tint border border-bss-border rounded-full px-2 py-0.5">Review before publish</span></div>
           <dl className="grid grid-cols-2 gap-3 text-xs"><Fact label="Location" value={`${draft.city || '—'}, ${draft.state || '—'}`}/><Fact label="Site" value={draft.site || '—'}/><Fact label="Vacancies" value={draft.vacancies || '—'}/><Fact label="Monthly wage" value={draft.monthlyWage ? money.format(Number(draft.monthlyWage)) : '—'}/><Fact label="Experience" value={draft.experience || '—'}/><Fact label="Closing date" value={draft.closingDate || '—'}/><Fact label="Salary range" value={draft.minSalary || draft.maxSalary ? `${draft.minSalary ? money.format(Number(draft.minSalary)) : '—'} – ${draft.maxSalary ? money.format(Number(draft.maxSalary)) : '—'}` : '—'}/><Fact label="Duration" value={draft.duration || '—'}/></dl>
-          <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Description</p><p className="text-xs text-gray-700 leading-5">{draft.description || '—'}</p></div>
-          {draft.skills.length > 0 && <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Required skills</p><div className="flex flex-wrap gap-1.5">{draft.skills.map(s => <span key={s} className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-semibold">{s}</span>)}</div></div>}
-          <p className="text-[11px] text-gray-400 flex items-center gap-1.5"><Eye size={13}/>Salary visibility: {draft.salaryVisibility} · Posting visibility: {draft.visibility}. Publishing makes this job visible to matching workers.</p>
+          <div><p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted mb-1">Description</p><p className="text-xs text-bss-text-primary leading-5">{draft.description || '—'}</p></div>
+          {draft.skills.length > 0 && <div><p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted mb-1">Required skills</p><div className="flex flex-wrap gap-1.5">{draft.skills.map(s => <span key={s} className="px-2 py-0.5 rounded-full bg-bss-blue-tint text-bss-interactive-blue text-[10px] font-semibold">{s}</span>)}</div></div>}
+          <p className="text-[11px] text-bss-text-muted flex items-center gap-1.5"><Eye size={13}/>Salary visibility: {draft.salaryVisibility} · Posting visibility: {draft.visibility}. Publishing makes this job visible to matching workers.</p>
         </div>}
         {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
       </div>
-      <footer className="p-5 border-t border-gray-100 flex flex-wrap justify-between gap-2">
+      <footer className="p-5 border-t border-bss-border flex flex-wrap justify-between gap-2">
         <button onClick={() => setPosting(false)} className="px-4 py-2 text-sm">Cancel</button>
         <div className="flex gap-2">
           {step > 1 && <button onClick={() => setStep(s => (s - 1) as 1 | 2 | 3)} className="px-4 py-2 rounded-lg border text-sm font-semibold flex items-center gap-1"><ChevronLeft size={15}/>Back</button>}
-          {step < 3 && <button onClick={() => setStep(s => (s + 1) as 1 | 2 | 3)} className="px-4 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold flex items-center gap-1">Next<ArrowRight size={15}/></button>}
-          {step === 3 && <><button onClick={() => submitPosting(true)} disabled={busy} className="px-4 py-2 rounded-lg border text-sm font-semibold">Save Draft</button><button onClick={() => submitPosting(false)} disabled={busy} className="px-4 py-2 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center gap-1"><Send size={14}/>{busy ? 'Publishing…' : 'Publish job'}</button></>}
+          {step < 3 && <button onClick={() => setStep(s => (s + 1) as 1 | 2 | 3)} className="px-4 py-2 rounded-lg bg-bss-interactive-blue text-white text-sm font-semibold flex items-center gap-1">Next<ArrowRight size={15}/></button>}
+          {step === 3 && <><button onClick={() => submitPosting(true)} disabled={busy} className="px-4 py-2 rounded-lg border text-sm font-semibold">Save Draft</button><button onClick={() => submitPosting(false)} disabled={busy} className="px-4 py-2 rounded-lg bg-bss-navy text-white text-sm font-semibold flex items-center gap-1"><Send size={14}/>{busy ? 'Publishing…' : 'Publish job'}</button></>}
         </div>
       </footer>
     </section></div>}
   </div>;
 }
 
-function Fact({ label, value, icon:Icon }: { label:string; value:string; icon?:typeof UserRound }) { return <div><p className="text-[10px] uppercase text-gray-400 font-bold">{label}</p><p className="mt-1 text-sm font-semibold flex gap-1 items-center">{Icon && <Icon size={14}/>} {value}</p></div>; }
+function Fact({ label, value, icon:Icon }: { label:string; value:string; icon?:typeof UserRound }) { return <div><p className="text-[10px] uppercase text-bss-text-muted font-bold">{label}</p><p className="mt-1 text-sm font-semibold flex gap-1 items-center">{Icon && <Icon size={14}/>} {value}</p></div>; }

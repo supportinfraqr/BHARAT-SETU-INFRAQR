@@ -2,29 +2,35 @@
 @import "leaflet/dist/leaflet.css";
 
 @theme {
-  --color-bss-navy: #073B67;
-  --color-bss-deep-navy: #062D4F;
-  --color-bss-interactive-blue: #155E95;
-  --color-bss-orange: #F47A32;
-  --color-bss-soft-orange: #FFF4EC;
-  --color-bss-green: #2F9E67;
-  --color-bss-soft-green: #EDF8F2;
+  /* BharatShramSetu brand palette — from the pitch deck theme.
+     dk1 #01183A · dk2 #022B5E · lt2 #F2F6FC · tint #DBE3EF
+     accent1 #E45D24 (orange) · accent2 #14843C (green) · accent3 #1E3A8A (blue)
+     accent4 #C94D18 · accent5 #4FC47E · accent6 #9FB8FF */
+  --color-bss-navy: #01183A;
+  --color-bss-deep-navy: #022B5E;
+  --color-bss-interactive-blue: #1E3A8A;
+  --color-bss-orange: #E45D24;
+  --color-bss-soft-orange: #FDEEE6;
+  --color-bss-green: #14843C;
+  --color-bss-soft-green: #E8F5EC;
+  --color-bss-soft-red: #FEE2E2;
+  --color-bss-red: #DC2626;
   
-  --color-bss-bg: #F6F8FB;
+  --color-bss-bg: #F2F6FC;
   --color-bss-card: #FFFFFF;
-  --color-bss-surface: #F1F5F8;
-  --color-bss-blue-tint: #EEF5FA;
+  --color-bss-surface: #DBE3EF;
+  --color-bss-blue-tint: #DBE3EF;
   
-  --color-bss-text-primary: #15212B;
-  --color-bss-text-secondary: #5D6975;
-  --color-bss-text-muted: #87929C;
+  --color-bss-text-primary: #01183A;
+  --color-bss-text-secondary: #38517B;
+  --color-bss-text-muted: #7C8BA8;
   
-  --color-bss-border: #E2E8EE;
+  --color-bss-border: #DBE3EF;
   
-  --color-bss-success: #2F9E67;
-  --color-bss-warning: #F47A32;
-  --color-bss-error: #D64545;
-  --color-bss-info: #155E95;
+  --color-bss-success: #14843C;
+  --color-bss-warning: #E45D24;
+  --color-bss-error: #C94D18;
+  --color-bss-info: #1E3A8A;
   
   --font-sans: "Noto Sans", "Noto Sans Devanagari", "Segoe UI", Arial, sans-serif;
 }
@@ -174,8 +180,8 @@ html.bss-reduce-motion *, html.bss-reduce-motion *::before, html.bss-reduce-moti
 /* Shared portal shell. Desktop navigation deliberately starts above iPad widths. */
 .bss-shell {
   min-height: 100dvh;
-  /* Cool, airy blue-white wash instead of flat gray — reads premium on any portal. */
-  background: linear-gradient(180deg, #FBFDFF 0%, #F3F7FB 100%);
+  /* Steel-blue wash lifted from the deck (lt2 #F2F6FC + tint #DBE3EF). */
+  background: linear-gradient(180deg, #FFFFFF 0%, #F2F6FC 55%, #DBE3EF 130%);
   background-attachment: fixed;
 }
 
@@ -288,8 +294,9 @@ body.bss-modal-open .bss-scan-fab {
   min-height: 7.5rem;
   padding: 1rem;
   background: #fff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #dbe3ef;
   border-radius: 0.875rem;
+  box-shadow: 0 1px 2px rgba(1, 24, 58, 0.04);
   display: flex;
   flex-direction: column;
 }
@@ -298,7 +305,7 @@ body.bss-modal-open .bss-scan-fab {
   display: block;
   margin-top: auto;
   padding-top: 0.625rem;
-  color: #0f172a;
+  color: #01183a;
   font-size: clamp(1.25rem, 2vw, 1.6rem);
   line-height: 1.1;
   font-weight: 700;
@@ -306,7 +313,7 @@ body.bss-modal-open .bss-scan-fab {
 
 .bss-kpi-card p {
   margin-top: 0.25rem;
-  color: #64748b;
+  color: #38517b;
   font-size: 0.75rem;
   line-height: 1.35;
 }
@@ -335,7 +342,7 @@ body.bss-modal-open .bss-scan-fab {
 }
 
 .bss-page-title {
-  color: #020617;
+  color: #01183a;
   font-size: clamp(1.5rem, 3vw, 2rem);
   line-height: 1.2;
   font-weight: 700;
@@ -354,10 +361,10 @@ body.bss-modal-open .bss-scan-fab {
   align-items: center;
   gap: 0.3rem;
   padding: 0.2rem 0.55rem;
-  border: 1px solid #bbf7d0;
+  border: 1px solid #b7eccd;
   border-radius: 999px;
-  color: #15803d;
-  background: #f0fdf4;
+  color: #0f6b30;
+  background: #e8f5ec;
   font-size: 0.625rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -367,14 +374,15 @@ body.bss-modal-open .bss-scan-fab {
 .bss-panel {
   min-width: 0;
   background: #fff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #dbe3ef;
   border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(1, 24, 58, 0.04);
 }
 
 .bss-panel-header {
   min-height: 4.25rem;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #eef2f9;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -382,13 +390,13 @@ body.bss-modal-open .bss-scan-fab {
 }
 
 .bss-panel-header h2 {
-  color: #0f172a;
+  color: #01183a;
   font-size: 0.875rem;
   font-weight: 700;
 }
 
 .bss-panel-header p {
-  color: #94a3b8;
+  color: #7c8ba8;
   font-size: 0.6875rem;
   line-height: 1.45;
   margin-top: 0.15rem;
@@ -414,15 +422,15 @@ body.bss-modal-open .bss-scan-fab {
 }
 
 .bss-primary-action {
-  background: #0f172a;
+  background: #01183a;
   color: #fff;
 }
 
 .bss-secondary-action,
 .bss-compact-action {
-  border: 1px solid #e2e8f0;
+  border: 1px solid #dbe3ef;
   background: #fff;
-  color: #334155;
+  color: #01183a;
 }
 
 .bss-compact-action {
@@ -442,10 +450,10 @@ body.bss-modal-open .bss-scan-fab {
 .bss-select {
   width: 100%;
   height: 2.75rem;
-  border: 1px solid #dbe2ea;
+  border: 1px solid #dbe3ef;
   border-radius: 0.625rem;
   background: #fff;
-  color: #1e293b;
+  color: #01183a;
   padding-left: 0.75rem;
   padding-right: 0.75rem;
   font-size: 0.8125rem;
@@ -552,7 +560,7 @@ body.bss-modal-open .bss-scan-fab {
    centre on the content box instead of the viewport and get clipped by the
    header. Keep this opacity-only. */
 .bss-content-fade {
-  animation: bssContentIn 0.18s ease-out;
+  animation: bssContentIn 0.34s cubic-bezier(0.22, 1, 0.36, 1);
 }
 @keyframes bssContentIn {
   from { opacity: 0; }
@@ -565,6 +573,69 @@ body.bss-modal-open .bss-scan-fab {
 }
 .bss-interactive:active {
   transform: scale(0.985);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Enterprise design foundation — soft cards, gentle hover lift,
+   subtle sheen and brand gradients (mirrors bharatshramsetu.com).
+   Opt-in classes so existing layouts are untouched.
+───────────────────────────────────────────────────────────── */
+.bss-card {
+  background: linear-gradient(180deg, #ffffff 0%, var(--color-bss-bg, #f2f6fc) 130%);
+  border: 1px solid var(--color-bss-border, #dbe3ef);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(1, 24, 58, 0.04), 0 12px 30px -18px rgba(1, 24, 58, 0.25);
+}
+.bss-hover-lift {
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.18s ease;
+}
+.bss-hover-lift:hover {
+  transform: translateY(-2px);
+  border-color: #c7d5ea;
+  box-shadow: 0 2px 4px rgba(1, 24, 58, 0.05), 0 18px 38px -18px rgba(1, 24, 58, 0.32);
+}
+.bss-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.bss-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.13) 50%, transparent 60%);
+  transform: translateX(-120%);
+  transition: transform 0.7s ease;
+  pointer-events: none;
+}
+.bss-sheen:hover::after {
+  transform: translateX(120%);
+}
+.bss-gradient-hero {
+  background: linear-gradient(180deg, var(--color-bss-deep-navy, #022b5e), var(--color-bss-navy, #01183a));
+}
+.bss-surface-soft {
+  background: linear-gradient(180deg, #ffffff 0%, var(--color-bss-bg, #f2f6fc) 100%);
+}
+
+/* Soft panel/row entrance — mirrors the reference site's --ease reveal language
+   (fade + gentle rise, optional blur). Opt-in via .bss-reveal; stagger with the
+   inline --bss-delay custom property. Reduced-motion collapses to no-op above. */
+.bss-reveal {
+  animation: bssReveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--bss-delay, 0ms);
+}
+@keyframes bssReveal {
+  from { opacity: 0; transform: translateY(10px); filter: blur(3px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+.bss-row-in {
+  animation: bssRowIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--bss-delay, 0ms);
+}
+@keyframes bssRowIn {
+  from { opacity: 0; transform: translateY(-8px); background-color: rgba(79, 196, 126, 0.14); }
+  to { opacity: 1; transform: none; background-color: transparent; }
 }
 
 /* Respect reduced-motion preferences — remove transitions/animations */
@@ -772,6 +843,88 @@ input[type="range"],
   .bss-data-table th button { white-space: nowrap; }
   .bss-data-table tbody { font-size: 11px; }
   .bss-data-table td { padding: 0.5rem; }
+}
+
+
+/* =============================================================
+   Soft polish layer — gentle motion, softer corners & depth,
+   subtle colour. Applies to every portal (worker/contractor/
+   employer/admin) so cards, panels and KPIs feel lighter and
+   more premium. Motion is disabled automatically under
+   html.bss-reduce-motion (see above) and prefers-reduced-motion.
+   ============================================================= */
+:root {
+  --bss-radius-sm: 0.75rem;
+  --bss-radius-md: 1rem;
+  --bss-radius-lg: 1.25rem;
+  --bss-shadow-1: 0 1px 2px rgba(1, 24, 58, 0.04), 0 1px 3px rgba(1, 24, 58, 0.03);
+  --bss-shadow-2: 0 10px 28px -12px rgba(1, 24, 58, 0.18), 0 3px 10px -4px rgba(1, 24, 58, 0.08);
+  --bss-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@keyframes bss-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes bss-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Soft, light background so white cards lift off the page. */
+body {
+  background-image:
+    radial-gradient(1200px 600px at 12% -8%, rgba(30, 58, 138, 0.05), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(228, 93, 36, 0.045), transparent 55%);
+  background-attachment: fixed;
+}
+
+/* Gentle staggered entrance for page sections. */
+.bss-app-main > * { animation: bss-rise 0.45s var(--bss-ease) both; }
+.bss-app-main > *:nth-child(2) { animation-delay: 0.04s; }
+.bss-app-main > *:nth-child(3) { animation-delay: 0.08s; }
+.bss-app-main > *:nth-child(4) { animation-delay: 0.12s; }
+
+/* Softer corners + lift on the shared card/panel surfaces. */
+.bss-kpi-card,
+.bss-panel {
+  border-radius: var(--bss-radius-lg);
+  box-shadow: var(--bss-shadow-1);
+  transition: transform 0.25s var(--bss-ease), box-shadow 0.25s var(--bss-ease),
+              border-color 0.25s var(--bss-ease);
+}
+.bss-kpi-card:hover,
+.bss-panel:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--bss-shadow-2);
+  border-color: #cdd9ea;
+}
+
+/* KPI cards read cleaner with centred value + label. */
+.bss-kpi-card { align-items: stretch; text-align: center; }
+.bss-kpi-card .bss-kpi-icon { margin-inline: auto; }
+
+/* Bigger, softer corner radius on the shell surfaces. */
+.bss-app-main { animation: bss-fade 0.3s var(--bss-ease) both; }
+
+/* Buttons: soften the press a touch. */
+.bss-primary-action,
+.bss-secondary-action,
+.bss-compact-action {
+  transition: transform 0.15s var(--bss-ease), box-shadow 0.2s var(--bss-ease),
+              background-color 0.2s var(--bss-ease);
+}
+.bss-primary-action:active,
+.bss-secondary-action:active,
+.bss-compact-action:active { transform: translateY(1px) scale(0.99); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bss-app-main,
+  .bss-app-main > *,
+  .bss-kpi-card,
+  .bss-panel { animation: none !important; transition: none !important; }
+  .bss-kpi-card:hover,
+  .bss-panel:hover { transform: none; }
 }
 
 

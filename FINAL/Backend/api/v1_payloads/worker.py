@@ -1504,6 +1504,7 @@ def _worker_compliance_label(worker):
 
 
 __all__ = [
+    "_duration_label",
     "attendance_detail",
     "_worker_address_section",
     "_worker_advances",

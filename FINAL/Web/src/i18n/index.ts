@@ -3,6 +3,7 @@ import { loginTranslations } from '@/locales/loginTranslations';
 import { workerTranslations } from '@/locales/workerTranslations';
 import { portalTranslations } from '@/locales/portalTranslations';
 import { uiTranslations } from '@/locales/uiTranslations';
+import { roleTranslations } from '@/locales/roleTranslations';
 import { DEFAULT_LANGUAGE, isLanguage, locales, type Language } from './config';
 
 export { DEFAULT_LANGUAGE, getLocale, isLanguage, locales, type Language } from './config';
@@ -16,7 +17,7 @@ export const LANGUAGE_STORAGE_KEY = 'bss-lang';
 export const LANGUAGE_COOKIE_NAME = 'bss-lang';
 
 type Dictionary = Record<string, Record<string, string>>;
-const dictionaries: readonly Dictionary[] = [loginTranslations, dashboardTranslations, workerTranslations, portalTranslations, uiTranslations];
+const dictionaries: readonly Dictionary[] = [loginTranslations, dashboardTranslations, workerTranslations, portalTranslations, uiTranslations, roleTranslations];
 
 function dictionaryFor(language: Language): Record<string, string> {
   return Object.assign({}, ...dictionaries.map((dictionary) => dictionary[language] ?? {}));
