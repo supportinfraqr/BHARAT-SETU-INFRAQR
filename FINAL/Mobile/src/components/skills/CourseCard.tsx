@@ -9,20 +9,19 @@ import type { LearningCourse } from '@/types/portal';
 // thumbnail image always renders (never an empty box).
 function coverDataUri(category: string, title: string): string {
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const cat = (category || 'COURSE').toUpperCase().slice(0, 20);
-  const t = esc((title || '').slice(0, 26));
+  const cat = esc((category || 'COURSE').toUpperCase().slice(0, 16));
+  const t = esc((title || '').slice(0, 24));
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240" viewBox="0 0 320 240">
 <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
 <stop offset="0" stop-color="#01183A"/><stop offset="0.55" stop-color="#022B5E"/><stop offset="1" stop-color="#1E3A8A"/></linearGradient></defs>
 <rect width="320" height="240" fill="url(#g)"/>
-<circle cx="272" cy="26" r="96" fill="#ffffff" opacity="0.05"/>
-<circle cx="40" cy="220" r="70" fill="#ffffff" opacity="0.04"/>
-<g transform="translate(24,34)" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
-<path d="M2 6h20a4 4 0 0 1 4 4v22H6a4 4 0 0 1-4-4z"/><path d="M26 10v22"/>
+<circle cx="160" cy="120" r="120" fill="#ffffff" opacity="0.04"/>
+<g transform="translate(146,52)" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.95">
+<path d="M0 4h18a4 4 0 0 1 4 4v20H4a4 4 0 0 1-4-4z"/><path d="M22 8v20"/>
 </g>
-<text x="24" y="152" fill="#ffffff" font-family="Inter,Segoe UI,sans-serif" font-size="26" font-weight="800" letter-spacing="0.5">${cat}</text>
-<text x="24" y="182" fill="#ffffff" font-family="Inter,Segoe UI,sans-serif" font-size="14" opacity="0.65">${t}</text>
-<text x="24" y="214" fill="#ffffff" font-family="Inter,Segoe UI,sans-serif" font-size="11" font-weight="600" letter-spacing="2" opacity="0.55">BHARAT SHRAM SETU</text>
+<text x="160" y="132" text-anchor="middle" fill="#ffffff" font-family="Inter,Segoe UI,sans-serif" font-size="24" font-weight="800" letter-spacing="0.5">${cat}</text>
+<text x="160" y="160" text-anchor="middle" fill="#ffffff" font-family="Inter,Segoe UI,sans-serif" font-size="13" opacity="0.7">${t}</text>
+<text x="160" y="206" text-anchor="middle" fill="#ffffff" font-family="Inter,Segoe UI,sans-serif" font-size="10" font-weight="600" letter-spacing="3" opacity="0.55">BHARAT SHRAM SETU</text>
 </svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
