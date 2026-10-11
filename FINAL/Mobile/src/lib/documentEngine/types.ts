@@ -63,6 +63,10 @@ export type TemplateStyles = {
   brandTagline?: string;
   /** Per-part wordmark colours (e.g. one part red, another green). */
   brandColors?: string[];
+  /** Logo alignment in the header. */
+  logoAlign?: 'left' | 'center' | 'right';
+  /** An uploaded image used as the whole brand text (instead of the wordmark). */
+  brandTextLogoUrl?: string;
   /** A fully custom pass colour (hex) that overrides the preset theme. */
   themeColor?: string;
   /** A simple free-form HTML block rendered into the document (script tags stripped). */
@@ -141,6 +145,8 @@ export const EMPTY_STYLES: TemplateStyles = {
   brandHeaderText: 'Bharat Shram Setu',
   brandTagline: 'One Nation · One Identity · One Future',
   brandColors: ['#022B5E', '#E45D24', '#14843C'],
+  logoAlign: 'left',
+  brandTextLogoUrl: '',
   customHtml: '',
   footerText: 'This is a system-generated document. Verify authenticity by scanning the worker QR code on bharatshramsetu.com.',
   theme: 'bss-navy',

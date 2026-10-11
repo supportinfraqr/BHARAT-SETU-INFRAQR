@@ -98,8 +98,9 @@ function cssFor(template: TemplateConfig): string {
   * { box-sizing: border-box; }
   body { margin:0; background:#fff; font-family: ${template.styles.fontFamily}; color:${textColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .doc-page { width:794px; margin:0 auto; padding: ${isGateCard ? '0' : '8px 4px 16px'}; position:relative; }
-  .doc-logo-row { display:flex; align-items:center; gap:12px; border-bottom:3px solid ${colors.primary}; padding:0 0 10px; margin-bottom:10px; }
+  .doc-logo-row { display:flex; align-items:center; justify-content:${template.styles.logoAlign === 'center' ? 'center' : template.styles.logoAlign === 'right' ? 'flex-end' : 'flex-start'}; gap:12px; border-bottom:3px solid ${colors.primary}; padding:0 0 10px; margin-bottom:10px; }
   .doc-logo { height:36px; width:auto; }
+  .doc-brand-text-logo { height:24px; width:auto; display:block; }
   .doc-brand strong { display:block; color:${colors.primary}; font-size:17px; letter-spacing:.3px; font-weight:800; }
   .doc-brand span { font-size:9px; color:#6b7280; letter-spacing:1.6px; text-transform:uppercase; }
   .doc-heading { text-align:center; color:${headingColor}; font-size:${fontSize + 5}px; margin:12px 0 8px; letter-spacing:1.4px; border-bottom:2px double ${gatePass ? headingColor : colors.accent}; padding-bottom:7px; text-transform:uppercase; font-weight:800; }
@@ -185,8 +186,10 @@ export function renderDocumentHtml(target: RenderTarget): string {
     : `<span style="color:${esc(brandColors[0])}">${esc(brandName)}</span>`;
   const logoUrl = template.styles.brandLogoUrl || '/bss-original-logo.png';
   const tagline = template.styles.brandTagline || 'One Nation · One Identity · One Future';
+  const brandTextLogo = template.styles.brandTextLogoUrl;
+  const brandInner = brandTextLogo ? `<img src="${esc(brandTextLogo)}" alt="brand" class="doc-brand-text-logo"/>` : brandWordmark;
   const headingMeta = template.styles.showBrandHeader
-    ? `<div class="doc-logo-row">${template.styles.showLogo ? `<img src="${esc(logoUrl)}" alt="logo" class="doc-logo"/>` : ''}<div class="doc-brand"><strong>${brandWordmark}</strong><span>${esc(tagline)}</span></div></div>`
+    ? `<div class="doc-logo-row">${template.styles.showLogo ? `<img src="${esc(logoUrl)}" alt="logo" class="doc-logo"/>` : ''}<div class="doc-brand"><strong>${brandInner}</strong><span>${esc(tagline)}</span></div></div>`
     : '';
 
   const body = visible

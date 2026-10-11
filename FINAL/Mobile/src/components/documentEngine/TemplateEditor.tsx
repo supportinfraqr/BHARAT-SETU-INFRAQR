@@ -62,7 +62,7 @@ export default function TemplateEditor({
 
   // debounced preview html
   const [previewHtml, setPreviewHtml] = useState('');
-  const jsonKey = JSON.stringify(template.sections) + template.styles.theme + template.styles.themeColor + template.styles.fontSize + template.styles.fontFamily + template.styles.headingColor + template.styles.showBrandHeader + template.styles.brandHeaderText + template.styles.brandTagline + template.styles.footerText + template.styles.showLogo + (template.styles.brandColors?.join(',') ?? '') + (template.styles.brandLogoUrl ?? '') + (template.styles.customHtml ?? '');
+  const jsonKey = JSON.stringify(template.sections) + template.styles.theme + template.styles.themeColor + template.styles.fontSize + template.styles.fontFamily + template.styles.headingColor + template.styles.showBrandHeader + template.styles.brandHeaderText + template.styles.brandTagline + template.styles.logoAlign + template.styles.footerText + template.styles.showLogo + (template.styles.brandColors?.join(',') ?? '') + (template.styles.brandLogoUrl ?? '') + (template.styles.brandTextLogoUrl ?? '') + (template.styles.customHtml ?? '');
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setPreviewHtml(renderDocumentHtml({ template: { ...template }, tokens: {} }));
@@ -143,6 +143,24 @@ export default function TemplateEditor({
       colors[index] = value;
       return { ...current, styles: { ...current.styles, brandColors: colors } };
     });
+  }
+
+  function setBrandWord(index: number, text: string) {
+    setTemplate(current => {
+      const words = (current.styles.brandHeaderText || '').split(/\s+/);
+      while (words.length < 3) words.push('');
+      words[index] = text;
+      return { ...current, styles: { ...current.styles, brandHeaderText: words.slice(0, 3).join(' ').trim() } };
+    });
+  }
+
+  function onBrandTextLogoFile(event: { target: HTMLInputElement }) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setTemplate(current => ({ ...current, styles: { ...current.styles, brandTextLogoUrl: String(reader.result ?? '') } }));
+    reader.readAsDataURL(file);
+    event.target.value = '';
   }
 
   function persistVersion(persist: TemplateConfig, note: string): TemplateVersionRecord | null {
@@ -278,12 +296,18 @@ export default function TemplateEditor({
                   </div>
                 </div>}
                 <label className="flex items-center justify-between text-xs font-semibold text-gray-600"><span>Show brand header</span><input type="checkbox" checked={template.styles.showBrandHeader} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, showBrandHeader: event.target.checked } }))} className="accent-[#073B67] w-4 h-4"/></label>
-                {template.styles.showBrandHeader && <label className="block text-xs font-semibold text-gray-600">Brand header text<input value={template.styles.brandHeaderText} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, brandHeaderText: event.target.value } }))} className={inputCls + ' text-xs'}/></label>}
+                {template.styles.showBrandHeader && <div className="space-y-3 pl-1">
+                  <label className="block text-xs font-semibold text-gray-600">Logo alignment<select value={template.styles.logoAlign ?? 'left'} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, logoAlign: event.target.value as 'left' | 'center' | 'right' } }))} className={inputCls + ' text-xs'}><option value="left">Left</option><option value="center">Centre</option><option value="right">Right</option></select></label>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Brand text — word · colour</p>
+                    <div className="space-y-1.5">{[0, 1, 2].map(index => { const words = (template.styles.brandHeaderText || 'Bharat Shram Setu').split(/\s+/); return <div key={index} className="flex items-center gap-2"><input value={words[index] ?? ''} onChange={event => setBrandWord(index, event.target.value)} placeholder={`Word ${index + 1}`} className={inputCls + ' text-xs flex-1'}/><input type="color" value={(template.styles.brandColors ?? ['#022B5E', '#E45D24', '#14843C'])[index] ?? '#000000'} onChange={event => setBrandColor(index, event.target.value)} className="h-9 w-12 rounded-lg border border-gray-200 bg-white p-1"/></div>; })}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-600 cursor-pointer hover:bg-gray-50"><Upload size={14}/>Upload brand text logo<input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden" onChange={onBrandTextLogoFile}/></label>
+                    {template.styles.brandTextLogoUrl && <button type="button" onClick={() => setTemplate(current => ({ ...current, styles: { ...current.styles, brandTextLogoUrl: '' } }))} className="text-[11px] text-gray-500 hover:text-red-600">Use text instead</button>}
+                  </div>
+                </div>}
                 <label className="block text-xs font-semibold text-gray-600">Brand tagline<input value={template.styles.brandTagline ?? ''} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, brandTagline: event.target.value } }))} className={inputCls + ' text-xs'}/></label>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Wordmark colours (one per word)</p>
-                  <div className="flex gap-2">{[0, 1, 2].map(index => <input key={index} type="color" value={(template.styles.brandColors ?? ['#022B5E', '#E45D24', '#14843C'])[index] ?? '#000000'} onChange={event => setBrandColor(index, event.target.value)} className="h-9 w-full rounded-lg border border-gray-200 bg-white p-1"/>)}</div>
-                </div>
                 <label className="block text-xs font-semibold text-gray-600">Document footer<textarea rows={2} value={template.styles.footerText} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, footerText: event.target.value } }))} className={textareaCls + ' text-xs'}/></label>
                 <p className="text-[11px] leading-5 text-gray-400">Layout, wording, fields and signatories are fixed in code — only the appearance above can be changed.</p>
               </div>
