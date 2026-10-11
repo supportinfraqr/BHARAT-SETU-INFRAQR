@@ -71,7 +71,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 /** QR with the BSS logo composited into its centre. High error correction keeps
  *  the code scannable around the logo. */
 async function qrWithLogo(text: string): Promise<string> {
-  const size = 240;
+  const size = 360;
   const base = await QRCode.toDataURL(text, { margin: 0, width: size, errorCorrectionLevel: 'H' });
   if (typeof document === 'undefined') return base;
   try {
@@ -81,8 +81,8 @@ async function qrWithLogo(text: string): Promise<string> {
     const ctx = canvas.getContext('2d');
     if (!ctx) return base;
     ctx.drawImage(qrImage, 0, 0, size, size);
-    const logoSize = 58;
-    const pad = 6;
+    const logoSize = 88;
+    const pad = 9;
     const box = logoSize + pad * 2;
     ctx.fillStyle = '#ffffff';
     ctx.fillRect((size - box) / 2, (size - box) / 2, box, box);

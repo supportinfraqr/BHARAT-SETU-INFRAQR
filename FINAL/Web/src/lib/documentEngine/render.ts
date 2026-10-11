@@ -96,7 +96,7 @@ function cssFor(template: TemplateConfig): string {
   .doc-body p { margin:0 0 8px; }
   .doc-photo-row { text-align:left; margin:6px 0; }
   .doc-photo { width:96px; height:116px; object-fit:cover; border:2px solid #d7dde5; border-radius:6px; }
-  .doc-qr { width:84px; height:84px; display:block; margin:8px auto; }
+  .doc-qr { width:150px; height:150px; display:block; margin:8px auto; }
   .doc-divider { border:0; border-top:1px dashed #cbd5e1; margin:12px 0; }
   .doc-table-wrap { margin:10px 0; }
   .doc-table { width:100%; border-collapse:collapse; font-size:${fontSize - 1}px; }
