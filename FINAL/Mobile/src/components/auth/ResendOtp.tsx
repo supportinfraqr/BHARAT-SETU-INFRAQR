@@ -54,8 +54,8 @@ export function useOtpResend(
 }
 
 /** Compact "Resend OTP" control with the remaining count + cooldown countdown. */
-export function ResendOtp({ onSend, className = "", initialCooldown = 0 }: { onSend: () => Promise<void>; className?: string; initialCooldown?: number }) {
-  const { resend, canResend, remaining, exhausted, cooldown, busy, error } = useOtpResend(onSend, { initialCooldown });
+export function ResendOtp({ onSend, className = "", initialCooldown = 0, cooldownSeconds = 30, maxResends = 3 }: { onSend: () => Promise<void>; className?: string; initialCooldown?: number; cooldownSeconds?: number; maxResends?: number }) {
+  const { resend, canResend, remaining, exhausted, cooldown, busy, error } = useOtpResend(onSend, { initialCooldown, cooldownSeconds, maxResends });
   return (
     <div className={className}>
       <button

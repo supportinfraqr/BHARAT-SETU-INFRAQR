@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiError, assertRateLimit, assertTrustedMutation, readJsonObject } from '@/server/api';
 import { getRuntimeConfig } from '@/server/config';
-import { upstreamRequest } from '@/server/http';
+import { upstreamRequest, UpstreamError } from '@/server/http';
 import { createSession } from '@/server/session';
 
 export const dynamic = 'force-dynamic';
@@ -38,6 +38,9 @@ export async function POST(request: Request) {
     await createSession({ subject: result.subject, role: 'Worker', sessionId: result.sessionId, accessToken: result.accessToken });
     return NextResponse.json({ bssId: result.bssId, redirectTo: '/worker/Profile?tab=integrations' }, { status: 201 });
   } catch (error) {
+    if (error instanceof UpstreamError && error.details && typeof error.details === 'object') {
+      return NextResponse.json(error.details, { status: error.status });
+    }
     return apiError(error, 'Aadhaar verification could not be completed.');
   }
 }

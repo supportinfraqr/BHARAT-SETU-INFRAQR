@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiError, assertRateLimit, assertTrustedMutation, readJsonObject } from '@/server/api';
 import { getRuntimeConfig } from '@/server/config';
-import { upstreamRequest } from '@/server/http';
+import { UpstreamError, upstreamRequest } from '@/server/http';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +24,9 @@ export async function POST(request: Request) {
     );
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
+    if (error instanceof UpstreamError && error.details && typeof error.details === 'object') {
+      return NextResponse.json(error.details, { status: error.status });
+    }
     return apiError(error, 'Aadhaar OTP could not be sent.');
   }
 }

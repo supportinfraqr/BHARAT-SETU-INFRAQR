@@ -430,15 +430,15 @@ export default function WorkerProfilePage() {
     setAadhaarLink(s => ({ ...s, busy: true, error: '', notice: '' }));
     try {
       const response = await fetch('/api/auth/aadhaar/otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aadhaar }) });
-      const json = await response.json() as { referenceId?: string; error?: string; message?: string; retryAfterSeconds?: number; otpPending?: boolean };
+      const json = await response.json() as { referenceId?: string; error?: string; message?: string; retryAfterSeconds?: number; resendAfterSeconds?: number; otpPending?: boolean; locked?: boolean };
       if (json.referenceId) {
-        setAadhaarLink(s => ({ ...s, referenceId: json.referenceId as string, sent: true, busy: false, error: '', otpCooldown: 0, notice: json.message || 'OTP sent to the mobile linked with your Aadhaar.' }));
+        setAadhaarLink(s => ({ ...s, referenceId: json.referenceId as string, otp: '', sent: true, busy: false, error: '', otpCooldown: json.resendAfterSeconds ?? 60, notice: json.message || 'OTP sent to the mobile linked with your Aadhaar.' }));
         return;
       }
-      // An OTP was already sent / is being debounced: still advance to the OTP step
-      // so the code the user received can be entered, and start the resend cooldown.
-      if (json.otpPending || json.retryAfterSeconds) {
-        setAadhaarLink(s => ({ ...s, sent: true, busy: false, error: '', otpCooldown: json.retryAfterSeconds || 45, notice: json.message || json.error || 'An OTP was already sent to your Aadhaar mobile — enter it below.' }));
+      // Throttled / locked / a code is already pending: still advance to the OTP
+      // step so the delivered code can be entered, and start the resend cooldown.
+      if (json.otpPending || json.retryAfterSeconds || json.locked) {
+        setAadhaarLink(s => ({ ...s, sent: true, busy: false, otpCooldown: json.retryAfterSeconds ?? 60, error: json.error || '', notice: json.locked ? '' : 'An OTP was already sent to your Aadhaar mobile — enter it below.' }));
         return;
       }
       throw new Error(json.error || 'OTP could not be sent.');
@@ -453,24 +453,23 @@ export default function WorkerProfilePage() {
     setAadhaarLink(s => ({ ...s, busy: true, error: '', notice: '' }));
     try {
       const response = await fetch('/api/worker/link-aadhaar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aadhaar, referenceId: aadhaarLink.referenceId, otp: aadhaarLink.otp }) });
-      const json = await response.json() as { error?: string; expired?: boolean; referenceId?: string; otpPending?: boolean; retryAfterSeconds?: number };
-      // The OTP lapsed server-side: it auto-issued a fresh one. Adopt the new
-      // reference and clear the box so the user enters the newest code.
-      if (json.expired) {
-        setAadhaarLink(s => ({
-          ...s, busy: false, error: '',
-          referenceId: json.referenceId || s.referenceId,
-          otp: '', sent: true,
-          otpCooldown: json.otpPending ? (json.retryAfterSeconds || 45) : 0,
-          notice: json.error || 'The previous OTP expired — a new OTP was sent. Enter the new code.',
-        }));
+      const json = await response.json() as { error?: string; expired?: boolean; wrong?: boolean; locked?: boolean; attemptsLeft?: number; referenceId?: string; otpPending?: boolean; retryAfterSeconds?: number };
+      // Success.
+      if (response.ok && !json.error && !json.wrong && !json.expired && !json.locked) {
+        const profileResponse = await fetch('/api/worker/profile', { cache: 'no-store' });
+        const profileJson = await profileResponse.json() as { data?: typeof worker };
+        if (profileJson.data) updateWorker(profileJson.data);
+        setAadhaarLink({ aadhaar: '', referenceId: '', otp: '', sent: false, busy: false, error: '', notice: '', otpCooldown: 0 });
         return;
       }
-      if (!response.ok) throw new Error(json.error || 'Aadhaar verification failed.');
-      const profileResponse = await fetch('/api/worker/profile', { cache: 'no-store' });
-      const profileJson = await profileResponse.json() as { data?: typeof worker };
-      if (profileJson.data) updateWorker(profileJson.data);
-      setAadhaarLink({ aadhaar: '', referenceId: '', otp: '', sent: false, busy: false, error: '', notice: '', otpCooldown: 0 });
+      if (json.locked) { setAadhaarLink(s => ({ ...s, busy: false, otp: '', otpCooldown: json.retryAfterSeconds ?? 600, error: json.error || 'Too many attempts. Please try again later.' })); return; }
+      if (json.expired) { setAadhaarLink(s => ({ ...s, busy: false, otp: '', referenceId: '', sent: true, otpCooldown: json.retryAfterSeconds ?? 60, error: json.error || 'That OTP expired. Request a new OTP.' })); return; }
+      if (json.wrong) {
+        const left = json.attemptsLeft ?? 1;
+        setAadhaarLink(s => ({ ...s, busy: false, otp: '', referenceId: left <= 0 ? '' : s.referenceId, otpCooldown: left <= 0 ? (json.retryAfterSeconds ?? 60) : s.otpCooldown, error: json.error || 'Incorrect OTP.' }));
+        return;
+      }
+      throw new Error(json.error || 'Aadhaar verification failed.');
     } catch (error) {
       setAadhaarLink(s => ({ ...s, busy: false, error: error instanceof Error ? error.message : 'Aadhaar verification failed.' }));
     }
@@ -2193,7 +2192,7 @@ export default function WorkerProfilePage() {
                         <div className="space-y-2 max-w-sm">
                           <input type="text" inputMode="numeric" value={aadhaarLink.aadhaar} onChange={e => setAadhaarLink(s => ({ ...s, aadhaar: e.target.value.replace(/\D/g, '').slice(0, 12), error: '' }))} disabled={aadhaarLink.sent} placeholder="12-digit Aadhaar number" className="w-full bg-white border border-bss-border rounded-xl px-4 py-2 text-[14px] font-medium tracking-wider focus:outline-none disabled:bg-bss-bg" />
                           {aadhaarLink.sent && <input type="text" inputMode="numeric" value={aadhaarLink.otp} onChange={e => setAadhaarLink(s => ({ ...s, otp: e.target.value.replace(/\D/g, '').slice(0, 6), error: '' }))} placeholder="6-digit OTP" className="w-full bg-white border border-bss-border rounded-xl px-4 py-2 text-[14px] font-medium tracking-[0.3em] focus:outline-none" />}
-                          {aadhaarLink.sent && <ResendOtp onSend={sendAadhaarOtp} initialCooldown={aadhaarLink.otpCooldown} />}
+                          {aadhaarLink.sent && <ResendOtp onSend={sendAadhaarOtp} initialCooldown={aadhaarLink.otpCooldown} cooldownSeconds={60} maxResends={5} />}
                           {aadhaarLink.error && <p className="text-[12px] text-bss-error">{aadhaarLink.error}</p>}
                           {aadhaarLink.notice && <p className="text-[12px] text-bss-green">{aadhaarLink.notice}</p>}
                           <div className="flex gap-2">
