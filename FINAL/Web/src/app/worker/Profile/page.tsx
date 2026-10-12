@@ -148,12 +148,13 @@ export default function WorkerProfilePage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ images: [dataUrl] }),
       });
-      const body = await response.json().catch(() => ({})) as { data?: { results?: Array<{ face?: boolean; reason?: string }> }; error?: string };
+      const body = await response.json().catch(() => ({})) as { data?: { results?: Array<{ face?: boolean; reason?: string; cosinePct?: number | null; matched?: boolean | null }> }; error?: string };
       if (!response.ok || !body.data) throw new Error(body.error ?? 'The photo could not be checked.');
       const result = body.data.results?.[0];
       if (result?.face) {
         addFacePhoto(slot, dataUrl);
         setFaceChecks(prev => ({ ...prev, [slot]: { state: 'ok' } }));
+        setFaceMatch(prev => ({ ...prev, [slot]: { state: 'ok', pct: typeof result.cosinePct === 'number' ? result.cosinePct : undefined, matched: result.matched ?? undefined } }));
         setFaceEnrollStatus('');
       } else {
         setFaceChecks(prev => ({ ...prev, [slot]: { state: 'error', message: result?.reason === 'invalid_image' ? 'Not a valid image' : 'No face detected — retake' } }));
@@ -1167,7 +1168,7 @@ export default function WorkerProfilePage() {
                         {faceChecks[idx]?.state === 'ok' && <span className="text-[9.5px] text-bss-green font-semibold mt-1">✓ Face OK</span>}
                         {faceChecks[idx]?.state === 'error' && <span className="text-[9.5px] text-bss-error font-semibold mt-1 max-w-[120px] leading-tight">{faceChecks[idx].message || 'Retake'}</span>}
                         {faceMatch[idx]?.state === 'checking' && <span className="text-[9.5px] text-bss-text-muted mt-0.5">Matching Aadhaar…</span>}
-                        {faceMatch[idx]?.state === 'ok' && (
+                        {faceMatch[idx]?.state === 'ok' && typeof faceMatch[idx].pct === 'number' && (
                           <span className={`text-[9.5px] font-bold mt-0.5 ${faceMatch[idx].matched ? 'text-bss-green' : 'text-bss-orange'}`} title="Cosine similarity vs your Aadhaar photo — advisory, uploads are never blocked">
                             {faceMatch[idx].matched ? '✓' : '⚠'} Aadhaar {faceMatch[idx].pct}%
                           </span>

@@ -148,12 +148,13 @@ export default function WorkerProfilePage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ images: [dataUrl] }),
       });
-      const body = await response.json().catch(() => ({})) as { data?: { results?: Array<{ face?: boolean; reason?: string }> }; error?: string };
+      const body = await response.json().catch(() => ({})) as { data?: { results?: Array<{ face?: boolean; reason?: string; cosinePct?: number | null; matched?: boolean | null }> }; error?: string };
       if (!response.ok || !body.data) throw new Error(body.error ?? 'The photo could not be checked.');
       const result = body.data.results?.[0];
       if (result?.face) {
         addFacePhoto(slot, dataUrl);
         setFaceChecks(prev => ({ ...prev, [slot]: { state: 'ok' } }));
+        setFaceMatch(prev => ({ ...prev, [slot]: { state: 'ok', pct: typeof result.cosinePct === 'number' ? result.cosinePct : undefined, matched: result.matched ?? undefined } }));
         setFaceEnrollStatus('');
       } else {
         setFaceChecks(prev => ({ ...prev, [slot]: { state: 'error', message: result?.reason === 'invalid_image' ? 'Not a valid image' : 'No face detected — retake' } }));
@@ -406,9 +407,9 @@ export default function WorkerProfilePage() {
     }
   };
   const splitEqually = () => { setDirty(true); setNominees(current => balanceNominees(current)); };
-  const segColors = ['bg-[#073B67]', 'bg-[#F47A32]', 'bg-[#2F9E67]', 'bg-[#7A5AF8]', 'bg-[#0EA5E9]', 'bg-[#E11D48]'];
+  const segColors = ['bg-[#01183A]', 'bg-[#E45D24]', 'bg-[#14843C]', 'bg-[#1E3A8A]', 'bg-[#1E3A8A]', 'bg-[#C94D18]'];
   // Red border for a required field that was left empty on a failed save.
-  const clsErr = (name: string) => invalidFields.includes(name) ? 'border-red-400' : 'border-black/10';
+  const clsErr = (name: string) => invalidFields.includes(name) ? 'border-bss-border' : 'border-black/10';
   
   // ── Government ID integrations (sourced from the worker profile) ────────
   const maskId = (value: string, keep = 4) => {
@@ -606,14 +607,14 @@ export default function WorkerProfilePage() {
   // Welfare & Safety — Medical examination values come from the Worker record.
   const medicalExaminationStatus = worker.welfare?.medicalExaminationStatus?.trim() || '';
   const medicalFitnessStatus = worker.welfare?.medicalFitnessStatus?.trim() || '';
-  const medicalStatusTone = medicalExaminationStatus === 'Pending' ? 'text-[#F47A32]' : medicalExaminationStatus === 'Expired' ? 'text-[#FF3B30]' : medicalExaminationStatus ? 'text-bss-green' : 'text-bss-text-primary';
+  const medicalStatusTone = medicalExaminationStatus === 'Pending' ? 'text-[#E45D24]' : medicalExaminationStatus === 'Expired' ? 'text-[#C94D18]' : medicalExaminationStatus ? 'text-bss-green' : 'text-bss-text-primary';
   // Green when a welfare/safety value is in a "done" state, amber when recorded
   // but not done, grey when empty — so the done items stand out on the tab.
   const welfareClass = (value?: string | boolean) => {
     const s = (typeof value === 'boolean' ? (value ? 'yes' : '') : String(value ?? '')).trim().toLowerCase();
     if (!s) return 'text-bss-text-muted';
     const ok = ['done', 'completed', 'active', 'fit', 'yes', 'provided', 'issued', 'self arranged', 'camp', 'room'].some(k => s.includes(k));
-    return ok ? 'text-bss-green' : 'text-[#F47A32]';
+    return ok ? 'text-bss-green' : 'text-[#E45D24]';
   };
 
   // Skills & Education — self-declared manual-entry fields (editable).
@@ -819,7 +820,7 @@ export default function WorkerProfilePage() {
             </span>
           )}
           {profileError && (
-            <span role="alert" className="bg-red-500/20 text-red-100 px-4 py-2.5 rounded-full border border-red-300/30 flex items-center gap-2 text-[13px] font-semibold">
+            <span role="alert" className="bg-bss-soft-orange0/20 text-bss-soft-orange px-4 py-2.5 rounded-full border border-bss-border/30 flex items-center gap-2 text-[13px] font-semibold">
               {profileError}
             </span>
           )}
@@ -827,7 +828,7 @@ export default function WorkerProfilePage() {
       />
 
       {highlightMissing && profileMissing.length > 0 && (
-        <div className="rounded-2xl border border-red-200 bg-bss-soft-red/70 p-4">
+        <div className="rounded-2xl border border-bss-border bg-bss-soft-red/70 p-4">
           <p className="text-[11px] font-bold uppercase tracking-wider text-bss-error">Complete your profile — {profileMissing.length} mandatory {profileMissing.length === 1 ? 'detail' : 'details'} missing</p>
           <p className="text-xs text-bss-text-secondary mt-1">These are the {profileMissing.length === 1 ? 'detail' : 'details'} counted in your {workerCompletion(worker).percent}% profile completion. Tap one to jump to its section.</p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -836,7 +837,7 @@ export default function WorkerProfilePage() {
                 key={item.key}
                 type="button"
                 onClick={() => setActiveTab(completionTab(item.section))}
-                className="h-8 px-3 rounded-full bg-white border border-red-200 text-bss-error text-[12px] font-semibold hover:bg-red-100"
+                className="h-8 px-3 rounded-full bg-white border border-bss-border text-bss-error text-[12px] font-semibold hover:bg-bss-soft-orange"
               >
                 {item.label}
               </button>
@@ -854,7 +855,7 @@ export default function WorkerProfilePage() {
             className={`flex items-center gap-3 px-4 py-3 font-semibold text-[14px] rounded-xl whitespace-nowrap transition-colors focus:outline-none ${activeTab === 'personal' ? 'bg-bss-navy text-white shadow-md' : 'text-bss-text-secondary hover:bg-bss-bg hover:text-bss-text-primary'}`}
           >
             <UserCircle size={18}/> Worker Identity
-            {missingTabs.has('personal') && <span className="ml-auto w-2 h-2 rounded-full bg-red-500" aria-label="Missing mandatory details" />}
+            {missingTabs.has('personal') && <span className="ml-auto w-2 h-2 rounded-full bg-bss-soft-orange0" aria-label="Missing mandatory details" />}
           </button>
           <button 
             onClick={() => setActiveTab('attendance')}
@@ -867,7 +868,7 @@ export default function WorkerProfilePage() {
             className={`flex items-center gap-3 px-4 py-3 font-semibold text-[14px] rounded-xl whitespace-nowrap transition-colors focus:outline-none ${activeTab === 'contact' ? 'bg-bss-navy text-white shadow-md' : 'text-bss-text-secondary hover:bg-bss-bg hover:text-bss-text-primary'}`}
           >
             <MapPin size={18}/> Address & Mobility
-            {missingTabs.has('contact') && <span className="ml-auto w-2 h-2 rounded-full bg-red-500" aria-label="Missing mandatory details" />}
+            {missingTabs.has('contact') && <span className="ml-auto w-2 h-2 rounded-full bg-bss-soft-orange0" aria-label="Missing mandatory details" />}
           </button>
           <button 
             onClick={() => setActiveTab('employment')}
@@ -880,21 +881,21 @@ export default function WorkerProfilePage() {
             className={`flex items-center gap-3 px-4 py-3 font-semibold text-[14px] rounded-xl whitespace-nowrap transition-colors focus:outline-none ${activeTab === 'family' ? 'bg-bss-navy text-white shadow-md' : 'text-bss-text-secondary hover:bg-bss-bg hover:text-bss-text-primary'}`}
           >
             <Users size={18}/> Family & Dependants
-            {missingTabs.has('family') && <span className="ml-auto w-2 h-2 rounded-full bg-red-500" aria-label="Missing mandatory details" />}
+            {missingTabs.has('family') && <span className="ml-auto w-2 h-2 rounded-full bg-bss-soft-orange0" aria-label="Missing mandatory details" />}
           </button>
           <button 
             onClick={() => setActiveTab('social')}
             className={`flex items-center gap-3 px-4 py-3 font-semibold text-[14px] rounded-xl whitespace-nowrap transition-colors focus:outline-none ${activeTab === 'social' ? 'bg-bss-navy text-white shadow-md' : 'text-bss-text-secondary hover:bg-bss-bg hover:text-bss-text-primary'}`}
           >
             <ShieldCheck size={18}/> Social Security
-            {missingTabs.has('social') && <span className="ml-auto w-2 h-2 rounded-full bg-red-500" aria-label="Missing mandatory details" />}
+            {missingTabs.has('social') && <span className="ml-auto w-2 h-2 rounded-full bg-bss-soft-orange0" aria-label="Missing mandatory details" />}
           </button>
           <button 
             onClick={() => setActiveTab('banking')}
             className={`flex items-center gap-3 px-4 py-3 font-semibold text-[14px] rounded-xl whitespace-nowrap transition-colors focus:outline-none ${activeTab === 'banking' ? 'bg-bss-navy text-white shadow-md' : 'text-bss-text-secondary hover:bg-bss-bg hover:text-bss-text-primary'}`}
           >
             <CreditCard size={18}/> Banking
-            {missingTabs.has('banking') && <span className="ml-auto w-2 h-2 rounded-full bg-red-500" aria-label="Missing mandatory details" />}
+            {missingTabs.has('banking') && <span className="ml-auto w-2 h-2 rounded-full bg-bss-soft-orange0" aria-label="Missing mandatory details" />}
           </button>
           <button 
             onClick={() => setActiveTab('classification')}
@@ -913,7 +914,7 @@ export default function WorkerProfilePage() {
             className={`flex items-center gap-3 px-4 py-3 font-semibold text-[14px] rounded-xl whitespace-nowrap transition-colors focus:outline-none ${activeTab === 'skills' ? 'bg-bss-navy text-white shadow-md' : 'text-bss-text-secondary hover:bg-bss-bg hover:text-bss-text-primary'}`}
           >
             <Award size={18}/> Skills & Employability
-            {missingTabs.has('skills') && <span className="ml-auto w-2 h-2 rounded-full bg-red-500" aria-label="Missing mandatory details" />}
+            {missingTabs.has('skills') && <span className="ml-auto w-2 h-2 rounded-full bg-bss-soft-orange0" aria-label="Missing mandatory details" />}
           </button>
           <button 
             onClick={() => setActiveTab('other')}
@@ -951,11 +952,11 @@ export default function WorkerProfilePage() {
                  <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 w-full">
                     <div>
                       <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">BSS Worker ID</label>
-                      <input name="identity.bssId" type="text" defaultValue={worker.identity.bssId} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none" readOnly />
+                      <input name="identity.bssId" type="text" defaultValue={worker.identity.bssId} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none" readOnly />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Name as per Aadhaar <span className="text-[#FF3B30]">*</span></label>
-                      <input name="identity.name" type="text" defaultValue={worker.identity.name} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none" readOnly />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Name as per Aadhaar <span className="text-[#C94D18]">*</span></label>
+                      <input name="identity.name" type="text" defaultValue={worker.identity.name} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none" readOnly />
                     </div>
                  </div>
               </div>
@@ -963,19 +964,19 @@ export default function WorkerProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6 pt-6 border-t border-black/5">
                  <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Date of Birth</label>
-                    <input name="identity.dob" type="date" defaultValue={worker.identity.dob} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none" readOnly />
+                    <input name="identity.dob" type="date" defaultValue={worker.identity.dob} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none" readOnly />
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Age</label>
-                   <input type="number" defaultValue={ageFromDoB(worker.identity.dob)} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none" readOnly />
+                   <input type="number" defaultValue={ageFromDoB(worker.identity.dob)} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none" readOnly />
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Gender</label>
-                    <input name="identity.gender" type="text" defaultValue={worker.identity.gender} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none" readOnly />
+                    <input name="identity.gender" type="text" defaultValue={worker.identity.gender} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none" readOnly />
                  </div>
                  <div>
-                   <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Place of Birth <span className="text-[#FF3B30]">*</span></label>
-                   <input name="identity.placeOfBirth" type="text" defaultValue={worker.identity.placeOfBirth || worker.address.permanentState || ''} onChange={e => setPlaceOfBirth(e.target.value)} placeholder="Native village/town, tehsil and district" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                   <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Place of Birth <span className="text-[#C94D18]">*</span></label>
+                   <input name="identity.placeOfBirth" type="text" defaultValue={worker.identity.placeOfBirth || worker.address.permanentState || ''} onChange={e => setPlaceOfBirth(e.target.value)} placeholder="Native village/town, tehsil and district" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                    <p className="text-[10px] text-bss-text-muted mt-1">Used with your Aadhaar-verified work address to map migrant flows for state policy.</p>
                  </div>
                  <div>
@@ -1000,7 +1001,7 @@ export default function WorkerProfilePage() {
                   </div>
                   <div className="relative">
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Disability Type / %</label>
-                    <button type="button" disabled={disabilityStatus !== 'Yes'} onClick={() => setDisabilityTypeOpen(o => !o)} className={`w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium flex items-center justify-between text-left focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC] disabled:bg-[#F5F5F7] ${disabilityStatus !== 'Yes' ? 'cursor-not-allowed' : ''}`}>
+                    <button type="button" disabled={disabilityStatus !== 'Yes'} onClick={() => setDisabilityTypeOpen(o => !o)} className={`w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium flex items-center justify-between text-left focus:outline-none focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A] disabled:bg-[#F2F6FC] ${disabilityStatus !== 'Yes' ? 'cursor-not-allowed' : ''}`}>
                       <span className={disabilityTypePct ? 'text-bss-text-primary' : 'text-bss-text-muted'}>{disabilityTypePct || 'Select type & %'}</span>
                       <ChevronDown size={15} className={`text-bss-text-muted transition-transform ${disabilityTypeOpen ? 'rotate-180' : ''}`} />
                     </button>
@@ -1009,37 +1010,37 @@ export default function WorkerProfilePage() {
                         <button type="button" aria-hidden="true" tabIndex={-1} onClick={() => setDisabilityTypeOpen(false)} className="fixed inset-0 z-40 cursor-default" />
                         <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-bss-border bg-white shadow-lg">
                           <button type="button" onClick={() => { setDisabilityTypePct(''); setDisabilityTypeOpen(false); }} className="block w-full px-4 py-2 text-left text-[13px] text-bss-text-muted hover:bg-bss-bg">Select type &amp; %</button>
-                          {DISABILITY_OPTIONS.map(o => <button key={o} type="button" onClick={() => { setDisabilityTypePct(o); setDisabilityTypeOpen(false); }} className={`block w-full px-4 py-2 text-left text-[13px] hover:bg-bss-bg ${disabilityTypePct === o ? 'bg-bss-blue-tint font-semibold text-[#073B67]' : 'text-bss-text-secondary'}`}>{o}</button>)}
+                          {DISABILITY_OPTIONS.map(o => <button key={o} type="button" onClick={() => { setDisabilityTypePct(o); setDisabilityTypeOpen(false); }} className={`block w-full px-4 py-2 text-left text-[13px] hover:bg-bss-bg ${disabilityTypePct === o ? 'bg-bss-blue-tint font-semibold text-[#01183A]' : 'text-bss-text-secondary'}`}>{o}</button>)}
                           {disabilityTypePct && !DISABILITY_OPTIONS.includes(disabilityTypePct) && <button type="button" onClick={() => { setDisabilityTypePct(disabilityTypePct); setDisabilityTypeOpen(false); }} className="block w-full px-4 py-2 text-left text-[13px] text-bss-text-secondary hover:bg-bss-bg">{disabilityTypePct} (current)</button>}
                         </div>
                       </>
                     )}
-                    {disabilityStatus === 'Yes' && !disabilityTypePct.trim() && <p className="text-[11px] text-[#F47A32] mt-1">Please select the disability type / percentage.</p>}
+                    {disabilityStatus === 'Yes' && !disabilityTypePct.trim() && <p className="text-[11px] text-[#E45D24] mt-1">Please select the disability type / percentage.</p>}
                   </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 pt-6 border-t border-black/5">
                  <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Father Name</label>
-                    <input name="personal.fatherName" type="text" defaultValue={worker.personal.fatherName} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none" readOnly />
+                    <input name="personal.fatherName" type="text" defaultValue={worker.personal.fatherName} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none" readOnly />
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Mother Name</label>
-                    <input name="personal.motherName" type="text" defaultValue={worker.personal.motherName} onChange={e => setMotherName(e.target.value)} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
+                    <input name="personal.motherName" type="text" defaultValue={worker.personal.motherName} onChange={e => setMotherName(e.target.value)} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A]" />
                  </div>
                </div>
 
               <div className="pt-6 border-t border-black/5">
                 <h3 className="text-[15px] font-semibold text-bss-text-primary mb-1">Emergency Contact</h3>
                 <p className="text-[13px] text-bss-text-muted mb-4">Used by the site medical officer and safety team in case of an emergency.</p>
-                <div className="bg-[#F5F5F7] rounded-2xl p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-[#F2F6FC] rounded-2xl p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                      <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider">Emergency Contact Name</p>
-                     <input name="identity.emergencyContactName" type="text" defaultValue={worker.identity.emergencyContactName} onChange={e => setEmergencyName(e.target.value)} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                     <input name="identity.emergencyContactName" type="text" defaultValue={worker.identity.emergencyContactName} onChange={e => setEmergencyName(e.target.value)} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                   </div>
                   <div>
                      <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider">Emergency Contact Number</p>
-                     <input name="identity.emergencyContactNumber" type="tel" maxLength={10} defaultValue={worker.identity.emergencyContactNumber} onChange={e => setEmergencyNumber(e.target.value)} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                     <input name="identity.emergencyContactNumber" type="tel" maxLength={10} defaultValue={worker.identity.emergencyContactNumber} onChange={e => setEmergencyNumber(e.target.value)} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                   </div>
                   <div>
                      <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider">Emergency Contact Relationship</p>
@@ -1050,18 +1051,18 @@ export default function WorkerProfilePage() {
 
               <div className="pt-6 border-t border-black/5">
                 <h3 className="text-[15px] font-semibold text-bss-text-primary mb-4">Contact Details</h3>
-                <div className="bg-[#F5F5F7] rounded-2xl p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-[#F2F6FC] rounded-2xl p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider">Mobile Number</p>
                     <p className="text-sm font-semibold text-bss-text-primary mt-1">+91 {worker.contact.mobile}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider">Alternate Mobile Number</p>
-                    <input name="identity.alternateMobile" type="tel" defaultValue={worker.contact.alternateMobile} onChange={e => setAlternateMobile(e.target.value)} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                    <input name="identity.alternateMobile" type="tel" defaultValue={worker.contact.alternateMobile} onChange={e => setAlternateMobile(e.target.value)} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider">Email ID</p>
-                    <input name="identity.email" type="email" defaultValue={worker.contact.email} onChange={e => setEmail(e.target.value)} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                    <input name="identity.email" type="email" defaultValue={worker.contact.email} onChange={e => setEmail(e.target.value)} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                   </div>
                 </div>
               </div>
@@ -1071,18 +1072,18 @@ export default function WorkerProfilePage() {
           {/* TAB: AI ATTENDANCE PHOTOS */}
           {activeTab === 'attendance' && (
             <div className="space-y-6 animate-in fade-in">
-              <div className="bg-gradient-to-r from-blue-50/90 via-slate-50 to-indigo-50/80 border border-blue-200/80 rounded-2xl p-6 shadow-xs space-y-5">
+              <div className="bg-gradient-to-r from-blue-50/90 via-slate-50 to-indigo-50/80 border border-bss-border/80 rounded-2xl p-6 shadow-xs space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-bss-border pb-4">
                   <div>
                     <h3 className="text-base font-bold text-bss-text-primary flex items-center gap-2">
-                      <Fingerprint size={20} className="text-[#073B67]" />
+                      <Fingerprint size={20} className="text-[#01183A]" />
                       AI CCTV Video Attendance — Face Photos (5 Required)
                     </h3>
                     <p className="text-xs text-bss-text-muted mt-1">
                       To automatically log your site attendance via CCTV &amp; camera recognition, please upload <strong>5 high-quality front-facing photos</strong> taken from different slight angles (approx. 1.5–2 meters distance).
                     </p>
                   </div>
-                  <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-blue-100 text-[#073B67] border border-blue-200 whitespace-nowrap self-start sm:self-auto">
+                  <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-bss-blue-tint text-[#01183A] border border-bss-border whitespace-nowrap self-start sm:self-auto">
                     AI Enrollment Ready
                   </span>
                 </div>
@@ -1116,26 +1117,26 @@ export default function WorkerProfilePage() {
                     return (
                       <div
                         key={idx}
-                        className="bg-white border border-bss-border rounded-xl p-3 flex flex-col items-center justify-between text-center relative group hover:border-[#073B67] hover:shadow-xs transition-all"
+                        className="bg-white border border-bss-border rounded-xl p-3 flex flex-col items-center justify-between text-center relative group hover:border-[#01183A] hover:shadow-xs transition-all"
                       >
                         <div 
                           onClick={() => {
                             setActiveFaceSlot(idx);
                             facePhotoInputRef.current?.click();
                           }}
-                          className="w-14 h-14 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden mb-2 relative cursor-pointer group/avatar"
+                          className="w-14 h-14 rounded-full bg-bss-bg border border-bss-border flex items-center justify-center overflow-hidden mb-2 relative cursor-pointer group/avatar"
                         >
                           {imgUrl ? (
                             <img src={imgUrl} alt={`Photo ${idx}`} className="w-full h-full object-cover" />
                           ) : (
-                            <UserCircle size={30} className="text-slate-400" />
+                            <UserCircle size={30} className="text-bss-text-muted" />
                           )}
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center">
                             <Upload size={14} className="text-white" />
                           </div>
                         </div>
-                        <span className="text-[11px] font-bold text-slate-800 leading-tight">Photo #{idx}</span>
-                        <span className="text-[9.5px] text-slate-500 mt-0.5 min-h-[14px] leading-tight">
+                        <span className="text-[11px] font-bold text-bss-text-primary leading-tight">Photo #{idx}</span>
+                        <span className="text-[9.5px] text-bss-text-muted mt-0.5 min-h-[14px] leading-tight">
                           {idx === 1 ? 'Frontal View' : idx === 2 ? 'Slight Left' : idx === 3 ? 'Slight Right' : idx === 4 ? 'Outdoor Light' : 'Natural Face'}
                         </span>
                         <div className="mt-2.5 grid grid-cols-2 gap-1.5 w-full">
@@ -1157,34 +1158,34 @@ export default function WorkerProfilePage() {
                               setActiveFaceSlot(idx);
                               facePhotoInputRef.current?.click();
                             }}
-                            className="text-bss-interactive-blue hover:bg-bss-interactive-blue hover:text-white bg-bss-blue-tint py-1.5 rounded-lg border border-blue-200/80 flex items-center justify-center transition-all shadow-2xs w-full group/btn"
+                            className="text-bss-interactive-blue hover:bg-bss-interactive-blue hover:text-white bg-bss-blue-tint py-1.5 rounded-lg border border-bss-border/80 flex items-center justify-center transition-all shadow-2xs w-full group/btn"
                             title="Upload photo file"
                           >
                             <Upload size={14} className="shrink-0 transition-transform group-hover/btn:scale-110" />
                           </button>
                         </div>
-                        {faceChecks[idx]?.state === 'checking' && <span className="text-[9.5px] text-slate-400 mt-1">Checking…</span>}
+                        {faceChecks[idx]?.state === 'checking' && <span className="text-[9.5px] text-bss-text-muted mt-1">Checking…</span>}
                         {faceChecks[idx]?.state === 'ok' && <span className="text-[9.5px] text-bss-green font-semibold mt-1">✓ Face OK</span>}
                         {faceChecks[idx]?.state === 'error' && <span className="text-[9.5px] text-bss-error font-semibold mt-1 max-w-[120px] leading-tight">{faceChecks[idx].message || 'Retake'}</span>}
-                        {faceMatch[idx]?.state === 'checking' && <span className="text-[9.5px] text-slate-400 mt-0.5">Matching Aadhaar…</span>}
-                        {faceMatch[idx]?.state === 'ok' && (
-                          <span className={`text-[9.5px] font-bold mt-0.5 ${faceMatch[idx].matched ? 'text-bss-green' : 'text-amber-600'}`} title="Cosine similarity vs your Aadhaar photo — advisory, uploads are never blocked">
+                        {faceMatch[idx]?.state === 'checking' && <span className="text-[9.5px] text-bss-text-muted mt-0.5">Matching Aadhaar…</span>}
+                        {faceMatch[idx]?.state === 'ok' && typeof faceMatch[idx].pct === 'number' && (
+                          <span className={`text-[9.5px] font-bold mt-0.5 ${faceMatch[idx].matched ? 'text-bss-green' : 'text-bss-orange'}`} title="Cosine similarity vs your Aadhaar photo — advisory, uploads are never blocked">
                             {faceMatch[idx].matched ? '✓' : '⚠'} Aadhaar {faceMatch[idx].pct}%
                           </span>
                         )}
-                        {faceMatch[idx]?.state === 'error' && <span className="text-[9px] text-slate-400 mt-0.5 max-w-[120px] leading-tight">{faceMatch[idx].message || 'Match unavailable'}</span>}
+                        {faceMatch[idx]?.state === 'error' && <span className="text-[9px] text-bss-text-muted mt-0.5 max-w-[120px] leading-tight">{faceMatch[idx].message || 'Match unavailable'}</span>}
                       </div>
                     );
                   })}
                 </div>
                 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-600 bg-white/80 rounded-xl p-3.5 border border-slate-200/60 gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-bss-text-secondary bg-white/80 rounded-xl p-3.5 border border-bss-border/60 gap-3">
                   <span className="flex items-center gap-2 font-medium">
                     <CheckCircle size={15} className="text-bss-green flex-shrink-0" />
                     Each photo is checked for a face; nothing is saved until all 5 are valid.
                   </span>
                   <div className="flex items-center gap-3 self-end sm:self-auto">
-                    <span className={`font-bold whitespace-nowrap ${faceStats.photoCount > 0 && faceStats.distinctPhotos < 5 ? 'text-amber-600' : 'text-[#073B67]'}`}>
+                    <span className={`font-bold whitespace-nowrap ${faceStats.photoCount > 0 && faceStats.distinctPhotos < 5 ? 'text-bss-orange' : 'text-[#01183A]'}`}>
                       {faceStats.photoCount > 0 && faceStats.distinctPhotos < 5
                         ? `${faceStats.distinctPhotos} / 5 distinct — duplicates`
                         : faceEnrolled > 0
@@ -1196,19 +1197,19 @@ export default function WorkerProfilePage() {
                       onClick={() => void saveFaceEnrollment()}
                       disabled={faceSaveBusy || [1, 2, 3, 4, 5].some(i => !facePhotos[i])}
                       title="Add all 5 valid face photos to enable"
-                      className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1.5 hover:bg-[#062D4F] disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="h-9 px-4 rounded-lg bg-[#01183A] text-white text-xs font-bold inline-flex items-center gap-1.5 hover:bg-[#022B5E] disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Fingerprint size={14} />{faceSaveBusy ? 'Saving…' : 'Save & Enroll'}
                     </button>
                   </div>
                 </div>
                 {faceStats.photoCount > 0 && faceStats.distinctPhotos < 5 && (
-                  <p className="text-[11px] font-semibold text-amber-600 mt-1">
+                  <p className="text-[11px] font-semibold text-bss-orange mt-1">
                     {faceStats.photoCount - faceStats.distinctPhotos} of your saved photos are identical, so the system counts fewer than 5.
                     Add 5 photos from different angles and press Save &amp; Enroll.
                   </p>
                 )}
-                {faceEnrollStatus && <p role="status" className="text-[11px] font-semibold text-[#073B67] mt-2">{faceEnrollStatus}</p>}
+                {faceEnrollStatus && <p role="status" className="text-[11px] font-semibold text-[#01183A] mt-2">{faceEnrollStatus}</p>}
               </div>
             </div>
           )}
@@ -1219,7 +1220,7 @@ export default function WorkerProfilePage() {
                   <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl space-y-4 p-5 text-center">
                     <div className="flex items-center justify-between border-b border-bss-border pb-3">
                       <h3 className="text-sm font-bold text-bss-text-primary flex items-center gap-2">
-                        <Camera size={18} className="text-[#073B67]" />
+                        <Camera size={18} className="text-[#01183A]" />
                         Capture Photo #{activeFaceSlot}
                       </h3>
                       <button type="button" onClick={stopCamera} className="w-8 h-8 grid place-items-center rounded-full hover:bg-bss-bg text-bss-text-muted">
@@ -1227,9 +1228,9 @@ export default function WorkerProfilePage() {
                       </button>
                     </div>
 
-                    <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-gray-800 flex items-center justify-center">
+                    <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-bss-navy flex items-center justify-center">
                       <video ref={cameraVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 border-2 border-emerald-400/40 rounded-xl pointer-events-none" />
+                      <div className="absolute inset-0 border-2 border-bss-green/40 rounded-xl pointer-events-none" />
                     </div>
 
                     <p className="text-xs text-bss-text-muted">
@@ -1263,11 +1264,11 @@ export default function WorkerProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                    <div>
                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Family Members Count</label>
-                     <input name="family.familyMembersCount" type="number" min={0} defaultValue={worker.family?.familyMembersCount ?? 0} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                     <input name="family.familyMembersCount" type="number" min={0} defaultValue={worker.family?.familyMembersCount ?? 0} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                    </div>
                    <div>
                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Dependants Count</label>
-                     <input name="family.dependantsCount" type="number" min={0} defaultValue={worker.family?.dependantsCount ?? 0} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                     <input name="family.dependantsCount" type="number" min={0} defaultValue={worker.family?.dependantsCount ?? 0} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                    </div>
                 </div>
               </div>
@@ -1275,7 +1276,7 @@ export default function WorkerProfilePage() {
               <div className="pt-6 border-t border-black/5">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
                   <h3 className="text-[15px] font-semibold text-bss-text-primary">Official Nominee Details</h3>
-                  <button type="button" onClick={addNominee} className="inline-flex items-center gap-1.5 text-[#0066CC] text-[13px] font-semibold hover:underline"><Plus size={15}/> Add Nominee</button>
+                  <button type="button" onClick={addNominee} className="inline-flex items-center gap-1.5 text-[#1E3A8A] text-[13px] font-semibold hover:underline"><Plus size={15}/> Add Nominee</button>
                 </div>
                 <p className="text-[13px] text-bss-text-muted mb-4">Add multiple nominees — each nominee gets one row with their own relationship, identity documents and share (%). Total share must equal 100%.</p>
 
@@ -1291,52 +1292,52 @@ export default function WorkerProfilePage() {
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-5">
                         <div>
-                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Name <span className="text-[#FF3B30]">*</span></label>
-                          <input type="text" data-nominee-name={n.id} value={n.name} onChange={e => updateNominee(n.id, n.nomineeType === 'Dependant' ? { name: e.target.value, dependant: e.target.value } : { name: e.target.value })} placeholder="Nominee full name" className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC] ${saveAttempted && !n.name.trim() ? 'border-red-400' : 'border-black/10'}`}/>
+                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Name <span className="text-[#C94D18]">*</span></label>
+                          <input type="text" data-nominee-name={n.id} value={n.name} onChange={e => updateNominee(n.id, n.nomineeType === 'Dependant' ? { name: e.target.value, dependant: e.target.value } : { name: e.target.value })} placeholder="Nominee full name" className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A] ${saveAttempted && !n.name.trim() ? 'border-bss-border' : 'border-black/10'}`}/>
                         </div>
                         <div>
-                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Relationship <span className="text-[#FF3B30]">*</span></label>
-                          <select data-nominee-relationship={n.id} value={n.relationship} onChange={e => updateNominee(n.id, { relationship: e.target.value })} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]">
+                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Relationship <span className="text-[#C94D18]">*</span></label>
+                          <select data-nominee-relationship={n.id} value={n.relationship} onChange={e => updateNominee(n.id, { relationship: e.target.value })} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]">
                             {BssTaxonomies.NomineeRelationship.map(r => <option key={r} value={r}>{r}</option>)}
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Nominee Type <span className="text-[#FF3B30]">*</span></label>
-                          <select data-nominee-type={n.id} value={n.nomineeType} onChange={e => { const t = e.target.value; updateNominee(n.id, t === 'Dependant' ? { nomineeType: t, dependant: n.name } : { nomineeType: t }); }} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]">
+                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Nominee Type <span className="text-[#C94D18]">*</span></label>
+                          <select data-nominee-type={n.id} value={n.nomineeType} onChange={e => { const t = e.target.value; updateNominee(n.id, t === 'Dependant' ? { nomineeType: t, dependant: n.name } : { nomineeType: t }); }} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]">
                             <option>Nominee</option>
                             <option>Family Member</option>
                             <option>Dependant</option>
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Date of Birth <span className="text-[#FF3B30]">*</span></label>
-                          <input type="date" data-nominee-dob={n.id} value={n.dob} onChange={e => updateNominee(n.id, { dob: e.target.value })} className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC] ${saveAttempted && !n.dob ? 'border-red-400' : 'border-black/10'}`}/>
+                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Date of Birth <span className="text-[#C94D18]">*</span></label>
+                          <input type="date" data-nominee-dob={n.id} value={n.dob} onChange={e => updateNominee(n.id, { dob: e.target.value })} className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A] ${saveAttempted && !n.dob ? 'border-bss-border' : 'border-black/10'}`}/>
                         </div>
                         <div>
                           <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Age</label>
-                          <input type="text" value={nomineeAge(n.dob)} readOnly className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary"/>
+                          <input type="text" value={nomineeAge(n.dob)} readOnly className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary"/>
                         </div>
                         <div>
-                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Contact <span className="text-[#FF3B30]">*</span></label>
-                          <input type="tel" maxLength={10} data-nominee-contact={n.id} value={n.contact} onChange={e => updateNominee(n.id, { contact: e.target.value })} className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC] ${saveAttempted && !n.contact.trim() ? 'border-red-400' : 'border-black/10'}`}/>
+                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Contact <span className="text-[#C94D18]">*</span></label>
+                          <input type="tel" maxLength={10} data-nominee-contact={n.id} value={n.contact} onChange={e => updateNominee(n.id, { contact: e.target.value })} className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A] ${saveAttempted && !n.contact.trim() ? 'border-bss-border' : 'border-black/10'}`}/>
                         </div>
                         <div>
-                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Dependant <span className="text-[#FF3B30]">*</span></label>
-                          <input type="text" data-nominee-dependant={n.id} value={n.nomineeType === 'Dependant' ? n.name : n.dependant} readOnly={n.nomineeType === 'Dependant'} onChange={e => updateNominee(n.id, { dependant: e.target.value })} placeholder={n.nomineeType === 'Dependant' ? 'Auto-filled from nominee name' : 'Name of dependant'} className={`w-full border rounded-xl px-3 py-2.5 text-[13px] font-medium focus:outline-none focus:border-[#0066CC] ${n.nomineeType === 'Dependant' ? 'bg-[#F5F5F7] text-bss-text-muted border-transparent' : `bg-white text-bss-text-primary ${saveAttempted && !n.dependant.trim() ? 'border-red-400' : 'border-black/10'}`}`}/>
+                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Dependant <span className="text-[#C94D18]">*</span></label>
+                          <input type="text" data-nominee-dependant={n.id} value={n.nomineeType === 'Dependant' ? n.name : n.dependant} readOnly={n.nomineeType === 'Dependant'} onChange={e => updateNominee(n.id, { dependant: e.target.value })} placeholder={n.nomineeType === 'Dependant' ? 'Auto-filled from nominee name' : 'Name of dependant'} className={`w-full border rounded-xl px-3 py-2.5 text-[13px] font-medium focus:outline-none focus:border-[#1E3A8A] ${n.nomineeType === 'Dependant' ? 'bg-[#F2F6FC] text-bss-text-muted border-transparent' : `bg-white text-bss-text-primary ${saveAttempted && !n.dependant.trim() ? 'border-bss-border' : 'border-black/10'}`}`}/>
                         </div>
                         <div className="sm:col-span-2">
-                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Nominee / Family Address <span className="text-[#FF3B30]">*</span></label>
-                          <textarea rows={2} data-nominee-address={n.id} value={n.address} onChange={e => updateNominee(n.id, { address: e.target.value })} className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC] resize-none ${saveAttempted && !n.address.trim() ? 'border-red-400' : 'border-black/10'}`}/>
+                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Nominee / Family Address <span className="text-[#C94D18]">*</span></label>
+                          <textarea rows={2} data-nominee-address={n.id} value={n.address} onChange={e => updateNominee(n.id, { address: e.target.value })} className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A] resize-none ${saveAttempted && !n.address.trim() ? 'border-bss-border' : 'border-black/10'}`}/>
                         </div>
                         <div className="sm:col-span-2">
-                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Identity Documents <span className="text-[#FF3B30]">*</span></label>
+                          <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Identity Documents <span className="text-[#C94D18]">*</span></label>
                           <div data-nominee-documents={n.id} className={`flex flex-wrap items-center gap-2 rounded-xl min-h-[42px] ${saveAttempted && n.documents.length === 0 ? 'ring-1 ring-red-400 p-1' : ''}`}>
                             <button type="button" onClick={() => pickNomineeDoc(n.id)} className="inline-flex items-center gap-1.5 bg-white border border-black/10 px-3 py-2 rounded-lg text-[12px] font-medium hover:bg-bss-bg"><Upload size={14}/> Upload PAN / Aadhaar Copy</button>
                             {n.documents.map((doc, docIndex) => (
-                              <span key={`${doc.fileName ?? doc.name}-${docIndex}`} className="inline-flex items-center gap-2 bg-[#E8F5E9]/70 border border-[#2F9E67]/20 text-bss-green px-2.5 py-1.5 rounded-lg text-[11px] font-semibold">
+                              <span key={`${doc.fileName ?? doc.name}-${docIndex}`} className="inline-flex items-center gap-2 bg-[#E8F5EC]/70 border border-[#14843C]/20 text-bss-green px-2.5 py-1.5 rounded-lg text-[11px] font-semibold">
                                 <FileText size={12}/>
                                 <span className="max-w-[180px] truncate" title={doc.name}>{doc.name}</span>
-                                {doc.url && <a href={doc.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-[#073B67] hover:underline" title="View document"><Eye size={12}/>View</a>}
+                                {doc.url && <a href={doc.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-[#01183A] hover:underline" title="View document"><Eye size={12}/>View</a>}
                                 <button type="button" onClick={() => updateNominee(n.id, { documents: n.documents.filter((_, i) => i !== docIndex) })} aria-label={`Remove ${doc.name}`} className="text-bss-text-muted hover:text-bss-error"><Trash2 size={11}/></button>
                               </span>
                             ))}
@@ -1347,7 +1348,7 @@ export default function WorkerProfilePage() {
                           <label className="block text-[11px] font-semibold text-bss-text-muted uppercase tracking-wider mb-1.5">Share %</label>
                           <div className="relative">
                             <Percent size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-bss-text-muted"/>
-                            <input type="text" inputMode="numeric" pattern="[0-9]*" value={nominees.length === 1 ? '100' : (n.percent ? String(n.percent) : '')} placeholder="0" onChange={e => { const digits = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); const others = totalPercent - (Number.isFinite(n.percent) ? n.percent : 0); const max = Math.max(0, 100 - others); const num = digits === '' ? 0 : Math.min(max, parseInt(digits, 10)); updateNominee(n.id, { percent: num }); }} disabled={nominees.length === 1} className="w-full bg-white border border-black/10 rounded-xl pl-8 pr-2 py-2.5 text-[13px] font-semibold text-bss-text-primary focus:outline-none focus:border-[#0066CC] disabled:bg-[#F5F5F7] disabled:text-bss-text-muted"/>
+                            <input type="text" inputMode="numeric" pattern="[0-9]*" value={nominees.length === 1 ? '100' : (n.percent ? String(n.percent) : '')} placeholder="0" onChange={e => { const digits = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); const others = totalPercent - (Number.isFinite(n.percent) ? n.percent : 0); const max = Math.max(0, 100 - others); const num = digits === '' ? 0 : Math.min(max, parseInt(digits, 10)); updateNominee(n.id, { percent: num }); }} disabled={nominees.length === 1} className="w-full bg-white border border-black/10 rounded-xl pl-8 pr-2 py-2.5 text-[13px] font-semibold text-bss-text-primary focus:outline-none focus:border-[#1E3A8A] disabled:bg-[#F2F6FC] disabled:text-bss-text-muted"/>
                           </div>
                           {nominees.length === 1 && <p className="text-[10px] text-bss-text-muted mt-1">A single nominee receives 100%.</p>}
                         </div>
@@ -1361,7 +1362,7 @@ export default function WorkerProfilePage() {
                   <div className="mt-5 rounded-2xl border border-black/10 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-[12px] font-semibold text-bss-text-primary">Nominee share distribution</p>
-                      <span className={`text-[12px] font-bold ${percentBalanced ? 'text-bss-green' : 'text-[#F47A32]'}`}>{percentBalanced ? '100% · balanced' : `${totalPercent}% of 100%`}</span>
+                      <span className={`text-[12px] font-bold ${percentBalanced ? 'text-bss-green' : 'text-[#E45D24]'}`}>{percentBalanced ? '100% · balanced' : `${totalPercent}% of 100%`}</span>
                     </div>
                     {nominees.length > 1 && (
                       <div className="mt-3 flex h-2.5 rounded-full overflow-hidden bg-bss-bg">
@@ -1373,8 +1374,8 @@ export default function WorkerProfilePage() {
                         <span key={n.id} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-bss-text-secondary"><span className={`w-2.5 h-2.5 rounded-full ${segColors[index % segColors.length]}`}/>{n.name || ('Nominee ' + (index + 1))} — {n.percent}%</span>
                       ))}
                     </div>
-                    {!percentBalanced && <p className="mt-3 text-[12px] text-[#F47A32] font-semibold flex items-center gap-1.5">Shares add up to {totalPercent}% — {Math.max(0, 100 - totalPercent)}% still to allocate. The total must be exactly 100%.</p>}
-                    {nominees.length > 1 && <button type="button" onClick={splitEqually} className="mt-3 inline-flex items-center gap-1.5 text-[#0066CC] text-[12px] font-semibold hover:underline"><RefreshCw size={13}/> Split equally</button>}
+                    {!percentBalanced && <p className="mt-3 text-[12px] text-[#E45D24] font-semibold flex items-center gap-1.5">Shares add up to {totalPercent}% — {Math.max(0, 100 - totalPercent)}% still to allocate. The total must be exactly 100%.</p>}
+                    {nominees.length > 1 && <button type="button" onClick={splitEqually} className="mt-3 inline-flex items-center gap-1.5 text-[#1E3A8A] text-[12px] font-semibold hover:underline"><RefreshCw size={13}/> Split equally</button>}
                   </div>
                 )}
               </div>
@@ -1384,37 +1385,37 @@ export default function WorkerProfilePage() {
           {/* TAB: SOCIAL SECURITY */}
           {activeTab === 'social' && (
             <div className="space-y-6 animate-in fade-in">
-              <div className="bg-[#FFF8F0] p-5 rounded-2xl border border-[#F47A32]/20 mb-6">
-                <p className="text-[13px] text-[#F47A32] font-medium">These identifiers are primarily updated by your employer or government APIs. You can declare existing numbers here to assist matching.</p>
+              <div className="bg-[#FDEEE6] p-5 rounded-2xl border border-[#E45D24]/20 mb-6">
+                <p className="text-[13px] text-[#E45D24] font-medium">These identifiers are primarily updated by your employer or government APIs. You can declare existing numbers here to assist matching.</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                  <div>
                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">EPFO UAN</label>
-                   <input name="socialSecurity.epfoUan" type="text" defaultValue={worker.socialSecurity.epfoUan} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                   <input name="socialSecurity.epfoUan" type="text" defaultValue={worker.socialSecurity.epfoUan} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">ESIC IP Number</label>
-                   <input name="socialSecurity.esicIp" type="text" defaultValue={worker.socialSecurity.esicIp} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                   <input name="socialSecurity.esicIp" type="text" defaultValue={worker.socialSecurity.esicIp} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">LWF Number (Labour Welfare Fund)</label>
-                    <input name="socialSecurity.lwfNo" type="text" defaultValue={worker.socialSecurity.lwfNo} placeholder="Enter if available" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                    <input name="socialSecurity.lwfNo" type="text" defaultValue={worker.socialSecurity.lwfNo} placeholder="Enter if available" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">e-Shram Number <span className="ml-1 inline-flex items-center text-[10px] font-bold text-bss-orange bg-bss-soft-orange px-1.5 py-0.5 rounded uppercase">{worker.socialSecurity.eShramNo ? 'Linked' : 'Not Linked'}</span></label>
-                    <input name="socialSecurity.eShramNo" type="text" defaultValue={worker.socialSecurity.eShramNo} placeholder="Enter 12 digit UAN" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                    <input name="socialSecurity.eShramNo" type="text" defaultValue={worker.socialSecurity.eShramNo} placeholder="Enter 12 digit UAN" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">BOCW Registration Number <span className="ml-1 inline-flex items-center text-[10px] font-bold text-bss-orange bg-bss-soft-orange px-1.5 py-0.5 rounded uppercase">{worker.socialSecurity.bocwRegNumber ? 'Registered' : 'Not Registered'}</span></label>
-                    <input name="socialSecurity.bocwRegNumber" type="text" defaultValue={worker.socialSecurity.bocwRegNumber} placeholder="State BOCW ID" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                    <input name="socialSecurity.bocwRegNumber" type="text" defaultValue={worker.socialSecurity.bocwRegNumber} placeholder="State BOCW ID" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">WC Policy No. (Workmen Compensation)</label>
-                    <input name="socialSecurity.wcPolicyNo" type="text" defaultValue={worker.socialSecurity.wcPolicyNo} placeholder="Insurance Policy No." className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                    <input name="socialSecurity.wcPolicyNo" type="text" defaultValue={worker.socialSecurity.wcPolicyNo} placeholder="Insurance Policy No." className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">State Worker ID</label>
-                    <input name="socialSecurity.stateWorkerId" type="text" defaultValue={worker.socialSecurity.stateWorkerId} placeholder="State labour department worker ID" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                    <input name="socialSecurity.stateWorkerId" type="text" defaultValue={worker.socialSecurity.stateWorkerId} placeholder="State labour department worker ID" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                  </div>
               </div>
             </div>
@@ -1427,15 +1428,15 @@ export default function WorkerProfilePage() {
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Aadhaar No.</label>
                     <div className="flex items-center gap-3">
-                      <input name="identity.aadhaar" type="password" defaultValue={worker.identity.aadhaar} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary" readOnly />
-                      <span className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider flex-shrink-0 ${worker.identity.aadhaarVerified ? 'bg-[#E8F5E9] text-bss-green' : 'bg-bss-bg text-bss-text-muted'}`}>{worker.identity.aadhaarVerified ? 'Verified' : 'Pending'}</span>
+                      <input name="identity.aadhaar" type="password" defaultValue={worker.identity.aadhaar} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary" readOnly />
+                      <span className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider flex-shrink-0 ${worker.identity.aadhaarVerified ? 'bg-[#E8F5EC] text-bss-green' : 'bg-bss-bg text-bss-text-muted'}`}>{worker.identity.aadhaarVerified ? 'Verified' : 'Pending'}</span>
                     </div>
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">PAN No.</label>
                     <div className="flex items-center gap-3">
-                      <input name="identity.pan" type="text" defaultValue={worker.identity.pan} placeholder="Enter PAN" readOnly={worker.identity.panVerified} className={`w-full border rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary uppercase focus:outline-none ${worker.identity.panVerified ? 'bg-[#F5F5F7] border-transparent' : 'bg-white border-black/10 focus:border-[#0066CC]'}`} />
-                      <span className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider flex-shrink-0 ${worker.identity.panVerified ? 'bg-[#E8F5E9] text-bss-green' : 'bg-bss-bg text-bss-text-muted'}`}>{worker.identity.panVerified ? 'Verified' : 'Pending'}</span>
+                      <input name="identity.pan" type="text" defaultValue={worker.identity.pan} placeholder="Enter PAN" readOnly={worker.identity.panVerified} className={`w-full border rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary uppercase focus:outline-none ${worker.identity.panVerified ? 'bg-[#F2F6FC] border-transparent' : 'bg-white border-black/10 focus:border-[#1E3A8A]'}`} />
+                      <span className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider flex-shrink-0 ${worker.identity.panVerified ? 'bg-[#E8F5EC] text-bss-green' : 'bg-bss-bg text-bss-text-muted'}`}>{worker.identity.panVerified ? 'Verified' : 'Pending'}</span>
                     </div>
                   </div>
               </div>
@@ -1444,52 +1445,52 @@ export default function WorkerProfilePage() {
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h3 className="text-[15px] font-semibold text-bss-text-primary">Bank Accounts (Wage Transfer)</h3>
                   {bankVerified ? (
-                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-bss-green bg-[#E8F5E9] px-2.5 py-1 rounded-full"><CheckCircle2 size={13}/> KYC Verified (Penny Drop)</span>
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-bss-green bg-[#E8F5EC] px-2.5 py-1 rounded-full"><CheckCircle2 size={13}/> KYC Verified (Penny Drop)</span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#F47A32] bg-[#FFF8F0] px-2.5 py-1 rounded-full"><ShieldCheck size={13}/> KYC pending</span>
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#E45D24] bg-[#FDEEE6] px-2.5 py-1 rounded-full"><ShieldCheck size={13}/> KYC pending</span>
                   )}
                 </div>
-                <div className="rounded-[14px] bg-[#EAF3FF] border border-[#0066CC]/15 px-4 py-3 mb-5 text-[13px] text-[#073B67] font-medium">
+                <div className="rounded-[14px] bg-[#EEF5FF] border border-[#1E3A8A]/15 px-4 py-3 mb-5 text-[13px] text-[#01183A] font-medium">
                   <strong>Note:</strong> Your <strong>primary account receives your salary</strong>. Keep the primary account active; the secondary account is used only when you choose it (e.g., saving/loan account). Both accounts are registered in <em>Govt. Integrations</em> and must pass KYC through the bank verification API.
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                   {/* Primary account */}
-                  <div className="rounded-2xl border border-[#2F9E67]/30 bg-white overflow-hidden">
-                    <div className="px-4 py-3 bg-[#E8F5E9]/60 border-b border-[#2F9E67]/20 flex flex-wrap items-center justify-between gap-2">
+                  <div className="rounded-2xl border border-[#14843C]/30 bg-white overflow-hidden">
+                    <div className="px-4 py-3 bg-[#E8F5EC]/60 border-b border-[#14843C]/20 flex flex-wrap items-center justify-between gap-2">
                       <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-bss-text-primary"><CheckCircle2 size={14} className="text-bss-green"/> Primary Account</span>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-[#2F9E67] px-2 py-0.5 rounded-full">Receives Salary</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-[#14843C] px-2 py-0.5 rounded-full">Receives Salary</span>
                     </div>
                     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
                       <div>
                         <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Bank Account Number</label>
-                        <input name="banking.accountNumber" type="password" defaultValue="" placeholder="Enter account number" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]"/>
+                        <input name="banking.accountNumber" type="password" defaultValue="" placeholder="Enter account number" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]"/>
                         <p className="text-[10px] text-bss-text-muted mt-1">Current: {maskId(worker.banking.accountNumber, 4) || '—'} · re-enter to change</p>
                       </div>
                       <div>
                         <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">IFSC Code</label>
-                        <input name="banking.ifsc" type="text" defaultValue={worker.banking.ifsc} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-bss-text-primary uppercase focus:outline-none focus:border-[#0066CC]"/>
+                        <input name="banking.ifsc" type="text" defaultValue={worker.banking.ifsc} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-bss-text-primary uppercase focus:outline-none focus:border-[#1E3A8A]"/>
                       </div>
                       <div>
                         <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Bank Name <span className="normal-case font-medium text-bss-text-muted">(auto-filled)</span></label>
-                        <input readOnly value={worker.banking.bankName} placeholder="Fetched from IFSC" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary"/>
+                        <input readOnly value={worker.banking.bankName} placeholder="Fetched from IFSC" className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary"/>
                       </div>
                       <div>
                         <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Account Holder Name <span className="normal-case font-medium text-bss-text-muted">(from bank)</span></label>
                         <div className="relative">
-                          <input readOnly value={worker.banking.holderName} placeholder="Fetched on verification" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-3 py-2.5 pr-10 text-[13px] font-medium text-bss-text-primary"/>
+                          <input readOnly value={worker.banking.holderName} placeholder="Fetched on verification" className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-3 py-2.5 pr-10 text-[13px] font-medium text-bss-text-primary"/>
                           {worker.banking.nameMatchesAadhaar && <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-bss-green" title="Matches your Aadhaar name"><CheckCheck size={17}/></span>}
                         </div>
                       </div>
                       <div>
                         <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Branch <span className="normal-case font-medium text-bss-text-muted">(auto-filled)</span></label>
-                        <input readOnly value={worker.banking.branch} placeholder="—" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary"/>
+                        <input readOnly value={worker.banking.branch} placeholder="—" className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary"/>
                       </div>
                       <div className="sm:col-span-2 flex flex-wrap items-center gap-3 pt-1">
-                        <button type="button" onClick={verifyBank} disabled={bankVerify.busy} className="h-10 px-4 rounded-xl bg-[#073B67] text-white text-[13px] font-bold inline-flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-50">{bankVerify.busy ? 'Verifying…' : 'Verify via Penny Drop (₹1)'}</button>
-                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full ${worker.banking.verificationStatus === 'Verified' ? 'text-bss-green bg-[#E8F5E9]' : 'text-[#F47A32] bg-[#FFF8F0]'}`}><ShieldCheck size={12}/> {worker.banking.verificationStatus === 'Verified' ? 'KYC Verified (NPCI Penny Drop)' : 'KYC pending'}</span>
+                        <button type="button" onClick={verifyBank} disabled={bankVerify.busy} className="h-10 px-4 rounded-xl bg-[#01183A] text-white text-[13px] font-bold inline-flex items-center gap-2 hover:bg-[#022B5E] disabled:opacity-50">{bankVerify.busy ? 'Verifying…' : 'Verify via Penny Drop (₹1)'}</button>
+                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full ${worker.banking.verificationStatus === 'Verified' ? 'text-bss-green bg-[#E8F5EC]' : 'text-[#E45D24] bg-[#FDEEE6]'}`}><ShieldCheck size={12}/> {worker.banking.verificationStatus === 'Verified' ? 'KYC Verified (NPCI Penny Drop)' : 'KYC pending'}</span>
                       </div>
-                      {bankVerify.message && <p role="status" className="sm:col-span-2 text-[12px] text-bss-green bg-[#E8F5E9] border border-[#2F9E67]/20 rounded-lg px-3 py-2">{bankVerify.message}</p>}
+                      {bankVerify.message && <p role="status" className="sm:col-span-2 text-[12px] text-bss-green bg-[#E8F5EC] border border-[#14843C]/20 rounded-lg px-3 py-2">{bankVerify.message}</p>}
                       {bankVerify.error && <p role="alert" className="sm:col-span-2 text-[12px] text-bss-error bg-bss-soft-red border border-bss-border rounded-lg px-3 py-2">{bankVerify.error}</p>}
                     </div>
                   </div>
@@ -1512,20 +1513,20 @@ export default function WorkerProfilePage() {
                    <DownSelect value={workerCategory} onChange={setWorkerCategory} placeholder="Select" options={BssTaxonomies.WorkerCategory} />
                 </div>
                 <div>
-                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Sector <span className="text-[#FF3B30]">*</span></label>
+                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Sector <span className="text-[#C94D18]">*</span></label>
                     <DownSelect name="classification.sector" value={sector} onChange={setSector} placeholder="Select" options={BssTaxonomies.Sector} />
                  </div>
                  <div>
-                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Industry <span className="text-[#FF3B30]">*</span></label>
-                    <input name="classification.industry" type="text" defaultValue={worker.classification?.industry} className={`w-full bg-white border ${clsErr('classification.industry')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Industry <span className="text-[#C94D18]">*</span></label>
+                    <input name="classification.industry" type="text" defaultValue={worker.classification?.industry} className={`w-full bg-white border ${clsErr('classification.industry')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                  </div>
                  <div>
-                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Occupation <span className="text-[#FF3B30]">*</span></label>
+                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Occupation <span className="text-[#C94D18]">*</span></label>
                     <DownSelect name="classification.occupation" value={occupation} onChange={setOccupation} placeholder="Select" options={['Bar Bender (Rebar)', 'Mason', 'Carpenter', 'Electrician']} />
                  </div>
                  <div>
-                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Total Worker Experience (Years) <span className="text-[#FF3B30]">*</span></label>
-                    <input name="classification.totalWorkerExperience" type="number" min={0} defaultValue={worker.classification?.totalWorkerExperience} className={`w-full bg-white border ${clsErr('classification.totalWorkerExperience')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Total Worker Experience (Years) <span className="text-[#C94D18]">*</span></label>
+                    <input name="classification.totalWorkerExperience" type="number" min={0} defaultValue={worker.classification?.totalWorkerExperience} className={`w-full bg-white border ${clsErr('classification.totalWorkerExperience')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                  </div>
               </div>
 
@@ -1535,56 +1536,56 @@ export default function WorkerProfilePage() {
                   <h3 className="text-[15px] font-semibold text-bss-text-primary mb-4">Gig Platform Details</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Platform / Aggregator Name <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.gigPlatformName" type="text" defaultValue={worker.classification?.gigPlatformName} className={`w-full bg-white border ${clsErr('classification.gigPlatformName')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Platform / Aggregator Name <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.gigPlatformName" type="text" defaultValue={worker.classification?.gigPlatformName} className={`w-full bg-white border ${clsErr('classification.gigPlatformName')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Platform Worker ID <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.gigPlatformWorkerId" type="text" defaultValue={worker.classification?.gigPlatformWorkerId} className={`w-full bg-white border ${clsErr('classification.gigPlatformWorkerId')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Platform Worker ID <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.gigPlatformWorkerId" type="text" defaultValue={worker.classification?.gigPlatformWorkerId} className={`w-full bg-white border ${clsErr('classification.gigPlatformWorkerId')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Date Joined Platform <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.gigDateJoined" type="date" defaultValue={worker.classification?.gigDateJoined} className={`w-full bg-white border ${clsErr('classification.gigDateJoined')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Date Joined Platform <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.gigDateJoined" type="date" defaultValue={worker.classification?.gigDateJoined} className={`w-full bg-white border ${clsErr('classification.gigDateJoined')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Platform Type <span className="text-[#FF3B30]">*</span></label>
-                      <select name="classification.gigPlatformType" defaultValue={worker.classification?.gigPlatformType} className={`w-full bg-white border ${clsErr('classification.gigPlatformType')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`}>
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Platform Type <span className="text-[#C94D18]">*</span></label>
+                      <select name="classification.gigPlatformType" defaultValue={worker.classification?.gigPlatformType} className={`w-full bg-white border ${clsErr('classification.gigPlatformType')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`}>
                         {BssTaxonomies.PlatformType.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Service Area <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.gigServiceArea" type="text" defaultValue={worker.classification?.gigServiceArea} className={`w-full bg-white border ${clsErr('classification.gigServiceArea')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Service Area <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.gigServiceArea" type="text" defaultValue={worker.classification?.gigServiceArea} className={`w-full bg-white border ${clsErr('classification.gigServiceArea')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Vehicle Type</label>
-                      <select name="classification.gigVehicleType" defaultValue={worker.classification?.gigVehicleType} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]">
+                      <select name="classification.gigVehicleType" defaultValue={worker.classification?.gigVehicleType} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]">
                         {BssTaxonomies.VehicleType.map(v => <option key={v} value={v}>{v}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Vehicle Ownership</label>
-                      <select name="classification.gigVehicleOwnership" defaultValue={worker.classification?.gigVehicleOwnership} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]">
+                      <select name="classification.gigVehicleOwnership" defaultValue={worker.classification?.gigVehicleOwnership} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]">
                         <option>Owned</option>
                         <option>Leased / Rented</option>
                         <option>Platform Provided</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Average Hours per Day <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.gigAvgHoursPerDay" type="number" placeholder="Hours" defaultValue={worker.classification?.gigAvgHoursPerDay} className={`w-full bg-white border ${clsErr('classification.gigAvgHoursPerDay')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Average Hours per Day <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.gigAvgHoursPerDay" type="number" placeholder="Hours" defaultValue={worker.classification?.gigAvgHoursPerDay} className={`w-full bg-white border ${clsErr('classification.gigAvgHoursPerDay')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Average Days per Week <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.gigAvgDaysPerWeek" type="number" placeholder="Days" defaultValue={worker.classification?.gigAvgDaysPerWeek} className={`w-full bg-white border ${clsErr('classification.gigAvgDaysPerWeek')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Average Days per Week <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.gigAvgDaysPerWeek" type="number" placeholder="Days" defaultValue={worker.classification?.gigAvgDaysPerWeek} className={`w-full bg-white border ${clsErr('classification.gigAvgDaysPerWeek')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Driving Licence Number</label>
-                      <input name="classification.gigDlNumber" type="text" defaultValue={worker.classification?.gigDlNumber} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.gigDlNumber" type="text" defaultValue={worker.classification?.gigDlNumber} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Driving Licence Expiry</label>
-                      <input name="classification.gigDlExpiry" type="date" defaultValue={worker.classification?.gigDlExpiry} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.gigDlExpiry" type="date" defaultValue={worker.classification?.gigDlExpiry} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                     </div>
                   </div>
                 </div>
@@ -1596,44 +1597,44 @@ export default function WorkerProfilePage() {
                   <h3 className="text-[15px] font-semibold text-bss-text-primary mb-4">Self Employment Details</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Business / Enterprise Name <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.seBusinessName" type="text" defaultValue={worker.classification?.seBusinessName} className={`w-full bg-white border ${clsErr('classification.seBusinessName')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Business / Enterprise Name <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.seBusinessName" type="text" defaultValue={worker.classification?.seBusinessName} className={`w-full bg-white border ${clsErr('classification.seBusinessName')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Employer / Business Name <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.seEmployerName" type="text" defaultValue={worker.classification?.seEmployerName} className={`w-full bg-white border ${clsErr('classification.seEmployerName')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Employer / Business Name <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.seEmployerName" type="text" defaultValue={worker.classification?.seEmployerName} className={`w-full bg-white border ${clsErr('classification.seEmployerName')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Business Type <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.seBusinessType" type="text" defaultValue={worker.classification?.seBusinessType} className={`w-full bg-white border ${clsErr('classification.seBusinessType')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Business Type <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.seBusinessType" type="text" defaultValue={worker.classification?.seBusinessType} className={`w-full bg-white border ${clsErr('classification.seBusinessType')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Business Registration Status <span className="text-[#FF3B30]">*</span></label>
-                      <select name="classification.seRegistrationStatus" defaultValue={worker.classification?.seRegistrationStatus} className={`w-full bg-white border ${clsErr('classification.seRegistrationStatus')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`}>
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Business Registration Status <span className="text-[#C94D18]">*</span></label>
+                      <select name="classification.seRegistrationStatus" defaultValue={worker.classification?.seRegistrationStatus} className={`w-full bg-white border ${clsErr('classification.seRegistrationStatus')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`}>
                         <option>Registered</option>
                         <option>Unregistered</option>
                         <option>Registration Pending</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Business Start Date <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.seStartDate" type="date" defaultValue={worker.classification?.seStartDate} className={`w-full bg-white border ${clsErr('classification.seStartDate')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Business Start Date <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.seStartDate" type="date" defaultValue={worker.classification?.seStartDate} className={`w-full bg-white border ${clsErr('classification.seStartDate')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Number of Employees <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.seEmployeesCount" type="number" min={0} defaultValue={worker.classification?.seEmployeesCount} className={`w-full bg-white border ${clsErr('classification.seEmployeesCount')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Number of Employees <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.seEmployeesCount" type="number" min={0} defaultValue={worker.classification?.seEmployeesCount} className={`w-full bg-white border ${clsErr('classification.seEmployeesCount')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Average Hours/Day <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.seAvgHoursPerDay" type="number" placeholder="Hours" defaultValue={worker.classification?.seAvgHoursPerDay} className={`w-full bg-white border ${clsErr('classification.seAvgHoursPerDay')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Average Hours/Day <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.seAvgHoursPerDay" type="number" placeholder="Hours" defaultValue={worker.classification?.seAvgHoursPerDay} className={`w-full bg-white border ${clsErr('classification.seAvgHoursPerDay')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Average Days/Week <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.seAvgDaysPerWeek" type="number" placeholder="Days" defaultValue={worker.classification?.seAvgDaysPerWeek} className={`w-full bg-white border ${clsErr('classification.seAvgDaysPerWeek')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Average Days/Week <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.seAvgDaysPerWeek" type="number" placeholder="Days" defaultValue={worker.classification?.seAvgDaysPerWeek} className={`w-full bg-white border ${clsErr('classification.seAvgDaysPerWeek')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Location <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.seLocation" type="text" defaultValue={worker.classification?.seLocation} className={`w-full bg-white border ${clsErr('classification.seLocation')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Location <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.seLocation" type="text" defaultValue={worker.classification?.seLocation} className={`w-full bg-white border ${clsErr('classification.seLocation')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                   </div>
                 </div>
@@ -1645,34 +1646,34 @@ export default function WorkerProfilePage() {
                   <h3 className="text-[15px] font-semibold text-bss-text-primary mb-4">Seasonal Work Details</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Job / Work Type <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.seasonalJobType" type="text" defaultValue={worker.classification?.seasonalJobType} className={`w-full bg-white border ${clsErr('classification.seasonalJobType')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Job / Work Type <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.seasonalJobType" type="text" defaultValue={worker.classification?.seasonalJobType} className={`w-full bg-white border ${clsErr('classification.seasonalJobType')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Season Start <span className="text-[#FF3B30]">*</span></label>
-                        <input name="classification.seasonalStartDate" type="date" defaultValue={worker.classification?.seasonalStartDate} className={`w-full bg-white border ${clsErr('classification.seasonalStartDate')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                        <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Season Start <span className="text-[#C94D18]">*</span></label>
+                        <input name="classification.seasonalStartDate" type="date" defaultValue={worker.classification?.seasonalStartDate} className={`w-full bg-white border ${clsErr('classification.seasonalStartDate')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                       </div>
                       <div>
-                        <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Season End <span className="text-[#FF3B30]">*</span></label>
-                        <input name="classification.seasonalEndDate" type="date" defaultValue={worker.classification?.seasonalEndDate} className={`w-full bg-white border ${clsErr('classification.seasonalEndDate')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                        <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Season End <span className="text-[#C94D18]">*</span></label>
+                        <input name="classification.seasonalEndDate" type="date" defaultValue={worker.classification?.seasonalEndDate} className={`w-full bg-white border ${clsErr('classification.seasonalEndDate')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Average Hours/Day <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.seasonalAvgHoursPerDay" type="number" defaultValue={worker.classification?.seasonalAvgHoursPerDay} placeholder="Hours" className={`w-full bg-white border ${clsErr('classification.seasonalAvgHoursPerDay')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Average Hours/Day <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.seasonalAvgHoursPerDay" type="number" defaultValue={worker.classification?.seasonalAvgHoursPerDay} placeholder="Hours" className={`w-full bg-white border ${clsErr('classification.seasonalAvgHoursPerDay')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Average Days/Week <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.seasonalAvgDaysPerWeek" type="number" defaultValue={worker.classification?.seasonalAvgDaysPerWeek} placeholder="Days" className={`w-full bg-white border ${clsErr('classification.seasonalAvgDaysPerWeek')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Average Days/Week <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.seasonalAvgDaysPerWeek" type="number" defaultValue={worker.classification?.seasonalAvgDaysPerWeek} placeholder="Days" className={`w-full bg-white border ${clsErr('classification.seasonalAvgDaysPerWeek')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Work Location / Service Area <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.seasonalLocation" type="text" defaultValue={worker.classification?.seasonalLocation} className={`w-full bg-white border ${clsErr('classification.seasonalLocation')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Work Location / Service Area <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.seasonalLocation" type="text" defaultValue={worker.classification?.seasonalLocation} className={`w-full bg-white border ${clsErr('classification.seasonalLocation')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Expected Seasonal Income <span className="text-[#FF3B30]">*</span></label>
-                      <input name="classification.seasonalExpectedIncome" type="text" defaultValue={worker.classification?.seasonalExpectedIncome} placeholder="₹" className={`w-full bg-white border ${clsErr('classification.seasonalExpectedIncome')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`} />
+                      <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Expected Seasonal Income <span className="text-[#C94D18]">*</span></label>
+                      <input name="classification.seasonalExpectedIncome" type="text" defaultValue={worker.classification?.seasonalExpectedIncome} placeholder="₹" className={`w-full bg-white border ${clsErr('classification.seasonalExpectedIncome')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`} />
                     </div>
                   </div>
                 </div>
@@ -1682,8 +1683,8 @@ export default function WorkerProfilePage() {
                 <h3 className="text-[15px] font-semibold text-bss-text-primary mb-4">Payment Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                   <div>
-                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Payment Frequency <span className="text-[#FF3B30]">*</span></label>
-                    <select name="classification.paymentFrequency" defaultValue={worker.classification?.paymentFrequency} className={`w-full bg-white border ${clsErr('classification.paymentFrequency')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`}>
+                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Payment Frequency <span className="text-[#C94D18]">*</span></label>
+                    <select name="classification.paymentFrequency" defaultValue={worker.classification?.paymentFrequency} className={`w-full bg-white border ${clsErr('classification.paymentFrequency')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`}>
                       <option>Weekly</option>
                       <option>Fortnightly</option>
                       <option>Monthly</option>
@@ -1691,8 +1692,8 @@ export default function WorkerProfilePage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Payment Mode <span className="text-[#FF3B30]">*</span></label>
-                    <select name="classification.paymentMode" defaultValue={worker.classification?.paymentMode} className={`w-full bg-white border ${clsErr('classification.paymentMode')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]`}>
+                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Payment Mode <span className="text-[#C94D18]">*</span></label>
+                    <select name="classification.paymentMode" defaultValue={worker.classification?.paymentMode} className={`w-full bg-white border ${clsErr('classification.paymentMode')} rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]`}>
                       <option>Bank Transfer</option>
                       <option>Cheque</option>
                       <option>Cash</option>
@@ -1707,11 +1708,11 @@ export default function WorkerProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Registration Source</label>
-                    <input name="other.registrationSource" type="text" defaultValue={worker.other?.registrationSource} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="other.registrationSource" type="text" defaultValue={worker.other?.registrationSource} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Consent for Data Sharing</label>
-                    <div className="flex items-center gap-2 w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-2 w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3">
                       <CheckCircle2 size={18} className="text-bss-green"/>
                       <span className="text-[14px] font-medium text-bss-text-primary">{worker.other?.consentDate ? `Granted on ${formatDate(worker.other.consentDate)}` : 'Not granted'}</span>
                     </div>
@@ -1724,7 +1725,7 @@ export default function WorkerProfilePage() {
           {/* TAB: EMPLOYMENT BINDING (READ ONLY) */}
           {activeTab === 'employment' && (
             <div className="space-y-8 animate-in fade-in">
-              <div className="bg-[#E8F5E9] p-5 rounded-2xl border border-[#2F9E67]/20 mb-6">
+              <div className="bg-[#E8F5EC] p-5 rounded-2xl border border-[#14843C]/20 mb-6">
                 <p className="text-[13px] text-bss-green font-medium">These employment and binding details are generated automatically by the system upon your successful binding with a contractor.</p>
               </div>
 
@@ -1736,64 +1737,64 @@ export default function WorkerProfilePage() {
                     <span className="text-bss-text-muted">Statutory total</span><span className="font-semibold text-right">₹{(worker.employment.costBreakdown.statutoryTotal ?? 0).toLocaleString('en-IN')}</span>
                     <span className="text-bss-text-muted">Custom total</span><span className="font-semibold text-right">₹{(worker.employment.costBreakdown.customTotal ?? 0).toLocaleString('en-IN')}</span>
                     <span className="font-bold text-bss-text-primary border-t border-black/5 pt-2">Employer cost</span><span className="font-bold text-right border-t border-black/5 pt-2">₹{(worker.employment.costBreakdown.employerCost ?? 0).toLocaleString('en-IN')}</span>
-                    <span className="font-bold text-bss-text-primary">CTC (monthly)</span><span className="font-bold text-right text-[#0066CC]">₹{(worker.employment.costBreakdown.ctc ?? worker.employment.ctc ?? 0).toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-bss-text-primary">CTC (monthly)</span><span className="font-bold text-right text-[#1E3A8A]">₹{(worker.employment.costBreakdown.ctc ?? worker.employment.ctc ?? 0).toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-1.5">{(worker.employment.costBreakdown.statutory ?? []).map(s => <span key={s.component} className="text-[11px] px-2 py-0.5 rounded-full bg-[#F5F5F7] text-bss-text-primary">{s.component} ₹{s.amount.toLocaleString('en-IN')}</span>)}{(worker.employment.costBreakdown.custom ?? []).map(c => <span key={c.name} className="text-[11px] px-2 py-0.5 rounded-full bg-[#E8F0FE] text-[#0066CC]">{c.name} ₹{c.computed.toLocaleString('en-IN')}</span>)}</div>
+                  <div className="mt-3 flex flex-wrap gap-1.5">{(worker.employment.costBreakdown.statutory ?? []).map(s => <span key={s.component} className="text-[11px] px-2 py-0.5 rounded-full bg-[#F2F6FC] text-bss-text-primary">{s.component} ₹{s.amount.toLocaleString('en-IN')}</span>)}{(worker.employment.costBreakdown.custom ?? []).map(c => <span key={c.name} className="text-[11px] px-2 py-0.5 rounded-full bg-[#EEF5FF] text-[#1E3A8A]">{c.name} ₹{c.computed.toLocaleString('en-IN')}</span>)}</div>
                 </div>
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                 <div>
                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Employer Name</label>
-                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.name ?? worker.employment.employer} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.name ?? worker.employment.employer} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Employer BSS ID</label>
-                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.code} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.code} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Employer Email ID</label>
-                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.email} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.email} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Employer State</label>
-                  <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.state} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                  <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.state} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Employer Address</label>
-                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.address} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.address} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Employer Industry</label>
-                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.industry} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.industry} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Principal Employer LIN No.</label>
-                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.lin} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.lin} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Contractor Name</label>
-                   <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.name ?? worker.employment.contractor} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                   <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.name ?? worker.employment.contractor} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Contractor BSS ID</label>
-                   <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.code} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                   <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.code} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Contractor Email</label>
-                   <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.email} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                   <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.email} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Contractor State</label>
-                  <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.state} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                  <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.state} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Contractor Address</label>
-                   <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.address} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                   <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.address} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Contractor LIN</label>
-                   <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.lin} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                   <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.lin} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
               </div>
 
@@ -1802,47 +1803,47 @@ export default function WorkerProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Site Name</label>
-                    <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.name ?? worker.employment.site} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.name ?? worker.employment.site} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Site ID</label>
-                    <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.code} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.code} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Site Location</label>
-                    <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.location} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.location} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">State</label>
-                    <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.state} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.state} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Designation & Department</label>
-                    <input type="text" defaultValue={[worker.employment.designation, worker.employment.department].filter(Boolean).join(" - ")} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input type="text" defaultValue={[worker.employment.designation, worker.employment.department].filter(Boolean).join(" - ")} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Nature of Job</label>
-                    <input name="employment.natureOfJob" type="text" defaultValue={worker.employment.natureOfJob} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="employment.natureOfJob" type="text" defaultValue={worker.employment.natureOfJob} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Type of Work</label>
-                    <input name="employment.typeOfWork" type="text" defaultValue={worker.employment.typeOfWork} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="employment.typeOfWork" type="text" defaultValue={worker.employment.typeOfWork} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Date of Joining</label>
-                    <input name="employment.doj" type="text" defaultValue={worker.employment.doj} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="employment.doj" type="text" defaultValue={worker.employment.doj} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Employment Status</label>
-                    <input name="employment.status" type="text" defaultValue={worker.employment.status} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-green" readOnly />
+                    <input name="employment.status" type="text" defaultValue={worker.employment.status} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-green" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Reference Worker ID</label>
-                    <input name="employment.refWorkerId" type="text" defaultValue={worker.employment.refWorkerId} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="employment.refWorkerId" type="text" defaultValue={worker.employment.refWorkerId} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">PF Account</label>
-                    <input name="employment.pfAccount" type="text" defaultValue={worker.employment.pfAccount} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="employment.pfAccount" type="text" defaultValue={worker.employment.pfAccount} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                 </div>
               </div>
@@ -1852,31 +1853,31 @@ export default function WorkerProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Shift</label>
-                    <input name="employment.shift" type="text" defaultValue={worker.employment.shift} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="employment.shift" type="text" defaultValue={worker.employment.shift} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Camp No.</label>
-                    <input name="employment.campNo" type="text" defaultValue={worker.employment.campNo} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="employment.campNo" type="text" defaultValue={worker.employment.campNo} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Transport Facility</label>
-                    <input name="employment.transportFacility" type="text" defaultValue={worker.employment.transportFacility} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-green" readOnly />
+                    <input name="employment.transportFacility" type="text" defaultValue={worker.employment.transportFacility} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-green" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Route</label>
-                    <input name="employment.route" type="text" defaultValue={worker.employment.route} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="employment.route" type="text" defaultValue={worker.employment.route} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Bus No.</label>
-                    <input name="employment.busNo" type="text" defaultValue={worker.employment.busNo} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="employment.busNo" type="text" defaultValue={worker.employment.busNo} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">ID Card Issue Date</label>
-                    <input name="employment.idCardIssueDate" type="text" defaultValue={worker.employment.idCardIssueDate} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="employment.idCardIssueDate" type="text" defaultValue={worker.employment.idCardIssueDate} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">ID Card Validity Till</label>
-                    <input name="employment.idCardValidityTill" type="text" defaultValue={worker.employment.idCardValidityTill} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <input name="employment.idCardValidityTill" type="text" defaultValue={worker.employment.idCardValidityTill} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                 </div>
               </div>
@@ -1889,42 +1890,42 @@ export default function WorkerProfilePage() {
           {/* TAB: SKILLS & EMPLOYABILITY */}
           {activeTab === 'skills' && (
             <div className="space-y-8 animate-in fade-in">
-              <div className="bg-[#F5F5F7] rounded-2xl p-5 space-y-4">
+              <div className="bg-[#F2F6FC] rounded-2xl p-5 space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-[15px] font-semibold text-bss-text-primary">Education & Languages</h3>
-                  <button type="button" onClick={addEducation} className="text-[#0066CC] text-[13px] font-semibold hover:underline">+ Add Education</button>
+                  <button type="button" onClick={addEducation} className="text-[#1E3A8A] text-[13px] font-semibold hover:underline">+ Add Education</button>
                 </div>
                 {skillsForm.educations.map((edu, index) => (
                   <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-white rounded-xl p-4 border border-bss-border">
                     <div>
                       <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider mb-2">Qualification / Course</p>
-                      <input type="text" value={edu.qualificationCourse} onChange={e => updateEducation(index, 'qualificationCourse', e.target.value)} placeholder="e.g. 12th Standard (HSC)" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                      <input type="text" value={edu.qualificationCourse} onChange={e => updateEducation(index, 'qualificationCourse', e.target.value)} placeholder="e.g. 12th Standard (HSC)" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                     </div>
                     <div>
                       <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider mb-2">Board / University</p>
-                      <input type="text" value={edu.boardUniversity} onChange={e => updateEducation(index, 'boardUniversity', e.target.value)} placeholder="e.g. CBSE" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                      <input type="text" value={edu.boardUniversity} onChange={e => updateEducation(index, 'boardUniversity', e.target.value)} placeholder="e.g. CBSE" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                     </div>
                     <div>
                       <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider mb-2">Passing Year</p>
-                      <input type="text" inputMode="numeric" value={edu.passingYear} onChange={e => updateEducation(index, 'passingYear', e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="e.g. 2014" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                      <input type="text" inputMode="numeric" value={edu.passingYear} onChange={e => updateEducation(index, 'passingYear', e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="e.g. 2014" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                     </div>
                     <div className="flex md:justify-end">
                       {skillsForm.educations.length > 1 && (
-                        <button type="button" onClick={() => removeEducation(index)} className="text-[#FF3B30] hover:bg-bss-soft-red rounded-lg p-2" aria-label="Remove education"><Trash2 size={16}/></button>
+                        <button type="button" onClick={() => removeEducation(index)} className="text-[#C94D18] hover:bg-bss-soft-red rounded-lg p-2" aria-label="Remove education"><Trash2 size={16}/></button>
                       )}
                     </div>
                   </div>
                 ))}
                 <div>
                   <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider mb-2">Languages Known</p>
-                  <input type="text" value={skillsForm.languages} onChange={e => setSkill('languages', e.target.value)} placeholder="Comma separated, e.g. Hindi, English" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                  <input type="text" value={skillsForm.languages} onChange={e => setSkill('languages', e.target.value)} placeholder="Comma separated, e.g. Hindi, English" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                 </div>
               </div>
 
               <div className="pt-6 border-t border-black/5">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-[15px] font-semibold text-bss-text-primary">Trades & Skills</h3>
-                  <button type="button" onClick={addSkill} className="text-[#0066CC] text-[13px] font-semibold hover:underline">
+                  <button type="button" onClick={addSkill} className="text-[#1E3A8A] text-[13px] font-semibold hover:underline">
                     + Add Skill
                   </button>
                 </div>
@@ -1932,12 +1933,12 @@ export default function WorkerProfilePage() {
                   {/* Verified certifications — issued via the BSS course system (read-only) */}
                   {(worker.skills?.items ?? []).filter(s => s.verified).map((s, i) => (
                     <div key={s.id ?? `v-${i}`} className="bg-white rounded-xl shadow-sm border border-bss-border overflow-hidden">
-                      <div className="p-4 border-b flex justify-between items-center bg-[#073B67] text-white">
+                      <div className="p-4 border-b flex justify-between items-center bg-[#01183A] text-white">
                         <div className="flex items-center gap-2">
-                          <Award size={18} className="text-[#F47A32]" />
+                          <Award size={18} className="text-[#E45D24]" />
                           <h3 className="font-bold text-white">{s.name || 'Certified Skill'}</h3>
                         </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-[#2F9E67] text-white">Verified</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-[#14843C] text-white">Verified</span>
                       </div>
                       <div className="p-5 space-y-5">
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -1959,7 +1960,7 @@ export default function WorkerProfilePage() {
                             <BadgeCheck size={16} className="text-bss-green" />
                             <h4 className="text-sm font-bold text-bss-text-primary">Certification Details</h4>
                           </div>
-                          <div className="bg-[#E8F5E9]/50 p-4 rounded-lg border border-[#2F9E67]/20 grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="bg-[#E8F5EC]/50 p-4 rounded-lg border border-[#14843C]/20 grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="col-span-2">
                               <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider">Certificate Name</p>
                               <p className="text-sm font-bold text-bss-text-primary">{s.certification?.name || '—'}</p>
@@ -1970,13 +1971,13 @@ export default function WorkerProfilePage() {
                             </div>
                             <div className="col-span-2">
                               <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider">Cert. Number</p>
-                              <p className="text-xs font-mono font-semibold text-[#073B67]">{s.certification?.number || '—'}</p>
+                              <p className="text-xs font-mono font-semibold text-[#01183A]">{s.certification?.number || '—'}</p>
                             </div>
                             <div className="col-span-2">
                               <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider">Validity</p>
                               <p className="text-xs font-semibold text-bss-text-primary">{s.certification?.expiry || '—'}</p>
                             </div>
-                            <div className="col-span-4 pt-2 border-t border-[#2F9E67]/20 flex justify-end">
+                            <div className="col-span-4 pt-2 border-t border-[#14843C]/20 flex justify-end">
                               <button
                                 type="button"
                                 onClick={() => setActiveCert({
@@ -1985,7 +1986,7 @@ export default function WorkerProfilePage() {
                                   number: s.certification?.number || 'BSS-CERT-VERIFIED',
                                   expiry: s.certification?.expiry || 'Lifetime Verified'
                                 })}
-                                className="px-3 py-1.5 rounded-lg bg-[#073B67] hover:bg-[#062D4F] text-white text-xs font-bold flex items-center gap-1.5 transition-colors"
+                                className="px-3 py-1.5 rounded-lg bg-[#01183A] hover:bg-[#022B5E] text-white text-xs font-bold flex items-center gap-1.5 transition-colors"
                               >
                                 <Upload size={13} className="rotate-180" /> View & Print Certificate
                               </button>
@@ -2004,20 +2005,20 @@ export default function WorkerProfilePage() {
                           <Award size={18} className="text-bss-text-muted" />
                           <h3 className="font-bold text-bss-text-primary">Self-Declared Skill</h3>
                         </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-yellow-100 text-yellow-800">Self-Declared</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-bss-soft-orange text-bss-orange">Self-Declared</span>
                       </div>
                       <div className="p-5">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                           <div className="md:col-span-2">
                             <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider mb-2">Skill / Trade</p>
-                            <input type="text" value={s.name} onChange={e => updateSkill(index, 'name', e.target.value)} placeholder="e.g. Bar Bender (Rebar)" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                            <input type="text" value={s.name} onChange={e => updateSkill(index, 'name', e.target.value)} placeholder="e.g. Bar Bender (Rebar)" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                           </div>
                           <div>
                             <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider mb-2">Experience</p>
-                            <input type="text" value={s.experienceYears} onChange={e => updateSkill(index, 'experienceYears', e.target.value)} placeholder="e.g. 3 Years" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]" />
+                            <input type="text" value={s.experienceYears} onChange={e => updateSkill(index, 'experienceYears', e.target.value)} placeholder="e.g. 3 Years" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                           </div>
                           <div className="flex md:justify-end">
-                            <button type="button" onClick={() => removeSkill(index)} className="text-[#FF3B30] hover:bg-bss-soft-red rounded-lg p-2" aria-label="Remove skill"><Trash2 size={16}/></button>
+                            <button type="button" onClick={() => removeSkill(index)} className="text-[#C94D18] hover:bg-bss-soft-red rounded-lg p-2" aria-label="Remove skill"><Trash2 size={16}/></button>
                           </div>
                         </div>
                       </div>
@@ -2034,11 +2035,11 @@ export default function WorkerProfilePage() {
           {/* TAB: WELFARE & SAFETY */}
           {activeTab === 'welfare' && (
             <div className="space-y-8 animate-in fade-in">
-              <div className="bg-[#FFF8F0] p-5 rounded-2xl border border-[#F47A32]/20 mb-6">
-                <p className="text-[13px] text-[#F47A32] font-medium">Welfare and safety records are maintained by your employer and site safety team. For detailed records and actions, visit the <a href="/worker/Compliance" className="underline font-semibold">Compliance module</a>.</p>
+              <div className="bg-[#FDEEE6] p-5 rounded-2xl border border-[#E45D24]/20 mb-6">
+                <p className="text-[13px] text-[#E45D24] font-medium">Welfare and safety records are maintained by your employer and site safety team. For detailed records and actions, visit the <a href="/worker/Compliance" className="underline font-semibold">Compliance module</a>.</p>
               </div>
 
-              <div className="bg-[#F5F5F7] rounded-2xl p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-[#F2F6FC] rounded-2xl p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider">PPE Required</p>
                   <p className={`text-sm font-semibold mt-1 ${welfareClass(worker.welfare?.ppeRequired)}`}>{worker.welfare?.ppeRequired ? 'Yes — per site safety policy' : 'No'}</p>
@@ -2046,7 +2047,7 @@ export default function WorkerProfilePage() {
                 <div>
                   <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider">Types of PPE Given</p>
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
-                    {(worker.welfare?.typesOfPpeGiven ? worker.welfare.typesOfPpeGiven.split(',').map(s => s.trim()).filter(Boolean) : []).map(item => <span key={item} className="text-[10px] font-semibold bg-white border border-bss-border text-[#073B67] px-2 py-0.5 rounded">{item}</span>)}
+                    {(worker.welfare?.typesOfPpeGiven ? worker.welfare.typesOfPpeGiven.split(',').map(s => s.trim()).filter(Boolean) : []).map(item => <span key={item} className="text-[10px] font-semibold bg-white border border-bss-border text-[#01183A] px-2 py-0.5 rounded">{item}</span>)}
                     {(!worker.welfare?.typesOfPpeGiven?.trim()) && <span className="text-xs text-bss-text-muted">Not recorded</span>}
                   </div>
                 </div>
@@ -2084,17 +2085,17 @@ export default function WorkerProfilePage() {
                 <h3 className="text-[15px] font-semibold text-bss-text-primary mb-4">Gate Passes</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-white rounded-xl border border-bss-border overflow-hidden">
-                    <div className="px-4 py-3 border-b bg-bss-bg flex justify-between items-center"><span className="text-sm font-bold text-bss-text-primary">Temporary Gate Pass Status</span><span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${(worker.welfare?.tempGatePassStatus || '').toLowerCase() === 'active' ? 'bg-green-100 text-bss-green' : 'bg-orange-100 text-[#F47A32]'}`}>{worker.welfare?.tempGatePassStatus || '—'}</span></div>
+                    <div className="px-4 py-3 border-b bg-bss-bg flex justify-between items-center"><span className="text-sm font-bold text-bss-text-primary">Temporary Gate Pass Status</span><span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${(worker.welfare?.tempGatePassStatus || '').toLowerCase() === 'active' ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-[#E45D24]'}`}>{worker.welfare?.tempGatePassStatus || '—'}</span></div>
                     <div className="p-4 space-y-2 text-xs">
-                      <div className="flex justify-between"><span className="text-bss-text-muted">Temporary Pass No.</span><span className="font-mono font-semibold text-[#073B67]">{worker.welfare?.tgpNo || '—'}</span></div>
+                      <div className="flex justify-between"><span className="text-bss-text-muted">Temporary Pass No.</span><span className="font-mono font-semibold text-[#01183A]">{worker.welfare?.tgpNo || '—'}</span></div>
                       <div className="flex justify-between"><span className="text-bss-text-muted">Temporary Gate Pass Start Date</span><span className="font-semibold text-bss-text-primary">{worker.welfare?.tempGatePassStart || '—'}</span></div>
                       <div className="flex justify-between"><span className="text-bss-text-muted">Temporary Gate Pass End Date</span><span className="font-semibold text-bss-text-primary">{worker.welfare?.tempGatePassEnd || '—'}</span></div>
                     </div>
                   </div>
                   <div className="bg-white rounded-xl border border-bss-border overflow-hidden">
-                    <div className="px-4 py-3 border-b bg-bss-bg flex justify-between items-center"><span className="text-sm font-bold text-bss-text-primary">Permanent Gate Pass Status</span><span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${(worker.welfare?.permanentGatePassStatus || '').toLowerCase() === 'active' ? 'bg-green-100 text-bss-green' : 'bg-orange-100 text-[#F47A32]'}`}>{worker.welfare?.permanentGatePassStatus || '—'}</span></div>
+                    <div className="px-4 py-3 border-b bg-bss-bg flex justify-between items-center"><span className="text-sm font-bold text-bss-text-primary">Permanent Gate Pass Status</span><span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${(worker.welfare?.permanentGatePassStatus || '').toLowerCase() === 'active' ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-[#E45D24]'}`}>{worker.welfare?.permanentGatePassStatus || '—'}</span></div>
                     <div className="p-4 space-y-2 text-xs">
-                      <div className="flex justify-between"><span className="text-bss-text-muted">Permanent Pass No.</span><span className="font-mono font-semibold text-[#073B67]">{worker.welfare?.pgpNo || '—'}</span></div>
+                      <div className="flex justify-between"><span className="text-bss-text-muted">Permanent Pass No.</span><span className="font-mono font-semibold text-[#01183A]">{worker.welfare?.pgpNo || '—'}</span></div>
                       <div className="flex justify-between"><span className="text-bss-text-muted">Permanent Gate Pass Start Date</span><span className="font-semibold text-bss-text-primary">{worker.welfare?.permanentGatePassStart || '—'}</span></div>
                       <div className="flex justify-between"><span className="text-bss-text-muted">Permanent Gate Pass End Date</span><span className="font-semibold text-bss-text-primary">{worker.welfare?.permanentGatePassEnd || '—'}</span></div>
                     </div>
@@ -2104,7 +2105,7 @@ export default function WorkerProfilePage() {
 
               <div className="pt-6 border-t border-black/5">
                 <h3 className="text-[15px] font-semibold text-bss-text-primary mb-4">Medical Fitness Status</h3>
-                <div className="bg-[#F5F5F7] rounded-2xl p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-[#F2F6FC] rounded-2xl p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider">Medical Examination Status</p>
                     {medicalExaminationStatus ? (
@@ -2122,7 +2123,7 @@ export default function WorkerProfilePage() {
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider">Next Medical Due</p>
-                    <p className="text-sm font-semibold text-[#F47A32] mt-1">{worker.welfare?.nextMedicalDue || 'Not recorded'}</p>
+                    <p className="text-sm font-semibold text-[#E45D24] mt-1">{worker.welfare?.nextMedicalDue || 'Not recorded'}</p>
                   </div>
                 </div>
               </div>
@@ -2132,39 +2133,39 @@ export default function WorkerProfilePage() {
           {/* TAB: OTHER */}
           {activeTab === 'other' && (
             <div className="space-y-8 animate-in fade-in">
-              <div className="bg-[#E8F5E9] p-5 rounded-2xl border border-[#2F9E67]/20 mb-6">
+              <div className="bg-[#E8F5EC] p-5 rounded-2xl border border-[#14843C]/20 mb-6">
                 <p className="text-[13px] text-bss-green font-medium">Registration and consent records are captured when your BSS profile is created and cannot be edited here.</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                 <div>
                   <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Consent for Registration</label>
-                  <div className="flex items-center gap-2 w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-2 w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3">
                     <CheckCircle2 size={18} className="text-bss-green"/>
                     <span className="text-[14px] font-medium text-bss-text-primary">{worker.other?.consentRegistration ? 'Granted' : 'Not granted'}</span>
                   </div>
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Consent for Verification / Data Sharing</label>
-                  <div className="flex items-center gap-2 w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-2 w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3">
                     <CheckCircle2 size={18} className="text-bss-green"/>
                     <span className="text-[14px] font-medium text-bss-text-primary">{worker.other?.consentVerification ? 'Granted' : 'Not granted'}</span>
                   </div>
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Consent Date</label>
-                  <input name="other.consentDate" type="text" defaultValue={formatDate(worker.other?.consentDate, '')} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                  <input name="other.consentDate" type="text" defaultValue={formatDate(worker.other?.consentDate, '')} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Registration Source</label>
-                  <input name="other.registrationSource" type="text" defaultValue={worker.other?.registrationSource} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                  <input name="other.registrationSource" type="text" defaultValue={worker.other?.registrationSource} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Registered By</label>
-                  <input name="other.registeredBy" type="text" defaultValue={worker.other?.registeredBy} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                  <input name="other.registeredBy" type="text" defaultValue={worker.other?.registeredBy} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Registration Date</label>
-                  <input name="other.registrationDate" type="text" defaultValue={formatDate(worker.other?.registrationDate, '')} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                  <input name="other.registrationDate" type="text" defaultValue={formatDate(worker.other?.registrationDate, '')} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                 </div>
               </div>
             </div>
@@ -2279,27 +2280,27 @@ export default function WorkerProfilePage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
                           <div>
                             <label className="block text-[11px] font-bold text-bss-text-muted uppercase tracking-wider mb-1.5">Bank Account Number</label>
-                            <input name="banking.accountNumber" type="password" defaultValue="" placeholder="Enter account number" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#0066CC]"/>
+                            <input name="banking.accountNumber" type="password" defaultValue="" placeholder="Enter account number" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]"/>
                             <p className="text-[10px] text-bss-text-muted mt-1">Current: {maskId(worker.banking.accountNumber, 4) || '—'} · re-enter to change</p>
                           </div>
                           <div>
                             <label className="block text-[11px] font-bold text-bss-text-muted uppercase tracking-wider mb-1.5">IFSC Code</label>
-                            <input name="banking.ifsc" type="text" defaultValue={worker.banking.ifsc} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-bss-text-primary uppercase focus:outline-none focus:border-[#0066CC]"/>
+                            <input name="banking.ifsc" type="text" defaultValue={worker.banking.ifsc} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-bss-text-primary uppercase focus:outline-none focus:border-[#1E3A8A]"/>
                           </div>
                           <div>
                             <label className="block text-[11px] font-bold text-bss-text-muted uppercase tracking-wider mb-1.5">Bank Name <span className="normal-case font-medium text-bss-text-muted">(auto-filled)</span></label>
-                            <input readOnly value={worker.banking.bankName} placeholder="Fetched from IFSC" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary"/>
+                            <input readOnly value={worker.banking.bankName} placeholder="Fetched from IFSC" className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary"/>
                           </div>
                           <div>
                             <label className="block text-[11px] font-bold text-bss-text-muted uppercase tracking-wider mb-1.5">Account Holder Name <span className="normal-case font-medium text-bss-text-muted">(from bank)</span></label>
                             <div className="relative">
-                              <input readOnly value={worker.banking.holderName} placeholder="Fetched on verification" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-3 py-2.5 pr-10 text-[13px] font-medium text-bss-text-primary"/>
+                              <input readOnly value={worker.banking.holderName} placeholder="Fetched on verification" className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-3 py-2.5 pr-10 text-[13px] font-medium text-bss-text-primary"/>
                               {worker.banking.nameMatchesAadhaar && <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-bss-green" title="Matches your Aadhaar name"><CheckCheck size={17}/></span>}
                             </div>
                           </div>
                           <div>
                             <label className="block text-[11px] font-bold text-bss-text-muted uppercase tracking-wider select-none mb-1.5">Branch <span className="normal-case font-medium text-bss-text-muted">(auto-filled)</span></label>
-                            <input readOnly value={worker.banking.branch} placeholder="—" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary"/>
+                            <input readOnly value={worker.banking.branch} placeholder="—" className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-bss-text-primary"/>
                           </div>
                           <div className="sm:col-span-2">
                             <label className="block text-[11px] font-bold text-bss-text-muted uppercase tracking-wider mb-1.5">UPI</label>
@@ -2309,8 +2310,8 @@ export default function WorkerProfilePage() {
                       </div>
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <button type="submit" disabled={isSaving} className="h-10 px-4 rounded-xl border border-[#073B67]/25 bg-white text-[#073B67] text-[13px] font-bold inline-flex items-center gap-2 hover:bg-[#073B67]/5 disabled:opacity-50">{isSaving ? 'Saving…' : 'Save details'}</button>
-                          <button type="button" onClick={verifyBank} disabled={bankVerify.busy} className="h-10 px-4 rounded-xl bg-[#073B67] text-white text-[13px] font-bold inline-flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-50">{bankVerify.busy ? 'Verifying…' : 'Verify via Penny Drop (₹1)'}</button>
+                          <button type="submit" disabled={isSaving} className="h-10 px-4 rounded-xl border border-[#01183A]/25 bg-white text-[#01183A] text-[13px] font-bold inline-flex items-center gap-2 hover:bg-[#01183A]/5 disabled:opacity-50">{isSaving ? 'Saving…' : 'Save details'}</button>
+                          <button type="button" onClick={verifyBank} disabled={bankVerify.busy} className="h-10 px-4 rounded-xl bg-[#01183A] text-white text-[13px] font-bold inline-flex items-center gap-2 hover:bg-[#022B5E] disabled:opacity-50">{bankVerify.busy ? 'Verifying…' : 'Verify via Penny Drop (₹1)'}</button>
                         </div>
                         <p className="text-[11px] text-bss-text-muted">Enter your account number and IFSC — the bank name, branch and account-holder name are fetched from the bank for you. A ₹1 test credit confirms the account (NPCI, via Sandbox.co.in).</p>
                       </div>
@@ -2338,10 +2339,10 @@ export default function WorkerProfilePage() {
                         <p className="text-[12px] text-bss-green font-semibold mb-2">DigiLocker linked — fetching documents…</p>
                       )}
                       {digilockerStatus === 'error' && digilockerMessage && (
-                        <p className="text-[12px] text-[#FF3B30] font-semibold mb-2">{digilockerMessage}</p>
+                        <p className="text-[12px] text-[#C94D18] font-semibold mb-2">{digilockerMessage}</p>
                       )}
                       {!digilockerDocs.length && digilockerErrorText && (
-                        <p className="text-[12px] text-[#B45309] bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-2">{digilockerErrorText}</p>
+                        <p className="text-[12px] text-[#C94D18] bg-bss-soft-orange border border-bss-border rounded-lg px-3 py-2 mb-2">{digilockerErrorText}</p>
                       )}
                       {digilockerDocs.length > 0 ? (
                         <div className="space-y-2 mt-2">
@@ -2354,7 +2355,7 @@ export default function WorkerProfilePage() {
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 {doc.file_url && <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold text-sky-700 hover:underline">View</a>}
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${doc.status === 'DOWNLOADED' ? 'bg-green-100 text-bss-green' : 'bg-orange-100 text-[#F47A32]'}`}>{doc.status || '—'}</span>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${doc.status === 'DOWNLOADED' ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-[#E45D24]'}`}>{doc.status || '—'}</span>
                               </div>
                             </div>
                           ))}
@@ -2404,22 +2405,22 @@ export default function WorkerProfilePage() {
               <button onClick={() => setActiveCert(null)} className="w-8 h-8 grid place-items-center rounded-full hover:bg-bss-bg"><X size={16}/></button>
             </div>
             <div className="p-8 text-center bg-gradient-to-b from-white to-blue-50/30 border-b border-bss-border" id="bss-certificate-print-area">
-              <div className="w-20 h-20 rounded-2xl bg-[#073B67] text-white flex items-center justify-center mx-auto shadow-md"><Award size={40}/></div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#073B67] mt-5">Bharat Shram Setu National Skill Registry</p>
+              <div className="w-20 h-20 rounded-2xl bg-[#01183A] text-white flex items-center justify-center mx-auto shadow-md"><Award size={40}/></div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#01183A] mt-5">Bharat Shram Setu National Skill Registry</p>
               <h3 className="text-2xl font-extrabold text-bss-text-primary mt-2">{activeCert.name}</h3>
               <p className="text-xs text-bss-text-secondary mt-3">This official certificate is proudly awarded to</p>
-              <p className="text-xl font-extrabold text-[#073B67] mt-1">{worker.identity.name}</p>
+              <p className="text-xl font-extrabold text-[#01183A] mt-1">{worker.identity.name}</p>
               <p className="text-xs text-bss-text-muted mt-1">BSS ID: <span className="font-mono font-semibold">{worker.identity.bssId}</span></p>
               <div className="my-6 pt-5 border-t border-bss-border/80 max-w-md mx-auto grid grid-cols-2 gap-4 text-left bg-white p-5 rounded-xl border border-bss-border shadow-sm">
                 <div><p className="text-[10px] text-bss-text-muted font-bold uppercase tracking-wider">Issued By</p><p className="text-xs font-semibold text-bss-text-primary mt-0.5">{activeCert.authority}</p></div>
                 <div><p className="text-[10px] text-bss-text-muted font-bold uppercase tracking-wider">Validity</p><p className="text-xs font-semibold text-bss-text-primary mt-0.5">{activeCert.expiry}</p></div>
-                <div><p className="text-[10px] text-bss-text-muted font-bold uppercase tracking-wider">Certificate No.</p><p className="text-xs font-mono font-semibold text-[#073B67] mt-0.5">{activeCert.number}</p></div>
+                <div><p className="text-[10px] text-bss-text-muted font-bold uppercase tracking-wider">Certificate No.</p><p className="text-xs font-mono font-semibold text-[#01183A] mt-0.5">{activeCert.number}</p></div>
                 <div><p className="text-[10px] text-bss-text-muted font-bold uppercase tracking-wider">Verified Skill</p><p className="text-xs font-semibold text-bss-green mt-0.5">{activeCert.name}</p></div>
               </div>
-              <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-green-800 bg-green-100/80 border border-green-200 px-4 py-1.5 rounded-full"><CheckCircle size={14}/>Cryptographically Verified on BSS Trust Registry</div>
+              <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-bss-green bg-bss-soft-green/80 border border-bss-border px-4 py-1.5 rounded-full"><CheckCircle size={14}/>Cryptographically Verified on BSS Trust Registry</div>
             </div>
             <div className="px-6 py-4 border-t border-bss-border flex gap-3 bg-bss-bg no-print">
-              <button onClick={() => window.print()} className="flex-1 h-10 rounded-xl bg-[#073B67] text-white text-xs font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F] transition-colors"><Upload size={15} className="rotate-180"/>Print / Save PDF Certificate</button>
+              <button onClick={() => window.print()} className="flex-1 h-10 rounded-xl bg-[#01183A] text-white text-xs font-bold flex items-center justify-center gap-2 hover:bg-[#022B5E] transition-colors"><Upload size={15} className="rotate-180"/>Print / Save PDF Certificate</button>
               <button onClick={() => setActiveCert(null)} className="h-10 px-5 rounded-xl border border-bss-border text-xs font-bold text-bss-text-secondary hover:bg-bss-bg">Close</button>
             </div>
           </div>

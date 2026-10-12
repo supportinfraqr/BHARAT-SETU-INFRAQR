@@ -649,6 +649,22 @@ def worker_face_check(request):
         result = control.check_faces(images)
     except control.AttendanceControlError as exc:
         return Response({"error": str(exc)}, status=exc.status_code)
+    # Also compute the per-photo Aadhaar match (cosine) at capture time when the
+    # worker has a verified Aadhaar photo, so the UI can flag a photo that isn't
+    # this worker immediately (advisory — never blocks the capture).
+    reference = _aadhaar_reference_b64(request.user)
+    if reference:
+        try:
+            comp = control.compare_faces(reference, images)
+            crows = comp.get("results") or []
+            rows = result.get("results") or []
+            for i, row in enumerate(rows):
+                c = crows[i] if i < len(crows) else None
+                if c:
+                    row["cosinePct"] = c.get("cosinePct")
+                    row["matched"] = c.get("matched")
+        except control.AttendanceControlError:
+            pass
     return Response({"data": result}, status=status.HTTP_200_OK)
 
 
