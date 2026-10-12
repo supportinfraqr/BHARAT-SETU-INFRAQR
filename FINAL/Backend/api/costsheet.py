@@ -111,13 +111,18 @@ def compute_worker_cost(template, *, basic_wage=None, vda=None, working_days=26,
             "frequency": line.frequency, "appliesTo": line.applies_to,
             "editableByOrg": line.editable_by_org, "computed": computed,
         })
-        if line.applies_to in ("employer", "both"):
+        # Count each custom head exactly ONCE. Only a genuine employer-side head
+        # adds to the employer cost; everything else (contractor / both) is the
+        # contractor's billing — so a "both" head is never double-counted.
+        if line.applies_to == "employer":
             employer_custom += computed
-        if line.applies_to in ("contractor", "both"):
+        else:
             contractor_custom += computed
 
     employer_cost = round(wage + statutory_total + employer_custom, 2)
-    contractor_billing = round(employer_cost + contractor_custom, 2) if include_contractor else None
+    # Contractor billing is always derived; the final CTC to the employer is the
+    # employer cost plus the contractor-applied custom heads.
+    contractor_billing = round(employer_cost + contractor_custom, 2)
 
     return {
         "basicWage": round(basic, 2),
@@ -128,9 +133,10 @@ def compute_worker_cost(template, *, basic_wage=None, vda=None, working_days=26,
         "statutoryTotal": round(statutory_total, 2),
         "custom": custom_rows,
         "customTotal": round(employer_custom, 2),
+        "contractorTotal": round(contractor_custom, 2),
         "employerCost": employer_cost,
         "contractorBilling": contractor_billing,
-        "ctc": contractor_billing if contractor_billing is not None else employer_cost,
+        "ctc": contractor_billing,
         "currency": template.currency,
         "templateCode": template.code,
         "templateName": template.name,

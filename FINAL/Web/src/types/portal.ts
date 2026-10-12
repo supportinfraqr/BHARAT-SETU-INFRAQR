@@ -166,8 +166,8 @@ export type ContractorWorker = {
 
 export type CostBreakdown = {
   basicWage?: number; vda?: number; minimumWage?: number; dailyWage?: number;
-  statutoryTotal?: number; customTotal?: number; employerCost?: number;
-  contractorBilling?: number | null; ctc?: number; currency?: string;
+  statutoryTotal?: number; customTotal?: number; contractorTotal?: number; employerCost?: number;
+  contractorBilling?: number; ctc?: number; currency?: string;
   templateCode?: string; templateName?: string;
   statutory?: Array<{ component:string; rate:number; rateType?:string; amount:number }>;
   custom?: Array<{ name:string; computed:number; appliesTo?:string; frequency?:string }>;

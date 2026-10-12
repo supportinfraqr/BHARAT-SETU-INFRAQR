@@ -1735,9 +1735,9 @@ export default function WorkerProfilePage() {
                   <div className="grid grid-cols-2 gap-y-2 text-[13px]">
                     <span className="text-bss-text-muted">Basic + VDA (wage)</span><span className="font-semibold text-right">₹{(worker.employment.costBreakdown.minimumWage ?? 0).toLocaleString('en-IN')}</span>
                     <span className="text-bss-text-muted">Statutory total</span><span className="font-semibold text-right">₹{(worker.employment.costBreakdown.statutoryTotal ?? 0).toLocaleString('en-IN')}</span>
-                    <span className="text-bss-text-muted">Custom total</span><span className="font-semibold text-right">₹{(worker.employment.costBreakdown.customTotal ?? 0).toLocaleString('en-IN')}</span>
+                    <span className="text-bss-text-muted">Contractor billing</span><span className="font-semibold text-right">₹{(worker.employment.costBreakdown.contractorTotal ?? 0).toLocaleString('en-IN')}</span>
                     <span className="font-bold text-bss-text-primary border-t border-black/5 pt-2">Employer cost</span><span className="font-bold text-right border-t border-black/5 pt-2">₹{(worker.employment.costBreakdown.employerCost ?? 0).toLocaleString('en-IN')}</span>
-                    <span className="font-bold text-bss-text-primary">CTC (monthly)</span><span className="font-bold text-right text-[#1E3A8A]">₹{(worker.employment.costBreakdown.ctc ?? worker.employment.ctc ?? 0).toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-bss-text-primary">Final employer CTC</span><span className="font-bold text-right text-[#1E3A8A]">₹{(worker.employment.costBreakdown.ctc ?? worker.employment.ctc ?? 0).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1.5">{(worker.employment.costBreakdown.statutory ?? []).map(s => <span key={s.component} className="text-[11px] px-2 py-0.5 rounded-full bg-[#F2F6FC] text-bss-text-primary">{s.component} ₹{s.amount.toLocaleString('en-IN')}</span>)}{(worker.employment.costBreakdown.custom ?? []).map(c => <span key={c.name} className="text-[11px] px-2 py-0.5 rounded-full bg-[#EEF5FF] text-[#1E3A8A]">{c.name} ₹{c.computed.toLocaleString('en-IN')}</span>)}</div>
                 </div>

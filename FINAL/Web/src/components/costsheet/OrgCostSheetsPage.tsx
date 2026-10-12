@@ -14,7 +14,7 @@ type Template = {
 };
 type Breakdown = {
   basicWage:number; vda:number; minimumWage:number; dailyWage:number;
-  statutoryTotal:number; customTotal:number; employerCost:number; contractorBilling:number | null; ctc:number;
+  statutoryTotal:number; customTotal:number; contractorTotal:number; employerCost:number; contractorBilling:number; ctc:number;
   statutory:Array<{ component:string; rate:number; amount:number }>;
   custom:Array<{ name:string; computed:number }>;
 };
@@ -304,9 +304,9 @@ export default function OrgCostSheetsPage() {
             <div className="grid grid-cols-2 gap-y-1.5 text-xs">
               <span className="text-bss-text-muted">Basic + VDA (wage)</span><span className="font-semibold text-right">₹{preview.minimumWage.toLocaleString("en-IN")}</span>
               <span className="text-bss-text-muted">Statutory total</span><span className="font-semibold text-right">₹{preview.statutoryTotal.toLocaleString("en-IN")}</span>
-              <span className="text-bss-text-muted">Custom total</span><span className="font-semibold text-right">₹{preview.customTotal.toLocaleString("en-IN")}</span>
               <span className="text-bss-text-primary font-bold border-t border-bss-border pt-1.5">Employer cost</span><span className="font-bold text-right border-t border-bss-border pt-1.5">₹{preview.employerCost.toLocaleString("en-IN")}</span>
-              <span className="text-bss-text-primary font-bold">CTC</span><span className="font-bold text-right text-[#01183A]">₹{preview.ctc.toLocaleString("en-IN")}</span>
+              <span className="text-bss-text-muted">Contractor billing</span><span className="font-semibold text-right">₹{(preview.contractorTotal ?? 0).toLocaleString("en-IN")}</span>
+              <span className="text-bss-text-primary font-bold border-t border-bss-border pt-1.5">Final employer CTC</span><span className="font-bold text-right text-[#01183A] border-t border-bss-border pt-1.5">₹{preview.ctc.toLocaleString("en-IN")}</span>
             </div>
             <div className="mt-3 flex flex-wrap gap-1.5">{preview.statutory.map(s => <span key={s.component} className="text-[10px] px-2 py-0.5 rounded-full bg-bss-bg border border-bss-border text-bss-text-secondary">{s.component} ₹{s.amount.toLocaleString("en-IN")}</span>)}</div>
           </div>}

@@ -256,9 +256,9 @@ export default function WorkerMasterPage() {
             <div className="grid grid-cols-2 gap-y-1.5 text-xs">
               <span className="text-bss-text-muted">Basic + VDA (wage)</span><span className="font-semibold text-right">₹{(profileView.costBreakdown.minimumWage ?? 0).toLocaleString('en-IN')}</span>
               <span className="text-bss-text-muted">Statutory total</span><span className="font-semibold text-right">₹{(profileView.costBreakdown.statutoryTotal ?? 0).toLocaleString('en-IN')}</span>
-              <span className="text-bss-text-muted">Custom total</span><span className="font-semibold text-right">₹{(profileView.costBreakdown.customTotal ?? 0).toLocaleString('en-IN')}</span>
+              <span className="text-bss-text-muted">Contractor billing</span><span className="font-semibold text-right">₹{(profileView.costBreakdown.contractorTotal ?? 0).toLocaleString('en-IN')}</span>
               <span className="text-bss-text-primary font-bold border-t border-bss-border pt-1.5">Employer cost</span><span className="font-bold text-right border-t border-bss-border pt-1.5">₹{(profileView.costBreakdown.employerCost ?? 0).toLocaleString('en-IN')}</span>
-              <span className="text-bss-text-primary font-bold">CTC (monthly)</span><span className="font-bold text-right text-[#01183A]">₹{(profileView.costBreakdown.ctc ?? profileView.ctc ?? 0).toLocaleString('en-IN')}</span>
+              <span className="text-bss-text-primary font-bold">Final employer CTC</span><span className="font-bold text-right text-[#01183A]">₹{(profileView.costBreakdown.ctc ?? profileView.ctc ?? 0).toLocaleString('en-IN')}</span>
             </div>
             <div className="mt-3 flex flex-wrap gap-1.5">{(profileView.costBreakdown.statutory ?? []).map(s => <span key={s.component} className="text-[10px] px-2 py-0.5 rounded-full bg-bss-bg border border-bss-border text-bss-text-secondary">{s.component} ₹{s.amount.toLocaleString('en-IN')}</span>)}{(profileView.costBreakdown.custom ?? []).map(c => <span key={c.name} className="text-[10px] px-2 py-0.5 rounded-full bg-bss-blue-tint border border-bss-border text-bss-interactive-blue">{c.name} ₹{c.computed.toLocaleString('en-IN')}</span>)}</div>
           </div>}
