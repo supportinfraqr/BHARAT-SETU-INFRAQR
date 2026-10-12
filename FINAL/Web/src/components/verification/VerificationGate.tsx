@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { BadgeCheck, Building2, CheckCircle2, Clock3, Loader2, Send, ShieldCheck, Upload } from "lucide-react";
 import GstVerifyCard from "@/components/gst/GstVerifyCard";
+import { SignOutButton } from "@/components/auth/SignOutButton";
 
 type VerificationStatus = {
   applicable: boolean;
@@ -322,9 +323,12 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
   return (
     <div className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-sm grid place-items-center p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-label={title}>
       <div className="bg-[var(--color-bss-bg)] rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden my-8">
-        <header className="px-5 py-4 bg-white border-b border-gray-100">
-          <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">{icon}{title}</h2>
-          <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+        <header className="px-5 py-4 bg-white border-b border-gray-100 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">{icon}{title}</h2>
+            <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+          </div>
+          <SignOutButton label="Sign out" className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 inline-flex items-center gap-1.5 hover:bg-gray-50 shrink-0" />
         </header>
         <div className="p-5">{body}</div>
       </div>
