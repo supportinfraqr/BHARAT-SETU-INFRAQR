@@ -399,8 +399,11 @@ def _send_otp(aadhaar, consent=True):
         }, status=status.HTTP_200_OK)
 
     # 2) One request per AADHAAR_RESEND_GAP_SEC (60s), persisted per Aadhaar.
+    #    Only a *successful* send (OTP_SENT) starts the gap — a failed provider
+    #    call (e.g. an expired subscription or an outage) must not leave the user
+    #    stuck waiting 60s on a code that was never sent.
     last = (AadhaarChallenge.objects
-            .filter(aadhaar_number=aadhaar, status__in=["CALL", "OTP_SENT"])
+            .filter(aadhaar_number=aadhaar, status="OTP_SENT")
             .order_by("-created_at").first())
     if last is not None:
         elapsed = (now - last.created_at).total_seconds()

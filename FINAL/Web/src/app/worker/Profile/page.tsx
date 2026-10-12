@@ -438,7 +438,7 @@ export default function WorkerProfilePage() {
       // Throttled / locked / a code is already pending: still advance to the OTP
       // step so the delivered code can be entered, and start the resend cooldown.
       if (json.otpPending || json.retryAfterSeconds || json.locked) {
-        setAadhaarLink(s => ({ ...s, sent: true, busy: false, otpCooldown: json.retryAfterSeconds ?? 60, error: json.error || '', notice: json.locked ? '' : 'An OTP was already sent to your Aadhaar mobile — enter it below.' }));
+        setAadhaarLink(s => ({ ...s, sent: true, busy: false, otpCooldown: json.retryAfterSeconds ?? 60, error: json.error || 'An OTP was already sent to your Aadhaar mobile — enter it below.', notice: '' }));
         return;
       }
       throw new Error(json.error || 'OTP could not be sent.');
