@@ -21,6 +21,8 @@ export default function ContractorBindingRequestsPage() {
   const [otpMode, setOtpMode] = useState<'bind' | 'unbind'>('bind');
   const [wageFor, setWageFor] = useState<ContractorBindingRequest | null>(null);
   const [acceptSheet, setAcceptSheet] = useState('');
+  const [acceptMode, setAcceptMode] = useState<'sheet' | 'manual'>('sheet');
+  const [acceptWage, setAcceptWage] = useState('');
   const [wageError, setWageError] = useState('');
   const [costSheets, setCostSheets] = useState<Array<{ id:number; name:string; code:string; status?:string; ownerId?:number|null; siteId?:number|null; siteName?:string }>>([]);
   const [confirm, setConfirm] = useState<{ row: ContractorBindingRequest; kind: 'approve' | 'reject' | 'accept' | 'ce-unbind' | 'worker-unbind' | 'worker-decline' } | null>(null);
@@ -47,10 +49,10 @@ export default function ContractorBindingRequestsPage() {
   const acceptSite = wageFor ? contractor.sites.find(s => s.id === wageFor.siteId) : undefined;
   const acceptSheets = costSheets.filter(s => s.status === 'PUBLISHED' && !!s.ownerId && (!s.siteId || (acceptSite && String(s.siteId) === acceptSite.id)));
 
-  async function accept(row: ContractorBindingRequest, costSheetId?: number) {
+  async function accept(row: ContractorBindingRequest, costSheetId?: number, offeredWage?: number) {
     setBusy(true); setError(''); setNotice('');
     try {
-      const response = await fetch('/api/worker/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: row.id, action: 'accept', costSheetId }) });
+      const response = await fetch('/api/worker/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: row.id, action: 'accept', costSheetId, offeredWage }) });
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
       if (!response.ok) throw new Error(result.error || 'Binding could not be accepted.');
       const accepted = result.data?.status === 'Accepted';
@@ -64,15 +66,24 @@ export default function ContractorBindingRequestsPage() {
   function openWagePrompt(row: ContractorBindingRequest) {
     setWageFor(row);
     setAcceptSheet('');
+    setAcceptMode('sheet');
+    setAcceptWage('');
     setWageError('');
   }
 
   async function confirmWage() {
     if (!wageFor) return;
-    if (!acceptSheet) { setWageError('Pick an employer-accepted cost sheet for the site.'); return; }
     const row = wageFor;
+    if (acceptMode === 'sheet') {
+      if (!acceptSheet) { setWageError('Pick an employer-accepted cost sheet for the site.'); return; }
+      setWageFor(null);
+      await accept(row, Number(acceptSheet));
+      return;
+    }
+    const wage = Number(acceptWage);
+    if (!(wage > 0)) { setWageError('Enter a valid monthly gross wage (₹).'); return; }
     setWageFor(null);
-    await accept(row, Number(acceptSheet));
+    await accept(row, undefined, wage);
   }
 
   async function declineWorker(row: ContractorBindingRequest) {
@@ -345,14 +356,27 @@ export default function ContractorBindingRequestsPage() {
     {wageFor && (
       <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4">
         <section role="dialog" aria-modal="true" className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl">
-          <h2 className="font-semibold text-bss-text-primary">Approve binding — cost sheet</h2>
+          <h2 className="font-semibold text-bss-text-primary">Approve binding — wage terms</h2>
           <p className="text-xs text-bss-text-muted mt-1">{wageFor.entityName} · {wageFor.site}</p>
-          <p className="text-[11px] text-bss-text-muted mt-2">Pick the employer-accepted cost sheet for this site. The wage, statutory components, custom costs and CTC are auto-computed and printed on the worker&apos;s appointment letter.</p>
-          <label className="block mt-4 text-[11px] font-bold uppercase tracking-wider text-bss-text-muted">Cost sheet (required)</label>
-          <select value={acceptSheet} onChange={e => { setAcceptSheet(e.target.value); setWageError(''); }} disabled={!acceptSheets.length} className="mt-1.5 w-full bg-[#F5F5F7] border border-bss-border rounded-xl px-3.5 py-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#01183A] disabled:text-bss-text-muted truncate">
-            <option value="">{acceptSheets.length ? 'Select an employer-accepted cost sheet…' : 'No accepted cost sheet for this site'}</option>
-            {acceptSheets.map(s => <option key={s.id} value={s.id}>{s.name}{s.siteName ? ` · ${s.siteName}` : ''} · {s.code}</option>)}
-          </select>
+          <p className="text-[11px] text-bss-text-muted mt-2">Pick the employer-accepted cost sheet for this site, or enter a monthly wage. Whichever you choose is printed on the worker&apos;s appointment letter.</p>
+          <div className="mt-4 inline-flex rounded-lg border border-bss-border bg-bss-bg p-0.5 text-xs font-semibold">
+            <button type="button" onClick={() => { setAcceptMode('sheet'); setWageError(''); }} className={`px-3 py-1.5 rounded-md transition-colors ${acceptMode === 'sheet' ? 'bg-white text-[#01183A] shadow-sm' : 'text-bss-text-muted'}`}>Cost sheet</button>
+            <button type="button" onClick={() => { setAcceptMode('manual'); setWageError(''); }} className={`px-3 py-1.5 rounded-md transition-colors ${acceptMode === 'manual' ? 'bg-white text-[#01183A] shadow-sm' : 'text-bss-text-muted'}`}>Enter wage</button>
+          </div>
+          {acceptMode === 'sheet' ? (
+            <>
+              <label className="block mt-3 text-[11px] font-bold uppercase tracking-wider text-bss-text-muted">Cost sheet</label>
+              <select value={acceptSheet} onChange={e => { setAcceptSheet(e.target.value); setWageError(''); }} disabled={!acceptSheets.length} className="mt-1.5 w-full bg-[#F5F5F7] border border-bss-border rounded-xl px-3.5 py-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#01183A] disabled:text-bss-text-muted truncate">
+                <option value="">{acceptSheets.length ? 'Select an employer-accepted cost sheet…' : 'No accepted cost sheet for this site'}</option>
+                {acceptSheets.map(s => <option key={s.id} value={s.id}>{s.name}{s.siteName ? ` · ${s.siteName}` : ''} · {s.code}</option>)}
+              </select>
+            </>
+          ) : (
+            <>
+              <label className="block mt-3 text-[11px] font-bold uppercase tracking-wider text-bss-text-muted">Monthly gross wage</label>
+              <input inputMode="numeric" value={acceptWage} onChange={e => { setAcceptWage(e.target.value.replace(/[^0-9]/g, '')); setWageError(''); }} placeholder="Monthly gross wage (₹)" className="mt-1.5 w-full bg-[#F5F5F7] border border-bss-border rounded-xl px-3.5 py-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#01183A]"/>
+            </>
+          )}
           {wageError && <p className="text-[11px] text-bss-error font-semibold mt-2">{wageError}</p>}
           <div className="mt-5 flex gap-2 justify-end">
             <button onClick={() => setWageFor(null)} className="h-9 px-4 rounded-lg border border-bss-border text-xs font-semibold hover:bg-bss-bg">Cancel</button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { BadgeCheck, Building2, CheckCircle2, Clock3, Loader2, Send, ShieldCheck, Upload } from "lucide-react";
+import { BadgeCheck, Building2, CheckCircle2, Clock3, Loader2, Send, Upload } from "lucide-react";
 import GstVerifyCard from "@/components/gst/GstVerifyCard";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 
@@ -22,12 +22,10 @@ const DOC_LABELS: Record<DocKind, string> = {
   OTHER: "Other supporting document",
 };
 // Minimum documents required before the verification submission is allowed.
-const REQUIRED_DOCS = 3;
+const REQUIRED_DOCS = 2;
 
 export default function VerificationGate({ role }: { role: "contractor" | "employer" }) {
   const [status, setStatus] = useState<VerificationStatus | null>(null);
-  const [askEl, setAskEl] = useState(false);
-  const [confirmNotEl, setConfirmNotEl] = useState(false);
   const [docs, setDocs] = useState<Partial<Record<DocKind, File>>>({});
   const [checks, setChecks] = useState<Partial<Record<DocKind, { busy?: boolean; verified?: boolean | null; note?: string }>>>({});
   const [askGst, setAskGst] = useState(false);
@@ -44,58 +42,8 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
     } catch { /* ignore */ }
   }, [role]);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- one-time bootstrap */
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
-    const state = params.get("state");
-    if (code && state) {
-      (async () => {
-        try {
-          await fetch("/api/entitylocker/callback", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code, state }),
-          });
-        } catch { /* fall through */ }
-        window.history.replaceState({}, "", window.location.pathname);
-        window.location.reload();
-      })();
-      return;
-    }
-    void load();
-  }, [load]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  async function startEntityLocker() {
-    setBusy(true); setError("");
-    try {
-      const response = await fetch("/api/entitylocker/start", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
-      });
-      const body = await response.json().catch(() => ({})) as { data?: { url?: string }; error?: string };
-      if (!response.ok || !body.data?.url) throw new Error(body.error || "EntityLocker could not be started.");
-      window.location.href = body.data.url;
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "EntityLocker could not be started.");
-      setBusy(false);
-    }
-  }
-
-  async function declineEntityLocker() {
-    setBusy(true); setError("");
-    try {
-      const response = await fetch(`/api/${role}/verification/decline-entitylocker`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirm: true }),
-      });
-      if (!response.ok) throw new Error("Could not record your answer.");
-      await load();
-      setConfirmNotEl(false);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not record your answer.");
-    } finally { setBusy(false); }
-  }
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time bootstrap
+  useEffect(() => { void load(); }, [load]);
 
   async function continueWithoutGst() {
     setBusy(true); setError("");
@@ -130,7 +78,14 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
   }
 
   async function submitManual() {
-    if (Object.keys(docs).length < REQUIRED_DOCS) { setError(`Upload at least ${REQUIRED_DOCS} documents.`); return; }
+    const kinds = Object.keys(docs) as DocKind[];
+    const hasPanOrIncorp = kinds.includes("PAN") || kinds.includes("INCORPORATION");
+    const gstOn = !!status?.gstVerified;
+    const missing: string[] = [];
+    if (!hasPanOrIncorp) missing.push("a PAN card or incorporation certificate");
+    if (!gstOn && !kinds.includes("AADHAAR")) missing.push("Aadhaar");
+    if (kinds.length < REQUIRED_DOCS) missing.push(`at least ${REQUIRED_DOCS} documents`);
+    if (missing.length) { setError(`Please upload ${missing.join(", ")}.`); return; }
     setBusy(true); setError("");
     try {
       const form = new FormData();
@@ -145,7 +100,7 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
   }
 
   if (!status || !status.applicable) return null;
-  const { gstVerified, gstStatus, entityLocker, manual } = status;
+  const { gstVerified, gstStatus, manual } = status;
   const gstNotApplicable = (gstStatus || "").toUpperCase() === "NOT_APPLICABLE";
   const gstCleared = gstVerified || gstNotApplicable;
   // The portal stays locked until Admin Approval is on (the single approval
@@ -193,50 +148,8 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
     } else {
       body = <GstVerifyCard role={role} onVerified={() => void load()} />;
     }
-  } else if (gstVerified && !entityLocker.verified && !entityLocker.declined) {
-    title = "Step 2 · EntityLocker";
-    body = askEl ? (
-      confirmNotEl ? (
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Are you <strong>sure</strong> you are <strong>not</strong> registered on EntityLocker (Meri Pehchaan)?
-            If so, you&apos;ll need to submit documents (PAN, Aadhaar, …) for manual verification by BSS.
-          </p>
-          {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
-          <div className="flex gap-2 justify-end">
-            <button type="button" onClick={() => setConfirmNotEl(false)} disabled={busy} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600">Back</button>
-            <button type="button" onClick={() => void declineEntityLocker()} disabled={busy} className="h-10 px-4 rounded-lg bg-red-600 text-white text-xs font-bold disabled:opacity-60">{busy ? "Saving…" : "Yes, I am not on EntityLocker"}</button>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">Is your organisation registered on the Government <strong>EntityLocker</strong> (Meri Pehchaan)?</p>
-          {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
-          <div className="flex gap-2 justify-end">
-            <button type="button" onClick={() => { setAskEl(true); setConfirmNotEl(true); }} disabled={busy} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-700">No, I&apos;m not</button>
-            <button type="button" onClick={() => void startEntityLocker()} disabled={busy} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-60">
-              {busy ? <Loader2 size={14} className="animate-spin"/> : <ShieldCheck size={14}/>}Yes, verify with EntityLocker
-            </button>
-          </div>
-        </div>
-      )
-    ) : (
-      <div className="space-y-4">
-        {manual.status === "REJECTED" && (
-          <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
-            Your manual verification was rejected{manual.note ? `: ${manual.note}` : ""}. Choose how to proceed again.
-          </p>
-        )}
-        <p className="text-sm text-gray-600">Your organisation is on EntityLocker? Verify once to unlock the portal.</p>
-        <div className="flex gap-2 justify-end">
-          <button type="button" onClick={() => { setAskEl(true); setConfirmNotEl(true); }} disabled={busy} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-700">No, I&apos;m not on EntityLocker</button>
-          <button type="button" onClick={() => setAskEl(true)} disabled={busy} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">Yes, I am on EntityLocker</button>
-        </div>
-        <button type="button" onClick={() => void declineEntityLocker()} disabled={busy} className="text-[11px] text-gray-500 underline hover:text-gray-700">EntityLocker isn&apos;t working? Continue with document verification</button>
-      </div>
-    );
-  } else if ((entityLocker.declined || gstNotApplicable) && (manual.status === "NOT_SUBMITTED" || manual.status === "REJECTED")) {
-    title = gstNotApplicable ? "Step 2 · Verification documents" : "Step 3 · Manual verification documents";
+  } else if (gstCleared && (manual.status === "NOT_SUBMITTED" || manual.status === "REJECTED")) {
+    title = gstNotApplicable ? "Step 2 · Verification documents" : "Step 2 · Verification documents";
     body = (
       <div className="space-y-4">
         {manual.status === "REJECTED" && (
@@ -244,7 +157,11 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
             Your previous submission was rejected{manual.note ? `: ${manual.note}` : ""}. Please re-submit.
           </p>
         )}
-        <p className="text-sm text-gray-600">Upload your identity documents (PAN, Aadhaar and any others). <strong>At least {REQUIRED_DOCS} documents are required.</strong> A BSS Admin will review and verify them.</p>
+        <p className="text-sm text-gray-600">
+          Upload your registration documents. A <strong>PAN card or incorporation certificate</strong> is required.
+          {gstNotApplicable || !gstVerified ? " Aadhaar is also required when you have no GST." : " As your GST is verified, Aadhaar is optional."}
+          {" "}<strong>At least {REQUIRED_DOCS} documents are required.</strong> A BSS Admin will review and verify them.
+        </p>
         {manual.documents.length > 0 && (
           <ul className="space-y-1.5">
             {manual.documents.map(doc => (

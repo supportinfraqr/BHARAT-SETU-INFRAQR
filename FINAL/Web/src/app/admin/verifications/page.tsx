@@ -8,14 +8,13 @@ type Doc = { id: number; docType: string; fileName: string; uploadedAt: string }
 type Row = {
   userId: number; role: string; name: string; username: string; bssId: string; gstin: string; legalName: string;
   gstNotApplicable?: boolean;
-  stage: 'PENDING' | 'AWAITING_GST' | 'AWAITING_DOCUMENTS' | 'AWAITING_ENTITYLOCKER';
+  stage: 'PENDING' | 'AWAITING_GST' | 'AWAITING_DOCUMENTS';
   manualStatus: string; declined: boolean; documents: Doc[];
 };
 const STAGE: Record<Row['stage'], { label: string; tone: string }> = {
   PENDING: { label: 'Ready to review', tone: 'bg-amber-50 text-amber-800 border-amber-200' },
   AWAITING_GST: { label: 'Awaiting GST', tone: 'bg-purple-50 text-purple-700 border-purple-200' },
   AWAITING_DOCUMENTS: { label: 'Awaiting documents', tone: 'bg-blue-50 text-blue-700 border-blue-200' },
-  AWAITING_ENTITYLOCKER: { label: 'Awaiting EntityLocker answer', tone: 'bg-gray-100 text-gray-600 border-gray-200' },
 };
 
 export default function AdminVerificationsPage() {

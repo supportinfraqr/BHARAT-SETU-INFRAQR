@@ -478,6 +478,7 @@ def _persist_mutation(user, role_path, resource, method, body):
                     binding.consent_contractor = True
                     binding.consent_worker = False
                 _apply_binding_terms(binding, row)
+                _require_binding_terms(binding)
                 binding.save()
             created.append(w.id)
         if isinstance(body.get("bulk"), list):

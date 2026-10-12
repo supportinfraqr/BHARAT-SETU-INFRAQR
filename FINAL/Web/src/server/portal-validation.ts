@@ -122,8 +122,12 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
     const rows = Array.isArray(body.bulk) ? body.bulk : [body];
     if (!rows.length || rows.length > 500) fail('Provide between 1 and 500 worker records.');
     rows.forEach(row => {
-      if (!bssId.test(requiredString(row as Record<string, unknown>, 'bssId', 15))) fail('Enter a valid worker BSS ID.');
-      requiredString(row as Record<string, unknown>, 'site'); requiredString(row as Record<string, unknown>, 'employer'); requiredString(row as Record<string, unknown>, 'designation');
+      const r = row as Record<string, unknown>;
+      if (!bssId.test(requiredString(r, 'bssId', 15))) fail('Enter a valid worker BSS ID.');
+      requiredString(r, 'site');
+      const hasSheet = Number(r.costSheetId) > 0;
+      const wage = Number(r.offeredWage);
+      if (!hasSheet && !(Number.isFinite(wage) && wage > 0)) fail('Pick an employer-accepted cost sheet or enter a monthly wage.');
     });
   }
   if (resource === 'compliances' && method === 'POST') {

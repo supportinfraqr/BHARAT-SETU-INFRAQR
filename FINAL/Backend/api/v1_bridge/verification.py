@@ -51,6 +51,45 @@ def _entitylocker_verified(user):
     return EntityLockerAuth.objects.filter(user=user, status="VERIFIED").exists()
 
 
+def _entity_has_gst(profile) -> bool:
+    """True once the entity has a GSTIN — set when GST is entered/verified.
+
+    A GSTIN carries the entity's PAN (characters 3–12), so a GST-registered
+    entity no longer needs to submit Aadhaar."""
+    gstin = str(getattr(profile, "gstin", "") or "").strip()
+    status = str(getattr(profile, "gst_verification_status", "") or "").upper()
+    return bool(gstin) or status == "VERIFIED"
+
+
+def _entity_expected_pan(profile) -> str:
+    """The PAN a PAN-card OCR must match: the GSTIN's embedded PAN when known,
+    else the profile's recorded PAN."""
+    gstin = str(getattr(profile, "gstin", "") or "").strip().upper()
+    if len(gstin) == 15 and gstin[2:12].isalnum():
+        return gstin[2:12]
+    return str(getattr(profile, "pan_no", "") or "").strip().upper()
+
+
+def _entity_docs_missing(profile, user) -> list:
+    """Documents still required before a manual submission is allowed.
+
+    Rules: a **PAN card or an incorporation certificate** is always required;
+    **Aadhaar** is required only when the entity has no GST (a GSTIN already
+    carries the PAN). At least 2 documents in total."""
+    from bss_core.models import EntityVerificationDocument
+
+    docs = list(EntityVerificationDocument.objects.filter(user=user))
+    types = {d.doc_type for d in docs}
+    missing = []
+    if not (("PAN" in types) or ("INCORPORATION" in types)):
+        missing.append("a PAN card or incorporation certificate")
+    if not _entity_has_gst(profile) and "AADHAAR" not in types:
+        missing.append("Aadhaar")
+    if len(docs) < 2:
+        missing.append("at least 2 documents")
+    return missing
+
+
 def _documents(user):
     from bss_core.models import EntityVerificationDocument
 
@@ -121,11 +160,12 @@ def verification_decline_entitylocker(request):
 _ENTITY_OCR_MAP = {"PAN": "pan", "AADHAAR": "aadhaar"}
 
 
-def _ocr_entity_document(doc_type, raw, filename):
+def _ocr_entity_document(doc_type, raw, filename, expected_pan=""):
     """OCR a registration document and type-verify it against the chosen slot.
 
     Returns ``(ocr_text, detected_type, verified, note)``. Never raises — OCR
-    must not block a registration upload."""
+    must not block a registration upload. For a PAN card the OCR'd PAN is also
+    matched against ``expected_pan`` (the GSTIN's embedded PAN when known)."""
     from .. import ocr_client
     try:
         text = ocr_client.extract_text(raw, filename) or ""
@@ -139,7 +179,8 @@ def _ocr_entity_document(doc_type, raw, filename):
     if not key:
         return text, detected, False, "OCR text captured"
     try:
-        ok, message = ocr_client.verify_document_text(key, text)
+        expected = expected_pan if key == "pan" else ""
+        ok, message = ocr_client.verify_document_text(key, text, expected_number=expected)
     except Exception:  # noqa: BLE001
         return text, detected, False, "OCR text captured"
     return text, detected, ok, message
@@ -153,7 +194,8 @@ def verification_check_document(request):
     chosen slot. Returns ``verified`` (true / false / null=advisory)."""
     from .. import ocr_client
 
-    if _profile_for(request.user) is None:
+    profile = _profile_for(request.user)
+    if profile is None:
         return Response({"error": "Only employers and contractors."}, status=status.HTTP_403_FORBIDDEN)
     upload = request.FILES.get("file")
     if upload is None:
@@ -178,8 +220,10 @@ def verification_check_document(request):
         return Response({"data": {"docType": doc_type, "verified": None, "detectedType": detected,
                                   "note": "Document captured" if readable else "Could not read the document",
                                   "text": text[:600]}}, status=status.HTTP_200_OK)
+    # A PAN card must match the GSTIN's embedded PAN (both hold the same PAN).
+    expected = _entity_expected_pan(profile) if key == "pan" else ""
     try:
-        ok, note = ocr_client.verify_document_text(key, text)
+        ok, note = ocr_client.verify_document_text(key, text, expected_number=expected)
     except Exception:  # noqa: BLE001
         ok, note = None, "OCR check unavailable"
     return Response({"data": {"docType": doc_type, "verified": ok, "detectedType": detected,
@@ -196,16 +240,10 @@ def verification_manual_submit(request):
     profile = _profile_for(request.user)
     if profile is None:
         return Response({"error": "Only employers and contractors."}, status=status.HTTP_403_FORBIDDEN)
-    # Contractors who declared "no GST" go straight to document submission
-    # (GST is optional for them) so they never answer the EntityLocker question.
-    gst_not_applicable = str(
-        getattr(profile, "gst_verification_status", "") or "").upper() == "NOT_APPLICABLE"
-    if not getattr(profile, "entity_locker_declined", False) and not gst_not_applicable:
-        return Response({"error": "Answer the EntityLocker question first."},
-                        status=status.HTTP_400_BAD_REQUEST)
 
     import re as _re
 
+    expected_pan = _entity_expected_pan(profile)
     saved = 0
     for key, uploaded in request.FILES.items():
         doc_type = key.split("_", 1)[1].upper() if key.startswith("file_") else "OTHER"
@@ -214,7 +252,7 @@ def verification_manual_submit(request):
         # OCR the uploaded document (extract text + verify it matches the slot).
         raw = uploaded.read()
         uploaded.seek(0)
-        text, detected, ok, note = _ocr_entity_document(doc_type, raw, uploaded.name)
+        text, detected, ok, note = _ocr_entity_document(doc_type, raw, uploaded.name, expected_pan)
         EntityVerificationDocument.objects.create(
             user=request.user, doc_type=doc_type, file=uploaded,
             ocr_text=text[:20000], detected_type=detected[:20], ocr_verified=ok, ocr_note=note[:255])
@@ -226,9 +264,9 @@ def verification_manual_submit(request):
                 profile.pan_no = found.group(0)
                 profile.save(update_fields=["pan_no"])
         saved += 1
-    total_docs = EntityVerificationDocument.objects.filter(user=request.user).count()
-    if total_docs < 3:
-        return Response({"error": "Upload at least 3 documents before submitting for verification."},
+    missing = _entity_docs_missing(profile, request.user)
+    if missing:
+        return Response({"error": f"Upload {', '.join(missing)} before submitting for verification."},
                         status=status.HTTP_400_BAD_REQUEST)
 
     profile.manual_verification_status = "PENDING"
@@ -291,10 +329,10 @@ def admin_verification_queue(request):
                 stage = "PENDING"           # ready to review — only Admin Approval left
             elif gst_status not in ("VERIFIED", "NOT_APPLICABLE"):
                 stage = "AWAITING_GST"
-            elif profile.entity_locker_declined or gst_not_applicable:
-                stage = "AWAITING_DOCUMENTS"
             else:
-                stage = "AWAITING_ENTITYLOCKER"
+                # EntityLocker is disabled — every GST-cleared entity submits
+                # documents next.
+                stage = "AWAITING_DOCUMENTS"
             rows.append({
                 "userId": profile.user_id, "role": role,
                 "name": (profile.employer_name if role == "employer" else profile.contractor_name) or user.username,

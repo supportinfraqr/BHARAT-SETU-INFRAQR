@@ -28,8 +28,8 @@ const columns: DataColumn<ContractorWorker>[] = [
   { id:'status', header:'Status', value:row => row.status, render:row => <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${row.status === 'Accepted' ? 'bg-bss-soft-green text-bss-green' : row.status === 'Pending' ? 'bg-bss-soft-orange text-bss-orange' : row.status === 'Expired' ? 'bg-bss-bg text-bss-text-muted' : 'bg-bss-soft-orange text-bss-error'}`}>{row.status}</span> },
 ];
 
-type RowDraft = { bssId:string; site:string; costSheetId:string; dateOfJoining:string };
-const emptyRow = (): RowDraft => ({ bssId:'', site:'', costSheetId:'', dateOfJoining:'' });
+type RowDraft = { bssId:string; site:string; costSheetId:string; offeredWage:string; dateOfJoining:string };
+const emptyRow = (): RowDraft => ({ bssId:'', site:'', costSheetId:'', offeredWage:'', dateOfJoining:'' });
 
 export default function WorkerMasterPage() {
   const { contractor, mutate, scoped } = useContractor();
@@ -45,6 +45,7 @@ export default function WorkerMasterPage() {
   const [empView, setEmpView] = useState<ContractorWorker | null>(null);
   const [costSheets, setCostSheets] = useState<Array<{ id:number; name:string; code:string; status?:string; ownerId?:number|null; siteId?:number|null; siteName?:string }>>([]);
   const [bindSite, setBindSite] = useState('');
+  const [singleMode, setSingleMode] = useState<'sheet' | 'manual'>('sheet');
   const docCtx = useContractorDocView();
   const [passPreview, setPassPreview] = useState<{ html: string; title: string } | null>(null);
   const scopedRows = scoped(contractor.workers, w => w.employer);
@@ -106,6 +107,9 @@ export default function WorkerMasterPage() {
   async function submitSingle(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError('');
     const data = Object.fromEntries(new FormData(event.currentTarget));
+    if (!String(data.costSheetId || '').trim() && !(Number(data.offeredWage) > 0)) {
+      setError('Pick an employer-accepted cost sheet or enter a monthly wage.'); setBusy(false); return;
+    }
     try {
       await mutate<{ data: unknown }>('workers', 'POST', data);
       setModal(null);
@@ -118,9 +122,9 @@ export default function WorkerMasterPage() {
     event.preventDefault(); setBusy(true); setError('');
     const valid = rows.filter(row => row.bssId && row.site);
     if (!valid.length) { setError('Add at least one row with a BSS ID and site.'); setBusy(false); return; }
-    if (valid.some(row => !row.costSheetId)) { setError('Pick an employer-accepted cost sheet for each worker.'); setBusy(false); return; }
+    if (valid.some(row => !row.costSheetId && !(Number(row.offeredWage) > 0))) { setError('Pick an employer-accepted cost sheet or enter a monthly wage for each worker.'); setBusy(false); return; }
     try {
-      const payload = valid.map(row => ({ bssId: row.bssId.trim().toUpperCase(), site: row.site, costSheetId: Number(row.costSheetId), dateOfJoining: row.dateOfJoining || undefined }));
+      const payload = valid.map(row => ({ bssId: row.bssId.trim().toUpperCase(), site: row.site, costSheetId: row.costSheetId ? Number(row.costSheetId) : undefined, offeredWage: Number(row.offeredWage) > 0 ? Number(row.offeredWage) : undefined, dateOfJoining: row.dateOfJoining || undefined }));
       await mutate<{ data: number[] }>('workers', 'POST', { bulk: payload });
       setNotice(`Binding requests sent for ${valid.length} worker${valid.length === 1 ? '' : 's'} — each worker must accept before their profile unlocks.`); setRows([]); setModal(null);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Bulk binding could not be completed.'); }
@@ -137,17 +141,17 @@ export default function WorkerMasterPage() {
       const text = String(reader.result ?? '');
       const lines = text.split(/\r?\n/).filter(line => line.trim()).slice(0, 500);
       const parsed = lines.map(line => {
-        const [bssId, site, dateOfJoining] = parseCsv(line);
-        return { bssId: bssId?.trim() ?? '', site: site?.trim() ?? '', costSheetId: '', dateOfJoining: dateOfJoining?.trim() ?? '' };
+        const [bssId, site, dateOfJoining, offeredWage] = parseCsv(line);
+        return { bssId: bssId?.trim() ?? '', site: site?.trim() ?? '', costSheetId: '', offeredWage: String(offeredWage ?? '').replace(/[^0-9]/g, ''), dateOfJoining: dateOfJoining?.trim() ?? '' };
       }).filter(r => r.bssId);
       setRows(current => [...current, ...parsed]); setError('');
-      if (!parsed.length) setError('No valid rows. Expected: BSS ID, Site, Date of Joining (date optional).');
+      if (!parsed.length) setError('No valid rows. Expected: BSS ID, Site, Date of Joining, Monthly Wage (date/wage optional).');
     };
     reader.readAsText(file);
   }
 
   function downloadTemplate() {
-    exportMatrixToXlsx({ filename: 'worker-binding-template', head: ['BSS ID', 'Site', 'Date of Joining'], rows: [], sheetName: 'Template' });
+    exportMatrixToXlsx({ filename: 'worker-binding-template', head: ['BSS ID', 'Site', 'Date of Joining', 'Monthly Wage (if no cost sheet)'], rows: [], sheetName: 'Template' });
   }
 
   return <div className="space-y-6 pb-12">
@@ -185,7 +189,24 @@ export default function WorkerMasterPage() {
       <form onSubmit={submitSingle} className="p-5 grid sm:grid-cols-2 gap-4">
         <Field name="bssId" label="BSS ID" pattern="(?:BSS-?W[A-Za-z0-9]{10,11}|BSS\d{12})" placeholder="BSS-W7KQ2M9X4RT"/>
         <label className="text-xs font-semibold text-bss-text-primary">Site<select required name="site" value={bindSite} onChange={e => setBindSite(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white"><option value="">Select site</option>{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name} — {s.employer}</option>)}</select></label>
-        <label className="text-xs font-semibold text-bss-text-primary sm:col-span-2">Cost sheet (required)<select required name="costSheetId" disabled={!bindSite || !bindCostSheets.length} className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white disabled:bg-bss-bg disabled:text-bss-text-muted"><option value="">{!bindSite ? 'Select a site first' : bindCostSheets.length ? 'Select an employer-accepted cost sheet…' : 'No accepted cost sheet for this site'}</option>{bindCostSheets.map(s => <option key={s.id} value={s.id}>{s.name}{s.siteName ? ` · ${s.siteName}` : ''} · {s.code}</option>)}</select><span className="block text-[10px] text-bss-text-muted mt-1">Wage, statutory components, custom costs and CTC are auto-computed from the cost sheet. Adopt a template for the site and get the employer&apos;s acceptance first.</span></label>
+        <div className="sm:col-span-2">
+          <label className="text-xs font-semibold text-bss-text-primary">Wage terms (required)</label>
+          <div className="mt-1 inline-flex rounded-lg border border-bss-border bg-bss-bg p-0.5 text-xs font-semibold">
+            <button type="button" onClick={() => setSingleMode('sheet')} className={`px-3 py-1.5 rounded-md transition-colors ${singleMode === 'sheet' ? 'bg-white text-bss-navy shadow-sm' : 'text-bss-text-muted'}`}>Cost sheet</button>
+            <button type="button" onClick={() => setSingleMode('manual')} className={`px-3 py-1.5 rounded-md transition-colors ${singleMode === 'manual' ? 'bg-white text-bss-navy shadow-sm' : 'text-bss-text-muted'}`}>Enter wage</button>
+          </div>
+          {singleMode === 'sheet' ? (
+            <>
+              <select name="costSheetId" disabled={!bindSite || !bindCostSheets.length} className="mt-2 w-full h-10 border rounded-lg px-3 text-sm bg-white disabled:bg-bss-bg disabled:text-bss-text-muted"><option value="">{!bindSite ? 'Select a site first' : bindCostSheets.length ? 'Select an employer-accepted cost sheet…' : 'No accepted cost sheet for this site'}</option>{bindCostSheets.map(s => <option key={s.id} value={s.id}>{s.name}{s.siteName ? ` · ${s.siteName}` : ''} · {s.code}</option>)}</select>
+              <span className="block text-[10px] text-bss-text-muted mt-1">Wage, statutory components, custom costs and CTC are auto-computed. Adopt a template for the site and get the employer&apos;s acceptance first.</span>
+            </>
+          ) : (
+            <>
+              <input name="offeredWage" inputMode="numeric" onChange={e => { e.target.value = e.target.value.replace(/[^0-9]/g, ''); }} placeholder="Monthly gross wage (₹)" className="mt-2 w-full h-10 border rounded-lg px-3 text-sm"/>
+              <span className="block text-[10px] text-bss-text-muted mt-1">The agreed monthly gross wage, printed on the worker&apos;s appointment letter.</span>
+            </>
+          )}
+        </div>
         <label className="text-xs font-semibold text-bss-text-primary sm:col-span-2">Date of joining (optional)<input type="date" name="dateOfJoining" max={todayIso()} className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white"/><span className="block text-[10px] text-bss-text-muted mt-1">The worker&apos;s real employment start date (used on the appointment letter). Leave blank to use the binding date.</span></label>
         {error && <p role="alert" className="sm:col-span-2 text-sm text-bss-error">{error}</p>}
         <div className="sm:col-span-2 flex justify-end gap-2"><button type="button" onClick={() => setModal(null)} className="px-4 py-2 text-sm">Cancel</button><button disabled={busy} className="px-4 py-2 bg-bss-interactive-blue text-white rounded-lg text-sm font-semibold">{busy ? 'Saving…' : 'Bind worker'}</button></div>
@@ -194,7 +215,7 @@ export default function WorkerMasterPage() {
 
     {/* Bulk bind modal */}
     {modal === 'bulk' && <div className="fixed inset-0 z-[80] bg-bss-navy/40 backdrop-blur-sm p-4 grid place-items-center"><section role="dialog" aria-modal="true" className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden">
-      <header className="p-5 border-b border-bss-border flex justify-between items-center"><div><h2 className="font-semibold text-sm text-bss-text-primary">Bulk bind workers</h2><p className="text-xs text-bss-text-muted mt-1">Download the template, import a CSV (BSS ID, Site, Date of Joining) or add rows. Pick an employer-accepted cost sheet per worker, plus an optional date of joining. Workers must already exist in BSS — you can only propose a binding by BSS ID.</p></div><button onClick={() => setModal(null)} aria-label="Close" className="w-9 h-9 grid place-items-center rounded-lg hover:bg-bss-bg text-bss-text-secondary"><X size={18}/></button></header>
+      <header className="p-5 border-b border-bss-border flex justify-between items-center"><div><h2 className="font-semibold text-sm text-bss-text-primary">Bulk bind workers</h2><p className="text-xs text-bss-text-muted mt-1">Download the template, import a CSV (BSS ID, Site, Date of Joining, Monthly Wage) or add rows. For each worker pick an employer-accepted cost sheet or enter a monthly wage, plus an optional date of joining. Workers must already exist in BSS — you can only propose a binding by BSS ID.</p></div><button onClick={() => setModal(null)} aria-label="Close" className="w-9 h-9 grid place-items-center rounded-lg hover:bg-bss-bg text-bss-text-secondary"><X size={18}/></button></header>
       <div className="p-5 space-y-4">
         <div className="flex flex-wrap gap-2">
           <button onClick={downloadTemplate} className="text-xs font-semibold text-bss-text-primary flex items-center gap-2 border border-bss-border rounded-lg px-3 py-2"><Download size={14}/>Download template</button>
@@ -203,11 +224,12 @@ export default function WorkerMasterPage() {
         </div>
         {error && <p role="alert" className="text-sm text-bss-error">{error}</p>}
         <form onSubmit={submitBulk} className="space-y-3">
-          <div className="overflow-x-auto"><div className="grid grid-cols-[minmax(160px,1fr)_minmax(170px,1fr)_minmax(200px,1fr)_140px_30px] gap-2 text-[11px] uppercase text-bss-text-muted font-bold px-1">{['BSS ID','Site','Cost sheet','Date of joining',''].map((label, i) => <span key={i}>{label}</span>)}</div>
-            {rows.map((row, index) => { const rowSheets = sheetsForSite(row.site); return <div key={index} className="grid grid-cols-[minmax(160px,1fr)_minmax(170px,1fr)_minmax(200px,1fr)_140px_30px] gap-2 items-center mt-2">
+          <div className="overflow-x-auto"><div className="grid grid-cols-[minmax(150px,1fr)_minmax(150px,1fr)_minmax(190px,1fr)_110px_130px_30px] gap-2 text-[11px] uppercase text-bss-text-muted font-bold px-1">{['BSS ID','Site','Cost sheet','Wage (₹)','Date of joining',''].map((label, i) => <span key={i}>{label}</span>)}</div>
+            {rows.map((row, index) => { const rowSheets = sheetsForSite(row.site); return <div key={index} className="grid grid-cols-[minmax(150px,1fr)_minmax(150px,1fr)_minmax(190px,1fr)_110px_130px_30px] gap-2 items-center mt-2">
               <input value={row.bssId} onChange={e => updateRow(index, 'bssId', e.target.value)} placeholder="BSS-W7KQ2M9X4RT" className="h-9 border border-bss-border rounded-lg px-2 text-xs font-mono"/>
               <select value={row.site} onChange={e => setRows(cur => cur.map((r, i) => i === index ? { ...r, site: e.target.value, costSheetId: '' } : r))} className="h-9 border border-bss-border rounded-lg px-2 text-xs bg-white"><option value="">Site</option>{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name} — {s.employer}</option>)}</select>
-              <select value={row.costSheetId} disabled={!row.site || !rowSheets.length} onChange={e => updateRow(index, 'costSheetId', e.target.value)} className="h-9 border border-bss-border rounded-lg px-2 text-xs bg-white disabled:bg-bss-bg disabled:text-bss-text-muted"><option value="">{!row.site ? 'Select a site first' : rowSheets.length ? 'Select cost sheet…' : 'No accepted cost sheet'}</option>{rowSheets.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` · ${s.code}` : ''}</option>)}</select>
+              <select value={row.costSheetId} disabled={!row.site || !rowSheets.length} onChange={e => updateRow(index, 'costSheetId', e.target.value)} className="h-9 border border-bss-border rounded-lg px-2 text-xs bg-white disabled:bg-bss-bg disabled:text-bss-text-muted"><option value="">{!row.site ? 'Select a site first' : rowSheets.length ? 'Cost sheet (or enter wage)' : 'No accepted cost sheet'}</option>{rowSheets.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` · ${s.code}` : ''}</option>)}</select>
+              <input value={row.offeredWage} inputMode="numeric" onChange={e => updateRow(index, 'offeredWage', e.target.value.replace(/[^0-9]/g, ''))} placeholder="Wage ₹" title="Monthly gross wage (if no cost sheet)" className="h-9 border border-bss-border rounded-lg px-2 text-xs"/>
               <input type="date" value={row.dateOfJoining} max={todayIso()} onChange={e => updateRow(index, 'dateOfJoining', e.target.value)} title="Date of joining (optional)" className="h-9 border border-bss-border rounded-lg px-2 text-xs bg-white"/>
               <button type="button" onClick={() => removeRow(index)} className="w-8 h-9 grid place-items-center text-bss-text-muted hover:text-bss-error" aria-label="Remove row"><Trash2 size={15}/></button>
             </div>; })}

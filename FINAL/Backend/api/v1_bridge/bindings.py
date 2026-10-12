@@ -361,6 +361,7 @@ def _contractor_binds_worker(contractor_user, worker_user, site=None, data=None)
     # synced employment record and appointment letter see them.
     if data:
         _apply_binding_terms(binding, data)
+    _require_binding_terms(binding)
     binding.consent_contractor = True
     binding.consent_method = "app"
     # If the worker already consented (they applied / scanned the QR first), the
@@ -402,9 +403,13 @@ def _contractor_binds_worker(contractor_user, worker_user, site=None, data=None)
 
 
 def _apply_binding_terms(binding, data):
-    """Capture the offered terms at bind time. A cost sheet template, when
-    selected, computes the wage/statutory/custom cost and CTC automatically —
-    replacing manual wage entry."""
+    """Capture the offered terms at bind time.
+
+    The contractor provides EITHER an employer-accepted cost sheet (which
+    computes the wage / statutory / custom cost and CTC automatically) OR a plain
+    monthly gross wage entered by hand. The choice drives the worker's employment
+    record and the appointment letter issued on acceptance.
+    """
     from decimal import Decimal, InvalidOperation
     from datetime import date
     from api import costsheet
@@ -456,15 +461,35 @@ def _apply_binding_terms(binding, data):
         binding.cost_breakdown = result
         if sheet.designation and not binding.designation:
             binding.designation = sheet.designation[:80]
-            return binding
+        if getattr(sheet, "department", "") and not binding.department:
+            binding.department = sheet.department[:80]
+        return binding
 
-    wage = data.get("offeredWage", data.get("offered_wage"))
+    # No cost sheet chosen — a manually entered monthly gross wage replaces it.
+    # Any previously selected cost sheet is cleared so the appointment letter
+    # reflects the manual wage rather than a stale sheet.
+    wage = data.get("offeredWage", data.get("offered_wage", data.get("wage")))
     if wage not in (None, ""):
         try:
-            binding.offered_wage = Decimal(str(wage))
+            amount = Decimal(str(wage))
         except (InvalidOperation, ValueError):
-            pass
+            raise PortalMutationError("Enter a valid monthly wage.", 400)
+        if amount < 0:
+            raise PortalMutationError("Monthly wage cannot be negative.", 400)
+        binding.cost_sheet = None
+        binding.computed_ctc = None
+        binding.cost_breakdown = {}
+        binding.offered_wage = amount
     return binding
+
+
+def _require_binding_terms(binding):
+    """A worker binding must carry either an employer-accepted cost sheet or a
+    manual monthly wage — the appointment letter is issued from it."""
+    if binding.cost_sheet_id is None and binding.offered_wage is None:
+        raise PortalMutationError(
+            "Select an employer-accepted cost sheet or enter a monthly wage before binding.", 400)
+
 
 
 def _sync_employment_from_binding(binding):
@@ -780,10 +805,11 @@ def binding_consent(request, binding_id):
             b.consent_worker = True
         else:
             b.consent_contractor = True
-            # The contractor records the offered terms (incl. wage) when they
-            # approve a worker-initiated binding; these feed the appointment
-            # letter issued on acceptance.
+            # The contractor records the offered terms (cost sheet or monthly
+            # wage) when they approve a worker-initiated binding; these feed the
+            # appointment letter issued on acceptance.
             _apply_binding_terms(b, request.data)
+            _require_binding_terms(b)
         b.consent_method = method
         if b.consent_worker and b.consent_contractor:
             b.binding_status = "ACCEPTED"
@@ -1461,6 +1487,7 @@ __all__ = [
     "_ensure_ce_binding",
     "_issue_binding_letter",
     "_release_contractor_workers",
+    "_require_binding_terms",
     "_request_worker_binding",
     "_resolve_successor",
     "_shift_workers_to_successor",

@@ -41,6 +41,8 @@ export default function ContractorScanPage() {
   const [selectedSite, setSelectedSite] = useState(contractor.defaultSite?.name ?? contractor.sites[0]?.name ?? '');
   const [costSheets, setCostSheets] = useState<Array<{ id:number; name:string; code:string; designation?:string; status?:string; ownerId?:number|null; siteId?:number|null; siteName?:string }>>([]);
   const [costSheetId, setCostSheetId] = useState('');
+  const [wageMode, setWageMode] = useState<'sheet' | 'manual'>('sheet');
+  const [offeredWage, setOfferedWage] = useState('');
   const [wageError, setWageError] = useState('');
   const [dateOfJoining, setDateOfJoining] = useState('');
   const [dojError, setDojError] = useState('');
@@ -219,9 +221,14 @@ export default function ContractorScanPage() {
   const sendBinding = async () => {
     if (!scanned || !entity) return;
     const isWorkerBinding = entity.kind === 'worker';
-    if (isWorkerBinding && !costSheetId) {
+    if (isWorkerBinding && wageMode === 'sheet' && !costSheetId) {
       setConfirmOpen(false);
-      setWageError('Pick an employer-accepted cost sheet for this site before sending the binding request.');
+      setWageError('Pick an employer-accepted cost sheet, or switch to entering a monthly wage.');
+      return;
+    }
+    if (isWorkerBinding && wageMode === 'manual' && !(Number(offeredWage) > 0)) {
+      setConfirmOpen(false);
+      setWageError('Enter a valid monthly gross wage (₹).');
       return;
     }
     if (isWorkerBinding && dateOfJoining && dateOfJoining > todayIso()) {
@@ -235,7 +242,7 @@ export default function ContractorScanPage() {
       const response = await fetch('/api/bindings/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: scanned.type, bssId: scanned.bssId, siteToken: scanned.siteToken, site: entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site, costSheetId: isWorkerBinding ? Number(costSheetId) : undefined, dateOfJoining: isWorkerBinding && dateOfJoining ? dateOfJoining : undefined }),
+        body: JSON.stringify({ type: scanned.type, bssId: scanned.bssId, siteToken: scanned.siteToken, site: entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site, costSheetId: isWorkerBinding && wageMode === 'sheet' ? Number(costSheetId) : undefined, offeredWage: isWorkerBinding && wageMode === 'manual' && Number(offeredWage) > 0 ? Number(offeredWage) : undefined, dateOfJoining: isWorkerBinding && dateOfJoining ? dateOfJoining : undefined }),
       });
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
       if (!response.ok) throw new Error(result.error || 'Binding request could not be created.');
@@ -362,15 +369,28 @@ export default function ContractorScanPage() {
               {entity.kind === 'worker' && !contractor.workers.some(w => w.bssId === entity.bssId) && !alreadyPending && (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-bss-text-muted mb-1">Cost sheet (required)</label>
-                    <select value={costSheetId} onChange={e => { setCostSheetId(e.target.value); setWageError(''); }} disabled={!availableCostSheets.length} className="w-full h-10 rounded-lg border border-bss-border px-3 text-sm bg-white disabled:bg-bss-bg disabled:text-bss-text-muted">
-                      <option value="">{availableCostSheets.length ? "Select an employer-accepted cost sheet…" : "No accepted cost sheet for this site"}</option>
-                      {availableCostSheets.map(s => <option key={s.id} value={s.id}>{s.name}{s.siteName ? ` · ${s.siteName}` : ""} · {s.code}</option>)}
-                    </select>
-                    {costSheetId ? (
-                      <p className="text-[11px] text-[#01183A] font-semibold mt-1">Wage, statutory, custom costs and CTC are auto-computed from the cost sheet.</p>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-bss-text-muted mb-1">Wage terms (required)</label>
+                    <div className="inline-flex rounded-lg border border-bss-border bg-bss-bg p-0.5 text-xs font-semibold">
+                      <button type="button" onClick={() => { setWageMode('sheet'); setWageError(''); }} className={`px-3 py-1.5 rounded-md transition-colors ${wageMode === 'sheet' ? 'bg-white text-[#01183A] shadow-sm' : 'text-bss-text-muted'}`}>Cost sheet</button>
+                      <button type="button" onClick={() => { setWageMode('manual'); setWageError(''); }} className={`px-3 py-1.5 rounded-md transition-colors ${wageMode === 'manual' ? 'bg-white text-[#01183A] shadow-sm' : 'text-bss-text-muted'}`}>Enter wage</button>
+                    </div>
+                    {wageMode === 'sheet' ? (
+                      <>
+                        <select value={costSheetId} onChange={e => { setCostSheetId(e.target.value); setWageError(''); }} disabled={!availableCostSheets.length} className="mt-2 w-full h-10 rounded-lg border border-bss-border px-3 text-sm bg-white disabled:bg-bss-bg disabled:text-bss-text-muted">
+                          <option value="">{availableCostSheets.length ? "Select an employer-accepted cost sheet…" : "No accepted cost sheet for this site"}</option>
+                          {availableCostSheets.map(s => <option key={s.id} value={s.id}>{s.name}{s.siteName ? ` · ${s.siteName}` : ""} · {s.code}</option>)}
+                        </select>
+                        {costSheetId ? (
+                          <p className="text-[11px] text-[#01183A] font-semibold mt-1">Wage, statutory, custom costs and CTC are auto-computed from the cost sheet.</p>
+                        ) : (
+                          <p className="text-[11px] text-bss-text-muted mt-1">{availableCostSheets.length ? "Only employer-accepted cost sheets for this site can be used." : "No accepted cost sheet — switch to “Enter wage” to set a monthly wage directly."}</p>
+                        )}
+                      </>
                     ) : (
-                      <p className="text-[11px] text-bss-text-muted mt-1">{availableCostSheets.length ? "Only employer-accepted cost sheets for this site can be used. Pick one to auto-compute the wage and CTC." : "Adopt a published template for this site and get the employer's acceptance before you can bind a worker."}</p>
+                      <>
+                        <input inputMode="numeric" value={offeredWage} onChange={e => { setOfferedWage(e.target.value.replace(/[^0-9]/g, '')); setWageError(''); }} placeholder="Monthly gross wage (₹)" className="mt-2 w-full h-10 rounded-lg border border-bss-border px-3 text-sm bg-white" />
+                        <p className="text-[11px] text-bss-text-muted mt-1">The agreed monthly gross wage. It is printed on the worker&apos;s appointment letter.</p>
+                      </>
                     )}
                     {wageError && <p className="text-[11px] text-bss-error font-semibold mt-1">{wageError}</p>}
                   </div>
@@ -402,8 +422,8 @@ export default function ContractorScanPage() {
                     ? <p className="p-3 bg-bss-soft-green border border-bss-border text-bss-green rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request sent! Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
                     : <div className="space-y-3">
                         {sendError && <p role="alert" className="p-3 bg-bss-soft-orange border border-bss-border text-bss-error rounded-xl text-xs font-semibold flex items-start gap-2"><XCircle size={14} className="mt-0.5 flex-shrink-0"/><span>{sendError}</span></p>}
-                        {entity.kind === 'worker' && (contractor.sites.length === 0 || !costSheetId)
-                          ? <button type="button" disabled className="w-full h-11 rounded-xl bg-bss-surface text-bss-text-muted text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed"><TriangleAlert size={17}/>{contractor.sites.length === 0 ? 'No site allotted — cannot bind' : 'Pick an accepted cost sheet to bind'}</button>
+                        {entity.kind === 'worker' && (contractor.sites.length === 0 || (wageMode === 'sheet' ? !costSheetId : !(Number(offeredWage) > 0)))
+                          ? <button type="button" disabled className="w-full h-11 rounded-xl bg-bss-surface text-bss-text-muted text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed"><TriangleAlert size={17}/>{contractor.sites.length === 0 ? 'No site allotted — cannot bind' : wageMode === 'sheet' ? 'Pick an accepted cost sheet to bind' : 'Enter a monthly wage to bind'}</button>
                           : <button onClick={() => { setWageError(''); setDojError(''); setConfirmOpen(true); }} className="w-full h-11 rounded-xl bg-[#01183A] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#022B5E]"><Link2 size={17}/>Send binding request</button>}
                       </div>}
             </div>
@@ -432,8 +452,11 @@ export default function ContractorScanPage() {
         ...(entity.bssId ? [{ label: 'BSS ID', value: entity.bssId }] : []),
         { label: scanned?.type === 'BSS_SITE' ? 'Site code' : 'Site', value: (entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site) || '—' },
         { label: 'Designation', value: entity.designation || '—' },
-        ...(entity.kind === 'worker' && costSheetId
+        ...(entity.kind === 'worker' && wageMode === 'sheet' && costSheetId
           ? [{ label: 'Cost sheet', value: availableCostSheets.find(s => String(s.id) === costSheetId)?.name ?? 'Selected cost sheet' }]
+          : []),
+        ...(entity.kind === 'worker' && wageMode === 'manual' && Number(offeredWage) > 0
+          ? [{ label: 'Monthly wage', value: `₹${Number(offeredWage).toLocaleString('en-IN')}` }]
           : []),
         ...(entity.kind === 'worker' ? [{ label: 'Date of joining', value: dateOfJoining || 'Binding date' }] : []),
       ] : []}

@@ -81,7 +81,8 @@ def _cost_sheet_section(cs, cb) -> str:
         ("Minimum wage", _money(cb.get("minimumWage"))),
         ("Statutory (employer)", _money(cb.get("statutoryTotal"))),
         ("Custom / other costs", _money(cb.get("customTotal"))),
-        ("CTC", _money(cb.get("ctc"))),
+        ("Contractor billing", _money(cb.get("contractorBilling"))),
+        ("Final employer CTC", _money(cb.get("ctc"))),
     ]
     rows = "".join(f"<tr><td>{_e(label)}</td><td>{value}</td></tr>" for label, value in breakdown)
     grade = _e(getattr(cs, "grade", "") or "")
@@ -105,10 +106,13 @@ def _offered_wage(binding):
     return latest.gross_wage if latest else None
 
 
-def _worker_facts(worker) -> dict:
+def _worker_facts(worker, binding=None) -> dict:
     wi = WorkerIdentity.objects.filter(user=worker).first()
     addr = WorkerAddressMobility.objects.filter(user=worker).first()
     emp = WorkerEmployment.objects.filter(user=worker).first()
+    # The date of joining captured while binding the worker is the source of
+    # truth; fall back to the employment record only when it is absent.
+    doj = getattr(binding, "date_of_joining", None) if binding is not None else None
     return {
         "name": _e(getattr(wi, "name", "") or worker.username),
         "bssId": _e(getattr(wi, "bss_worker_id", "")),
@@ -119,7 +123,7 @@ def _worker_facts(worker) -> dict:
         "address": _e(getattr(addr, "permanent_address", "") or getattr(addr, "current_address", "")),
         "designation": _e(getattr(emp, "designation", "")),
         "department": _e(getattr(emp, "department", "")),
-        "doj": _fmt(getattr(emp, "doj", None)),
+        "doj": _fmt(doj or getattr(emp, "doj", None)),
     }
 
 
@@ -224,7 +228,7 @@ def _block_table(headers: list, row, cls: str = "") -> str:
 def _letter_tokens(binding, letter_type: str, logo_url: str = "", state: str = "") -> dict:
     """Values injected into an admin-authored HTML template. Tokens are written
     as {{token}} (or {{ token }}) — values are HTML-escaped by the facts helpers."""
-    w = _worker_facts(binding.worker)
+    w = _worker_facts(binding.worker, binding)
     p = _party_facts(binding)
     ref = bss_ids.letter_bss_id(binding.id, letter_type)
     issue = _fmt_dt(binding.accepted_at or binding.created_at)
@@ -360,7 +364,7 @@ def _render_template_html(html_text: str, tokens: dict, letter_type: str = "APPO
 def _render_card(binding) -> str:
     """A frozen Employment Card snapshot, issued when an engagement ends and
     kept in the worker's Employment History."""
-    w = _worker_facts(binding.worker)
+    w = _worker_facts(binding.worker, binding)
     p = _party_facts(binding)
     ref = bss_ids.letter_bss_id(binding.id, "card")
     issued = _fmt_dt(binding.accepted_at or binding.created_at)
@@ -394,83 +398,17 @@ def _render_card(binding) -> str:
 def render_letter(binding, letter_type: str) -> str:
     if letter_type == "card":
         return _render_card(binding)
+    # A letter is issued ONLY from an admin-authored template. When no matching
+    # template exists the letter is intentionally not generated (returns ""),
+    # rather than falling back to a hardcoded BSS-branded body.
     template = _resolve_letter_template(binding, letter_type)
-    if template is not None:
-        return _render_template_html(
-            template.html,
-            _letter_tokens(binding, letter_type, getattr(template, "logo_url", "") or "", getattr(template, "state", "") or ""),
-            letter_type,
-            getattr(template, "state", "") or "")
-    w = _worker_facts(binding.worker)
-    p = _party_facts(binding)
-    ref = bss_ids.letter_bss_id(binding.id, letter_type)
-    issue = _fmt_dt(binding.accepted_at or binding.created_at)
-    wage = _money(_offered_wage(binding))
-    cost_sheet_html = _cost_sheet_section(getattr(binding, "cost_sheet", None),
-                                          getattr(binding, "cost_breakdown", {}) or {})
-
-    if letter_type == "appointment":
-        body = f"""
-        <h1>Appointment Letter</h1>
-        <div class="meta"><span>Ref No.: {ref}</span><span>Date: {issue}</span></div>
-        <p>Dear {w['name']},</p>
-        <p>With reference to your engagement, we are pleased to appoint you on the terms set out below, at the
-        project site of <strong>{p['employer']}</strong> through <strong>{p['contractor']}</strong>.</p>
-        <h3>A. Employer &amp; Site</h3>
-        <table class="kv">
-          <tr><td>Contractor / Service Provider</td><td>{p['contractor']} ({p['contractorBss']})<br/>{p['contractorAddr']}</td></tr>
-          <tr><td>Principal Employer</td><td>{p['employer']}</td></tr>
-          <tr><td>Site</td><td>{p['site']}<br/>{p['siteAddr']}</td></tr>
-        </table>
-        <h3>B. Worker Particulars</h3>
-        <table class="kv">
-          <tr><td>Name</td><td>{w['name']}</td></tr>
-          <tr><td>BSS Worker ID</td><td>{w['bssId']}</td></tr>
-          <tr><td>Father's Name</td><td>{w['father']}</td></tr>
-          <tr><td>Date of Birth</td><td>{w['dob']}</td></tr>
-          <tr><td>Gender</td><td>{w['gender']}</td></tr>
-          <tr><td>Address</td><td>{w['address']}</td></tr>
-        </table>
-        <h3>C. Appointment Terms</h3>
-        <table class="kv">
-          <tr><td>Designation</td><td>{w['designation']}</td></tr>
-          <tr><td>Department / Unit</td><td>{w['department']}</td></tr>
-          <tr><td>Date of Joining</td><td>{w['doj']}</td></tr>
-        </table>
-        <h3>D. Wages</h3>
-        <table class="kv">
-          <tr><td>Gross Monthly Wage</td><td>{wage}</td></tr>
-        </table>
-        {cost_sheet_html}
-        <p>Your engagement is subject to applicable labour laws and the terms agreed with the contractor. You shall
-        follow all site safety rules, use the personal protective equipment provided, complete site induction, and
-        report any unsafe condition to the site safety officer immediately.</p>
-        <p>This appointment is valid while your binding with the contractor remains active on the BSS portal.</p>
-        <div class="sign">
-          <div><div class="line">{w['name']}</div>Worker</div>
-          <div><div class="line">{p['contractor']}</div>Contractor / Authorized Signatory</div>
-        </div>
-        """
-    else:
-        body = f"""
-        <h1>Experience Letter</h1>
-        <div class="meta"><span>Ref No.: {ref}</span><span>Date: {issue}</span></div>
-        <p>To Whomsoever It May Concern</p>
-        <p>This is to certify that <strong>{w['name']}</strong> (BSS Worker ID {w['bssId']}) was engaged by
-        <strong>{p['contractor']}</strong> and deployed at <strong>{p['site']}</strong> for
-        <strong>{p['employer']}</strong> as <strong>{w['designation']}</strong> in the department of
-        {w['department']}.</p>
-        <table class="kv">
-          <tr><td>Date of Joining</td><td>{w['doj']}</td></tr>
-          <tr><td>Date of Relieving</td><td>{issue}</td></tr>
-        </table>
-        <p>During the engagement, {w['name']} discharged the assigned duties diligently and maintained the required
-        conduct and safety standards. We wish {w['name']} the very best in future endeavours.</p>
-        <div class="sign">
-          <div><div class="line">{p['contractor']}</div>Contractor / Authorized Signatory</div>
-        </div>
-        """
-    return _shell(f"{LETTER_NAMES[letter_type]} — {w['name']}", body)
+    if template is None:
+        return ""
+    return _render_template_html(
+        template.html,
+        _letter_tokens(binding, letter_type, getattr(template, "logo_url", "") or "", getattr(template, "state", "") or ""),
+        letter_type,
+        getattr(template, "state", "") or "")
 
 
 def _letter_as_pdf(binding, letter_type: str, html: str):
@@ -503,6 +441,10 @@ def issue_letter(binding, letter_type: str):
     if master is None:
         return None
     html = render_letter(binding, letter_type)
+    if not html.strip():
+        # No matching template — the letter is deliberately not issued. Leave any
+        # previously generated document untouched.
+        return None
     pdf = _letter_as_pdf(binding, letter_type, html)
     if pdf:
         filename = f"{code}-{binding.id}-{binding.worker_id}.pdf"

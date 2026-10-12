@@ -26,6 +26,10 @@ DEFAULT_LOGO_URL = "https://login.bharatshramsetu.com/bss-brand/bharatshramsetu-
 # Letter types that must never receive BSS branding (statutory government format).
 UNBRANDED_LETTER_TYPES = {"EXPERIENCE"}
 
+# Letter types that keep the brand row (wordmark) but must NOT carry the BSS
+# logo image — e.g. appointment letters.
+NO_LOGO_LETTER_TYPES = {"APPOINTMENT"}
+
 # Specific states whose appointment letters must not carry the BSS logo.
 LOGO_SUPPRESSED_STATES = {"Andaman and Nicobar Islands"}
 
@@ -135,6 +139,8 @@ def ensure_logo_url(value, letter_type: str = "APPOINTMENT",
     text = (value or "").strip()
     if not wants_logo(letter_type, with_logo, state):
         return ""
+    if (letter_type or "").strip().upper() in NO_LOGO_LETTER_TYPES:
+        return ""
     return text or DEFAULT_LOGO_URL
 
 
@@ -203,8 +209,15 @@ def ensure_letter_html(html_text: str, letter_type: str = "APPOINTMENT",
 
     out = html_text
     brand = wants_logo(letter_type, with_logo, state)
+    no_logo = (letter_type or "").strip().upper() in NO_LOGO_LETTER_TYPES
 
-    if brand:
+    if brand and no_logo:
+        # Branded layout, but the BSS logo image is not allowed (e.g. appointment
+        # letters). Keep the wordmark row, drop only the logo <img> and its token.
+        out = _IMG_RE.sub(lambda m: "" if _is_logo_img(m.group(0)) else m.group(0), out)
+        out = out.replace("{{logoUrl}}", "")
+        out = _mark_brand_row(out)
+    elif brand:
         # 1. Logo <img> must be size-constrained, or a portrait logo blows up the header.
         out = _IMG_RE.sub(lambda m: _size_logo_img(m.group(0)) if _is_logo_img(m.group(0))
                           else m.group(0), out)
