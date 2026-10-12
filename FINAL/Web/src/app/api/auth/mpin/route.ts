@@ -15,13 +15,14 @@ export async function POST(request: Request) {
     const action = String(body.action ?? 'set').toLowerCase();
     const mpin = String(body.mpin ?? '');
     const otp = String(body.otp ?? '');
+    const acceptedTerms = body.acceptedTerms === true || String(body.acceptedTerms ?? '').toLowerCase() === 'true';
     if (!['request-otp', 'send-otp'].includes(action) && !/^\d{4,6}$/.test(mpin)) {
       return NextResponse.json({ error: 'MPIN must be 4-6 digits.' }, { status: 400 });
     }
     const config = getRuntimeConfig();
     const result = await upstreamRequest(config.apiBaseUrl, '/v1/auth/mpin', session, {
       method: 'POST',
-      body: JSON.stringify({ action, mpin, otp }),
+      body: JSON.stringify({ action, mpin, otp, acceptedTerms }),
     });
     return NextResponse.json(result);
   } catch (error) {

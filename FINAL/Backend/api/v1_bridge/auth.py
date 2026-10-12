@@ -114,6 +114,14 @@ def otp_challenge(request):
     }, status=status.HTTP_200_OK)
 
 
+def _accepted_terms(body):
+    """True when the Terms/Privacy consent flag is set (bool or truthy string)."""
+    value = body.get("acceptedTerms")
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in ("1", "true", "yes", "on")
+
+
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -138,6 +146,9 @@ def mpin_set(request):
                         status=status.HTTP_200_OK)
     mpin = str(body.get("mpin") or "").strip()
     otp_value = str(body.get("otp") or "").strip()
+    if not _accepted_terms(body):
+        return Response({"error": "Accept the Terms & Privacy Policy to continue."},
+                        status=status.HTTP_400_BAD_REQUEST)
     if not _MPIN_RE.fullmatch(mpin):
         return Response({"error": "MPIN must be 4-6 digits."}, status=status.HTTP_400_BAD_REQUEST)
     if not otp_value:
@@ -147,6 +158,12 @@ def mpin_set(request):
     cred = _mobile_credential_for(request.user)
     cred.mpin_hash = make_password(mpin)
     cred.save(update_fields=["mpin_hash"])
+    # Record the Terms/Privacy consent the first time an MPIN is set.
+    user = request.user
+    if user.terms_accepted_at is None:
+        user.terms_accepted_at = timezone.now()
+        user.terms_accepted_version = "mpin-v1"
+        user.save(update_fields=["terms_accepted_at", "terms_accepted_version"])
     return Response({"ok": True}, status=status.HTTP_200_OK)
 
 

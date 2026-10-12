@@ -62,6 +62,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     # every previously issued token/session.
     current_session_id = models.CharField(max_length=64, blank=True, default="", db_index=True)
     current_session_at = models.DateTimeField(null=True, blank=True)
+    # Terms / Privacy Policy consent recorded when the user first sets their MPIN.
+    terms_accepted_at = models.DateTimeField(null=True, blank=True)
+    terms_accepted_version = models.CharField(max_length=40, blank=True)
 
     objects = UserManager()
 

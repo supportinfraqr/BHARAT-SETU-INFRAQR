@@ -15,6 +15,7 @@ export default function MpinSetupGate() {
   const [confirm, setConfirm] = useState("");
   const [otp, setOtp] = useState("");
   const [mobileMask, setMobileMask] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -40,12 +41,13 @@ export default function MpinSetupGate() {
     finally { setBusy(false); }
   }
   async function save() {
+    if (!agreedToTerms) return setError("Accept the Terms & Privacy Policy to continue.");
     if (!/^\d{4,6}$/.test(mpin)) return setError("MPIN must be 4-6 digits.");
     if (mpin !== confirm) return setError("The two MPIN entries do not match.");
     if (otp.length !== 6) return setError("Enter the six-digit OTP.");
     setBusy(true); setError("");
     try {
-      const response = await fetch("/api/auth/mpin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "set", mpin, otp }) });
+      const response = await fetch("/api/auth/mpin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "set", mpin, otp, acceptedTerms: agreedToTerms }) });
       const body = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(body.error || "MPIN could not be saved.");
       await load();
@@ -61,15 +63,26 @@ export default function MpinSetupGate() {
           <p className="text-xs text-gray-500 mt-1">Create a 4–6 digit MPIN for quick, secure login. This step is required before you can use the portal.</p>
         </header>
         <div className="p-5 space-y-3">
+          <label className="flex items-start gap-2 text-xs text-gray-600 rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2.5">
+            <input
+              type="checkbox"
+              checked={agreedToTerms}
+              onChange={e => setAgreedToTerms(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[#073B67]"
+            />
+            <span className="leading-snug">
+              I agree to the <a href="/policy" target="_blank" rel="noreferrer" className="text-[#1E3A8A] hover:underline">Privacy Policy</a> and <a href="/terms" target="_blank" rel="noreferrer" className="text-[#1E3A8A] hover:underline">Terms &amp; Conditions</a>.
+            </span>
+          </label>
           {!otpSent ? (
-            <button type="button" onClick={() => void sendOtp()} disabled={busy || !status.hasMobile} title={status.hasMobile ? "" : "No mobile number on your account"} className="w-full h-10 rounded-lg bg-[#073B67] text-white text-sm font-bold disabled:opacity-50">{busy ? "Sending…" : "Send OTP to my mobile"}</button>
+            <button type="button" onClick={() => void sendOtp()} disabled={busy || !status.hasMobile || !agreedToTerms} title={status.hasMobile ? "" : "No mobile number on your account"} className="w-full h-10 rounded-lg bg-[#073B67] text-white text-sm font-bold disabled:opacity-50">{busy ? "Sending…" : "Send OTP to my mobile"}</button>
           ) : (
             <>
               <p className="text-xs text-gray-500">OTP sent to {mobileMask || "your mobile"}. Enter it below and choose an MPIN.</p>
               <input value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="6-digit OTP" className="w-full h-11 rounded-lg border border-gray-200 px-3 text-center tracking-[0.3em] font-bold" />
               <input type="password" value={mpin} onChange={e => setMpin(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="New MPIN (4–6 digits)" className="w-full h-11 rounded-lg border border-gray-200 px-3" />
               <input type="password" value={confirm} onChange={e => setConfirm(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="Confirm MPIN" className="w-full h-11 rounded-lg border border-gray-200 px-3" />
-              <button type="button" onClick={() => void save()} disabled={busy} className="w-full h-10 rounded-lg bg-[#073B67] text-white text-sm font-bold disabled:opacity-50">{busy ? "Saving…" : "Save MPIN"}</button>
+              <button type="button" onClick={() => void save()} disabled={busy || !agreedToTerms} className="w-full h-10 rounded-lg bg-[#073B67] text-white text-sm font-bold disabled:opacity-50">{busy ? "Saving…" : "Save MPIN"}</button>
             </>
           )}
           {!status.hasMobile && <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">No mobile number is linked to this account, so an MPIN can’t be set here. Contact BSS support.</p>}
