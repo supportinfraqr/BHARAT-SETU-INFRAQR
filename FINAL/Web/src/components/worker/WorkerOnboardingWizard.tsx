@@ -26,6 +26,7 @@ export default function WorkerOnboardingWizard() {
   const [otp, setOtp] = useState("");
   const [mpin, setMpin] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -86,12 +87,13 @@ export default function WorkerOnboardingWizard() {
   }
 
   async function saveMpin() {
+    if (!acceptedTerms) { setError('Accept the Terms & Privacy Policy to continue.'); return; }
     if (!/^\d{4,6}$/.test(mpin)) { setError('MPIN must be 4-6 digits.'); return; }
     if (mpin !== confirm) { setError('The two MPIN entries do not match.'); return; }
     if (otp.length !== 6) { setError('Enter the six-digit OTP.'); return; }
     setBusy(true); setError('');
     try {
-      const res = await fetch('/api/auth/mpin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'set', mpin, otp }) });
+      const res = await fetch('/api/auth/mpin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'set', mpin, otp, acceptedTerms }) });
       if (!res.ok) { const b = await res.json().catch(() => ({})) as { error?: string }; throw new Error(b.error || 'MPIN could not be saved.'); }
       await load();
     } catch (e) { setError(e instanceof Error ? e.message : 'MPIN could not be saved.'); }
@@ -143,12 +145,13 @@ export default function WorkerOnboardingWizard() {
 
           {step === 'mpin' && <>
             <p className="text-xs text-bss-text-secondary">Create a 4–6 digit MPIN for quick, secure login. An OTP will be sent to your registered mobile.</p>
-            {!otpSent ? <button onClick={() => void sendOtp()} disabled={busy} className="w-full h-10 rounded-lg bg-[#01183A] text-white text-sm font-bold disabled:opacity-50">{busy ? 'Sending…' : 'Send OTP to my mobile'}</button>
+            <label className="flex items-start gap-2 text-xs text-bss-text-primary"><input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} className="accent-[#01183A] w-4 h-4 mt-0.5"/>I agree to the <a href="/policy" target="_blank" rel="noreferrer" className="text-[#1E3A8A] hover:underline">Privacy Policy</a> and <a href="/terms" target="_blank" rel="noreferrer" className="text-[#1E3A8A] hover:underline">Terms &amp; Conditions</a>.</label>
+            {!otpSent ? <button onClick={() => void sendOtp()} disabled={busy || !acceptedTerms} className="w-full h-10 rounded-lg bg-[#01183A] text-white text-sm font-bold disabled:opacity-50">{busy ? 'Sending…' : 'Send OTP to my mobile'}</button>
               : <>
                 <input value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="6-digit OTP" className="w-full h-11 rounded-lg border border-bss-border px-3 text-center tracking-[0.3em] font-bold" />
                 <input type="password" value={mpin} onChange={e => setMpin(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="New MPIN (4–6 digits)" className="w-full h-11 rounded-lg border border-bss-border px-3" />
                 <input type="password" value={confirm} onChange={e => setConfirm(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="Confirm MPIN" className="w-full h-11 rounded-lg border border-bss-border px-3" />
-                <button onClick={() => void saveMpin()} disabled={busy} className="w-full h-10 rounded-lg bg-[#01183A] text-white text-sm font-bold disabled:opacity-50">{busy ? 'Saving…' : 'Save MPIN & continue'}</button>
+                <button onClick={() => void saveMpin()} disabled={busy || !acceptedTerms} className="w-full h-10 rounded-lg bg-[#01183A] text-white text-sm font-bold disabled:opacity-50">{busy ? 'Saving…' : 'Save MPIN & continue'}</button>
               </>}
           </>}
 
