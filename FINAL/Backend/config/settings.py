@@ -283,6 +283,13 @@ AADHAAR_OTP_TTL_MIN = int(os.environ.get("BSS_AADHAAR_OTP_TTL_MIN", "10"))
 AADHAAR_RESEND_GAP_SEC = int(os.environ.get("BSS_AADHAAR_RESEND_GAP_SEC", "60"))
 AADHAAR_MAX_RESENDS = int(os.environ.get("BSS_AADHAAR_MAX_RESENDS", "5"))
 AADHAAR_LOCK_SEC = int(os.environ.get("BSS_AADHAAR_LOCK_SEC", "600"))
+# Account-wide guardrails (Redis-backed, shared by every gunicorn worker):
+#   * at most AADHAAR_PROVIDER_RPS OTP sends per second app-wide — a burst
+#     back-pressures with a short "try again" instead of a 429 storm;
+#   * after a provider 429, a short escalating backoff (capped at 5 min) instead
+#     of locking every user out for 15–60 minutes.
+AADHAAR_PROVIDER_RPS = int(os.environ.get("BSS_AADHAAR_PROVIDER_RPS", "3"))
+AADHAAR_GLOBAL_BACKOFF_SEC = int(os.environ.get("BSS_AADHAAR_GLOBAL_BACKOFF_SEC", "20"))
 AADHAAR_GLOBAL_COOLDOWN_SEC = int(os.environ.get("BSS_AADHAAR_GLOBAL_COOLDOWN_SEC", "900"))
 AADHAAR_MIN_INTERVAL_SEC = int(os.environ.get("BSS_AADHAAR_MIN_INTERVAL_SEC", "45"))
 AADHAAR_MAX_ATTEMPTS = int(os.environ.get("BSS_AADHAAR_MAX_ATTEMPTS", "3"))

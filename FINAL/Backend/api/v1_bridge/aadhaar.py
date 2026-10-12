@@ -2,11 +2,56 @@
 
 import logging
 import re
+import time
+
+from django.core.cache import cache as _cache
 
 # ruff: noqa: F401,F403
 from .common import *  # noqa: F401,F403
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Account-wide guardrails, shared by every gunicorn worker via the Redis cache
+# (falls back to local memory when BSS_REDIS_URL is unset). These keep the whole
+# install inside UIDAI's per-key limits and let bursts back-pressure gracefully
+# instead of hammering the provider and locking everyone out.
+# ---------------------------------------------------------------------------
+def _provider_rate_ok() -> bool:
+    """At most ``AADHAAR_PROVIDER_RPS`` OTP sends per second app-wide."""
+    rps = max(1, settings.AADHAAR_PROVIDER_RPS)
+    key = f"bss:aadhaar:rl:{int(time.time())}"
+    try:
+        if _cache.add(key, 1, timeout=2):
+            return True
+        return _cache.incr(key) <= rps
+    except Exception:  # noqa: BLE001 — cache down: fail open (per-Aadhaar caps remain)
+        return True
+
+
+def _global_backoff_remaining() -> int:
+    try:
+        until = _cache.get("bss:aadhaar:backoff")
+    except Exception:  # noqa: BLE001
+        return 0
+    return max(1, int(float(until) - time.time())) if until else 0
+
+
+def _open_global_backoff(seconds=None):
+    """Short, escalating account-wide backoff after a provider 429 (capped 5 min)."""
+    base = int(seconds or settings.AADHAAR_GLOBAL_BACKOFF_SEC)
+    try:
+        n = int(_cache.get("bss:aadhaar:backoff_n") or 0) + 1
+        _cache.set("bss:aadhaar:backoff_n", n, timeout=1800)
+    except Exception:  # noqa: BLE001
+        n = 1
+    wait = min(base * (2 ** min(n - 1, 4)), 300)  # 20s → … → 5 min
+    try:
+        _cache.set("bss:aadhaar:backoff", time.time() + wait, timeout=wait + 5)
+    except Exception:  # noqa: BLE001
+        pass
+    return wait
 
 
 def _sanitize_aadhaar(value):
@@ -375,6 +420,21 @@ def _send_otp(aadhaar, consent=True):
             "retryAfterSeconds": settings.AADHAAR_LOCK_SEC, "locked": True, "otpPending": True,
         }, status=status.HTTP_200_OK)
 
+    # 4) Account-wide guardrails (Redis): after a provider 429 wait it out with a
+    #    short backoff, and cap app-wide sends per second so a burst back-pressures
+    #    instead of hammering UIDAI and locking everyone out.
+    backoff = _global_backoff_remaining()
+    if backoff:
+        return Response({
+            "error": f"Aadhaar service is busy — please try again in {_fmt_wait(backoff)}.",
+            "retryAfterSeconds": backoff, "otpPending": True,
+        }, status=status.HTTP_200_OK)
+    if not _provider_rate_ok():
+        return Response({
+            "error": "Aadhaar service is busy — please try again in a moment.",
+            "retryAfterSeconds": 2, "otpPending": True,
+        }, status=status.HTTP_200_OK)
+
     AadhaarChallenge.objects.create(aadhaar_number=aadhaar, status="CALL")
 
     # Ask Sandbox to send a NEW OTP now.
@@ -383,8 +443,10 @@ def _send_otp(aadhaar, consent=True):
     except aadhaar_client.SandboxError as exc:
         sb_status = getattr(exc, "status", 502)
         if sb_status == 429:
-            # UIDAI rate-limits our whole key — cool the account down.
-            _lock_aadhaar(aadhaar, settings.AADHAAR_LOCK_SEC)
+            # UIDAI rate-limits our whole key — brief account-wide backoff (short,
+            # escalating) + a short per-Aadhaar wait, never a long global lock.
+            _open_global_backoff()
+            _lock_aadhaar(aadhaar, 60)
         if 400 <= sb_status < 500:
             return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"error": f"Aadhaar (UIDAI) service is temporarily unavailable — {str(exc)}. Please try again later."},

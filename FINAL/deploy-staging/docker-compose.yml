@@ -49,6 +49,8 @@ services:
       BSS_PG_HOST: db
       BSS_PG_PORT: "5432"
       BSS_REDIS_URL: redis://redis:6379/0
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-8}
       BSS_AADHAAR_BASE_URL: ${BSS_AADHAAR_BASE_URL:-https://api.sandbox.co.in}
       BSS_AADHAAR_API_KEY: ${BSS_AADHAAR_API_KEY:?BSS_AADHAAR_API_KEY is required in deploy/.env}
       BSS_AADHAAR_API_SECRET: ${BSS_AADHAAR_API_SECRET:?BSS_AADHAAR_API_SECRET is required in deploy/.env}

@@ -16,4 +16,11 @@ echo "== Collecting static =="
 python manage.py collectstatic --noinput 2>/dev/null || echo "collectstatic skipped"
 
 echo "== Starting gunicorn =="
-exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 180
+# gthread (threaded workers) so slow provider I/O (Aadhaar/Sandbox waits of up
+# to ~12s) does not hog a whole sync worker: concurrency = workers × threads.
+# Tunable via GUNICORN_WORKERS / GUNICORN_THREADS.
+exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 \
+  --worker-class gthread \
+  --workers "${GUNICORN_WORKERS:-3}" \
+  --threads "${GUNICORN_THREADS:-8}" \
+  --timeout 180
