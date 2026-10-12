@@ -185,8 +185,10 @@ def verification_manual_submit(request):
                 profile.pan_no = found.group(0)
                 profile.save(update_fields=["pan_no"])
         saved += 1
-    if saved == 0 and not EntityVerificationDocument.objects.filter(user=request.user).exists():
-        return Response({"error": "Upload at least one document."}, status=status.HTTP_400_BAD_REQUEST)
+    total_docs = EntityVerificationDocument.objects.filter(user=request.user).count()
+    if total_docs < 3:
+        return Response({"error": "Upload at least 3 documents before submitting for verification."},
+                        status=status.HTTP_400_BAD_REQUEST)
 
     profile.manual_verification_status = "PENDING"
     profile.manual_verification_note = ""

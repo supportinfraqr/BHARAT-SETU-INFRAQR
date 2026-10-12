@@ -20,6 +20,8 @@ const DOC_LABELS: Record<DocKind, string> = {
   INCORPORATION: "Incorporation / registration certificate",
   OTHER: "Other supporting document",
 };
+// Minimum documents required before the verification submission is allowed.
+const REQUIRED_DOCS = 3;
 
 export default function VerificationGate({ role }: { role: "contractor" | "employer" }) {
   const [status, setStatus] = useState<VerificationStatus | null>(null);
@@ -111,7 +113,7 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
   }
 
   async function submitManual() {
-    if (Object.keys(docs).length === 0) { setError("Upload at least one document."); return; }
+    if (Object.keys(docs).length < REQUIRED_DOCS) { setError(`Upload at least ${REQUIRED_DOCS} documents.`); return; }
     setBusy(true); setError("");
     try {
       const form = new FormData();
@@ -225,7 +227,7 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
             Your previous submission was rejected{manual.note ? `: ${manual.note}` : ""}. Please re-submit.
           </p>
         )}
-        <p className="text-sm text-gray-600">Upload your identity documents (PAN, Aadhaar and any others). A BSS Admin will review and verify them.</p>
+        <p className="text-sm text-gray-600">Upload your identity documents (PAN, Aadhaar and any others). <strong>At least {REQUIRED_DOCS} documents are required.</strong> A BSS Admin will review and verify them.</p>
         {manual.documents.length > 0 && (
           <ul className="space-y-1.5">
             {manual.documents.map(doc => (
@@ -251,9 +253,12 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
             </label>
           ))}
         </div>
-        <button type="button" onClick={() => void submitManual()} disabled={busy} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-60">
-          {busy ? <Loader2 size={14} className="animate-spin"/> : <Send size={14}/>}Submit for verification
-        </button>
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <span className={`text-[11px] font-semibold ${Object.keys(docs).length >= REQUIRED_DOCS ? 'text-bss-green' : 'text-bss-orange'}`}>{Object.keys(docs).length}/{REQUIRED_DOCS} documents attached</span>
+          <button type="button" onClick={() => void submitManual()} disabled={busy || Object.keys(docs).length < REQUIRED_DOCS} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+            {busy ? <Loader2 size={14} className="animate-spin"/> : <Send size={14}/>}Submit for verification
+          </button>
+        </div>
       </div>
     );
   } else {
