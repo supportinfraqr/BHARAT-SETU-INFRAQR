@@ -16,6 +16,7 @@ import LanguageSelector from "./LanguageSelector";
 import { ResendOtp } from "@/components/auth/ResendOtp";
 import { useRouter } from "next/navigation";
 import type { Language } from '@/i18n';
+import { isDemoMobile } from '@/lib/demoMobiles';
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
@@ -23,8 +24,6 @@ interface RegisterFormProps {
   onLangChange: (code: Language) => void;
   t: (key: string) => string;
 }
-
-const DEMO_MOBILES = ['2222222222', '3333333333', '4444444444'];
 
 export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChange, t }: RegisterFormProps) {
   const [selectedRole, setSelectedRole] = useState("Worker");
@@ -48,7 +47,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   const requestOtp = async () => {
     setError("");
     if (!isSelfService) return setError("This role requires administrator approval. Please contact BSS support.");
-    if (!/^[6-9]\d{9}$/.test(contact.trim()) && !DEMO_MOBILES.includes(contact.trim())) return setError("Enter a valid 10-digit Indian mobile number.");
+    if (!/^[6-9]\d{9}$/.test(contact.trim()) && !isDemoMobile(contact)) return setError("Enter a valid 10-digit Indian mobile number.");
     setIsCreating(true);
     try {
       await sendRegisterOtp();

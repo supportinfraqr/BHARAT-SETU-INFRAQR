@@ -4,6 +4,7 @@ import { getRuntimeConfig } from '@/server/config';
 import { upstreamRequest } from '@/server/http';
 import { createSession } from '@/server/session';
 import type { PortalRole } from '@/types/portal';
+import { isDemoMobile } from '@/lib/demoMobiles';
 
 const registrationByRole: Record<string, { path: string; redirectTo: string }> = {
   Worker: { path: '/v1/auth/register/worker', redirectTo: '/worker/Profile?tab=integrations' },
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Verified contact and accepted terms are required.' }, { status: 400 });
     }
     const contact = body.contact.trim().toLowerCase();
-    if (!/^(?:[6-9]\d{9}|[^\s@]+@[^\s@]+\.[^\s@]+)$/.test(contact) && !['2222222222', '3333333333', '4444444444'].includes(contact)) {
+    if (!/^(?:[6-9]\d{9}|[^\s@]+@[^\s@]+\.[^\s@]+)$/.test(contact) && !isDemoMobile(contact)) {
       return NextResponse.json({ error: 'Enter a valid Indian mobile number or email address.' }, { status: 400 });
     }
     assertRateLimit(`register:${contact}`, 5, 30 * 60_000);
