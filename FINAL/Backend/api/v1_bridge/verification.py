@@ -148,6 +148,47 @@ def _ocr_entity_document(doc_type, raw, filename):
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
+def verification_check_document(request):
+    """OCR a single registration document at upload time and verify it against the
+    chosen slot. Returns ``verified`` (true / false / null=advisory)."""
+    from .. import ocr_client
+
+    if _profile_for(request.user) is None:
+        return Response({"error": "Only employers and contractors."}, status=status.HTTP_403_FORBIDDEN)
+    upload = request.FILES.get("file")
+    if upload is None:
+        return Response({"error": "Choose a file."}, status=status.HTTP_400_BAD_REQUEST)
+    doc_type = str(request.data.get("docType") or "OTHER").strip().upper()
+    if doc_type not in _DOC_TYPES:
+        doc_type = "OTHER"
+    raw = upload.read()
+    try:
+        text = ocr_client.extract_text(raw, upload.name) or ""
+    except Exception:  # noqa: BLE001 — never block on OCR being unavailable
+        return Response({"data": {"docType": doc_type, "verified": None, "detectedType": "",
+                                  "note": "OCR unavailable", "text": ""}}, status=status.HTTP_200_OK)
+    try:
+        detected = ocr_client.detect_document_type(text) or ""
+    except Exception:  # noqa: BLE001
+        detected = ""
+    key = _ENTITY_OCR_MAP.get(doc_type)
+    if not key:
+        # Incorporation / Other: no marker set — just require it to be readable.
+        readable = bool(text.strip())
+        return Response({"data": {"docType": doc_type, "verified": None, "detectedType": detected,
+                                  "note": "Document captured" if readable else "Could not read the document",
+                                  "text": text[:600]}}, status=status.HTTP_200_OK)
+    try:
+        ok, note = ocr_client.verify_document_text(key, text)
+    except Exception:  # noqa: BLE001
+        ok, note = None, "OCR check unavailable"
+    return Response({"data": {"docType": doc_type, "verified": ok, "detectedType": detected,
+                              "note": note, "text": text[:600]}}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def verification_manual_submit(request):
     """Upload manual identity documents (PAN, Aadhaar, …) for admin review."""
     from bss_core.models import EntityVerificationDocument
@@ -329,4 +370,5 @@ def admin_verification_review(request):
 __all__ = [
     "verification_status", "verification_decline_entitylocker", "verification_manual_submit",
     "verification_document", "admin_verification_queue", "admin_verification_review",
+    "verification_check_document",
 ]

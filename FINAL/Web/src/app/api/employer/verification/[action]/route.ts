@@ -41,6 +41,14 @@ export async function POST(request: Request, context: Context) {
       }, { timeoutMs: 60_000 });
       return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
     }
+    if (action === 'check-document') {
+      const contentType = request.headers.get('content-type') ?? 'multipart/form-data';
+      const body = Buffer.from(await request.arrayBuffer());
+      const result = await upstreamRequest(config.apiBaseUrl, '/v1/employer/verification/check-document', session, {
+        method: 'POST', body, headers: { 'Content-Type': contentType },
+      }, { timeoutMs: 60_000 });
+      return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
+    }
     return NextResponse.json({ error: 'Unknown action.' }, { status: 404 });
   } catch (error) {
     return apiError(error, 'Verification could not be completed.');

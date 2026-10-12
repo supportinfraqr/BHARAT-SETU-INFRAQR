@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { BadgeCheck, Building2, Clock3, Loader2, Send, ShieldCheck, Upload } from "lucide-react";
+import { BadgeCheck, Building2, CheckCircle2, Clock3, Loader2, Send, ShieldCheck, Upload } from "lucide-react";
 import GstVerifyCard from "@/components/gst/GstVerifyCard";
 
 type VerificationStatus = {
@@ -28,6 +28,7 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
   const [askEl, setAskEl] = useState(false);
   const [confirmNotEl, setConfirmNotEl] = useState(false);
   const [docs, setDocs] = useState<Partial<Record<DocKind, File>>>({});
+  const [checks, setChecks] = useState<Partial<Record<DocKind, { busy?: boolean; verified?: boolean | null; note?: string }>>>({});
   const [askGst, setAskGst] = useState(false);
   const [showIncorp, setShowIncorp] = useState(false);
   const [incorpDate, setIncorpDate] = useState("");
@@ -110,6 +111,21 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not continue.");
     } finally { setBusy(false); }
+  }
+
+  async function checkFile(kind: DocKind, f: File) {
+    setChecks(prev => ({ ...prev, [kind]: { busy: true } }));
+    try {
+      const form = new FormData();
+      form.set("file", f);
+      form.set("docType", kind);
+      const response = await fetch(`/api/${role}/verification/check-document`, { method: "POST", body: form });
+      const body = await response.json().catch(() => ({})) as { data?: { verified?: boolean | null; note?: string }; error?: string };
+      const d = body.data ?? {};
+      setChecks(prev => ({ ...prev, [kind]: { verified: d.verified ?? null, note: d.note || body.error || "" } }));
+    } catch {
+      setChecks(prev => ({ ...prev, [kind]: { verified: null, note: "OCR check failed" } }));
+    }
   }
 
   async function submitManual() {
@@ -242,20 +258,32 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
         )}
         {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
         <div className="grid sm:grid-cols-2 gap-3">
-          {(Object.keys(DOC_LABELS) as DocKind[]).map(kind => (
-            <label key={kind} className="text-xs font-semibold text-gray-700">
-              {DOC_LABELS[kind]}
-              <span className="mt-1 flex items-center gap-2 h-10 px-3 rounded-lg border border-dashed border-gray-300 cursor-pointer hover:bg-gray-50">
-                <Upload size={14} className="text-gray-400"/>
-                <span className="text-[11px] text-gray-500 truncate">{docs[kind]?.name || "Choose a file (PDF/JPEG/PNG)"}</span>
-                <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setDocs(prev => ({ ...prev, [kind]: f })); }} />
-              </span>
-            </label>
-          ))}
+          {(Object.keys(DOC_LABELS) as DocKind[]).map(kind => {
+            const chk = checks[kind];
+            return (
+              <label key={kind} className="text-xs font-semibold text-gray-700">
+                {DOC_LABELS[kind]}
+                <span className="mt-1 flex items-center gap-2 h-10 px-3 rounded-lg border border-dashed border-gray-300 cursor-pointer hover:bg-gray-50">
+                  <Upload size={14} className="text-gray-400"/>
+                  <span className="text-[11px] text-gray-500 truncate">{docs[kind]?.name || "Choose a file (PDF/JPEG/PNG)"}</span>
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) { setDocs(prev => ({ ...prev, [kind]: f })); void checkFile(kind, f); } }} />
+                </span>
+                {chk && (
+                  <span className={`mt-1 flex items-center gap-1 text-[10px] font-bold ${chk.busy ? 'text-gray-400' : chk.verified === false ? 'text-bss-error' : chk.verified === true ? 'text-bss-green' : 'text-bss-orange'}`}>
+                    {chk.busy ? <Loader2 size={11} className="animate-spin"/> : <CheckCircle2 size={11}/>}
+                    {chk.busy ? 'Checking document…' : chk.verified === true ? 'OCR verified' : (chk.note || 'OCR not verified')}
+                  </span>
+                )}
+              </label>
+            );
+          })}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-          <span className={`text-[11px] font-semibold ${Object.keys(docs).length >= REQUIRED_DOCS ? 'text-bss-green' : 'text-bss-orange'}`}>{Object.keys(docs).length}/{REQUIRED_DOCS} documents attached</span>
-          <button type="button" onClick={() => void submitManual()} disabled={busy || Object.keys(docs).length < REQUIRED_DOCS} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+          <span className={`text-[11px] font-semibold ${Object.keys(docs).length >= REQUIRED_DOCS ? 'text-bss-green' : 'text-bss-orange'}`}>
+            {Object.keys(docs).length}/{REQUIRED_DOCS} documents attached
+            {(Object.values(checks).some(c => c?.verified === false)) && <span className="ml-2 text-bss-error">— remove unverified documents</span>}
+          </span>
+          <button type="button" onClick={() => void submitManual()} disabled={busy || Object.keys(docs).length < REQUIRED_DOCS || Object.values(checks).some(c => c?.busy || c?.verified === false)} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
             {busy ? <Loader2 size={14} className="animate-spin"/> : <Send size={14}/>}Submit for verification
           </button>
         </div>
