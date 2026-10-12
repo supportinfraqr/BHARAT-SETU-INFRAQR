@@ -181,10 +181,21 @@ useEffect(() => {
     if (!draftState || !draftCategory) return;
     const combos: Array<{ state: string; zone: string }> = [];
     for (const st of (draftStates.length ? draftStates : draftState ? [draftState] : [])) {
-      const zones = (draftStateZones[st] ?? []).length ? draftStateZones[st] : (zonesByState[st] ?? []);
+      // Only look up zones the admin has explicitly ticked — never fall back to
+      // "all zones of the state". The min-wage panel and the Save rule must agree:
+      // a template pins its zone(s) explicitly.
+      const zones = draftStateZones[st] ?? [];
       for (const zone of zones) combos.push({ state: st, zone });
     }
-    if (!combos.length) return;
+    if (!combos.length) {
+      // No zone selected → nothing to match; clear any stale result so the panel
+      // shows the "pick at least one zone" hint instead of an old match.
+      /* eslint-disable react-hooks/set-state-in-effect -- clearing stale match when no zone is chosen */
+      setMinWageStatus('idle'); setMinWageMessage('');
+      setDraft(d => (d && (d.minimumWages.length || d.minimumWage)) ? { ...d, minimumWages: [], minimumWage: null } : d);
+      /* eslint-enable react-hooks/set-state-in-effect */
+      return;
+    }
     let active = true;
     (async () => {
       setMinWageStatus('fetching'); setMinWageMessage('');
