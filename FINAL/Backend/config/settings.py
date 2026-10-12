@@ -275,10 +275,11 @@ AADHAAR_API_SECRET = os.environ.get("BSS_AADHAAR_API_SECRET", "")
 AADHAAR_API_VERSION = os.environ.get("BSS_AADHAAR_API_VERSION", "1.0")
 AADHAAR_OTP_TTL_MIN = int(os.environ.get("BSS_AADHAAR_OTP_TTL_MIN", "10"))
 # How long BSS may hand back an already-delivered OTP reference instead of
-# asking Sandbox for a new one. MUST stay below the provider's real reference
-# validity (Sandbox/UIDAI expire the reference in ~90s), otherwise Resend returns
-# a reference the provider has already killed and verify reports "OTP expired".
-AADHAAR_REUSE_WINDOW_SEC = int(os.environ.get("BSS_AADHAAR_REUSE_WINDOW_SEC", "60"))
+# asking Sandbox for a new one. Sandbox/UIDAI do NOT publish a fixed OTP
+# validity ("governed by UIDAI policies"), so this is an operator-tunable knob,
+# not a hardcoded truth. Default keeps the original 3-minute reuse behaviour.
+# Set it just under the real UIDAI window once measured (see the oKYC probe).
+AADHAAR_REUSE_WINDOW_SEC = int(os.environ.get("BSS_AADHAAR_REUSE_WINDOW_SEC", "180"))
 AADHAAR_GLOBAL_COOLDOWN_SEC = int(os.environ.get("BSS_AADHAAR_GLOBAL_COOLDOWN_SEC", "900"))
 AADHAAR_MIN_INTERVAL_SEC = int(os.environ.get("BSS_AADHAAR_MIN_INTERVAL_SEC", "45"))
 AADHAAR_MAX_ATTEMPTS = int(os.environ.get("BSS_AADHAAR_MAX_ATTEMPTS", "5"))
