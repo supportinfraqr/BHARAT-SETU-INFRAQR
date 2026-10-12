@@ -418,6 +418,21 @@ def _handle_site(user, body, method):
     if "experienceLetterTemplateId" in body:
         site.experience_letter_template_id = _tid(body.get("experienceLetterTemplateId"))
 
+    # Site agreement (PDF) — uploaded by the employer at site creation. Multipart
+    # request, so the file arrives as an UploadedFile on the body.
+    agreement = body.get("agreement")
+    if agreement is not None and hasattr(agreement, "read"):
+        head = agreement.read(5)
+        agreement.seek(0)
+        if head != b"%PDF-":
+            raise PortalMutationError("The site agreement must be a PDF file.", 415)
+        if getattr(agreement, "size", 0) > 10 * 1024 * 1024:
+            raise PortalMutationError("The site agreement must be 10 MB or smaller.", 413)
+        site.agreement_file = agreement
+        site.agreement_name = (getattr(agreement, "name", "") or "site-agreement.pdf")[:255]
+        site.agreement_uploaded_at = timezone.now()
+        site.agreement_uploaded_by = user
+
     site.save()
     # On create, pin the site's state letter templates (if the admin has any).
     if created:
@@ -425,6 +440,67 @@ def _handle_site(user, body, method):
         site.save(update_fields=["appointment_letter_template", "experience_letter_template",
                                  "updated_at"])
     return site.id
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def site_agreement(request, site_id):
+    """Download a site's agreement PDF — the owning employer, any contractor the
+    site is allotted to, or BSS staff/admin/government."""
+    from django.http import FileResponse
+
+    from bss_core.models import ContractorSiteAllotment
+
+    site = Site.objects.filter(pk=site_id).first()
+    if site is None or not site.agreement_file:
+        return Response({"error": "No site agreement is available."},
+                        status=status.HTTP_404_NOT_FOUND)
+    user = request.user
+    allowed = user.role in ("bss_admin", "bss_staff", "government", "admin") \
+        or site.employer_id == user.id
+    if not allowed and user.role == "contractor":
+        allowed = ContractorSiteAllotment.objects.filter(
+            site=site, binding__contractor=user, binding__binding_status="ACCEPTED",
+            status="APPROVED").exists()
+    if not allowed:
+        return Response({"error": "Not authorized."}, status=status.HTTP_403_FORBIDDEN)
+    filename = (site.agreement_name or f"site-agreement-{site.site_code}.pdf").split("/")[-1]
+    response = FileResponse(site.agreement_file.open("rb"), as_attachment=False, filename=filename)
+    response["Content-Type"] = "application/pdf"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def employer_site_agreement_upload(request, site_id):
+    """Upload/replace a site's agreement PDF (owning employer only)."""
+    if request.user.role != "employer":
+        return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
+    site = Site.objects.filter(pk=site_id, employer=request.user).first()
+    if site is None:
+        return Response({"error": "Site not found."}, status=status.HTTP_404_NOT_FOUND)
+    upload = request.FILES.get("agreement") or request.FILES.get("file")
+    if upload is None:
+        return Response({"error": "Choose a PDF file."}, status=status.HTTP_400_BAD_REQUEST)
+    head = upload.read(5)
+    upload.seek(0)
+    if head != b"%PDF-":
+        return Response({"error": "The site agreement must be a PDF file."},
+                        status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+    if getattr(upload, "size", 0) > 10 * 1024 * 1024:
+        return Response({"error": "The site agreement must be 10 MB or smaller."},
+                        status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+    site.agreement_file = upload
+    site.agreement_name = (upload.name or "site-agreement.pdf")[:255]
+    site.agreement_uploaded_at = timezone.now()
+    site.agreement_uploaded_by = request.user
+    site.save(update_fields=["agreement_file", "agreement_name", "agreement_uploaded_at",
+                             "agreement_uploaded_by", "updated_at"])
+    return Response({"data": {"hasAgreement": True, "agreementName": site.agreement_name}},
+                    status=status.HTTP_200_OK)
 
 
 def _employer_set_gate_pass_block(user, body):
@@ -754,4 +830,6 @@ __all__ = [
     "_handle_rozgar_apply",
     "_handle_rozgar_respond",
     "_handle_site",
+    "employer_site_agreement_upload",
+    "site_agreement",
 ]

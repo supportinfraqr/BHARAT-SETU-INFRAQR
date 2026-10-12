@@ -8,6 +8,7 @@ import { tabs, type Tab, TAB_FIELDS, LABELS, FIELD_DEFS } from "@/components/sit
 const noopSubscribe = () => () => {};
 
 export type ContractorSiteDetail = {
+  id?: string;
   name: string;
   code: string;
   bssId?: string;
@@ -15,6 +16,8 @@ export type ContractorSiteDetail = {
   location?: string;
   state?: string;
   status?: string;
+  hasAgreement?: boolean;
+  agreementName?: string;
   data?: Record<string, unknown>;
 };
 
@@ -87,7 +90,14 @@ export default function ContractorSiteDetailDialog({
           </dl>
         </div>
 
-        <footer className="px-6 py-4 border-t border-bss-border flex justify-end">
+        <footer className="px-6 py-4 border-t border-bss-border flex items-center justify-between gap-3">
+          {site.hasAgreement && site.id ? (
+            <a href={`/api/site-agreement/${site.id}`}
+               target="_blank" rel="noreferrer"
+               className="h-10 px-4 rounded-xl border border-bss-border text-sm font-semibold text-bss-interactive-blue hover:bg-bss-blue-tint flex items-center gap-1.5">
+              Site agreement (PDF)
+            </a>
+          ) : <span className="text-xs text-bss-text-muted">No site agreement uploaded.</span>}
           <button type="button" onClick={onClose} className="h-10 px-5 rounded-xl border border-bss-border text-sm font-semibold text-bss-text-primary hover:bg-bss-bg transition-colors">Close</button>
         </footer>
       </div>

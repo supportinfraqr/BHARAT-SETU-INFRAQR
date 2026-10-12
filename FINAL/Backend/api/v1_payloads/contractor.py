@@ -164,6 +164,8 @@ def _contractor_sites(user):
                 contractor=user, site=s, binding_status="ACCEPTED").count(),
             "compliance": _site_compliance_pct(user, s),
             "boundSince": _dts(allotted_on.get(s.id)) or "",
+            "hasAgreement": bool(s.agreement_file),
+            "agreementName": _d(s.agreement_name),
             "data": _site_scalar_data(s),
         })
     return rows

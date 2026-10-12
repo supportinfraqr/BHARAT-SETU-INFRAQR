@@ -10,7 +10,7 @@ import { SiteQrPanel } from '@/components/qr/WorkerQr';
 import { formatDate } from '@/lib/date';
 
 export default function EmployerSitesPage() {
-  const { employer, mutate } = useEmployer();
+  const { employer, mutate, refresh } = useEmployer();
   const [open, setOpen] = useState(false);
   const [qrSite, setQrSite] = useState<EmployerSite | null>(null);
   const [busy, setBusy] = useState(false);
@@ -38,7 +38,22 @@ export default function EmployerSitesPage() {
     setBusy(true);
     setError('');
     try {
-      await mutate('sites', 'POST', payload);
+      // The site agreement (if any) is uploaded separately as multipart — the
+      // site-create call itself stays JSON so field coercion is unchanged.
+      const agreementFile = payload.agreement;
+      delete payload.agreement;
+      const res = await mutate<{ data?: { id?: number | string } }>('sites', 'POST', payload);
+      const siteId = res?.data?.id;
+      if (agreementFile instanceof File && siteId !== undefined && siteId !== null && siteId !== '') {
+        const fd = new FormData();
+        fd.append('agreement', agreementFile);
+        const up = await fetch(`/api/employer/sites/${siteId}/agreement`, { method: 'POST', body: fd });
+        if (!up.ok) {
+          const body = await up.json().catch(() => ({})) as { error?: string };
+          throw new Error(body.error || 'The site was created, but its agreement failed to upload.');
+        }
+        await refresh();
+      }
       // The portal is re-fetched automatically by mutate(), so the new card
       // shows its server-derived QR token, BSS id and default state.
       setOpen(false);

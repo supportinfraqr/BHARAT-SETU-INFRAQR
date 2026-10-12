@@ -203,6 +203,8 @@ def _employer_sites(user):
                 _d(s.appointment_letter_template.name) if s.appointment_letter_template_id else ""),
             "experienceLetterTemplateName": (
                 _d(s.experience_letter_template.name) if s.experience_letter_template_id else ""),
+            "hasAgreement": bool(s.agreement_file),
+            "agreementName": _d(s.agreement_name),
             "data": _site_scalar_data(s),
         })
     return rows

@@ -402,6 +402,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   const [endDate, setEndDate] = useState(String(initial?.expected_end_date ?? ''));
   const [status, setStatus] = useState(String(initial?.site_status ?? 'Active'));
   const [colour, setColour] = useState(String(initial?.assign_color ?? '#E45D24'));
+  const [agreement, setAgreement] = useState<File | null>(null);
   const [geography, setGeography] = useState<Record<string, Record<string, { city: string; pins: string[] }[]>>>({});
   const [tab, setTab] = useState(FORM_SECTIONS[0].title);
   const section = useMemo(() => FORM_SECTIONS.find(s => s.title === tab) ?? FORM_SECTIONS[0], [tab]);
@@ -506,6 +507,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
         }
       }
     }
+    if (agreement) payload.agreement = agreement;
     onSubmit(payload);
   }
 
@@ -589,6 +591,12 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
           </div>
 
           {error && <p role="alert" className="mt-4 text-sm text-bss-error bg-bss-soft-orange rounded-lg p-3">{error}</p>}
+          <label className="mt-4 block text-xs font-semibold text-bss-text-primary">
+            Site agreement (PDF, optional)
+            <input type="file" accept="application/pdf,.pdf" onChange={e => setAgreement(e.target.files?.[0] ?? null)} className="mt-1 block w-full text-xs text-bss-text-secondary file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-bss-blue-tint file:text-[#01183A] file:text-xs file:font-semibold" />
+            <span className="block text-[10px] text-bss-text-muted mt-1">The signed agreement / work order between the principal employer and the contractor for this site. Contractors allotted to this site can view it.</span>
+            {agreement && <span className="block text-[11px] text-bss-green mt-1">{agreement.name} · {Math.round(agreement.size / 1024)} KB</span>}
+          </label>
           {hasMissing && <p className="mt-4 text-xs text-bss-text-muted">All fields except <span className="font-semibold">Additional details</span> are required.</p>}
           <div className="mt-5 flex justify-end gap-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm">Cancel</button>

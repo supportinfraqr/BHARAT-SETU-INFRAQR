@@ -227,7 +227,7 @@ def mutate_portal(request, role_path, resource):
         return Response({"success": True, "data": result, "updatedAt": payloads._dts(timezone.now())},
                         status=status.HTTP_200_OK)
 
-    out = dict(body or {})
+    out = {k: v for k, v in dict(body or {}).items() if not hasattr(v, "read")}
     out["id"] = result
     updated_at = payloads._dts(timezone.now())
     return Response({"success": True, "data": out, "updatedAt": updated_at},

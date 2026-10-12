@@ -366,7 +366,7 @@ export type ContractorPortalData = {
   identity: { name: string; company: string; photoUrl?: string; bssId: string; incorpDate: string; entity: string; verified: boolean; rating: number; memberSince?: string; contact: string; email: string; accountStatus?: string; cardIssueDate?: string; cardValidTill?: string };
   stats: { totalWorkers: number; activeSites: number; complianceScore: number; pendingAlerts: number };
   principalEmployer: { name: string; code: string; industry: string; email: string; lin: string };
-  sites: Array<{ id: string; code: string; name: string; employer: string; location: string; workers: number; compliance: number | null; bssId?: string; state?: string; status?: string; boundSince?: string; data?: Record<string, unknown> }>;
+  sites: Array<{ id: string; code: string; name: string; employer: string; location: string; workers: number; compliance: number | null; bssId?: string; state?: string; status?: string; boundSince?: string; hasAgreement?: boolean; agreementName?: string; data?: Record<string, unknown> }>;
   pendingSites?: Array<{ id: string; code: string; name: string; employer: string; location: string; state: string; source: string }>;
   defaultSite?: { id: string; name: string; code: string } | null;
   workers: ContractorWorker[];
@@ -442,6 +442,8 @@ export type EmployerSite = {
   experienceLetterTemplateId?: number | null;
   appointmentLetterTemplateName?: string;
   experienceLetterTemplateName?: string;
+  hasAgreement?: boolean;
+  agreementName?: string;
   details?: EmployerSiteDetail;
   /** Raw scalar site-master fields (snake_case model column names) from the Site Detail sheet. */
   data?: Record<string, unknown>;

@@ -367,6 +367,14 @@ class Site(models.Model):
     bss_activation = models.CharField(max_length=40, blank=True)
     go_live_date = models.DateField(null=True, blank=True)
 
+    # --- Site agreement (PDF uploaded by the principal employer at site creation) ---
+    agreement_file = models.FileField(upload_to="site_agreements/", null=True, blank=True)
+    agreement_name = models.CharField(max_length=255, blank=True)
+    agreement_uploaded_at = models.DateTimeField(null=True, blank=True)
+    agreement_uploaded_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="site_agreements_uploaded")
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

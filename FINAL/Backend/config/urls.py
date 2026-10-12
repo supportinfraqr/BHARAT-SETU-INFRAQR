@@ -49,6 +49,8 @@ _v1_patterns = _v1(
     ("auth/aadhaar/verify", v1_bridge.aadhaar_verify, "v1_aadhaar_verify"),
     ("reference/geography", v1_bridge.geography, "v1_geography"),
     ("identity/verify/<str:bss_id>", v1_bridge.identity_verify, "v1_identity_verify"),
+    ("site-agreement/<int:site_id>", v1_bridge.site_agreement, "v1_site_agreement"),
+    ("employer/sites/<int:site_id>/agreement", v1_bridge.employer_site_agreement_upload, "v1_employer_site_agreement"),
     ("worker/portal", v1_bridge.worker_portal, "v1_worker_portal"),
     ("contractor/portal", v1_bridge.contractor_portal, "v1_contractor_portal"),
     ("employer/portal", v1_bridge.employer_portal, "v1_employer_portal"),

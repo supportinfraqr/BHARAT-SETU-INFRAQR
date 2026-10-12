@@ -4,7 +4,7 @@ import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { ArrowLeft, Building2, History, MapPin, Pencil, QrCode, Save, Trash2, UserRound, X } from 'lucide-react';
+import { ArrowLeft, Building2, FileText, History, MapPin, Pencil, QrCode, Save, Trash2, UserRound, X } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerSite } from '@/types/portal';
 import { parseCoordinate } from '@/components/employer/siteGeo';
@@ -95,6 +95,7 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
   return <div className="space-y-6">
     <Link href="/employer/sites" className="inline-flex items-center gap-1 text-xs font-semibold text-bss-interactive-blue hover:underline"><ArrowLeft size={14}/>Back to My Sites</Link>
     <header><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{current.name}</h1><Status value={current.status}/></div><p className="font-mono text-xs text-bss-text-muted mt-1">{current.code}</p><p className="text-sm text-bss-text-secondary flex items-center gap-1 mt-2"><MapPin size={13}/>{current.location}, {current.state}</p></div><div className="flex gap-2">
+      {current.hasAgreement && <a href={`/api/site-agreement/${current.id}`} target="_blank" rel="noreferrer" className="h-10 px-4 rounded-lg border border-bss-border text-bss-interactive-blue text-sm font-semibold flex items-center gap-2 hover:bg-bss-blue-tint"><FileText size={15}/>Agreement</a>}
       <button onClick={() => setQrOpen(true)} className="h-10 px-4 rounded-lg border border-bss-border text-bss-text-primary text-sm font-semibold flex items-center gap-2 hover:bg-bss-bg"><QrCode size={15}/>Site QR</button>
       {editing ? <><button onClick={() => setEditing(false)} className="h-10 px-4 rounded-lg border border-bss-border text-bss-text-primary text-sm font-semibold">Cancel</button><button onClick={saveInline} disabled={busy} className="h-10 px-4 rounded-lg bg-bss-navy text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-60"><Save size={15}/>{busy ? 'Saving…' : 'Save changes'}</button></> : <button onClick={startEdit} className="h-10 px-4 rounded-lg bg-bss-navy text-white text-sm font-semibold flex items-center gap-2"><Pencil size={15}/>Edit</button>}
       <button onClick={() => setConfirmDelete(true)} disabled={busy} className="h-10 px-4 rounded-lg border border-bss-border text-bss-error text-sm font-semibold flex items-center gap-2 hover:bg-bss-soft-orange"><Trash2 size={15}/>Delete</button>
