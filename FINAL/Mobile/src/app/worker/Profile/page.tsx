@@ -2192,7 +2192,7 @@ export default function WorkerProfilePage() {
                         <div className="space-y-2 max-w-sm">
                           <input type="text" inputMode="numeric" value={aadhaarLink.aadhaar} onChange={e => setAadhaarLink(s => ({ ...s, aadhaar: e.target.value.replace(/\D/g, '').slice(0, 12), error: '' }))} disabled={aadhaarLink.sent} placeholder="12-digit Aadhaar number" className="w-full bg-white border border-bss-border rounded-xl px-4 py-2 text-[14px] font-medium tracking-wider focus:outline-none disabled:bg-bss-bg" />
                           {aadhaarLink.sent && <input type="text" inputMode="numeric" value={aadhaarLink.otp} onChange={e => setAadhaarLink(s => ({ ...s, otp: e.target.value.replace(/\D/g, '').slice(0, 6), error: '' }))} placeholder="6-digit OTP" className="w-full bg-white border border-bss-border rounded-xl px-4 py-2 text-[14px] font-medium tracking-[0.3em] focus:outline-none" />}
-                          {aadhaarLink.sent && <ResendOtp onSend={sendAadhaarOtp} initialCooldown={aadhaarLink.otpCooldown} cooldownSeconds={60} maxResends={5} />}
+                          {aadhaarLink.sent && <ResendOtp onSend={sendAadhaarOtp} initialCooldown={aadhaarLink.otpCooldown} cooldownSeconds={60} maxResends={3} />}
                           {aadhaarLink.error && <p className="text-[12px] text-bss-error">{aadhaarLink.error}</p>}
                           {aadhaarLink.notice && <p className="text-[12px] text-bss-green">{aadhaarLink.notice}</p>}
                           <div className="flex gap-2">

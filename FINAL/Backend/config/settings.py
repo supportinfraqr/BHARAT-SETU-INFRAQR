@@ -277,11 +277,11 @@ AADHAAR_OTP_TTL_MIN = int(os.environ.get("BSS_AADHAAR_OTP_TTL_MIN", "10"))
 # Per-Aadhaar OTP policy (persisted in AadhaarChallenge, so a refresh or
 # logout/login cannot bypass it):
 #   * one OTP request per AADHAAR_RESEND_GAP_SEC (60s);
-#   * at most AADHAAR_MAX_RESENDS (5) resends after the first, then a
+#   * at most AADHAAR_MAX_RESENDS (3) resends after the first, then a
 #     AADHAAR_LOCK_SEC (10 min) gap;
 #   * AADHAAR_MAX_ATTEMPTS (3) verify attempts, one per OTP.
 AADHAAR_RESEND_GAP_SEC = int(os.environ.get("BSS_AADHAAR_RESEND_GAP_SEC", "60"))
-AADHAAR_MAX_RESENDS = int(os.environ.get("BSS_AADHAAR_MAX_RESENDS", "5"))
+AADHAAR_MAX_RESENDS = int(os.environ.get("BSS_AADHAAR_MAX_RESENDS", "3"))
 AADHAAR_LOCK_SEC = int(os.environ.get("BSS_AADHAAR_LOCK_SEC", "600"))
 # Account-wide guardrails (Redis-backed, shared by every gunicorn worker):
 #   * at most AADHAAR_PROVIDER_RPS OTP sends per second app-wide — a burst
