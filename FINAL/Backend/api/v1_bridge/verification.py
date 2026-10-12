@@ -57,7 +57,10 @@ def _documents(user):
     return [
         {"id": d.id, "docType": d.doc_type, "note": d.note,
          "uploadedAt": payloads._dts(d.uploaded_at),
-         "fileName": (d.file.name or "").split("/")[-1]}
+         "fileName": (d.file.name or "").split("/")[-1],
+         "ocrVerified": bool(d.ocr_verified), "ocrNote": d.ocr_note,
+         "detectedType": d.detected_type,
+         "ocrText": (d.ocr_text or "")[:1500]}
         for d in EntityVerificationDocument.objects.filter(user=user).order_by("id")
     ]
 
@@ -115,6 +118,33 @@ def verification_decline_entitylocker(request):
     return Response({"data": _state(profile, request.user)}, status=status.HTTP_200_OK)
 
 
+_ENTITY_OCR_MAP = {"PAN": "pan", "AADHAAR": "aadhaar"}
+
+
+def _ocr_entity_document(doc_type, raw, filename):
+    """OCR a registration document and type-verify it against the chosen slot.
+
+    Returns ``(ocr_text, detected_type, verified, note)``. Never raises — OCR
+    must not block a registration upload."""
+    from .. import ocr_client
+    try:
+        text = ocr_client.extract_text(raw, filename) or ""
+    except Exception:  # noqa: BLE001
+        return "", "", False, "OCR unavailable"
+    try:
+        detected = ocr_client.detect_document_type(text) or ""
+    except Exception:  # noqa: BLE001
+        detected = ""
+    key = _ENTITY_OCR_MAP.get(doc_type)
+    if not key:
+        return text, detected, False, "OCR text captured"
+    try:
+        ok, message = ocr_client.verify_document_text(key, text)
+    except Exception:  # noqa: BLE001
+        return text, detected, False, "OCR text captured"
+    return text, detected, ok, message
+
+
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -133,12 +163,27 @@ def verification_manual_submit(request):
         return Response({"error": "Answer the EntityLocker question first."},
                         status=status.HTTP_400_BAD_REQUEST)
 
+    import re as _re
+
     saved = 0
     for key, uploaded in request.FILES.items():
         doc_type = key.split("_", 1)[1].upper() if key.startswith("file_") else "OTHER"
         if doc_type not in _DOC_TYPES:
             doc_type = "OTHER"
-        EntityVerificationDocument.objects.create(user=request.user, doc_type=doc_type, file=uploaded)
+        # OCR the uploaded document (extract text + verify it matches the slot).
+        raw = uploaded.read()
+        uploaded.seek(0)
+        text, detected, ok, note = _ocr_entity_document(doc_type, raw, uploaded.name)
+        EntityVerificationDocument.objects.create(
+            user=request.user, doc_type=doc_type, file=uploaded,
+            ocr_text=text[:20000], detected_type=detected[:20], ocr_verified=ok, ocr_note=note[:255])
+        # Register the PAN number on the profile when OCR reads one and the
+        # profile has none yet.
+        if doc_type == "PAN" and not (getattr(profile, "pan_no", "") or ""):
+            found = _re.search(r"[A-Z]{5}\d{4}[A-Z]", (text or "").upper())
+            if found:
+                profile.pan_no = found.group(0)
+                profile.save(update_fields=["pan_no"])
         saved += 1
     if saved == 0 and not EntityVerificationDocument.objects.filter(user=request.user).exists():
         return Response({"error": "Upload at least one document."}, status=status.HTTP_400_BAD_REQUEST)

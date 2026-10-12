@@ -10,7 +10,7 @@ type VerificationStatus = {
   gstVerified: boolean;
   gstStatus?: string;
   entityLocker: { verified: boolean; declined: boolean };
-  manual: { status: string; note: string; documents: Array<{ id: number; docType: string }> };
+  manual: { status: string; note: string; documents: Array<{ id: number; docType: string; ocrVerified?: boolean; ocrNote?: string; detectedType?: string }> };
 };
 
 type DocKind = "PAN" | "AADHAAR" | "INCORPORATION" | "OTHER";
@@ -226,6 +226,18 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
           </p>
         )}
         <p className="text-sm text-gray-600">Upload your identity documents (PAN, Aadhaar and any others). A BSS Admin will review and verify them.</p>
+        {manual.documents.length > 0 && (
+          <ul className="space-y-1.5">
+            {manual.documents.map(doc => (
+              <li key={doc.id} className="flex items-center justify-between gap-2 rounded-lg border border-bss-border bg-white px-3 py-2">
+                <span className="text-xs font-semibold text-bss-text-primary">{DOC_LABELS[doc.docType as DocKind] ?? doc.docType}</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${doc.ocrVerified ? 'text-bss-green bg-bss-soft-green border-bss-border' : 'text-bss-orange bg-bss-soft-orange border-bss-border'}`}>
+                  {doc.ocrVerified ? 'OCR verified' : `OCR: ${doc.ocrNote || 'not readable'}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
         {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
         <div className="grid sm:grid-cols-2 gap-3">
           {(Object.keys(DOC_LABELS) as DocKind[]).map(kind => (
@@ -256,6 +268,18 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
           </div>
         </div>
         {manual.status === "REJECTED" && <p className="text-red-700 font-semibold">Rejected{manual.note ? `: ${manual.note}` : ""} — please re-submit.</p>}
+        {manual.documents.length > 0 && (
+          <ul className="space-y-1.5">
+            {manual.documents.map(doc => (
+              <li key={doc.id} className="flex items-center justify-between gap-2 rounded-lg border border-bss-border bg-white px-3 py-2">
+                <span className="text-xs font-semibold text-bss-text-primary">{DOC_LABELS[doc.docType as DocKind] ?? doc.docType}</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${doc.ocrVerified ? 'text-bss-green bg-bss-soft-green border-bss-border' : 'text-bss-orange bg-bss-soft-orange border-bss-border'}`}>
+                  {doc.ocrVerified ? 'OCR verified' : `OCR: ${doc.ocrNote || 'not readable'}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     );
   }

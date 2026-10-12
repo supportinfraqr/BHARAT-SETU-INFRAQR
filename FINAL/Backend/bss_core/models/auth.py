@@ -343,6 +343,11 @@ class EntityVerificationDocument(models.Model):
     doc_type = models.CharField(max_length=20, choices=DOC_TYPES, default="OTHER")
     file = models.FileField(upload_to="entity_verification/")
     note = models.CharField(max_length=255, blank=True)
+    # OCR result captured at upload time (read + type-verify the document).
+    ocr_text = models.TextField(blank=True)
+    detected_type = models.CharField(max_length=20, blank=True)
+    ocr_verified = models.BooleanField(default=False)
+    ocr_note = models.CharField(max_length=255, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
