@@ -13,6 +13,7 @@ import html as _html
 from django.http import HttpResponse
 
 from .common import *  # noqa: F401,F403
+from .audit_line_report import SECTIONS as _AUDIT_SECTIONS, build_line_item_report_html
 
 _LOGO_URL = "https://login.bharatshramsetu.com/bss-original-logo.png"
 _logo_cache = {"data": None}
@@ -104,6 +105,53 @@ def _ai_narrative(ev, criteria):
     raw = str(raw or "").strip()
     raw = raw.replace("```html", "").replace("```", "").strip()
     return raw
+
+
+def _norm_tokens(s):
+    import re as _re
+    return {t for t in _re.sub(r"[^a-z0-9]+", " ", str(s or "").lower()).split() if len(t) > 1}
+
+
+_STATUS_MAP = {"passed": "Complied", "failed": "Non-Complied", "review": "Partially Complied"}
+
+
+def _derive_line_data(batches, files):
+    """Best-effort: match each of the 31 audit areas to a register/file AI audit
+    and set that area's line-item statuses + first observation. Unmatched areas
+    stay "Pending" (the auditor fills them)."""
+    from bss_core.models import RegisterTemplate
+
+    sources = []  # (tokens, status, findings)
+    for batch in batches or []:
+        for tid, audit in (getattr(batch, "register_audits", None) or {}).items():
+            audit = audit or {}
+            tpl = (RegisterTemplate.objects.filter(pk=int(tid)).first()
+                   if str(tid).isdigit() else None)
+            label = f"{getattr(tpl, 'form_code', '') or ''} {getattr(tpl, 'title', '') or ''}"
+            sources.append((_norm_tokens(label), str(audit.get("status") or "").lower(),
+                            _audit_highlights(audit)))
+    for f in files or []:
+        findings = ([f.get("summary")] if f.get("summary") else []) + list(f.get("findings") or [])
+        sources.append((_norm_tokens(f.get("name")), str(f.get("status") or "").lower(), findings))
+
+    status, obs = {}, {}
+    for sec in _AUDIT_SECTIONS:
+        atoks = _norm_tokens(sec["title"])
+        best = None
+        for stoks, st, findings in sources:
+            if len(atoks & stoks) >= 2:
+                best = (st, findings)
+                break
+        if not best:
+            continue
+        mapped = _STATUS_MAP.get(best[0])
+        if not mapped:
+            continue
+        for idx in range(1, len(sec["items"]) + 1):
+            status[f"{sec['id']}.{idx}"] = mapped
+        if best[1] and str(best[1][0]).strip():
+            obs[f"{sec['id']}.1"] = str(best[1][0])
+    return status, obs
 
 
 def _html_shell(ev, criteria, body_html):
@@ -438,7 +486,7 @@ def contractor_compliance_report(request):
         if cr is None:
             return Response({"error": "Report not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        from .compliance_verification import build_verification_report, verification_report_html
+        from .compliance_verification import build_verification_report
         from .submissions import _batch_rows
         batch_ids = [int(x) for x in (cr.batch_ids or []) if str(x).isdigit()]
         batches = list(ComplianceBatch.objects.filter(id__in=batch_ids, contractor=request.user)
@@ -466,7 +514,8 @@ def contractor_compliance_report(request):
             "contractor": payloads._party_name(cr.employer) if cr.employer_id else "",
         }
         report = build_verification_report(rows, meta, batches, files=files)
-        html = verification_report_html(meta, report)
+        status_by_line, obs_by_line = _derive_line_data(batches, files)
+        html = build_line_item_report_html(meta, status_by_line, obs_by_line)
         if (request.query_params.get("download") or "").lower() == "pdf":
             return _report_pdf(html, f"bss-verification-report-{cr.unique_no or cr.id}.pdf")
         return Response({"data": {
@@ -482,7 +531,7 @@ def contractor_compliance_report(request):
     submissions = _scope_submissions(request.user, site=site, period=period, fy=fy)
     meta = {"site": site, "period": period, "fy": fy}
     report = build_submission_report(submissions, meta)
-    html = _submission_report_html(meta, report)
+    html = build_line_item_report_html(meta)
     if (request.query_params.get("download") or "").lower() == "pdf":
         return _report_pdf(html, "bss-compliance-submission-report.pdf")
     return Response({"data": {**{k: report[k] for k in ("criteria", "documents", "verdict", "total", "clean", "passed")}, "html": html}}, status=status.HTTP_200_OK)
@@ -493,7 +542,7 @@ def contractor_compliance_report(request):
 @permission_classes([IsAuthenticated])
 def employer_batch_verification_report(request, batch_id):
     """Detailed verification report for one CLRA register batch — employer view."""
-    from .compliance_verification import build_verification_report, verification_report_html
+    from .compliance_verification import build_verification_report
     from .submissions import _batch_rows, _visible_batch
     batch = _visible_batch(request.user, batch_id)
     if batch is None:
@@ -508,7 +557,8 @@ def employer_batch_verification_report(request, batch_id):
         "employer": payloads._org_name(batch.site.employer) if (batch.site and batch.site.employer_id) else "",
     }
     report = build_verification_report(rows, meta, [batch], files=[])
-    html = verification_report_html(meta, report)
+    status_by_line, obs_by_line = _derive_line_data([batch], [])
+    html = build_line_item_report_html(meta, status_by_line, obs_by_line)
     if (request.query_params.get("download") or "").lower() == "pdf":
         return _report_pdf(html, f"bss-verification-report-batch-{batch.id}.pdf")
     return Response({"data": {"html": html, "verdict": report["verdict"], "totals": report["totals"]}},
