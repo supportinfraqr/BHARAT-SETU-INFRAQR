@@ -8,6 +8,10 @@ import time
 import requests
 from django.conf import settings
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class SandboxError(Exception):
     def __init__(self, message, status=502):
@@ -110,8 +114,14 @@ def generate_otp(aadhaar_number: str) -> dict:
         attempts=2,
     )
     if resp.status_code != 200:
+        logger.warning("sandbox aadhaar generate FAILED %s: %s",
+                       resp.status_code, _error_message(resp))
         raise SandboxError(_error_message(resp), resp.status_code)
-    return resp.json()
+    body = resp.json()
+    data = body.get("data") if isinstance(body.get("data"), dict) else {}
+    logger.info("sandbox aadhaar generate ok: code=%s ref=%s",
+                body.get("code"), str(data.get("reference_id") or "")[:8])
+    return body
 
 
 def verify_otp(reference_id: str, otp: str) -> dict:
@@ -130,8 +140,14 @@ def verify_otp(reference_id: str, otp: str) -> dict:
         attempts=2,
     )
     if resp.status_code != 200:
+        logger.warning("sandbox aadhaar verify FAILED %s (ref=%s): %s",
+                       resp.status_code, str(reference_id)[:8], _error_message(resp))
         raise SandboxError(_error_message(resp), resp.status_code)
-    return resp.json()
+    body = resp.json()
+    data = body.get("data") if isinstance(body.get("data"), dict) else {}
+    logger.info("sandbox aadhaar verify: code=%s ref=%s message=%s",
+                body.get("code"), str(reference_id)[:8], str(data.get("message"))[:80])
+    return body
 
 
 def verify_bank_account(ifsc: str, account_number: str) -> dict:

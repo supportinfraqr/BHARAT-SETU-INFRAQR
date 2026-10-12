@@ -1,9 +1,12 @@
 """Aadhaar / DigiLocker verification and worker identity linking."""
 
+import logging
 import re
 
 # ruff: noqa: F401,F403
 from .common import *  # noqa: F401,F403
+
+logger = logging.getLogger(__name__)
 
 
 def _sanitize_aadhaar(value):
@@ -206,24 +209,30 @@ def _aadhaar_care_of_parts(care_of):
     return name, ""
 
 
-def _reuse_recent(aadhaar, window_minutes=3, message=""):
+def _reuse_recent(aadhaar, window_seconds=None, message=""):
     """Return a *fresh, still-valid* OTP reference so a repeated request reuses
     the OTP already delivered instead of tripping UIDAI's resend cooldown.
 
-    Only references created within ``window_minutes`` and not yet lapsed locally
-    are reused — never an old/dead reference (that was surfacing as "OTP
-    expired" on verify).
+    Only references created within ``window_seconds`` (default
+    ``settings.AADHAAR_REUSE_WINDOW_SEC``) and not yet lapsed locally are reused —
+    never an old/dead reference (that was surfacing as "OTP expired" on verify).
+    The window MUST stay below the provider's real reference validity (~90s).
     """
+    if window_seconds is None:
+        window_seconds = settings.AADHAAR_REUSE_WINDOW_SEC
     now = timezone.now()
     recent = (AadhaarChallenge.objects
               .filter(aadhaar_number=aadhaar,
-                      created_at__gte=now - timedelta(minutes=window_minutes),
+                      created_at__gte=now - timedelta(seconds=window_seconds),
                       expires_at__gt=now)
               .exclude(reference_id__isnull=True).exclude(reference_id="")
               .exclude(status__in=["VERIFIED", "FAILED", "EXPIRED"])
               .order_by("-expires_at", "-created_at").first())
     if recent is None:
         return None
+    logger.info("aadhaar_otp: reuse aadhaar=****%s ref=%s age=%ss",
+                aadhaar[-4:], str(recent.reference_id)[:8],
+                int((now - recent.created_at).total_seconds()))
     payload = {
         "referenceId": recent.reference_id,
         "expiresIn": max(0, int((recent.expires_at - now).total_seconds())),
@@ -283,7 +292,7 @@ def aadhaar_otp(request):
     # 1) Reuse a *fresh, still-valid* reference only (i.e. tapped again within a
     #    few minutes) — never an old/dead one. Otherwise fall through to a real
     #    send so the user always gets a live OTP.
-    reused = _reuse_recent(aadhaar, 3)
+    reused = _reuse_recent(aadhaar)
     if reused is not None:
         return reused
 
@@ -295,7 +304,7 @@ def aadhaar_otp(request):
                          created_at__gte=now - timedelta(seconds=45))
                  .order_by("-created_at").first())
     if last_call is not None:
-        fallback = _reuse_recent(aadhaar, 3)
+        fallback = _reuse_recent(aadhaar)
         if fallback is not None:
             return fallback
         wait = max(1, 45 - int((now - last_call.created_at).total_seconds()))
@@ -317,7 +326,7 @@ def aadhaar_otp(request):
             # reference so the user still reaches the OTP screen with the OTP
             # they received, instead of being blocked.
             msg = str(exc)
-            fallback = _reuse_recent(aadhaar, 3, msg)
+            fallback = _reuse_recent(aadhaar, message=msg)
             if fallback is not None:
                 return fallback
             return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
@@ -328,7 +337,7 @@ def aadhaar_otp(request):
     if result.get("code") != 200 or not ref_id:
         msg = str((result.get("data") or {}).get("message") or "").strip() or \
             "Aadhaar verification service is currently experiencing delays."
-        fallback = _reuse_recent(aadhaar, 3, msg)
+        fallback = _reuse_recent(aadhaar, message=msg)
         if fallback is not None:
             return fallback
         return Response(
