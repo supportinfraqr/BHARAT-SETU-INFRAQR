@@ -931,16 +931,21 @@ def _background_fetch_documents(session, access_token, profile, user):
                         fpath = os.path.join(folder, fname)
                         with open(fpath, "wb") as f:
                             f.write(file_bytes)
-                        existing.file.save(fname, ContentFile(file_bytes), save=False)
-                        existing.file_path = existing.file.name
-                        if dl.extract_pan(uri):
+                        # DigiLockerDocument stores the file on disk (file_path/
+                        # file_name) — there is no FileField, so never touch
+                        # ``.file`` here (that AttributeError used to abort the
+                        # re-download BEFORE the PAN name was captured).
+                        existing.file_path = fpath
+                        existing.file_name = fname
+                        existing.status = "DOWNLOADED"
+                        existing.error_detail = ""
+                        if dl.extract_pan(uri) or dl.extract_pan(item.get("name") or ""):
                             _capture_pan_name(user, file_bytes)
                 except Exception as exc:
                     logging.getLogger(__name__).warning("DigiLocker re-download %s failed: %s", uri, exc)
                 existing.downloaded_at = tz.now()
-                existing.doc_date = (item.get("doc_date") or "")[:60]
+                existing.doc_date = (item.get("doc_date") or item.get("date") or "")[:60]
                 existing.issuer = (item.get("issuer") or "")[:120]
-                existing.document_name = (item.get("document_name") or "")[:200]
                 existing.save()
                 continue
             try:
