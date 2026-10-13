@@ -293,4 +293,8 @@ AADHAAR_GLOBAL_BACKOFF_SEC = int(os.environ.get("BSS_AADHAAR_GLOBAL_BACKOFF_SEC"
 AADHAAR_GLOBAL_COOLDOWN_SEC = int(os.environ.get("BSS_AADHAAR_GLOBAL_COOLDOWN_SEC", "900"))
 AADHAAR_MIN_INTERVAL_SEC = int(os.environ.get("BSS_AADHAAR_MIN_INTERVAL_SEC", "45"))
 AADHAAR_MAX_ATTEMPTS = int(os.environ.get("BSS_AADHAAR_MAX_ATTEMPTS", "3"))
+# DEMO/testing only: when true, Aadhaar oKYC send/verify are simulated locally
+# (no Sandbox call, no wallet charge) so the flow works without a funded
+# provider account. NEVER enable for real identity verification in production.
+AADHAAR_MOCK = os.environ.get("BSS_AADHAAR_MOCK", "").strip().lower() in ("1", "true", "yes", "on")
 AADHAAR_PHOTO_DIR = os.environ.get("BSS_AADHAAR_PHOTO_DIR", str(BASE_DIR / "media/aadhaar"))

@@ -120,6 +120,11 @@ def _authed_headers(token: str, include_version: bool = False) -> dict:
 
 def generate_otp(aadhaar_number: str) -> dict:
     """POST /kyc/aadhaar/okyc/otp -> { code, data: { reference_id, ... } }"""
+    if getattr(settings, "AADHAAR_MOCK", False):
+        logger.warning("AADHAAR_MOCK: simulating OTP send for ****%s", str(aadhaar_number)[-4:])
+        return {"code": 200, "data": {
+            "@entity": "in.co.sandbox.kyc.aadhaar.okyc.otp.response",
+            "reference_id": f"MOCK{int(time.time())}", "message": "OTP sent successfully"}}
     token = get_access_token()
     resp = _post_with_retry(
         f"{settings.AADHAAR_BASE_URL}/kyc/aadhaar/okyc/otp",
@@ -145,6 +150,19 @@ def generate_otp(aadhaar_number: str) -> dict:
 def verify_otp(reference_id: str, otp: str) -> dict:
     """POST /kyc/aadhaar/okyc/otp/verify -> { code, data: { message, name,
     gender, date_of_birth, care_of, full_address, photo, address... } }"""
+    if getattr(settings, "AADHAAR_MOCK", False):
+        logger.warning("AADHAAR_MOCK: auto-approving Aadhaar verify (ref=%s)", str(reference_id)[:16])
+        # Non-destructive canned success: empty identity fields so the caller
+        # keeps whatever the worker already has; the Aadhaar number comes from
+        # the request, not this payload.
+        return {"code": 200, "transaction_id": "mock", "data": {
+            "@entity": "in.co.sandbox.kyc.aadhaar.okyc", "reference_id": reference_id,
+            "status": "VALID", "message": "Aadhaar Card Exists",
+            "name": "", "gender": "", "date_of_birth": "", "care_of": "",
+            "full_address": "", "email_hash": "", "mobile_hash": "", "photo": "", "share_code": "",
+            "address": {"@entity": "in.co.sandbox.kyc.aadhaar.okyc.address", "country": "India",
+                        "state": "", "district": "", "pincode": "", "vtc": "", "house": "",
+                        "street": "", "landmark": "", "post_office": "", "subdistrict": ""}}}
     token = get_access_token()
     resp = _post_with_retry(
         f"{settings.AADHAAR_BASE_URL}/kyc/aadhaar/okyc/otp/verify",
