@@ -212,10 +212,20 @@ def _html_shell(ev, criteria, body_html):
 
 def build_report(ev):
     criteria = _criteria(ev)
-    body = _ai_narrative(ev, criteria)
-    html = _html_shell(ev, criteria, body)
     passed = sum(1 for c in criteria if c["passed"])
     verdict = "Passed" if passed == len(criteria) else ("Passed with observations" if passed >= len(criteria) - 2 else "Needs attention")
+    m = _meta(ev)
+    meta = {
+        "reportNo": f"BSS/AI/{ev.id}",
+        "employer": m.get("employer"),
+        "contractor": m.get("party"),
+        "site": m.get("site"),
+        "period": m.get("period") or m.get("financialYear"),
+        "fy": m.get("financialYear"),
+        "auditDate": m.get("submittedAt"),
+        "auditor": "BSS AI Audit Engine",
+    }
+    html = build_line_item_report_html(meta)
     return {"criteria": criteria, "verdict": verdict, "passed": passed, "total": len(criteria), "html": html}
 
 
