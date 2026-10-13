@@ -70,8 +70,9 @@ def _raise_sandbox(resp, *, action):
     if resp.status_code in (401, 402, 403) and any(h in low for h in _ACCOUNT_HINTS):
         logger.error("sandbox aadhaar %s: provider account issue (%s): %s",
                      action, resp.status_code, msg)
-        raise SandboxError("Aadhaar verification is temporarily unavailable. "
-                           "Please try again later.", 503)
+        raise SandboxError("Aadhaar verification is temporarily unavailable — the Aadhaar "
+                           "provider (Sandbox) account has insufficient credits (wallet / "
+                           "quota). Please try again later.", 503)
     logger.warning("sandbox aadhaar %s FAILED %s: %s", action, resp.status_code, msg)
     raise SandboxError(msg, resp.status_code)
 
