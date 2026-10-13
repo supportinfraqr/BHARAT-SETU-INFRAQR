@@ -541,7 +541,6 @@ export default function WorkerProfilePage() {
     : '';
   const digilockerKinds = {
     aadhaar: digilockerBlob.includes('AADHAAR') || digilockerBlob.includes('ADHAR'),
-    pan: digilockerBlob.includes('PAN'),
     epfo: /EPFO|UAN|PRFND|PASSBOOK|PROVIDENT/.test(digilockerBlob),
   };
 
@@ -2328,7 +2327,7 @@ export default function WorkerProfilePage() {
                       <h4 className="text-[15px] font-bold text-bss-text-primary">DigiLocker — Fetch Issued Documents</h4>
                       <p className="text-[13px] text-bss-text-muted mb-3">Link your DigiLocker account to pull your government-issued documents (Aadhaar, PAN, certificates) into BSS.</p>
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {([['Aadhaar', digilockerKinds.aadhaar], ['PAN', digilockerKinds.pan], ['EPFO / UAN', digilockerKinds.epfo]] as const).map(([label, ok]) => (
+                        {([['Aadhaar', digilockerKinds.aadhaar], ['EPFO / UAN', digilockerKinds.epfo]] as const).map(([label, ok]) => (
                           <span key={label} className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg border ${ok ? 'text-bss-green bg-bss-soft-green border-bss-border' : 'text-bss-text-muted bg-white border-bss-border'}`}>
                             {ok ? <CheckCircle size={12}/> : <Clock size={12}/>} {label}
                           </span>
