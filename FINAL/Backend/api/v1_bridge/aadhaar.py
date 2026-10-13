@@ -473,13 +473,17 @@ def _send_otp(aadhaar, consent=True):
         response_json=json.dumps(result, default=str))
 
     sends = _aadhaar_sends(aadhaar)
-    return Response({
+    payload = {
         "referenceId": challenge.reference_id,
         "expiresIn": settings.AADHAAR_OTP_TTL_MIN * 60,
         "resendAfterSeconds": settings.AADHAAR_RESEND_GAP_SEC,
         "resendsLeft": max(0, settings.AADHAAR_MAX_RESENDS - max(0, sends - 1)),
         "attemptsAllowed": settings.AADHAAR_MAX_ATTEMPTS,
-    }, status=status.HTTP_200_OK)
+    }
+    if getattr(settings, "AADHAAR_MOCK", False):
+        # Demo mode — no SMS is sent; surface the OTP so it can be entered.
+        payload["demoOtp"] = aadhaar_client.MOCK_OTP
+    return Response(payload, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])

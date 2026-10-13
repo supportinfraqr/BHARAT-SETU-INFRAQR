@@ -430,9 +430,9 @@ export default function WorkerProfilePage() {
     setAadhaarLink(s => ({ ...s, busy: true, error: '', notice: '' }));
     try {
       const response = await fetch('/api/auth/aadhaar/otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aadhaar }) });
-      const json = await response.json() as { referenceId?: string; error?: string; message?: string; retryAfterSeconds?: number; resendAfterSeconds?: number; otpPending?: boolean; locked?: boolean };
+      const json = await response.json() as { referenceId?: string; error?: string; message?: string; retryAfterSeconds?: number; resendAfterSeconds?: number; otpPending?: boolean; locked?: boolean; demoOtp?: string };
       if (json.referenceId) {
-        setAadhaarLink(s => ({ ...s, referenceId: json.referenceId as string, otp: '', sent: true, busy: false, error: '', otpCooldown: json.resendAfterSeconds ?? 60, notice: json.message || 'OTP sent to the mobile linked with your Aadhaar.' }));
+        setAadhaarLink(s => ({ ...s, referenceId: json.referenceId as string, otp: '', sent: true, busy: false, error: '', otpCooldown: json.resendAfterSeconds ?? 60, notice: json.demoOtp ? `Demo mode — no SMS is sent. Enter OTP ${json.demoOtp}.` : (json.message || 'OTP sent to the mobile linked with your Aadhaar.') }));
         return;
       }
       // Throttled / locked / a code is already pending: still advance to the OTP

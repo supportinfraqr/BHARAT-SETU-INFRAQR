@@ -9,6 +9,7 @@ type OtpResponse = {
   error?: string; message?: string;
   otpPending?: boolean; locked?: boolean; wrong?: boolean; expired?: boolean;
   retryAfterSeconds?: number;
+  demoOtp?: string;
 };
 
 /** Mandatory worker Aadhaar verification — runs AFTER the MPIN gate. Blocks the
@@ -51,7 +52,7 @@ export default function WorkerOnboardingGate() {
       setOtpSent(true);
       setOtp("");
       setCooldown(json.resendAfterSeconds ?? 60);
-      setNotice(json.message || "OTP sent to the mobile linked with your Aadhaar.");
+      setNotice(json.demoOtp ? `Demo mode — no SMS is sent. Enter OTP ${json.demoOtp}.` : (json.message || "OTP sent to the mobile linked with your Aadhaar."));
       setError("");
       return true;
     }

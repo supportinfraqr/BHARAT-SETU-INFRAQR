@@ -12,6 +12,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Demo/mock OTP (see settings.AADHAAR_MOCK). Shown on-screen and accepted when
+# the mock mode is on (no real SMS / no provider call).
+MOCK_OTP = "123456"
+
 
 class SandboxError(Exception):
     def __init__(self, message, status=502):
