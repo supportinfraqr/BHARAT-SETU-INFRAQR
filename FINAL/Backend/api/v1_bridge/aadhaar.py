@@ -452,7 +452,7 @@ def _send_otp(aadhaar, consent=True):
             _lock_aadhaar(aadhaar, 60)
         if 400 <= sb_status < 500:
             return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"error": f"Aadhaar (UIDAI) service is temporarily unavailable — {str(exc)}. Please try again later."},
+        return Response({"error": str(exc)},
                         status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
     ref_id = (result.get("data") or {}).get("reference_id")
@@ -549,7 +549,7 @@ def aadhaar_verify(request):
         if 400 <= sb_status < 500:
             # A provider 4xx (bad/reused session) — do not count it as a wrong try.
             return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"error": f"Aadhaar (UIDAI) service is temporarily unavailable — {str(exc)}. Please try again later."},
+        return Response({"error": str(exc)},
                         status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
     challenge.response_json = json.dumps(result, default=str)
@@ -682,7 +682,7 @@ def worker_link_aadhaar(request):
         sb_status = getattr(exc, "status", 502)
         if 400 <= sb_status < 500:
             return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"error": f"Aadhaar (UIDAI) service is temporarily unavailable — {str(exc)}. Please try again later."},
+        return Response({"error": str(exc)},
                         status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
     challenge.response_json = json.dumps(result, default=str)

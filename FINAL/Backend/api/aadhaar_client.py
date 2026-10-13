@@ -57,6 +57,25 @@ def _error_message(resp) -> str:
     return (resp.text or "").strip()[:200] or f"HTTP {resp.status_code}"
 
 
+# Provider account/billing failures (expired subscription, exhausted credits) are
+# not the caller's fault and are not retryable by the user. Surface them as a
+# generic "service unavailable" so the UI never shows raw billing text.
+_ACCOUNT_HINTS = ("insufficient credit", "subscription", "out of credit",
+                  "not enough credit", "quota", "recharge", "payment")
+
+
+def _raise_sandbox(resp, *, action):
+    msg = _error_message(resp)
+    low = msg.lower()
+    if resp.status_code in (401, 402, 403) and any(h in low for h in _ACCOUNT_HINTS):
+        logger.error("sandbox aadhaar %s: provider account issue (%s): %s",
+                     action, resp.status_code, msg)
+        raise SandboxError("Aadhaar verification is temporarily unavailable. "
+                           "Please try again later.", 503)
+    logger.warning("sandbox aadhaar %s FAILED %s: %s", action, resp.status_code, msg)
+    raise SandboxError(msg, resp.status_code)
+
+
 # Cache the Sandbox access token so we don't re-authenticate on every call
 # (auth + OTP used to add ~3-4s each request and push past the proxy timeout).
 _TOKEN_CACHE = {"token": "", "expires_at": 0.0}
@@ -78,7 +97,7 @@ def get_access_token() -> str:
         attempts=2,
     )
     if resp.status_code != 200:
-        raise SandboxError(f"authenticate failed: {resp.status_code} {resp.text[:300]}")
+        _raise_sandbox(resp, action="authenticate")
     data = resp.json()
     token = (data.get("data") or {}).get("access_token")
     if not token:
@@ -114,9 +133,7 @@ def generate_otp(aadhaar_number: str) -> dict:
         attempts=2,
     )
     if resp.status_code != 200:
-        logger.warning("sandbox aadhaar generate FAILED %s: %s",
-                       resp.status_code, _error_message(resp))
-        raise SandboxError(_error_message(resp), resp.status_code)
+        _raise_sandbox(resp, action="generate")
     body = resp.json()
     data = body.get("data") if isinstance(body.get("data"), dict) else {}
     logger.info("sandbox aadhaar generate ok: code=%s ref=%s",
@@ -140,9 +157,8 @@ def verify_otp(reference_id: str, otp: str) -> dict:
         attempts=2,
     )
     if resp.status_code != 200:
-        logger.warning("sandbox aadhaar verify FAILED %s (ref=%s): %s",
-                       resp.status_code, str(reference_id)[:8], _error_message(resp))
-        raise SandboxError(_error_message(resp), resp.status_code)
+        logger.warning("sandbox aadhaar verify ref=%s", str(reference_id)[:8])
+        _raise_sandbox(resp, action="verify")
     body = resp.json()
     data = body.get("data") if isinstance(body.get("data"), dict) else {}
     logger.info("sandbox aadhaar verify: code=%s ref=%s message=%s",
