@@ -244,7 +244,7 @@ export default function DocumentsModule() {
       <section className="bss-scroll-rise flex items-start gap-3 rounded-2xl border border-bss-border bg-bss-blue-tint/60 p-4">
         <span className="w-9 h-9 rounded-xl bg-white border border-bss-border text-bss-interactive-blue grid place-items-center flex-shrink-0"><Info size={17}/></span>
         <p className="text-xs text-bss-text-secondary leading-relaxed">
-          Upload each mandatory document as <strong>PDF, JPEG or PNG</strong> (max 10 MB). Uploads are saved to your BSS record and move to <strong>Under Verification</strong> until reviewed — a manual upload is never marked <strong>Verified</strong>. Link your <strong>DigiLocker</strong> account to fetch government-issued copies of Aadhaar, PAN, UAN and Educational certificates; those arrive <strong>Verified</strong> and locked. Documents marked <strong>Auto-Generated</strong> (e.g. gate passes) are issued by the system after employer/contractor approvals and cannot be uploaded here.
+          Upload each mandatory document as <strong>PDF, JPEG or PNG</strong> (max 10 MB). Uploads are saved to your BSS record and move to <strong>Under Verification</strong> until reviewed — a manual upload is never marked <strong>Verified</strong>. Documents marked <strong>Auto-Generated</strong> (e.g. gate passes) are issued by the system after employer/contractor approvals and cannot be uploaded here.
         </p>
       </section>
 

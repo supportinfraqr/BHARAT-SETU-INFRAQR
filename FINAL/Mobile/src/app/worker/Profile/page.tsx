@@ -527,75 +527,6 @@ export default function WorkerProfilePage() {
     }
   }, [activeTab]);
 
-  // ── DigiLocker document wallet ──────────────────────────────────────────
-  type DigiLockerDoc = { id: number; doctype?: string; issuer?: string; doc_date?: string; file_name?: string; file_url?: string; status?: string; downloaded_at?: string; created_at?: string };
-  const [digilockerDocs, setDigilockerDocs] = useState<DigiLockerDoc[]>([]);
-  const [digilockerStatus, setDigilockerStatus] = useState<'idle' | 'linking' | 'linked' | 'error'>('idle');
-  const [digilockerMessage, setDigilockerMessage] = useState('');
-  const [digilockerFetchError, setDigilockerFetchError] = useState('');
-  const digilockerBlob = digilockerDocs.map(d => `${d.doctype ?? ''} ${d.file_name ?? ''}`).join(' ').toUpperCase();
-  const digilockerErrorText = digilockerFetchError
-    ? (digilockerFetchError.includes('insufficient_scope')
-        ? 'Linked, but DigiLocker did not grant access to the requested documents (app permissions for issued/uploaded files or e-Aadhaar are not enabled).'
-        : `Linked, but DigiLocker could not share documents: ${digilockerFetchError}`)
-    : '';
-  const digilockerKinds = {
-    aadhaar: digilockerBlob.includes('AADHAAR') || digilockerBlob.includes('ADHAR'),
-    pan: digilockerBlob.includes('PAN'),
-    epfo: /EPFO|UAN|PRFND|PASSBOOK|PROVIDENT/.test(digilockerBlob),
-  };
-
-  const loadDigilockerDocs = useCallback(async (): Promise<DigiLockerDoc[]> => {
-    try {
-      const response = await fetch('/api/digilocker/documents', { cache: 'no-store' });
-      if (!response.ok) return [];
-      const json = await response.json() as DigiLockerDoc[] | { data?: DigiLockerDoc[]; error?: string };
-      const list = Array.isArray(json) ? json : json.data;
-      if (Array.isArray(list)) setDigilockerDocs(list);
-      setDigilockerFetchError(Array.isArray(json) ? '' : (json.error || ''));
-      return Array.isArray(list) ? list : [];
-    } catch { return []; }
-  }, []);
-
-  const linkDigiLocker = async () => {
-    setDigilockerStatus('linking');
-    setDigilockerMessage('');
-    try {
-      const response = await fetch('/api/digilocker/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-      const json = await response.json() as { authorize_url?: string; error?: string };
-      if (!response.ok || !json.authorize_url) throw new Error(json.error || 'Could not start DigiLocker linking.');
-      window.location.href = json.authorize_url;
-    } catch (error) {
-      setDigilockerStatus('error');
-      setDigilockerMessage(error instanceof Error ? error.message : 'DigiLocker linking failed.');
-    }
-  };
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const outcome = params.get('digilocker');
-    if (outcome === 'linked') {
-      setDigilockerStatus('linked');
-      let tries = 0;
-      const tick = async () => {
-        tries += 1;
-        const list = await loadDigilockerDocs();
-        if ((list?.length ?? 0) > 0 || tries >= 5) {
-          clearInterval(timer);
-          setDigilockerStatus('idle');
-        }
-      };
-      void tick();
-      const timer = setInterval(() => { void tick(); }, 3000);
-      return () => clearInterval(timer);
-    }
-    if (outcome === 'error') {
-      setDigilockerStatus('error');
-      setDigilockerMessage(params.get('message') || 'DigiLocker linking failed.');
-    }
-    void loadDigilockerDocs();
-  }, [loadDigilockerDocs]);
-  
   // Conditional UI State
   // EmploymentStatus values must match BssTaxonomies.EmploymentStatus exactly
   // ("Gig active", "Self-employed", "Seasonal", …) so the conditional
@@ -2316,57 +2247,6 @@ export default function WorkerProfilePage() {
                       </div>
                       {bankVerify.message && <p role="status" className="text-[12px] text-bss-green bg-bss-soft-green border border-bss-border rounded-lg px-3 py-2">{bankVerify.message}</p>}
                       {bankVerify.error && <p role="alert" className="text-[12px] text-bss-error bg-bss-soft-red border border-bss-border rounded-lg px-3 py-2">{bankVerify.error}</p>}
-                    </div>
-                  </div>
-
-                  {/* DigiLocker — fetch issued documents */}
-                  <div className="flex flex-col md:flex-row gap-4 p-5 rounded-2xl border border-bss-border bg-bss-bg/50">
-                    <div className="w-12 h-12 bg-sky-50 text-sky-600 rounded-full flex items-center justify-center shrink-0">
-                      <FileText size={24} />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-[15px] font-bold text-bss-text-primary">DigiLocker — Fetch Issued Documents</h4>
-                      <p className="text-[13px] text-bss-text-muted mb-3">Link your DigiLocker account to pull your government-issued documents (Aadhaar, PAN, certificates) into BSS.</p>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {([['Aadhaar', digilockerKinds.aadhaar], ['PAN', digilockerKinds.pan], ['EPFO / UAN', digilockerKinds.epfo]] as const).map(([label, ok]) => (
-                          <span key={label} className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg border ${ok ? 'text-bss-green bg-bss-soft-green border-bss-border' : 'text-bss-text-muted bg-white border-bss-border'}`}>
-                            {ok ? <CheckCircle size={12}/> : <Clock size={12}/>} {label}
-                          </span>
-                        ))}
-                      </div>
-                      {digilockerStatus === 'linked' && !digilockerFetchError && (
-                        <p className="text-[12px] text-bss-green font-semibold mb-2">DigiLocker linked — fetching documents…</p>
-                      )}
-                      {digilockerStatus === 'error' && digilockerMessage && (
-                        <p className="text-[12px] text-[#C94D18] font-semibold mb-2">{digilockerMessage}</p>
-                      )}
-                      {!digilockerDocs.length && digilockerErrorText && (
-                        <p className="text-[12px] text-[#C94D18] bg-bss-soft-orange border border-bss-border rounded-lg px-3 py-2 mb-2">{digilockerErrorText}</p>
-                      )}
-                      {digilockerDocs.length > 0 ? (
-                        <div className="space-y-2 mt-2">
-                          {digilockerDocs.map(doc => (
-                            <div key={doc.id} className="flex items-center justify-between gap-3 rounded-xl border border-bss-border bg-white px-3 py-2">
-                              <div className="min-w-0">
-                                <p className="text-[13px] font-semibold text-bss-text-primary truncate">{doc.doctype || 'Document'}</p>
-                                <p className="text-[11px] text-bss-text-muted truncate">{[doc.issuer, doc.doc_date].filter(Boolean).join(' · ')}</p>
-                                {(doc.downloaded_at || doc.created_at) && <p className="text-[10px] text-bss-text-muted">Fetched {new Date((doc.downloaded_at || doc.created_at) as string).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>}
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                {doc.file_url && <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold text-sky-700 hover:underline">View</a>}
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${doc.status === 'DOWNLOADED' ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-[#E45D24]'}`}>{doc.status || '—'}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : !digilockerErrorText ? (
-                        <p className="text-[12px] text-bss-text-muted">No DigiLocker documents fetched yet.</p>
-                      ) : null}
-                    </div>
-                    <div className="flex items-center justify-start md:justify-end min-w-[140px]">
-                      <button type="button" onClick={linkDigiLocker} disabled={digilockerStatus === 'linking'} className="bg-sky-600 text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-sky-700 flex items-center gap-2 disabled:opacity-60">
-                        {digilockerStatus === 'linking' ? <RefreshCw size={16} className="animate-spin" /> : 'Link DigiLocker'}
-                      </button>
                     </div>
                   </div>
                   
