@@ -31,9 +31,9 @@ export function CopyButton({ value, className = "" }: { value: string; className
       type="button"
       onClick={handleCopy}
       title={copied ? "Copied!" : `Copy ${value}`}
-      className={`inline-flex items-center gap-1 text-[11px] font-medium text-gray-500 hover:text-blue-700 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 rounded-md px-1.5 py-0.5 transition-colors cursor-pointer ${className}`}
+      className={`inline-flex items-center gap-1 text-[11px] font-medium text-bss-text-muted hover:text-bss-interactive-blue hover:bg-bss-blue-tint border border-bss-border hover:border-bss-interactive-blue rounded-md px-1.5 py-0.5 transition-colors cursor-pointer ${className}`}
     >
-      {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
+      {copied ? <Check size={12} className="text-bss-green" /> : <Copy size={12} />}
       <span>{copied ? "Copied" : "Copy"}</span>
     </button>
   );

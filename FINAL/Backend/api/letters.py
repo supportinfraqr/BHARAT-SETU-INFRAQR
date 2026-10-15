@@ -329,7 +329,8 @@ def _letter_tokens(binding, letter_type: str, logo_url: str = "", state: str = "
 
 
 def _resolve_letter_template(binding, letter_type: str):
-    """Template priority: the site's selected template → a state template →
+    """Template priority: the site's selected template → the site's regulatory
+    head template (state, or Central when the site's jurisdiction is central) →
     the all-India default. Returns a LetterTemplate or None."""
     from bss_core.models import LetterTemplate
     kind = "APPOINTMENT" if letter_type == "appointment" else "EXPERIENCE"
@@ -339,10 +340,13 @@ def _resolve_letter_template(binding, letter_type: str):
                   else site.experience_letter_template)
         if chosen is not None and chosen.is_active and chosen.html.strip():
             return chosen
-        state = (site.state or "").strip()
-        if state:
+        # The site's head: a Central-jurisdiction site uses the Central templates;
+        # otherwise the state's own templates.
+        head = "Central" if getattr(site, "jurisdiction", "state") == "central" \
+            else (site.state or "").strip()
+        if head:
             t = (LetterTemplate.objects
-                 .filter(letter_type=kind, state__iexact=state, is_active=True)
+                 .filter(letter_type=kind, state__iexact=head, is_active=True)
                  .exclude(html="").order_by("-updated_at").first())
             if t is not None:
                 return t
@@ -351,11 +355,15 @@ def _resolve_letter_template(binding, letter_type: str):
             .exclude(html="").order_by("-updated_at").first())
 
 
-def _render_template_html(html_text: str, tokens: dict, letter_type: str = "APPOINTMENT", state: str = "") -> str:
+def _render_template_html(html_text: str, tokens: dict, letter_type: str = "APPOINTMENT", state: str = "", adoption=None) -> str:
     # Normalise the page box first (older templates hardcode a 794px width that
     # overflows the PDF page box). Branding is skipped for statutory types such
     # as EXPERIENCE, which must stay free of any BSS logo or wordmark.
     out = letter_brand.ensure_letter_html(html_text, letter_type, state=state)
+    # Apply the employer's adoption BEFORE token substitution so tokens inside
+    # employer-authored header/footer/clauses are resolved too.
+    if adoption is not None:
+        out = letter_brand.apply_letter_customizations(out, adoption)
     for key, value in tokens.items():
         out = out.replace("{{" + key + "}}", value).replace("{{ " + key + " }}", value)
     return out
@@ -398,17 +406,32 @@ def _render_card(binding) -> str:
 def render_letter(binding, letter_type: str) -> str:
     if letter_type == "card":
         return _render_card(binding)
-    # A letter is issued ONLY from an admin-authored template. When no matching
-    # template exists the letter is intentionally not generated (returns ""),
-    # rather than falling back to a hardcoded BSS-branded body.
-    template = _resolve_letter_template(binding, letter_type)
+    # An employer may adopt + customise the Appointment letter; when adopted, the
+    # employer's base template + overrides win over the per-site/state resolution.
+    adoption = None
+    if letter_type == "appointment":
+        from bss_core.models import EmployerLetterAdoption
+        site = binding.site
+        employer_id = getattr(site, "employer_id", None) if site is not None else None
+        if employer_id:
+            adoption = (EmployerLetterAdoption.objects
+                        .filter(employer_id=employer_id, letter_type="APPOINTMENT",
+                                is_active=True)
+                        .select_related("base_template").first())
+    if adoption is not None and adoption.base_template_id:
+        template = adoption.base_template
+    else:
+        # A letter is issued ONLY from an admin-authored template. When no matching
+        # template exists the letter is intentionally not generated (returns ""),
+        # rather than falling back to a hardcoded BSS-branded body.
+        template = _resolve_letter_template(binding, letter_type)
     if template is None:
         return ""
-    return _render_template_html(
-        template.html,
-        _letter_tokens(binding, letter_type, getattr(template, "logo_url", "") or "", getattr(template, "state", "") or ""),
-        letter_type,
-        getattr(template, "state", "") or "")
+    state = getattr(template, "state", "") or ""
+    tokens = _letter_tokens(binding, letter_type, getattr(template, "logo_url", "") or "", state)
+    if adoption is not None and (adoption.logo_url or "").strip():
+        tokens["logoUrl"] = adoption.logo_url.strip()
+    return _render_template_html(template.html, tokens, letter_type, state, adoption)
 
 
 def _letter_as_pdf(binding, letter_type: str, html: str):

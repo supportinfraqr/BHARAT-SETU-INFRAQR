@@ -739,6 +739,50 @@ class LetterTemplate(models.Model):
         return f"{self.name} ({self.get_letter_type_display()}{' · ' + self.state if self.state else ' · all-India'})"
 
 
+class EmployerLetterAdoption(models.Model):
+    """An employer adopting a letter template (Appointment) and customising it.
+
+    One active adoption per employer (employer-wide): the employer picks a base
+    template from the admin catalog and may override the letter's text colour,
+    heading colour, logo, brand wordmark and footer. Every contractor (and thus
+    every worker) engaged at the employer's sites then gets their appointment
+    letters rendered from this adopted + customised template.
+    """
+
+    employer = models.ForeignKey(User, on_delete=models.CASCADE,
+                                 related_name="letter_adoptions",
+                                 limit_choices_to={"role": "employer"})
+    letter_type = models.CharField(max_length=20, default="APPOINTMENT")
+    # The catalog template the employer adopted; null once it is retired so the
+    # customisations can still be shown/edited until the employer re-adopts.
+    base_template = models.ForeignKey(LetterTemplate, on_delete=models.SET_NULL,
+                                      null=True, blank=True, related_name="+")
+    text_color = models.CharField(max_length=20, blank=True)
+    heading_color = models.CharField(max_length=20, blank=True)
+    brand_name = models.CharField(max_length=120, blank=True)
+    footer_text = models.CharField(max_length=255, blank=True)
+    logo_url = models.TextField(blank=True)
+    # Employer-authored HTML for the unlocked regions. The base template body
+    # stays locked; the header and footer are replaceable and extra clauses can
+    # be appended before the signature block.
+    header_html = models.TextField(blank=True)
+    footer_html = models.TextField(blank=True)
+    clauses_html = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "employer_letter_adoption"
+        constraints = [models.UniqueConstraint(
+            fields=["employer", "letter_type"], name="uq_employer_letter_adoption")]
+        indexes = [models.Index(fields=["employer", "letter_type"],
+                                name="idx_emp_letter_adopt")]
+
+    def __str__(self):
+        return f"{self.employer_id} · {self.letter_type} · {'active' if self.is_active else 'inactive'}"
+
+
 class WorkerGatePassBlock(models.Model):
     """Principal employer's switch to stop gate-pass generation for a worker
     (both temporary and permanent). When blocked the pass is not generated."""

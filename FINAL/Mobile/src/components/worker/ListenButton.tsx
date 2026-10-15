@@ -12,7 +12,7 @@ export default function ListenButton({ className = "", label = "Listen" }: { cla
     <button
       type="button"
       onClick={() => window.dispatchEvent(new Event("bss:open-voice-guide"))}
-      className={`inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-[#073B67] hover:bg-gray-50 ${className}`}
+      className={`inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-bss-border bg-white text-sm font-semibold text-[#01183A] hover:bg-bss-bg ${className}`}
       aria-label="Listen and learn — read this page aloud"
     >
       <Volume2 size={16} />

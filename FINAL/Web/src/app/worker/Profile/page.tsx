@@ -422,7 +422,7 @@ export default function WorkerProfilePage() {
   const bankVerified = worker.banking.verificationStatus === 'Verified';
 
   // ── Aadhaar oKYC linking (for workers whose Aadhaar isn't linked yet) ────
-  const [aadhaarLink, setAadhaarLink] = useState({ aadhaar: '', referenceId: '', otp: '', sent: false, busy: false, error: '', notice: '', otpCooldown: 0 });
+  const [aadhaarLink, setAadhaarLink] = useState({ aadhaar: '', referenceId: '', otp: '', sent: false, busy: false, error: '', notice: '', otpCooldown: 0, verifyCooldown: 0 });
 
   const sendAadhaarOtp = async () => {
     const aadhaar = aadhaarLink.aadhaar.replace(/\D/g, '');
@@ -430,9 +430,9 @@ export default function WorkerProfilePage() {
     setAadhaarLink(s => ({ ...s, busy: true, error: '', notice: '' }));
     try {
       const response = await fetch('/api/auth/aadhaar/otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aadhaar }) });
-      const json = await response.json() as { referenceId?: string; error?: string; message?: string; retryAfterSeconds?: number; resendAfterSeconds?: number; otpPending?: boolean; locked?: boolean; demoOtp?: string };
+      const json = await response.json() as { referenceId?: string; error?: string; message?: string; retryAfterSeconds?: number; resendAfterSeconds?: number; otpPending?: boolean; locked?: boolean; demoOtp?: string; verifyAfterSeconds?: number };
       if (json.referenceId) {
-        setAadhaarLink(s => ({ ...s, referenceId: json.referenceId as string, otp: '', sent: true, busy: false, error: '', otpCooldown: json.resendAfterSeconds ?? 60, notice: json.demoOtp ? `Demo mode — no SMS is sent. Enter OTP ${json.demoOtp}.` : (json.message || 'OTP sent to the mobile linked with your Aadhaar.') }));
+        setAadhaarLink(s => ({ ...s, referenceId: json.referenceId as string, otp: '', sent: true, busy: false, error: '', otpCooldown: json.resendAfterSeconds ?? 60, verifyCooldown: json.verifyAfterSeconds ?? 0, notice: json.demoOtp ? `Demo mode — no SMS is sent. Enter OTP ${json.demoOtp}.` : (json.message || 'OTP sent to the mobile linked with your Aadhaar.') }));
         return;
       }
       // Throttled / locked / a code is already pending: still advance to the OTP
@@ -453,17 +453,22 @@ export default function WorkerProfilePage() {
     setAadhaarLink(s => ({ ...s, busy: true, error: '', notice: '' }));
     try {
       const response = await fetch('/api/worker/link-aadhaar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aadhaar, referenceId: aadhaarLink.referenceId, otp: aadhaarLink.otp }) });
-      const json = await response.json() as { error?: string; expired?: boolean; wrong?: boolean; locked?: boolean; attemptsLeft?: number; referenceId?: string; otpPending?: boolean; retryAfterSeconds?: number };
+      const json = await response.json() as { error?: string; expired?: boolean; wrong?: boolean; locked?: boolean; attemptsLeft?: number; referenceId?: string; otpPending?: boolean; retryAfterSeconds?: number; transient?: boolean };
       // Success.
       if (response.ok && !json.error && !json.wrong && !json.expired && !json.locked) {
         const profileResponse = await fetch('/api/worker/profile', { cache: 'no-store' });
         const profileJson = await profileResponse.json() as { data?: typeof worker };
         if (profileJson.data) updateWorker(profileJson.data);
-        setAadhaarLink({ aadhaar: '', referenceId: '', otp: '', sent: false, busy: false, error: '', notice: '', otpCooldown: 0 });
+        setAadhaarLink({ aadhaar: '', referenceId: '', otp: '', sent: false, busy: false, error: '', notice: '', otpCooldown: 0, verifyCooldown: 0 });
         return;
       }
       if (json.locked) { setAadhaarLink(s => ({ ...s, busy: false, otp: '', otpCooldown: json.retryAfterSeconds ?? 600, error: json.error || 'Too many attempts. Please try again later.' })); return; }
       if (json.expired) { setAadhaarLink(s => ({ ...s, busy: false, otp: '', referenceId: '', sent: true, otpCooldown: json.retryAfterSeconds ?? 60, error: json.error || 'That OTP expired. Request a new OTP.' })); return; }
+      if (json.transient) {
+        // UIDAI is still arming the OTP — keep the code, wait, then retry it.
+        setAadhaarLink(s => ({ ...s, busy: false, verifyCooldown: json.retryAfterSeconds ?? 30, error: '', notice: json.error || 'OTP is being processed — please wait a few seconds and try again.' }));
+        return;
+      }
       if (json.wrong) {
         const left = json.attemptsLeft ?? 1;
         setAadhaarLink(s => ({ ...s, busy: false, otp: '', referenceId: left <= 0 ? '' : s.referenceId, otpCooldown: left <= 0 ? (json.retryAfterSeconds ?? 60) : s.otpCooldown, error: json.error || 'Incorrect OTP.' }));
@@ -474,6 +479,13 @@ export default function WorkerProfilePage() {
       setAadhaarLink(s => ({ ...s, busy: false, error: error instanceof Error ? error.message : 'Aadhaar verification failed.' }));
     }
   };
+
+  // Count down the "UIDAI arming the OTP" gate so Verify re-enables automatically.
+  useEffect(() => {
+    if ((aadhaarLink.verifyCooldown ?? 0) <= 0) return;
+    const timer = window.setTimeout(() => setAadhaarLink(s => ({ ...s, verifyCooldown: Math.max(0, (s.verifyCooldown ?? 0) - 1) })), 1000);
+    return () => window.clearTimeout(timer);
+  }, [aadhaarLink.verifyCooldown]);
 
   // ── NPCI Penny Drop bank verification (Sandbox.co.in) ───────────────────
   const [bankVerify, setBankVerify] = useState<{ busy: boolean; message: string; error: string }>({ busy: false, message: '', error: '' });
@@ -545,16 +557,17 @@ export default function WorkerProfilePage() {
     epfo: /EPFO|UAN|PRFND|PASSBOOK|PROVIDENT/.test(digilockerBlob),
   };
 
-  const loadDigilockerDocs = useCallback(async (): Promise<DigiLockerDoc[]> => {
+  const loadDigilockerDocs = useCallback(async (): Promise<{ list: DigiLockerDoc[]; status: string }> => {
     try {
       const response = await fetch('/api/digilocker/documents', { cache: 'no-store' });
-      if (!response.ok) return [];
-      const json = await response.json() as DigiLockerDoc[] | { data?: DigiLockerDoc[]; error?: string };
+      if (!response.ok) return { list: [], status: '' };
+      const json = await response.json() as DigiLockerDoc[] | { data?: DigiLockerDoc[]; error?: string; status?: string };
       const list = Array.isArray(json) ? json : json.data;
+      const status = Array.isArray(json) ? '' : (json.status || '');
       if (Array.isArray(list)) setDigilockerDocs(list);
       setDigilockerFetchError(Array.isArray(json) ? '' : (json.error || ''));
-      return Array.isArray(list) ? list : [];
-    } catch { return []; }
+      return { list: Array.isArray(list) ? list : [], status };
+    } catch { return { list: [], status: '' }; }
   }, []);
 
   const linkDigiLocker = async () => {
@@ -576,25 +589,32 @@ export default function WorkerProfilePage() {
     const outcome = params.get('digilocker');
     if (outcome === 'linked') {
       setDigilockerStatus('linked');
+      // The backend fetches the documents in a background thread and returns
+      // PROCESSING. Poll until it COMPLETES (up to ~2 min), then refresh the
+      // portal so the Govt. Integrations tab shows the new Aadhaar/PAN as
+      // Verified — no manual page refresh needed.
+      const MAX_TRIES = 40;
       let tries = 0;
+      let timer = 0;
       const tick = async () => {
         tries += 1;
-        const list = await loadDigilockerDocs();
-        if ((list?.length ?? 0) > 0 || tries >= 5) {
-          clearInterval(timer);
+        const { status } = await loadDigilockerDocs();
+        if (status === 'COMPLETED' || status === 'FAILED' || tries >= MAX_TRIES) {
+          window.clearInterval(timer);
+          await refresh();
           setDigilockerStatus('idle');
         }
       };
       void tick();
-      const timer = setInterval(() => { void tick(); }, 3000);
-      return () => clearInterval(timer);
+      timer = window.setInterval(() => { void tick(); }, 3000);
+      return () => window.clearInterval(timer);
     }
     if (outcome === 'error') {
       setDigilockerStatus('error');
       setDigilockerMessage(params.get('message') || 'DigiLocker linking failed.');
     }
     void loadDigilockerDocs();
-  }, [loadDigilockerDocs]);
+  }, [loadDigilockerDocs, refresh]);
   
   // Conditional UI State
   // EmploymentStatus values must match BssTaxonomies.EmploymentStatus exactly
@@ -2200,7 +2220,7 @@ export default function WorkerProfilePage() {
                               <button type="button" onClick={sendAadhaarOtp} disabled={aadhaarLink.busy} className="bg-bss-interactive-blue text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-bss-deep-navy disabled:opacity-60">{aadhaarLink.busy ? 'Sending…' : 'Send OTP'}</button>
                             ) : (
                               <>
-                                <button type="button" onClick={verifyAadhaarOtp} disabled={aadhaarLink.busy} className="bg-bss-navy text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-bss-deep-navy disabled:opacity-60">{aadhaarLink.busy ? 'Verifying…' : 'Verify & Link'}</button>
+                                <button type="button" onClick={verifyAadhaarOtp} disabled={aadhaarLink.busy || (aadhaarLink.verifyCooldown ?? 0) > 0} className="bg-bss-navy text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-bss-deep-navy disabled:opacity-60">{aadhaarLink.busy ? 'Verifying…' : (aadhaarLink.verifyCooldown ?? 0) > 0 ? `Wait ${aadhaarLink.verifyCooldown}s…` : 'Verify & Link'}</button>
                                 <button type="button" onClick={() => setAadhaarLink(s => ({ ...s, sent: false, otp: '', notice: '', error: '' }))} className="px-3 py-2 rounded-xl text-[13px] font-semibold text-bss-text-muted hover:text-bss-text-secondary">Change number</button>
                               </>
                             )}

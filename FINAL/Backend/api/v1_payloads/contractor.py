@@ -159,13 +159,13 @@ def _contractor_sites(user):
             "bssId": _d(s.bss_site_id),
             "employer": emp_name, "location": _d(s.location) or _d(s.city),
             "state": _d(s.state),
+            "jurisdiction": _d(s.jurisdiction) or "state",
             "status": _d(s.site_status) or ("Active" if s.attendance_enabled else "Planned"),
             "workers": WorkerContractorBinding.objects.filter(
                 contractor=user, site=s, binding_status="ACCEPTED").count(),
             "compliance": _site_compliance_pct(user, s),
             "boundSince": _dts(allotted_on.get(s.id)) or "",
-            "hasAgreement": bool(s.agreement_file),
-            "agreementName": _d(s.agreement_name),
+            "documents": _csd_payload(user, s),
             "data": _site_scalar_data(s),
         })
     return rows
@@ -1147,6 +1147,7 @@ def _contractor_audit_report_row(r):
         "score": _num(r.score), "scorePercent": _num(r.score_pct),
         "version": int(r.version or 1),
         "isCurrent": bool(getattr(r, "is_current", True)),
+        "aiStatus": _d(getattr(r, "status", "") or ""),
         "actWise": items,
     }
 

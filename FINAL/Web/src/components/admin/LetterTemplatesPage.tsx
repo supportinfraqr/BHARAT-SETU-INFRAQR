@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Copy, Loader2, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 import { INDIA_STATES } from "@/data/indiaStates";
-import { DEFAULT_LETTER_LOGO } from "@/lib/letterBrand";
+
+/** Regulatory heads that also carry their own (seeded) letter templates. */
+const HEAD_STATES = ["Central"];
+const STATE_CHOICES = Array.from(new Set([...INDIA_STATES, ...HEAD_STATES]));
+import { DEFAULT_LETTER_LOGO, LETTER_LOGO_DISPLAY } from "@/lib/letterBrand";
 import DocumentStudioEditor, { type StudioToken } from "@/components/admin/DocumentStudioEditor";
 
 type LetterTemplate = {
@@ -61,6 +65,12 @@ function defaultLogoFor(letterType?: string, current?: string): string {
   return (current ?? "").trim() || DEFAULT_LETTER_LOGO;
 }
 
+/** On-screen previews must not use the cross-origin production URL (served with
+ *  CORP: same-origin) — swap the default for the local same-origin copy. */
+function displayLogo(url: string): string {
+  return url === DEFAULT_LETTER_LOGO ? LETTER_LOGO_DISPLAY : url;
+}
+
 const BLANK_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><style>
   .page { max-width:100%; margin:0; padding:0; }
 </style></head><body><div class="page">
@@ -68,17 +78,17 @@ const BLANK_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><s
 
 // Sample values used only for the live preview (not saved).
 const SAMPLE: Record<string, string> = {
-  letterTitle: 'Appointment Letter', refNo: 'BSS/APPT/00042', issueDate: '01 Sep 2026',
-  workerName: 'Ramesh Kumar', workerBssId: 'BSS-W9MQKMHMQYKU', fatherName: 'Suresh Kumar',
-  dob: '05 May 1995', gender: 'M', mobile: '9876543210', address: 'Village X, Pune, Maharashtra',
-  designation: 'Mason', department: 'Civil Works', doj: '12 Jun 2026', relievingDate: '25 Sep 2026',
+  letterTitle: 'Appointment Letter', refNo: 'BSSA7KQ2M9X4RTP', issueDate: '01/09/2026',
+  workerName: 'Ramesh Kumar', workerBssId: 'BSSW7KQ2M9X4RTP', fatherName: 'Suresh Kumar',
+  dob: '05/05/1995', gender: 'M', mobile: '9876543210', address: 'Village X, Pune, Maharashtra',
+  designation: 'Mason', department: 'Civil Works', doj: '12/06/2026', relievingDate: '25/09/2026',
   identificationMarks: 'Mole on right forearm', wage: '₹25,000',
   costSheetCode: 'BSS-CS-78A9B2', costSheetName: 'Maharashtra Construction — Skilled Grade A',
   costSheetCategory: 'Skilled', costSheetGrade: 'Grade A', ctc: '₹29,850',
   epfEmployer: '₹1,950', esicEmployer: '₹813', netTakeHome: '₹22,400',
-  contractorName: 'BuildWell Contractors Pvt Ltd', contractorBssId: 'BSS-C00000000004',
+  contractorName: 'BuildWell Contractors Pvt Ltd', contractorBssId: 'BSSC3HJ8NPQ6VW',
   contractorAddress: 'Plot 4, MIDC, Pune', employerName: 'Adani Infra Pvt Ltd',
-  employerBssId: 'BSS-E00000000001',
+  employerBssId: 'BSSE9F2C7YTR4A',
   siteName: 'Demo Metro Site', siteAddress: 'Sector 21, Navi Mumbai, Maharashtra',
   formXVTable: `
     <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:11px;text-align:center;border:1px solid #334155;">
@@ -106,8 +116,8 @@ const SAMPLE: Record<string, string> = {
       <tbody>
         <tr>
           <td style="padding:8px 6px;border:1px solid #334155;">1</td>
-          <td style="padding:8px 6px;border:1px solid #334155;">12 Jun 2026</td>
-          <td style="padding:8px 6px;border:1px solid #334155;">25 Sep 2026</td>
+          <td style="padding:8px 6px;border:1px solid #334155;">12/06/2026</td>
+          <td style="padding:8px 6px;border:1px solid #334155;">25/09/2026</td>
           <td style="padding:8px 6px;border:1px solid #334155;">Masonry &amp; Civil Works</td>
           <td style="padding:8px 6px;border:1px solid #334155;">₹25,000 / Month</td>
           <td style="padding:8px 6px;border:1px solid #334155;">Satisfactory Service</td>
@@ -155,8 +165,8 @@ const SAMPLE: Record<string, string> = {
   employmentGridTable: `
     <table style="width:100%;border-collapse:collapse;margin:10px 0;font-size:12.5px;">
       <tbody>
-        <tr><td style="border:1px solid #94a3b8;padding:6px 10px;background:#F0F4FA;color:#073B67;font-weight:600;width:35%;">Contractor / Service Provider</td><td style="border:1px solid #94a3b8;padding:6px 10px;">BuildWell Contractors Pvt Ltd (BSS-C00000000004)</td></tr>
-        <tr><td style="border:1px solid #94a3b8;padding:6px 10px;background:#F0F4FA;color:#073B67;font-weight:600;">Principal Employer</td><td style="border:1px solid #94a3b8;padding:6px 10px;">Adani Infra Pvt Ltd (BSS-E00000000001)</td></tr>
+        <tr><td style="border:1px solid #94a3b8;padding:6px 10px;background:#F0F4FA;color:#073B67;font-weight:600;width:35%;">Contractor / Service Provider</td><td style="border:1px solid #94a3b8;padding:6px 10px;">BuildWell Contractors Pvt Ltd (BSSC3HJ8NPQ6VW)</td></tr>
+        <tr><td style="border:1px solid #94a3b8;padding:6px 10px;background:#F0F4FA;color:#073B67;font-weight:600;">Principal Employer</td><td style="border:1px solid #94a3b8;padding:6px 10px;">Adani Infra Pvt Ltd (BSSE9F2C7YTR4A)</td></tr>
         <tr><td style="border:1px solid #94a3b8;padding:6px 10px;background:#F0F4FA;color:#073B67;font-weight:600;">Project Site & Address</td><td style="border:1px solid #94a3b8;padding:6px 10px;">Demo Metro Site, Sector 21, Navi Mumbai, Maharashtra</td></tr>
       </tbody>
     </table>
@@ -166,7 +176,7 @@ const SAMPLE: Record<string, string> = {
 function renderPreview(htmlText: string, logoUrl: string, letterType?: string): string {
   let out = htmlText || '';
   const effectiveLogo = defaultLogoFor(letterType, logoUrl);
-  const values: Record<string, string> = { ...SAMPLE, logoUrl: effectiveLogo };
+  const values: Record<string, string> = { ...SAMPLE, logoUrl: displayLogo(effectiveLogo) };
   
   // Replace tokens with flexibility for whitespace (e.g. {{ logoUrl }}, {{logoUrl}}, {{ workerName }})
   for (const [key, value] of Object.entries(values)) {
@@ -209,7 +219,7 @@ export default function LetterTemplatesPage() {
   function firstFreeStateType(): { state: string; letterType: LetterTemplate['letterType'] } {
     const appts = new Set(rows.filter(r => r.letterType === "APPOINTMENT").map(r => (r.state || "").toLowerCase()));
     const rels = new Set(rows.filter(r => r.letterType === "EXPERIENCE").map(r => (r.state || "").toLowerCase()));
-    for (const st of INDIA_STATES) {
+    for (const st of STATE_CHOICES) {
       if (!appts.has(st.toLowerCase())) return { state: st, letterType: "APPOINTMENT" };
       if (!rels.has(st.toLowerCase())) return { state: st, letterType: "EXPERIENCE" };
     }
@@ -244,7 +254,7 @@ export default function LetterTemplatesPage() {
     const letterType = edit.letterType ?? "APPOINTMENT";
     const typeLabel = letterType === "EXPERIENCE" ? "Experience / Releasing Letter" : "Appointment Letter";
     if (stateTypeTaken(edit.state ?? "", letterType, edit.id)) {
-      setError(`A template for ${typeLabel} in "${edit.state || 'All India'}" already exists. Edit or delete the existing one instead of adding a duplicate.`);
+      setError(`A template for ${typeLabel} in "${edit.state || 'Central'}" already exists. Edit or delete the existing one instead of adding a duplicate.`);
       return;
     }
     setBusy(true); setError("");
@@ -350,7 +360,7 @@ export default function LetterTemplatesPage() {
       : <div className="space-y-6">
           {(() => {
             // Display states that have at least one template created
-            const configuredStates = INDIA_STATES.filter(st => rows.some(r => (r.state || "").toLowerCase() === st.toLowerCase()));
+            const configuredStates = STATE_CHOICES.filter(st => rows.some(r => (r.state || "").toLowerCase() === st.toLowerCase()));
             
             if (configuredStates.length === 0) {
               return (
@@ -423,15 +433,15 @@ export default function LetterTemplatesPage() {
         <div className="p-5 space-y-4 overflow-y-auto">
           {error && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-semibold">{error}</div>}
           <div className="grid sm:grid-cols-3 gap-3">
-            <label className="text-[11px] font-semibold text-gray-600">Step 1: Select State<select value={edit.state ?? INDIA_STATES[0]} onChange={e => {
+            <label className="text-[11px] font-semibold text-gray-600">Step 1: Select State<select value={edit.state ?? STATE_CHOICES[0]} onChange={e => {
               const newState = e.target.value;
               const typeLabel = edit.letterType === "EXPERIENCE" ? "Experience / Releasing Letter" : "Appointment Letter";
               setEdit(v => ({ ...v, state: newState, name: `${newState} — ${typeLabel}` }));
-            }} className={input}>{INDIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}</select></label>
+            }} className={input}>{STATE_CHOICES.map(s => <option key={s} value={s}>{s}</option>)}</select></label>
             <label className="text-[11px] font-semibold text-gray-600">Step 2: Select Letter Type<select value={edit.letterType ?? "APPOINTMENT"} onChange={e => {
               const newType = e.target.value as LetterTemplate['letterType'];
               const typeLabel = newType === "EXPERIENCE" ? "Experience / Releasing Letter" : "Appointment Letter";
-              const st = edit.state || INDIA_STATES[0];
+              const st = edit.state || STATE_CHOICES[0];
               setEdit(v => ({ ...v, letterType: newType, name: `${st} — ${typeLabel}` }));
             }} className={input}><option value="APPOINTMENT">Appointment Letter</option><option value="EXPERIENCE">Experience / Releasing Letter</option></select></label>
             <label className="text-[11px] font-semibold text-gray-600">Step 3: Template Name<input value={edit.name ?? ""} onChange={e => setEdit(v => ({ ...v, name: e.target.value }))} placeholder="e.g. Maharashtra — Appointment Letter" className={input} /></label>
@@ -442,7 +452,7 @@ export default function LetterTemplatesPage() {
             if (!taken) return null;
             const typeLabel = edit.letterType === "EXPERIENCE" ? "Experience / Releasing Letter" : "Appointment Letter";
             return <p role="alert" className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 font-semibold">
-              <span>⚠</span><span>A template for {typeLabel} in &ldquo;{edit.state || 'All India'}&rdquo; already exists. Edit or delete the existing one instead — saving a duplicate is not allowed.</span>
+              <span>⚠</span><span>A template for {typeLabel} in &ldquo;{edit.state || 'Central'}&rdquo; already exists. Edit or delete the existing one instead — saving a duplicate is not allowed.</span>
             </p>;
           })()}
 
@@ -457,7 +467,7 @@ export default function LetterTemplatesPage() {
             </div>
             <div className="flex items-center gap-3">
               <div className="w-16 h-16 rounded-lg border border-gray-200 grid place-items-center overflow-hidden bg-white flex-shrink-0">
-                {defaultLogoFor(edit.letterType, edit.logoUrl) ? <img src={defaultLogoFor(edit.letterType, edit.logoUrl)} alt="logo preview" className="max-w-full max-h-full object-contain" /> : <span className="text-[9px] text-gray-300">No logo</span>}
+                {defaultLogoFor(edit.letterType, edit.logoUrl) ? <img src={displayLogo(defaultLogoFor(edit.letterType, edit.logoUrl))} alt="logo preview" className="max-w-full max-h-full object-contain" /> : <span className="text-[9px] text-gray-300">No logo</span>}
               </div>
               <div className="flex-1 space-y-2 min-w-0">
                 <input value={edit.logoUrl ?? ""} onChange={e => setEdit(v => ({ ...v, logoUrl: e.target.value }))} placeholder="Logo URL (https://…/logo.png) or upload" className={input} />
@@ -484,7 +494,7 @@ export default function LetterTemplatesPage() {
     {confirmDelete && <div className="fixed inset-0 z-[95] bg-black/50 grid place-items-center p-4">
       <section role="dialog" aria-modal="true" className="w-full max-w-sm bg-white rounded-2xl p-5">
         <h2 className="text-sm font-semibold text-gray-900">Delete this template?</h2>
-        <p className="text-xs text-gray-500 mt-1">{confirmDelete.name} · {confirmDelete.letterTypeLabel} · {confirmDelete.state || "All India"}. Sites using it will fall back to the state/default template.</p>
+        <p className="text-xs text-gray-500 mt-1">{confirmDelete.name} · {confirmDelete.letterTypeLabel} · {confirmDelete.state || "Central"}. Sites using it will fall back to the state/default template.</p>
         <div className="mt-4 flex justify-end gap-2"><button onClick={() => setConfirmDelete(null)} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold">Cancel</button><button disabled={busy} onClick={() => void remove(confirmDelete)} className="h-9 px-4 rounded-lg bg-red-600 text-white text-xs font-bold disabled:opacity-60">Delete</button></div>
       </section>
     </div>}

@@ -29,6 +29,7 @@ services:
       BSS_PAYMENT_HOSTS: checkout.razorpay.com,secure.payu.in
       BSS_SESSION_SECRET: ${BSS_SESSION_SECRET:?BSS_SESSION_SECRET is required in deploy-mobile/.env}
       BSS_API_TIMEOUT_MS: "15000"
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-AIzaSyCqfNilx-gBvPdG0pVwJGm9heWjkZKPKfA}
 
   frontend-staging:
     profiles: ["staging"]
@@ -47,6 +48,7 @@ services:
       BSS_PAYMENT_HOSTS: checkout.razorpay.com,secure.payu.in
       BSS_SESSION_SECRET: ${BSS_SESSION_SECRET_STAGING:-${BSS_SESSION_SECRET}}
       BSS_API_TIMEOUT_MS: "15000"
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-AIzaSyCqfNilx-gBvPdG0pVwJGm9heWjkZKPKfA}
 
   nginx:
     image: nginx:1.27-alpine

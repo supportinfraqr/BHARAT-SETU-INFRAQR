@@ -69,7 +69,7 @@ export default function ContractorCoursePage({ params }: { params: Promise<{ cou
             <p className="text-sm font-semibold text-white">{activeLesson.title}</p>
             <p className="text-xs text-white/60 max-w-sm">Lesson {activeModule + 1} of {course.modules.length} · {activeLesson.duration} · Hindi with English subtitles. Video streaming is simulated in this demo build.</p>
           </div>
-          {completed[activeModule] && <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[10px] font-bold text-bss-soft-green bg-bss-soft-green0/20 border border-bss-green/30 px-2 py-0.5 rounded-full"><Check size={11}/>Completed</span>}
+          {completed[activeModule] && <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[10px] font-bold text-bss-soft-green bg-bss-green/20 border border-bss-green/30 px-2 py-0.5 rounded-full"><Check size={11}/>Completed</span>}
         </div>
         <div className="p-4 flex flex-wrap items-center justify-between gap-3 border-t border-bss-border">
           <div><h2 className="text-sm font-semibold text-bss-text-primary">Lesson {activeModule + 1}: {activeLesson.title}</h2><p className="text-xs text-bss-text-muted mt-0.5 flex items-center gap-1"><Clock3 size={11}/>{activeLesson.duration}</p></div>

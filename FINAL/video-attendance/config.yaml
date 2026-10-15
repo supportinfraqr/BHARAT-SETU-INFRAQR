@@ -1,16 +1,19 @@
 postgres:
   host: 127.0.0.1
   port: 5432
-  dbname: btp            # ONE shared database for all cameras now (no btp_<name>);
-                         # cameras are told apart by the `camera` column.
+  dbname: btp            # per-camera processes use btp_<name> (mirrors old db_<name>.sqlite3)
   user: btp
   password: ""           # NEVER commit a password. Export BTP_PG_PASSWORD, or set a
-                         # full BTP_DATABASE_URL (takes precedence). On BSS prod point
-                         # it at bss_prod with schema=attendance below.
-  schema: ""             # BTP_PG_SCHEMA env wins. e.g. "attendance" keeps this
-                         # pipeline's tables isolated inside a shared database.
+                         # full BTP_DATABASE_URL (takes precedence). On BSS the deploy
+                         # points it at the shared DB with schema=attendance below.
+  schema: ""             # BTP_PG_SCHEMA env wins. e.g. "attendance" isolates this
+                         # pipeline's tables inside a shared (bss) database.
 paths:
   snapshots: data/snapshots
+  # PRIVACY: never persist the live CCTV feed in any form. When false (default)
+  # the engine writes NO frame/snapshot files — only sighting/code rows with
+  # timestamps. Set true only for local debugging.
+  save_snapshots: false
 
 source:
   mode: auto
@@ -19,16 +22,10 @@ source:
                     # data/snapshots/scan_camN.jpg if cameras stop matching.
   webcam_width: 1280   # requested HD mode (DirectShow defaults to 640x480
   webcam_height: 720   # if unset); actual size is printed on connect
-  ivideon_cameras:
-    - id: 100-DxWvvaN7dT4xMMEJ38TESZ:0
-      name: Backup camera
-    - id: 100-KqKKF3inDX3uvKrwbIGWGb:851968
-      name: Yaroslavl Mashinostroiteley Avenue
-    
+  ivideon_cameras: []
   openwebcamdb:
     api_key: ""
-    webcams:
-      - yaroslavl-mashinostroiteley-avenue
+    webcams: []
   rtsp_urls:
     - rtsp://127.0.0.1:8554/cctv
   local_files: []
@@ -43,17 +40,37 @@ cameras:
   - name: gate
     source: "1"          # same syntax as --source (webcam index / rtsp:// / file)
     web_port: 8081
+    face_level: true     # face-height close-up mount -> close-up preset
+    # (min 80px faces, stricter blur, posture weight ~0). Omit for hall views.
+    # Per-camera independent processing (see camera_profiler + CameraSpec):
+    # paste `python tools/profile_camera.py --camera gate` output here.
+    # Example:
+    # overrides:
+    #   detector: { infer_width: 640, conf: 0.35 }
+    #   face: { min_blur: 15, refresh_interval_s: 2.0 }
   - name: lobby
     source: rtsp://127.0.0.1:8554/cctv
     web_port: 8082
 
+# Fleet: multi-camera parallel policy. One node runs a shard of `cameras:`
+# (see tools/run_fleet.py --shard-index/--shard-count); scale to 3000 by
+# adding nodes, each running its shard. Triage knobs below cut cost by
+# calling models fewer times — accuracy thresholds are untouched.
+fleet:
+  adaptive_stride: true  # let slow cameras raise detect stride automatically
+  max_stride: 4          # never slower than every 4th frame for detection
+  qr_idle_skip: true     # skip the QR pass on static empty frames
+
 detector:
-  model: yolov8n.pt
+  model: data/models/yolov8n.pt
   imgsz: 640
   infer_width: 640
   conf: 0.35
   iou: 0.45
-  process_every: 2
+  process_every: 1    # ACCURACY-FIRST: detect every frame (best track continuity,
+                      # fewest ID-switches). Compute is provisioned, not saved.
+                      # The adaptive-stride governor (fleet:) only steps this up
+                      # if a camera actually falls below ~8 fps.
   present_hits: 2
   absent_misses: 12
   track_lost_after_s: 4.0
@@ -103,7 +120,12 @@ face:
                                # ~2.5m and never match reliably; skip them so bad
                                # frames can't poison decisions. Working zone at
                                # 1.5-2m is ~75-110px, unaffected.
-  reassign_margin: 0.90          # rescaled from 0.55 for ArcFace
+  reassign_margin: 0.75          # was 0.90: a stale track lock held too long,
+                                 # painting the previous occupant's name on whoever
+                                 # entered the box next. 0.75 still tolerates pose
+                                 # drift (threshold is 0.6) but releases sooner.
+  face_absent_timeout_s: 6.0     # locked track with no face observation this long
+                                 # drops to scanning (occupant likely changed)
   identity_patience: 2           # was 1: name locks need sustained evidence,
                                  # single noisy frames can't flip identity
 

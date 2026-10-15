@@ -201,13 +201,50 @@ def _verify_guard(aadhaar, reference_id):
 
 
 def _verify_failure(aadhaar, challenge, raw_msg):
-    """A wrong OTP: count it against the OTP. The user retries the SAME code until
-    the attempts are used, then must request a new one (no auto-resend)."""
-    if "expire" in (raw_msg or "").lower():
+    """Classify the provider's verify response and respond accordingly.
+
+    - ``expired`` — the UIDAI OTP lapsed → ask for a new one (no attempt consumed).
+    - ``transient`` — e.g. "Request under process, please try after 30 seconds":
+      UIDAI hasn't armed the OTP yet, so the SAME code will work in a moment. Do
+      NOT consume an attempt and do NOT expire it (misclassifying this as a wrong
+      OTP was why a correct code reported "wrong OTP" and locked users out).
+    - otherwise — a genuinely wrong code: count it against the OTP."""
+    msg = (raw_msg or "").strip()
+    low = msg.lower()
+    if "expire" in low:
+        # Sandbox/UIDAI returns a spurious "OTP expired" when verify lands before
+        # the OTP is armed (seen seconds after a correct send, while genuinely
+        # fresh OTPs verify fine). Only treat it as truly expired once the OTP is
+        # well past the grace window; before that keep the challenge valid so the
+        # SAME correct code can be retried (this was the "correct OTP → expired"
+        # loop).
+        try:
+            age = (timezone.now() - challenge.created_at).total_seconds()
+        except Exception:  # noqa: BLE001
+            age = settings.AADHAAR_OTP_GRACE_SEC + 1
+        if age < settings.AADHAAR_OTP_GRACE_SEC:
+            logger.warning("aadhaar verify early-expired (ref=%s, age=%.0fs) → transient",
+                           str(challenge.reference_id)[:8], age)
+            return Response({
+                "error": "We couldn't validate that OTP yet — please wait a few seconds "
+                         "and enter the same OTP again.",
+                "retryAfterSeconds": 10, "transient": True, "otpPending": True,
+            }, status=status.HTTP_200_OK)
         challenge.status = "EXPIRED"
         challenge.expires_at = timezone.now()
         challenge.save(update_fields=["status", "expires_at", "updated_at"])
         return _expired_otp_response(aadhaar)
+    transient_hints = ("under process", "try after", "try again", "please wait",
+                       "processing", "in progress", "too early", "not ready")
+    if any(h in low for h in transient_hints):
+        wait = settings.AADHAAR_VERIFY_DELAY_SEC
+        logger.warning("aadhaar verify transient (ref=%s, no attempt consumed): %s",
+                       str(challenge.reference_id)[:8], msg[:140] or "(no message)")
+        return Response({
+            "error": "Your OTP is still being processed by UIDAI — please wait about "
+                     f"{wait} seconds, then enter the same OTP again.",
+            "retryAfterSeconds": wait, "transient": True, "otpPending": True,
+        }, status=status.HTTP_200_OK)
     challenge.otp_attempts += 1
     if challenge.otp_attempts >= challenge.max_attempts:
         challenge.status = "FAILED"
@@ -477,6 +514,7 @@ def _send_otp(aadhaar, consent=True):
         "referenceId": challenge.reference_id,
         "expiresIn": settings.AADHAAR_OTP_TTL_MIN * 60,
         "resendAfterSeconds": settings.AADHAAR_RESEND_GAP_SEC,
+        "verifyAfterSeconds": settings.AADHAAR_VERIFY_DELAY_SEC,
         "resendsLeft": max(0, settings.AADHAAR_MAX_RESENDS - max(0, sends - 1)),
         "attemptsAllowed": settings.AADHAAR_MAX_ATTEMPTS,
     }
@@ -561,9 +599,12 @@ def aadhaar_verify(request):
 
     data = result.get("data") or {}
     if result.get("code") != 200 or data.get("message") != "Aadhaar Card Exists":
-        # Wrong OTP or a lapsed session — consume the OTP (1 try per OTP) and
-        # enforce the attempt caps; the user must request a fresh code.
-        return _verify_failure(aadhaar, challenge, str(data.get("message") or "").strip())
+        # Wrong OTP or a lapsed/not-ready session — classify the provider message
+        # (transient "under process" is retried without consuming an attempt).
+        message = str(data.get("message") or "").strip()
+        logger.warning("aadhaar verify rejected (ref=%s, code=%s): %s",
+                       str(reference_id)[:8], result.get("code"), message[:140] or "(no message)")
+        return _verify_failure(aadhaar, challenge, message)
 
     photo_url = ""
     user = None

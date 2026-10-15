@@ -4,7 +4,7 @@ import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { ArrowLeft, Building2, FileText, History, MapPin, Pencil, QrCode, Save, Trash2, UserRound, X } from 'lucide-react';
+import { ArrowLeft, Building2, History, MapPin, Pencil, QrCode, Save, Trash2, UserRound, X } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerSite } from '@/types/portal';
 import { parseCoordinate } from '@/components/employer/siteGeo';
@@ -12,13 +12,14 @@ import { formatDate } from '@/lib/date';
 import { SiteQr, SiteQrPanel } from '@/components/qr/WorkerQr';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { tabs, type Tab, TAB_FIELDS, LABELS, FIELD_DEFS } from '@/components/site/siteDetailFields';
+import ContractorSiteDocs from '@/components/site/ContractorSiteDocs';
 
 const SiteMapView = dynamic(() => import('@/components/employer/SiteMap').then(m => m.SiteMapView), { ssr: false });
 
 export default function SiteDetailPage({ params }: { params: Promise<{ siteId:string }> }) {
   const { siteId } = use(params);
   const router = useRouter();
-  const { employer, replaceEmployer, mutate } = useEmployer();
+  const { employer, replaceEmployer, mutate, refresh } = useEmployer();
   const [tab, setTab] = useState<Tab>('basic');
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -94,8 +95,7 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
 
   return <div className="space-y-6">
     <Link href="/employer/sites" className="inline-flex items-center gap-1 text-xs font-semibold text-bss-interactive-blue hover:underline"><ArrowLeft size={14}/>Back to My Sites</Link>
-    <header><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{current.name}</h1><Status value={current.status}/></div><p className="font-mono text-xs text-bss-text-muted mt-1">{current.code}</p><p className="text-sm text-bss-text-secondary flex items-center gap-1 mt-2"><MapPin size={13}/>{current.location}, {current.state}</p></div><div className="flex gap-2">
-      {current.hasAgreement && <a href={`/api/site-agreement/${current.id}`} target="_blank" rel="noreferrer" className="h-10 px-4 rounded-lg border border-bss-border text-bss-interactive-blue text-sm font-semibold flex items-center gap-2 hover:bg-bss-blue-tint"><FileText size={15}/>Agreement</a>}
+    <header><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{current.name}</h1><Status value={current.status}/></div><p className="font-mono text-xs text-bss-text-muted mt-1">{current.code}</p><p className="text-sm text-bss-text-secondary flex items-center gap-1 mt-2"><MapPin size={13}/>{current.location}{current.jurisdiction === 'central' ? ', Central' : (current.state ? `, ${current.state}` : '')}</p></div><div className="flex gap-2">
       <button onClick={() => setQrOpen(true)} className="h-10 px-4 rounded-lg border border-bss-border text-bss-text-primary text-sm font-semibold flex items-center gap-2 hover:bg-bss-bg"><QrCode size={15}/>Site QR</button>
       {editing ? <><button onClick={() => setEditing(false)} className="h-10 px-4 rounded-lg border border-bss-border text-bss-text-primary text-sm font-semibold">Cancel</button><button onClick={saveInline} disabled={busy} className="h-10 px-4 rounded-lg bg-bss-navy text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-60"><Save size={15}/>{busy ? 'Saving…' : 'Save changes'}</button></> : <button onClick={startEdit} className="h-10 px-4 rounded-lg bg-bss-navy text-white text-sm font-semibold flex items-center gap-2"><Pencil size={15}/>Edit</button>}
       <button onClick={() => setConfirmDelete(true)} disabled={busy} className="h-10 px-4 rounded-lg border border-bss-border text-bss-error text-sm font-semibold flex items-center gap-2 hover:bg-bss-soft-orange"><Trash2 size={15}/>Delete</button>
@@ -143,14 +143,14 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
             {editing ? (
               <select value={String(draft.experienceLetterTemplateId ?? '')} onChange={e => setDraft(d => ({ ...d, experienceLetterTemplateId: e.target.value }))} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 bg-white text-sm">
                 <option value="">Default (state / all-India)</option>
-                {letterTemplates.filter(t => t.letterType === 'EXPERIENCE').map(t => <option key={t.id} value={t.id}>{t.name}{t.state ? ` — ${t.state}` : ' — All India'}</option>)}
+                {letterTemplates.filter(t => t.letterType === 'EXPERIENCE').map(t => <option key={t.id} value={t.id}>{t.name}{t.state ? ` — ${t.state}` : ' — Central'}</option>)}
               </select>
             ) : <p className="text-sm font-medium mt-1 text-bss-text-primary">{current.experienceLetterTemplateName || 'Default (state / all-India)'}</p>}
           </div>
         </div>
       </div>
 
-      {tab === 'address' && (() => { const lat = parseCoordinate(data.latitude as string | number | null | undefined); const lng = parseCoordinate(data.longitude as string | number | null | undefined); if (lat === null || lng === null) return null; return <div className="mt-8 pt-6 border-t border-bss-border"><p className="text-[11px] uppercase font-semibold text-bss-text-muted mb-3 flex items-center gap-1.5"><MapPin size={12}/>Map preview — OpenStreetMap</p><SiteMapView lat={lat} lng={lng} name={current.name}/></div>; })()}
+      {tab === 'address' && (() => { const lat = parseCoordinate(data.latitude as string | number | null | undefined); const lng = parseCoordinate(data.longitude as string | number | null | undefined); if (lat === null || lng === null) return null; return <div className="mt-8 pt-6 border-t border-bss-border"><p className="text-[11px] uppercase font-semibold text-bss-text-muted mb-3 flex items-center gap-1.5"><MapPin size={12}/>Map preview</p><SiteMapView lat={lat} lng={lng} name={current.name}/></div>; })()}
 
       {tab === 'address' && current.qrToken && (
         <div className="mt-8 pt-6 border-t border-bss-border">
@@ -164,7 +164,7 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
       )}
 
       <div className="border-t border-bss-border mt-6 pt-5"><h3 className="text-xs font-semibold text-bss-text-muted uppercase tracking-wider mb-4">Connected relationships</h3>
-        <div className="grid md:grid-cols-2 gap-4"><div className="border border-bss-border rounded-xl p-4"><p className="text-[11px] uppercase text-bss-text-muted font-bold flex items-center gap-1"><Building2 size={12}/>Contractors at this site</p><div className="mt-2 space-y-2">{contractors.length ? contractors.map(c => <div key={c.id} className="flex justify-between text-xs"><span className="text-bss-text-primary">{c.name}</span><span className={`font-semibold ${c.status === 'Active' ? 'text-bss-green' : 'text-bss-orange'}`}>{c.status}</span></div>) : <p className="text-xs text-bss-text-muted">No contractors assigned.</p>}</div></div>
+        <div className="grid md:grid-cols-2 gap-4"><div className="border border-bss-border rounded-xl p-4"><p className="text-[11px] uppercase text-bss-text-muted font-bold flex items-center gap-1"><Building2 size={12}/>Contractors at this site</p><div className="mt-2 space-y-3">{contractors.length ? contractors.map(c => <div key={c.id} className="space-y-2"><div className="flex justify-between text-xs"><span className="text-bss-text-primary font-semibold">{c.name}</span><span className={`font-semibold ${c.status === 'Active' ? 'text-bss-green' : 'text-bss-orange'}`}>{c.status}</span></div><ContractorSiteDocs role="employer" siteId={current.id} contractorId={c.id} documents={current.contractorDocuments?.[String(c.id)] ?? { agreement: null, po: null }} onChanged={() => void refresh()} /></div>) : <p className="text-xs text-bss-text-muted">No contractors assigned.</p>}</div></div>
           <div className="border border-bss-border rounded-xl p-4"><p className="text-[11px] uppercase text-bss-text-muted font-bold flex items-center gap-1"><UserRound size={12}/>Workers at this site</p><div className="mt-2 space-y-2">{siteWorkers.length ? siteWorkers.map(w => <div key={w.id} className="flex justify-between text-xs"><span className="text-bss-text-primary">{w.name}</span><span className="text-bss-text-muted">{w.contractor}</span></div>) : <p className="text-xs text-bss-text-muted">No workers assigned.</p>}</div></div></div>
       </div>
 

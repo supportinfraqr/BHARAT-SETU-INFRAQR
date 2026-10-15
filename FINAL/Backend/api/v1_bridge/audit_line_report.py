@@ -237,7 +237,51 @@ ul.obslist { margin:4px 0 0 16px; padding:0; } ul.obslist li { margin:2px 0; }
 """
 
 
-def build_line_item_report_html(meta, status_by_line=None, obs_by_line=None):
+def _audit_item_badge(status):
+    st = (status or "pending").strip().lower()
+    cls = {"passed": "ok", "failed": "bad", "review": "warn", "partial": "warn",
+           "pending": "pending", "unavailable": "na", "error": "bad"}.get(st, "pending")
+    label = {"passed": "Passed", "failed": "Failed", "review": "Review", "partial": "Partial",
+             "pending": "Pending", "unavailable": "No AI", "error": "Error"}.get(st, st or "Pending")
+    return f"<span class='badge {cls}'>{_e(label)}</span>"
+
+
+def build_audit_items_html(items):
+    """Render every audited item — grouped by kind (per register/document vs
+    global-level contracts such as the signed agreement & purchase order)."""
+    items = [it for it in (items or []) if it]
+    if not items:
+        return ("<p class='muted'>No audited documents or global items recorded for "
+                "this scope yet.</p>")
+    groups = {}
+    for it in items:
+        groups.setdefault(it.get("group") or "Documents", []).append(it)
+    blocks = []
+    for group, rows in groups.items():
+        trs = []
+        for it in rows:
+            findings = [str(x) for x in (it.get("findings") or []) if str(x).strip()]
+            fhtml = ("<ul class='obslist'>" + "".join(f"<li>{_e(x)}</li>" for x in findings) + "</ul>"
+                     if findings else "<span class='muted'>—</span>")
+            obs = _e(it.get("summary") or "")
+            trs.append(
+                "<tr>"
+                f"<td class='step'>{_e(it.get('kind'))}</td>"
+                f"<td class='param'>{_e(it.get('name'))}</td>"
+                f"<td class='status'>{_audit_item_badge(it.get('status'))}</td>"
+                f"<td class='obs'>{obs}{fhtml}</td>"
+                "</tr>"
+            )
+        blocks.append(
+            f"<h3>{_e(group)}</h3>"
+            "<table class='lines'><thead><tr><th>Item</th><th>Document / Source</th>"
+            "<th>AI Status</th><th>Findings / Audit Steps</th></tr></thead>"
+            f"<tbody>{''.join(trs)}</tbody></table>"
+        )
+    return "".join(blocks)
+
+
+def build_line_item_report_html(meta, status_by_line=None, obs_by_line=None, audit_items=None):
     """Return the full line-item compliance audit report HTML."""
     meta = meta or {}
     counts, risk = _counts(status_by_line)
@@ -286,24 +330,30 @@ def build_line_item_report_html(meta, status_by_line=None, obs_by_line=None):
   <h2><span class="num">05</span>Line-Item Audit Matrix — All 31 Audit Areas</h2>
   <div id="matrix">{_matrix(status_by_line, obs_by_line)}</div>
 
-  <h2><span class="num">06</span>Compliance Status &amp; Risk Definitions</h2>
+  <h2><span class="num">06</span>Audited Documents, Registers &amp; Global Contracts</h2>
+  <p class="objective"><b>Two kinds of audited items:</b> per uploaded register/document, and
+     global-level items such as the signed agreement copy and purchase/work order — each verified
+     against its own audit step list.</p>
+  {build_audit_items_html(audit_items)}
+
+  <h2><span class="num">07</span>Compliance Status &amp; Risk Definitions</h2>
   <table class="kv"><tr><td class="k" style="width:20%">Status</td><td class="k">Definition</td></tr>{sdefs}</table>
   <table class="kv"><tr><td class="k" style="width:20%">Risk level</td><td class="k">Typical examples</td></tr>{rdefs}</table>
 
-  <h2><span class="num">07</span>Key Observations &amp; Recommended Actions</h2>
+  <h2><span class="num">08</span>Key Observations &amp; Recommended Actions</h2>
   <h3>Key observations</h3>
   {_observations(status_by_line)}
   <h3>Recommended action plan</h3>
   <table class="lines"><thead><tr><th>Action</th><th>Owner</th><th>Timeline</th><th>Priority</th></tr></thead>
     <tbody>{aplan}</tbody></table>
 
-  <h2><span class="num">08</span>Final AI Audit Rule Logic</h2>
+  <h2><span class="num">09</span>Final AI Audit Rule Logic</h2>
   <table class="kv">{rules}</table>
 
-  <h2><span class="num">09</span>Verification Site Links</h2>
+  <h2><span class="num">10</span>Verification Site Links</h2>
   <p class="links">{links}</p>
 
-  <h2><span class="num">10</span>Certification &amp; Sign-Off</h2>
+  <h2><span class="num">11</span>Certification &amp; Sign-Off</h2>
   <table class="ctrl">
     <tr><td class="k">Prepared By</td><td>{_e(meta.get('auditor') or 'AI Audit Engine + Human Reviewer')}</td>
         <td class="k">Reviewed By</td><td>{_e(meta.get('reviewedBy'))}</td></tr>

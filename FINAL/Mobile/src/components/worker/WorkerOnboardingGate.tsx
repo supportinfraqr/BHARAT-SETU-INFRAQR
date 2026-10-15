@@ -7,8 +7,8 @@ type OtpResponse = {
   referenceId?: string; expiresIn?: number; resendAfterSeconds?: number; resendsLeft?: number;
   attemptsAllowed?: number; attemptsLeft?: number;
   error?: string; message?: string;
-  otpPending?: boolean; locked?: boolean; wrong?: boolean; expired?: boolean;
-  retryAfterSeconds?: number;
+  otpPending?: boolean; locked?: boolean; wrong?: boolean; expired?: boolean; transient?: boolean;
+  retryAfterSeconds?: number; verifyAfterSeconds?: number;
   demoOtp?: string;
 };
 
@@ -24,6 +24,7 @@ export default function WorkerOnboardingGate() {
   const [otp, setOtp] = useState("");
   const [reference, setReference] = useState("");
   const [cooldown, setCooldown] = useState(0);
+  const [verifyCooldown, setVerifyCooldown] = useState(0);
 
   const load = useCallback(async () => {
     try {
@@ -44,6 +45,13 @@ export default function WorkerOnboardingGate() {
     return () => window.clearTimeout(timer);
   }, [cooldown]);
 
+  // UIDAI needs a few seconds to arm the OTP — gate Verify until it's ready.
+  useEffect(() => {
+    if (verifyCooldown <= 0) return;
+    const timer = window.setTimeout(() => setVerifyCooldown(c => Math.max(0, c - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [verifyCooldown]);
+
   if (!status || status.aadhaarVerified) return null;
 
   function applySend(json: OtpResponse): boolean {
@@ -52,6 +60,7 @@ export default function WorkerOnboardingGate() {
       setOtpSent(true);
       setOtp("");
       setCooldown(json.resendAfterSeconds ?? 60);
+      setVerifyCooldown(json.verifyAfterSeconds ?? 0);
       setNotice(json.demoOtp ? `Demo mode — no SMS is sent. Enter OTP ${json.demoOtp}.` : (json.message || "OTP sent to the mobile linked with your Aadhaar."));
       setError("");
       return true;
@@ -104,6 +113,13 @@ export default function WorkerOnboardingGate() {
         }
         return;
       }
+      if (json.transient) {
+        // UIDAI is still arming the OTP — keep the code, wait, then retry it.
+        setVerifyCooldown(json.retryAfterSeconds ?? 30);
+        setNotice(json.error || "OTP is being processed — please wait a few seconds and try again.");
+        setError("");
+        return;
+      }
       throw new Error(json.error || "Aadhaar verification failed.");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Aadhaar verification failed."); }
     finally { setBusy(false); }
@@ -124,7 +140,7 @@ export default function WorkerOnboardingGate() {
           {!otpSent
             ? <button type="button" onClick={() => void sendOtp()} disabled={busy || !/^\d{12}$/.test(aadhaar)} className="w-full h-10 rounded-lg bg-[#01183A] text-white text-sm font-bold disabled:opacity-50">{busy ? "Sending…" : "Send OTP to Aadhaar-linked mobile"}</button>
             : <div className="flex gap-2">
-                <button type="button" onClick={() => void verify()} disabled={busy} className="flex-1 h-10 rounded-lg bg-[#01183A] text-white text-sm font-bold disabled:opacity-50">{busy ? "Verifying…" : "Verify Aadhaar"}</button>
+                <button type="button" onClick={() => void verify()} disabled={busy || verifyCooldown > 0} className="flex-1 h-10 rounded-lg bg-[#01183A] text-white text-sm font-bold disabled:opacity-50">{busy ? "Verifying…" : verifyCooldown > 0 ? `Wait ${verifyCooldown}s…` : "Verify Aadhaar"}</button>
                 <button type="button" onClick={() => void sendOtp()} disabled={busy || cooldown > 0} className="h-10 px-3 rounded-lg border border-bss-border text-xs font-bold text-[#01183A] disabled:opacity-50 whitespace-nowrap">{cooldown > 0 ? `Resend in ${cooldown}s` : "Resend OTP"}</button>
               </div>}
         </div>

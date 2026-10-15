@@ -11,6 +11,7 @@ import { useContractor } from '@/contexts/ContractorContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { formatDate } from '@/lib/date';
+import LicensesPrompt from '@/components/licenses/LicensesPrompt';
 import type { GatePassEligibility } from '@/types/portal';
 
 /** Render a stored date (YYYY-MM-DD) as DD/MM/YYYY for display. */
@@ -93,6 +94,8 @@ export default function ContractorDashboardPage() {
           </Link>
         </div>
       </header>
+
+      <LicensesPrompt endpoint="/api/contractor/licenses" href="/contractor/licenses" />
 
       {/* Contractor identity + Principal Employer */}
       <section className="bss-card bss-3d bss-scroll-rise rounded-2xl overflow-hidden">

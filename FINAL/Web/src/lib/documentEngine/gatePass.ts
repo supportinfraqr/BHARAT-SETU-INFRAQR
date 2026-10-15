@@ -1,9 +1,10 @@
 import QRCode from 'qrcode';
 import { templateService } from './services';
-import { renderDocumentHtml, openPrintHtml } from './render';
+import { openPrintHtml } from './render';
 import { resolveWorkerTokens, type PortalView, type WorkerLike } from './workerDataService';
 import { today, type DocumentType, type OwnerScope } from './types';
 import { createWorkerQrPayload } from '@/components/qr/WorkerQr';
+import { renderGatePassDesign } from './gatePassDesigns';
 
 export type GatePassOverrides = {
   number?: string;
@@ -14,6 +15,8 @@ export type GatePassOverrides = {
   reason?: string;
   place?: string;
   status?: string;
+  /** Force a specific built-in design (1–8) for this render (e.g. "test on worker"). */
+  design?: number;
   /** Employer branding from the gate-pass compliance template. */
   branding?: { companyName?: string; logoUrl?: string; header?: string };
 };
@@ -147,13 +150,34 @@ export async function buildGatePassHtml(
     'document.reason': overrides.reason ?? tokens['document.reason'] ?? '',
     'document.place': overrides.place ?? tokens['document.place'] ?? '',
   };
-  const html = renderDocumentHtml({ template, tokens: merged });
   const status = String(overrides.status || '');
-  if (status === 'Expired' || status === 'Revoked') {
-    const mark = `<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:9999;font:900 64px/1 Arial,sans-serif;color:rgba(190,20,20,0.16);transform:rotate(-24deg);letter-spacing:.12em;text-transform:uppercase">${status}</div>`;
-    return html.replace(/<\/body>/i, `${mark}</body>`);
-  }
-  return html;
+
+  // The pass always renders from the single modern design template.
+  return renderGatePassDesign(1, {
+    workerName: merged['worker.fullName'] || worker.name || '',
+    bssId: worker.bssId,
+    designation: merged['employment.designation'] || '',
+    dob: merged['worker.dob'] || '',
+    bloodGroup: merged['worker.bloodGroup'] || '',
+    emergencyContact: merged['worker.emergencyContact'] || '',
+    employer: merged['employer.legalName'] || '',
+    contractor: merged['contractor.legalName'] || '',
+    site: merged['site.name'] || '',
+    siteCode: merged['site.code'] || '',
+    siteAddress: merged['site.address'] || '',
+    issueDate: merged['document.issueDate'] || dmy(issue),
+    validTo: merged['document.validTo'] || dmy(validTo),
+    days: merged['document.days'] || '',
+    status: status || 'Active',
+    type: type === 'permanent-gate-pass' ? 'Permanent' : 'Temporary',
+    photo: merged['worker.photo'] || '',
+    qr,
+  }, {
+    passColor: template.styles.themeColor, textColor: template.styles.headingColor,
+    fontFamily: template.styles.fontFamily, fontSize: template.styles.fontSize,
+    brandHeader: template.styles.brandHeaderText, brandColors: template.styles.brandColors, tagline: template.styles.brandTagline,
+    footer: template.styles.footerText, showLogo: template.styles.showLogo, logoUrl: template.styles.brandLogoUrl,
+  });
 }
 
 /** Open the freshly-rendered pass in a printable window (print / Save as PDF). */

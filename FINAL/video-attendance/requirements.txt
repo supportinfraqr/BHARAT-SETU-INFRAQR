@@ -18,3 +18,5 @@ flask           # session controller HTTP API (controller.py)
 #     pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
 #     pip install -r requirements.txt
 # The Dockerfile does exactly that.
+pyzbar          # barcode/QR decoding (zbar lib); optional QR-only fallback without it
+ruamel.yaml     # comment-preserving config.yaml edits for the /settings page

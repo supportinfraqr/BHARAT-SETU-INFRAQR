@@ -24,6 +24,11 @@ class Site(models.Model):
     city = models.CharField(max_length=60, blank=True)
     district = models.CharField(max_length=60, blank=True)
     state = models.CharField(max_length=60, blank=True)
+    # Regulatory head the site is governed under: a State site uses only that
+    # state's statutory/CLRA templates; a Central site uses only Central
+    # templates (and is not tied to a state).
+    JURISDICTION = [("state", "State"), ("central", "Central")]
+    jurisdiction = models.CharField(max_length=10, choices=JURISDICTION, default="state", db_index=True)
     pincode = models.CharField(max_length=10, blank=True)
     site_type = models.CharField(max_length=60, blank=True)
     site_category = models.CharField(max_length=60, blank=True)
@@ -58,6 +63,12 @@ class Site(models.Model):
     attendance_device_count = models.SmallIntegerField(default=0)
     attendance_coverage = models.CharField(max_length=40, blank=True)
     attendance_daily_sync = models.BooleanField(default=False)
+    # Max CCTV cameras the employer may configure for this site. Defaults to 5;
+    # a BSS admin can raise it per site.
+    max_cctv_cameras = models.PositiveSmallIntegerField(default=5)
+    # Whether the employer may view the live CCTV feed (frames) for this site.
+    # OFF by default — privacy; a BSS admin can allow it per site.
+    allow_cctv_feed_view = models.BooleanField(default=False)
     billing_contractor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                                            related_name="billing_sites",
                                            limit_choices_to={"role": "contractor"})
@@ -366,14 +377,6 @@ class Site(models.Model):
     principal_employer_approval = models.CharField(max_length=40, blank=True)
     bss_activation = models.CharField(max_length=40, blank=True)
     go_live_date = models.DateField(null=True, blank=True)
-
-    # --- Site agreement (PDF uploaded by the principal employer at site creation) ---
-    agreement_file = models.FileField(upload_to="site_agreements/", null=True, blank=True)
-    agreement_name = models.CharField(max_length=255, blank=True)
-    agreement_uploaded_at = models.DateTimeField(null=True, blank=True)
-    agreement_uploaded_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name="site_agreements_uploaded")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -686,6 +689,52 @@ class ContractorSiteAllotment(models.Model):
 
     def __str__(self):
         return f"C{self.binding.contractor_id}-S{self.site_id} {self.status}"
+
+
+class ContractorSiteDocument(models.Model):
+    """A signed agreement / purchase-order document for a contractor at a site.
+
+    Anchored to the contractor↔site relationship (not the site): either the
+    principal employer or the contractor may upload it, and both can view it.
+    Versioned — a re-upload adds a new version and keeps the history; documents
+    are never deleted.
+    """
+
+    DOC_TYPES = [("AGREEMENT", "Signed Agreement"),
+                 ("PO", "Purchase Order / Work Order")]
+
+    contractor = models.ForeignKey(User, on_delete=models.CASCADE,
+                                   related_name="site_documents",
+                                   limit_choices_to={"role": "contractor"})
+    site = models.ForeignKey(Site, on_delete=models.CASCADE,
+                             related_name="contractor_documents")
+    doc_type = models.CharField(max_length=20, choices=DOC_TYPES)
+    file = models.FileField(upload_to="contractor_site_docs/")
+    file_name = models.CharField(max_length=255, blank=True)
+    version = models.PositiveIntegerField(default=1)
+    is_current = models.BooleanField(default=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name="+")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    # AI audit result for this document (per audit-area step list). ``ai_json``
+    # holds {status, summary, steps:[{label, status, observation, risk}]}.
+    ai_status = models.CharField(max_length=20, blank=True)
+    ai_json = models.JSONField(default=dict, blank=True)
+    ai_checked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "contractor_site_document"
+        constraints = [
+            models.UniqueConstraint(fields=["contractor", "site", "doc_type", "version"],
+                                    name="uq_contractor_site_doc_version"),
+        ]
+        indexes = [
+            models.Index(fields=["contractor", "site", "doc_type"],
+                         name="idx_csd_contractor_site_type"),
+        ]
+
+    def __str__(self):
+        return f"{self.doc_type} v{self.version} C{self.contractor_id}-S{self.site_id}"
 
 
 class ContractorJob(models.Model):

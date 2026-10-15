@@ -213,10 +213,10 @@ export default function QRScannerWorkflow() {
           <div className="relative bg-black rounded-xl h-64 overflow-hidden flex items-center justify-center">
             <video ref={videoRef} className={`w-full h-full object-cover ${state==="scanning"?"block":"hidden"}`} muted playsInline/>
             <ScanFrame active={state==="scanning"} />
-            {state!=="scanning"&&<div className="text-center text-white px-6">{state==="verified"?<CheckCircle2 size={48} className="mx-auto text-green-400 bss-pulse-halo"/>:state==="error"?<XCircle size={48} className="mx-auto text-red-400"/>:state==="binding"?<Handshake size={48} className="mx-auto text-orange-300"/>:<ScanLine size={48} className="mx-auto text-bss-text-muted bss-pulse-halo"/>}<p className="mt-3 text-sm font-semibold">{message||"Ready to scan a secure credential"}</p></div>}
+            {state!=="scanning"&&<div className="text-center text-white px-6">{state==="verified"?<CheckCircle2 size={48} className="mx-auto text-bss-soft-green bss-pulse-halo"/>:state==="error"?<XCircle size={48} className="mx-auto text-bss-orange"/>:state==="binding"?<Handshake size={48} className="mx-auto text-bss-soft-orange"/>:<ScanLine size={48} className="mx-auto text-bss-text-muted bss-pulse-halo"/>}<p className="mt-3 text-sm font-semibold">{message||"Ready to scan a secure credential"}</p></div>}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <button onClick={state==="idle"||state==="error"||state==="verified"||state==="binding"?startCamera:reset} className="bg-[#073B67] text-white py-2.5 rounded-lg font-bold text-sm"><Camera size={16} className="inline mr-2"/>{state==="scanning"?"Reset":"Use camera"}</button>
+            <button onClick={state==="idle"||state==="error"||state==="verified"||state==="binding"?startCamera:reset} className="bg-[#01183A] text-white py-2.5 rounded-lg font-bold text-sm"><Camera size={16} className="inline mr-2"/>{state==="scanning"?"Reset":"Use camera"}</button>
             <button onClick={()=>fileRef.current?.click()} className="border py-2.5 rounded-lg font-bold text-sm"><Upload size={16} className="inline mr-2"/>Upload image</button>
           </div>
           <button type="button" onClick={() => setManualOpen(true)} className="w-full py-2 bg-bss-bg hover:bg-bss-bg border border-bss-border text-bss-text-secondary rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"><KeyRound size={14}/>Enter BSS ID manually</button>
@@ -230,7 +230,7 @@ export default function QRScannerWorkflow() {
         <div className="p-5">
           {state==="binding"&&contractor?(
             <div className="space-y-4">
-              <div className="flex items-center gap-4"><span className="w-14 h-14 rounded-full bg-orange-50 text-[#F47A32] grid place-items-center"><Handshake size={26}/></span><div><h2 className="font-bold text-lg">{contractor.name}</h2><code className="text-xs text-[#073B67]">{contractor.bssId}</code><p className="text-xs text-orange-600 mt-1 font-semibold">Contractor QR identified</p></div></div>
+              <div className="flex items-center gap-4"><span className="w-14 h-14 rounded-full bg-bss-soft-orange text-[#E45D24] grid place-items-center"><Handshake size={26}/></span><div><h2 className="font-bold text-lg">{contractor.name}</h2><code className="text-xs text-[#01183A]">{contractor.bssId}</code><p className="text-xs text-bss-orange mt-1 font-semibold">Contractor QR identified</p></div></div>
               {verifyData && <ScanIdentityCard data={verifyData} />}
               <p className="text-xs text-bss-text-muted bg-bss-bg rounded-xl p-3">
                 {siteCheck === 'loading'
@@ -239,18 +239,18 @@ export default function QRScannerWorkflow() {
                     ? 'This contractor has no site allotted yet, so a binding cannot be requested. Ask the contractor to get a site allotted first.'
                     : <>Your request will be created at <strong>{contractorSite}</strong> — the contractor&apos;s default site. You never choose a site; binding completes only after the contractor approves.</>}
               </p>
-              {error && <p role="alert" className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm font-semibold">{error}</p>}
+              {error && <p role="alert" className="p-3 bg-bss-soft-orange border border-bss-border text-bss-error rounded-xl text-sm font-semibold">{error}</p>}
               {existingBinding || alreadySentToContractor
-                ? <p className="p-3 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>{existingBinding?.status === 'Accepted' ? `You are already bound to ${contractor.name}${existingBinding.site ? ` at ${existingBinding.site}` : ''}.` : `A binding request is already pending with ${contractor.name}.`} Track it in <Link href="/worker/binding" className="underline font-bold">Binding Requests</Link>.</p>
+                ? <p className="p-3 bg-bss-soft-orange border border-bss-border text-bss-orange rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>{existingBinding?.status === 'Accepted' ? `You are already bound to ${contractor.name}${existingBinding.site ? ` at ${existingBinding.site}` : ''}.` : `A binding request is already pending with ${contractor.name}.`} Track it in <Link href="/worker/binding" className="underline font-bold">Binding Requests</Link>.</p>
                 : bindSent
-                  ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request sent{sentSite ? ` for ${sentSite}` : ''}! Track it in <Link href="/worker/binding" className="underline font-bold">Binding Requests</Link>.</p>
-                  : <button onClick={requestSendBinding} disabled={busy || siteCheck !== 'ok'} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F] disabled:opacity-50 disabled:cursor-not-allowed"><Handshake size={17}/>{busy ? 'Sending…' : siteCheck === 'loading' ? 'Checking site…' : 'Send binding request'}</button>}
+                  ? <p className="p-3 bg-bss-soft-green border border-bss-border text-bss-green rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request sent{sentSite ? ` for ${sentSite}` : ''}! Track it in <Link href="/worker/binding" className="underline font-bold">Binding Requests</Link>.</p>
+                  : <button onClick={requestSendBinding} disabled={busy || siteCheck !== 'ok'} className="w-full h-11 rounded-xl bg-[#01183A] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#022B5E] disabled:opacity-50 disabled:cursor-not-allowed"><Handshake size={17}/>{busy ? 'Sending…' : siteCheck === 'loading' ? 'Checking site…' : 'Send binding request'}</button>}
             </div>
           ):result?(
             <div className="space-y-5">
               {verifyData
                 ? <ScanIdentityCard data={verifyData} />
-                : <div className="flex items-center gap-4"><span className="w-16 h-16 rounded-full bg-bss-bg border border-bss-border grid place-items-center text-bss-text-muted"><UserRound size={26}/></span><div><h2 className="font-bold text-lg">{result.identity.name}</h2><code className="text-xs text-[#073B67]">{result.identity.bssId}</code><p className="text-xs text-green-700 mt-1">Verified BSS credential</p></div></div>}
+                : <div className="flex items-center gap-4"><span className="w-16 h-16 rounded-full bg-bss-bg border border-bss-border grid place-items-center text-bss-text-muted"><UserRound size={26}/></span><div><h2 className="font-bold text-lg">{result.identity.name}</h2><code className="text-xs text-[#01183A]">{result.identity.bssId}</code><p className="text-xs text-bss-green mt-1">Verified BSS credential</p></div></div>}
             </div>
           ):<div className="py-20 text-center text-bss-text-muted"><ScanLine size={44} className="mx-auto mb-3"/><p className="text-sm">Scanned result will appear here.</p></div>}
         </div>
@@ -278,7 +278,7 @@ export default function QRScannerWorkflow() {
         <section role="dialog" aria-modal="true" className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
           <header className="p-5 border-b flex justify-between items-center">
             <div>
-              <h2 className="font-semibold text-[#062D4F]">Enter BSS ID Manually</h2>
+              <h2 className="font-semibold text-[#022B5E]">Enter BSS ID Manually</h2>
               <p className="text-xs text-bss-text-muted mt-0.5">Enter a Contractor BSS ID (BSS-C...) to request binding, or a Worker BSS ID (BSS-W...) to verify.</p>
             </div>
             <button onClick={() => setManualOpen(false)} className="text-bss-text-muted hover:text-bss-text-secondary" aria-label="Close"><X size={18}/></button>
@@ -297,7 +297,7 @@ export default function QRScannerWorkflow() {
             </label>
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setManualOpen(false)} className="px-4 py-2 text-xs font-semibold text-bss-text-secondary hover:bg-bss-bg rounded-lg">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-[#073B67] text-white text-xs font-bold rounded-lg hover:bg-[#062D4F]">Identify Entity</button>
+              <button type="submit" className="px-4 py-2 bg-[#01183A] text-white text-xs font-bold rounded-lg hover:bg-[#022B5E]">Identify Entity</button>
             </div>
           </form>
         </section>

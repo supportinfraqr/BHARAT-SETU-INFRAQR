@@ -80,14 +80,14 @@ export default function EmploymentHistoryPage() {
             <ol className="relative border-s border-bss-border ms-3 space-y-5">
               {rows.map(h => (
                 <li key={h.id} className="ms-6">
-                  <span className="absolute -start-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#073B67] text-white text-[10px] font-bold ring-4 ring-white">{h.sequence ?? (rows.indexOf(h) + 1)}</span>
+                  <span className="absolute -start-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#01183A] text-white text-[10px] font-bold ring-4 ring-white">{h.sequence ?? (rows.indexOf(h) + 1)}</span>
                   <div className="bss-3d bss-scroll-rise rounded-2xl border border-bss-border bg-white p-4">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="text-[14px] font-bold text-[#1D1D1F]">{h.contractor}</h4>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${h.current ? 'bg-green-50 text-green-700' : h.status === 'Site Changed' ? 'bg-sky-50 text-sky-700' : 'bg-bss-bg text-bss-text-secondary'}`}>{h.status}</span>
-                          {h.durationLabel && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 inline-flex items-center gap-1"><Clock size={10} />{h.durationLabel}</span>}
+                          <h4 className="text-[14px] font-bold text-[#01183A]">{h.contractor}</h4>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${h.current ? 'bg-bss-soft-green text-bss-green' : h.status === 'Site Changed' ? 'bg-sky-50 text-sky-700' : 'bg-bss-bg text-bss-text-secondary'}`}>{h.status}</span>
+                          {h.durationLabel && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-bss-blue-tint text-bss-interactive-blue inline-flex items-center gap-1"><Clock size={10} />{h.durationLabel}</span>}
                         </div>
                         <p className="text-[11px] text-bss-text-muted mt-0.5">{h.employer}{h.site ? ` · ${h.site}` : ''} · {h.ref}</p>
                       </div>
@@ -104,9 +104,9 @@ export default function EmploymentHistoryPage() {
                       <div><p className="text-bss-text-muted">Wage</p><p className="font-semibold text-bss-text-primary">{h.wage ? `₹${h.wage.toLocaleString('en-IN')}` : '—'}</p></div>
                     </div>
                     <div className="mt-3 pt-3 border-t border-bss-border flex flex-wrap gap-2">
-                      {h.appointmentLetter?.downloadUrl && <a href={h.appointmentLetter.downloadUrl} target="_blank" rel="noopener noreferrer" className="h-8 px-3 rounded-lg border border-[#073B67]/20 text-[#073B67] text-[11px] font-bold inline-flex items-center gap-1.5"><FileText size={12} />Appointment letter</a>}
-                      {h.experienceLetter?.downloadUrl && <a href={h.experienceLetter.downloadUrl} target="_blank" rel="noopener noreferrer" className="h-8 px-3 rounded-lg border border-[#073B67]/20 text-[#073B67] text-[11px] font-bold inline-flex items-center gap-1.5"><FileText size={12} />Experience letter</a>}
-                      <button type="button" onClick={() => setCardFor(h)} className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-[11px] font-bold inline-flex items-center gap-1.5"><BadgeCheck size={12} />Employment card{h.current ? '' : ' (expired)'}</button>
+                      {h.appointmentLetter?.downloadUrl && <a href={h.appointmentLetter.downloadUrl} target="_blank" rel="noopener noreferrer" className="h-8 px-3 rounded-lg border border-[#01183A]/20 text-[#01183A] text-[11px] font-bold inline-flex items-center gap-1.5"><FileText size={12} />Appointment letter</a>}
+                      {h.experienceLetter?.downloadUrl && <a href={h.experienceLetter.downloadUrl} target="_blank" rel="noopener noreferrer" className="h-8 px-3 rounded-lg border border-[#01183A]/20 text-[#01183A] text-[11px] font-bold inline-flex items-center gap-1.5"><FileText size={12} />Experience letter</a>}
+                      <button type="button" onClick={() => setCardFor(h)} className="h-8 px-3 rounded-lg bg-[#01183A] text-white text-[11px] font-bold inline-flex items-center gap-1.5"><BadgeCheck size={12} />Employment card{h.current ? '' : ' (expired)'}</button>
                     </div>
                   </div>
                 </li>

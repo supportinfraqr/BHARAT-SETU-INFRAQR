@@ -336,3 +336,103 @@ def contractor_audit_document(request):
         "extractError": extract_error,
         "ai": audit,
     }}, status=status.HTTP_200_OK)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Multi-item AI audit: a named area with its own step list. Unlike the
+# register/checkpoint audit above (single document), this audits each *item*
+# (agreement, PO/WO, …) against its own explicit steps, so a report can cover
+# many items. Runs on upload and on manual re-run.
+# ─────────────────────────────────────────────────────────────────────────
+AUDIT_AREAS = {
+    "AGREEMENT": {
+        "label": "Signed Agreement Copy",
+        "objective": "Verify validity of the contract between Principal Employer and Contractor.",
+        "steps": [
+            "Collect signed agreement copy.",
+            "Verify agreement validity period.",
+            "Check start date and end date.",
+            "Verify signatures and company seals of both parties.",
+            "Review scope of work mentioned.",
+            "Verify manpower deployment clause.",
+            "Check compliance clauses (PF, ESI, Bonus, Gratuity, Labour Laws).",
+            "Record observations.",
+        ],
+    },
+    "PO": {
+        "label": "Purchase Order / Work Order",
+        "objective": "Verify the purchase order / work order.",
+        "steps": [
+            "Obtain PO/Work Order.",
+            "Verify PO number and date.",
+            "Check validity period.",
+            "Verify service description.",
+            "Confirm manpower requirement mentioned.",
+            "Match PO validity with agreement validity.",
+            "Verify authorized signatures.",
+        ],
+    },
+}
+
+
+def _derive_audit_status(steps):
+    statuses = [str(s.get("status", "")).lower() for s in steps if isinstance(s, dict)]
+    joined = " ".join(statuses)
+    if "fail" in joined:
+        return "failed"
+    if "partial" in joined or "review" in joined:
+        return "review"
+    if statuses and all("pass" in s or "notappl" in s or s in ("n/a", "na") for s in statuses):
+        return "passed"
+    return "review"
+
+
+def run_document_audit(area_key, text, context_lines=None, timeout=40):
+    """Audit one document against an audit area's step list. Returns a dict
+    ``{status, summary, overall, steps:[{step,status,observation,risk}], provider, model}``."""
+    area = AUDIT_AREAS.get(str(area_key or "").upper())
+    if area is None:
+        return {"status": "error", "message": f"Unknown audit area: {area_key}"}
+    if not _provider_credentials():
+        return {"status": "unavailable",
+                "message": "No AI provider is configured (Admin → AI Audit Settings)."}
+    if not (text or "").strip():
+        return {"status": "unavailable", "message": "No readable text in the document."}
+
+    steps_txt = "\n".join(f"{i + 1}. {s}" for i, s in enumerate(area["steps"]))
+    ctx = "\n".join(str(x) for x in (context_lines or []) if x)
+    system = (
+        "You are a strict Indian labour-law compliance auditor for the Bharat Shram Setu "
+        "portal. Evaluate the document against EACH audit step below and reply ONLY with a "
+        "compact JSON object. Be factual; never invent data."
+    )
+    prompt = (
+        f"Audit area: {area['label']}\nObjective: {area['objective']}\n"
+        + (f"Context:\n{ctx}\n" if ctx else "")
+        + f"\nAudit steps (evaluate each one):\n{steps_txt}\n\n"
+        "For every step choose status ∈ {Passed, Failed, Partial, NotApplicable}, give a short "
+        "observation and a risk ∈ {High, Medium, Low}. Compute an overall ∈ "
+        "{Passed, Failed, Partial, Review}.\n"
+        "Return JSON with exactly these keys: "
+        '{"summary":"one line","overall":"Passed|Failed|Partial|Review",'
+        '"steps":[{"step":"...","status":"...","observation":"...","risk":"..."}]}.\n\n'
+        "----- DOCUMENT TEXT (may be OCR; ignore minor noise) -----\n" + text
+    )
+    raw, cred, provider_error = _call_provider_any(system, prompt, timeout=timeout)
+    if raw is None:
+        return {"status": "unavailable",
+                "message": f"The AI provider could not be reached ({provider_error or 'timeout'})."}
+    parsed = _parse_json_block(raw) or {}
+    steps = parsed.get("steps") or []
+    if not isinstance(steps, list):
+        steps = []
+    from bss_core.models import AI_PROVIDERS
+    return {
+        "status": _derive_audit_status(steps),
+        "summary": str(parsed.get("summary") or ""),
+        "overall": str(parsed.get("overall") or ""),
+        "steps": steps,
+        "provider": cred.provider if cred else "",
+        "providerLabel": AI_PROVIDERS.get(cred.provider, {}).get("label", cred.provider) if cred else "",
+        "model": cred.model if cred else "",
+    }

@@ -255,80 +255,6 @@ class FaceEngine:
             embedding=np.array(rep["embedding"], dtype=np.float32),
         )
 
-    def recognize_frame(self, frame: np.ndarray, estimate_age: bool = False) -> List["FaceObservation"]:
-        """Detect + recognise every face in a full frame (browser/snapshot feed).
-        Unlike process_crop this takes the whole image and lets the detector
-        locate faces anywhere, then matches each embedding against the gallery."""
-        if frame is None or frame.size == 0:
-            return []
-        try:
-            reps = self._DeepFace.represent(
-                img_path=frame,
-                model_name=self.model_name,
-                detector_backend=self.detector_backend,
-                enforce_detection=False,
-            )
-        except Exception:
-            return []
-        out: List[FaceObservation] = []
-        fh, fw = frame.shape[:2]
-        for rep in reps or []:
-            area = rep.get("facial_area", {}) or {}
-            x = max(0, int(area.get("x", 0)))
-            y = max(0, int(area.get("y", 0)))
-            w, h = int(area.get("w", 0)), int(area.get("h", 0))
-            if min(w, h) < self.auto_min_face_px:
-                continue
-            if self.min_blur > 0:
-                bx2, by2 = min(fw, x + w), min(fh, y + h)
-                if bx2 > x and by2 > y:
-                    gray = cv2.cvtColor(frame[y:by2, x:bx2], cv2.COLOR_BGR2GRAY)
-                    if float(cv2.Laplacian(gray, cv2.CV_64F).var()) < self.min_blur:
-                        continue
-            embedding = np.array(rep["embedding"], dtype=np.float32)
-            pid, name, dist = self._match(embedding)
-            out.append(FaceObservation(
-                name=name, person_id=pid, distance=dist, age=None,
-                face_box=(x, y, x + w, y + h), embedding=embedding,
-            ))
-        return out
-
-    def enroll_from_images(self, person: str, frames) -> int:
-        """(Re-)enrol a worker's face photos (BSS id). The person's previous
-        vectors are dropped first, so a re-enrolment REPLACES the previous set —
-        the enrolled count then equals the distinct photos just uploaded (no
-        accumulation), and near-identical frames within the new set are still
-        deduplicated."""
-        if self.db is None:
-            return 0
-        row = self.db.get_person_by_name(person)
-        pid = row[0] if row else self.db.add_person(person, notes="enrolled via BSS face photos")
-        # Replace: clear the old vectors from the DB + in-memory gallery/store.
-        self.db.delete_embeddings(pid, self.model_name)
-        with self._lock:
-            self.gallery[:] = [g for g in self.gallery if g[0] != pid]
-            self._store.rebuild(self.gallery)
-
-        added = 0
-        for frame in frames:
-            observations = self.recognize_frame(frame)
-            if not observations:
-                continue
-            best = max(
-                observations,
-                key=lambda o: (o.face_box[2] - o.face_box[0]) * (o.face_box[3] - o.face_box[1])
-                if o.face_box else 0,
-            )
-            with self._lock:
-                if any(p == pid and cosine_distance(best.embedding, e) < 0.05
-                       for p, _, e in self.gallery):
-                    continue
-                self.db.add_embedding(pid, self.model_name, best.embedding)
-                self.gallery.append((pid, person, best.embedding))
-                self._store.add(pid, person, best.embedding)
-            added += 1
-        return added
-
     def _estimate_age(self, face_img: np.ndarray) -> Optional[int]:
         try:
             results = self._DeepFace.analyze(
@@ -447,16 +373,39 @@ class _TrackIdentity:
 class TrackIdentityTracker:
     """Locks a track_id onto an identity once assigned. A single noisy frame
     (glasses off, squint, blur) won't spawn a new person — only sustained
-    disagreement over `patience` consecutive checks releases the lock."""
-    def __init__(self, patience: int = 3):
+    disagreement over `patience` consecutive checks releases the lock.
+
+    The lock follows the *face evidence*, not just the box: callers must
+    release it (via forget) when the track's box jumps discontinuously
+    (probable detector ID-switch after occlusion) or when no face has been
+    seen for `face_absent_timeout_s` (the person in the box likely changed
+    while faces were turned away). Without this, a stale lock paints the
+    wrong name on whoever walks into the box next."""
+
+    def __init__(self, patience: int = 3, face_absent_timeout_s: float = 6.0):
         self.patience = patience
+        self.face_absent_timeout_s = face_absent_timeout_s
         self._state: dict = {}
+        self._last_face_seen: dict = {}
 
     def get(self, track_id: int):
         return self._state.get(track_id)
 
     def lock(self, track_id: int, person_id: int, name: str) -> None:
         self._state[track_id] = _TrackIdentity(person_id, name)
+
+    def mark_face_seen(self, track_id: int, now: float) -> None:
+        self._last_face_seen[track_id] = now
+
+    def face_absent_expired(self, track_id: int, now: float) -> bool:
+        """True when a locked track has produced no face observation for
+        longer than the timeout — its lock is stale and must be dropped."""
+        if track_id not in self._state:
+            return False
+        last = self._last_face_seen.get(track_id)
+        if last is None:
+            return False
+        return (now - last) > self.face_absent_timeout_s
 
     def note_hit(self, track_id: int) -> None:
         st = self._state.get(track_id)
@@ -474,3 +423,4 @@ class TrackIdentityTracker:
     def forget(self, track_ids) -> None:
         for tid in track_ids:
             self._state.pop(tid, None)
+            self._last_face_seen.pop(tid, None)

@@ -96,13 +96,12 @@ export const LWF_MASTER: MasterConfig = {
 };
 
 export const LICENSE_MASTER: MasterConfig = {
-  key: 'license', title: 'License Management', description: 'Statutory license master — state + industry applicability, government fee, security deposit, payment frequency, bonus, grade/employment category and wage zone.',
+  key: 'license', title: 'License Management', description: 'Statutory license master — who it applies to (contractor / employer / both), state, government fee, security deposit and validity. The applicable party is prompted to upload the licence.',
   statusField: 'status',
   columns: [
     { id: 'name', header: 'License Name', value: r => String(r.name) },
     { id: 'state', header: 'State', value: r => String(r.state) },
-    { id: 'industry', header: 'Industry', value: r => String(r.industry) },
-    { id: 'applicabilityCount', header: 'Applicability Count', value: r => Number(r.applicabilityCount) },
+    { id: 'appliesTo', header: 'Applies To', value: r => String(r.appliesTo) },
     { id: 'fee', header: 'Government Fee (₹)', value: r => String(r.govtFee) },
     { id: 'effective', header: 'Effective From / To', value: r => `${r.effectiveFrom} → ${r.effectiveTo}` },
     { id: 'status', header: 'License Status', value: r => String(r.status), render: r => <StatusBadge value={String(r.status)}/> },
@@ -110,23 +109,17 @@ export const LICENSE_MASTER: MasterConfig = {
   fields: [
     { name: 'name', label: 'License Name', type: 'text', required: true },
     { name: 'state', label: 'State', type: 'select', options: STATES, required: true },
-    { name: 'industry', label: 'Industry', type: 'select', options: ['Construction', 'Manufacturing', 'Textile', 'Mining', 'All Industries'], required: true },
-    { name: 'applicabilityCount', label: 'Applicability Count', type: 'number', required: true },
+    { name: 'appliesTo', label: 'Applies To', type: 'select', options: ['Contractor', 'Employer', 'Both'], required: true },
     { name: 'govtFee', label: 'Government Fee Amount (₹)', type: 'number' },
     { name: 'securityDeposit', label: 'Security Deposit Amount (₹)', type: 'number' },
     { name: 'effectiveFrom', label: 'Effective From', type: 'date', required: true },
     { name: 'effectiveTo', label: 'Effective To', type: 'date' },
     { name: 'status', label: 'License Status', type: 'select', options: ACTIVE_STATUS, required: true },
     { name: 'minWageApplicability', label: 'Minimum Wages Applicability', type: 'select', options: YES_NO, required: true },
-    { name: 'paymentFrequency', label: 'Payment Frequency', type: 'select', options: ['Monthly', 'Quarterly', 'Half Yearly', 'Yearly'] },
-    { name: 'bonusPercent', label: 'Yearly Percentage of Bonus', type: 'number', placeholder: '8.33' },
     { name: 'bonusPayoutMonth', label: 'Bonus Payout Month', type: 'text', placeholder: 'October' },
-    { name: 'grade', label: 'Grade', type: 'text', placeholder: 'Grade A / B / C' },
-    { name: 'employmentCategory', label: 'Employment Category', type: 'text', placeholder: 'Skilled / Semi-skilled / Unskilled' },
-    { name: 'wageZone', label: 'Wage Zone', type: 'text', placeholder: 'Zone 1 / 2 / 3' },
   ],
   rows: [],
-  initial: { name: '', state: 'Maharashtra', industry: 'Construction', applicabilityCount: 1, govtFee: 1000, securityDeposit: 0, effectiveFrom: '2026-04-01', effectiveTo: '2027-03-31', status: 'Active', minWageApplicability: 'Yes', paymentFrequency: 'Yearly', bonusPercent: 8.33, bonusPayoutMonth: 'October', grade: '', employmentCategory: '', wageZone: '' },
+  initial: { name: '', state: 'Maharashtra', appliesTo: 'Both', govtFee: 1000, securityDeposit: 0, effectiveFrom: '2026-04-01', effectiveTo: '2027-03-31', status: 'Active', minWageApplicability: 'Yes', bonusPayoutMonth: 'October' },
 };
 
 // Minimum Wage consistency rules (amounts and effective window).

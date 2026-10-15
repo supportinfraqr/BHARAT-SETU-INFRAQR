@@ -230,6 +230,13 @@ def _handle_compliances(user, body, method):
         if batch_ids:
             report.batch_ids = [int(b) for b in batch_ids if str(b).isdigit()]
             report.save(update_fields=["batch_ids"])
+        # The submission audit runs the SAME folder→agent pipeline as the global
+        # audit — its workspace also carries the CLRA registers + uploaded docs.
+        report.report_kind = "SUBMISSION"
+        report.status = "PENDING"
+        report.save(update_fields=["report_kind", "status", "updated_at"])
+        from .audit_workspace import schedule_report
+        schedule_report(report.id)
         # A "hard submit" overrides failed OCR — keep that on record per document.
         force = str(body.get("force") or "").lower() in ("1", "true", "yes")
         if force:
@@ -336,7 +343,7 @@ def _auto_assign_letter_templates(site):
     templates so the site detail shows them (the employer can still override, and
     rendering already falls back to the state template)."""
     from bss_core.models import LetterTemplate
-    state = (site.state or "").strip()
+    state = "Central" if getattr(site, "jurisdiction", "state") == "central" else (site.state or "").strip()
     if not state:
         return
     for kind, attr in (("APPOINTMENT", "appointment_letter_template"),
@@ -371,6 +378,10 @@ def _handle_site(user, body, method):
     if site_id:
         site = Site.objects.filter(pk=site_id, employer=user).first()
     created = site is None
+    old_head = None
+    if not created:
+        old_head = ("Central" if getattr(site, "jurisdiction", "state") == "central"
+                    else (site.state or "").strip())
 
     if site is None:
         code = str(body.get("site_code") or body.get("code") or "").strip().upper()
@@ -388,6 +399,9 @@ def _handle_site(user, body, method):
         site.location = str(body.get("location") or "").strip()
     if body.get("state") is not None:
         site.state = str(body.get("state") or "").strip()
+    if body.get("jurisdiction") is not None:
+        j = str(body.get("jurisdiction") or "").strip().lower()
+        site.jurisdiction = j if j in ("state", "central") else "state"
     if body.get("status") is not None:
         site.site_status = str(body.get("status") or "").strip()
     if body.get("startDate") is not None:
@@ -418,56 +432,175 @@ def _handle_site(user, body, method):
     if "experienceLetterTemplateId" in body:
         site.experience_letter_template_id = _tid(body.get("experienceLetterTemplateId"))
 
-    # Site agreement (PDF) — uploaded by the employer at site creation. Multipart
-    # request, so the file arrives as an UploadedFile on the body.
-    agreement = body.get("agreement")
-    if agreement is not None and hasattr(agreement, "read"):
-        head = agreement.read(5)
-        agreement.seek(0)
-        if head != b"%PDF-":
-            raise PortalMutationError("The site agreement must be a PDF file.", 415)
-        if getattr(agreement, "size", 0) > 10 * 1024 * 1024:
-            raise PortalMutationError("The site agreement must be 10 MB or smaller.", 413)
-        site.agreement_file = agreement
-        site.agreement_name = (getattr(agreement, "name", "") or "site-agreement.pdf")[:255]
-        site.agreement_uploaded_at = timezone.now()
-        site.agreement_uploaded_by = user
-
     site.save()
-    # On create, pin the site's state letter templates (if the admin has any).
+    # On create, pin the site's head letter templates (if the admin has any).
     if created:
         _auto_assign_letter_templates(site)
         site.save(update_fields=["appointment_letter_template", "experience_letter_template",
                                  "updated_at"])
+    else:
+        new_head = ("Central" if getattr(site, "jurisdiction", "state") == "central"
+                    else (site.state or "").strip())
+        # If the site's regulatory head changed (State ↔ Central, or a different
+        # state), re-pin the letters to the new head's templates so a site can
+        # never keep letters from the wrong head.
+        if "appointmentLetterTemplateId" not in body and "experienceLetterTemplateId" not in body \
+                and old_head != new_head:
+            site.appointment_letter_template = None
+            site.experience_letter_template = None
+            _auto_assign_letter_templates(site)
+            site.save(update_fields=["appointment_letter_template", "experience_letter_template",
+                                     "updated_at"])
     return site.id
+
+
+# ── Contractor↔site documents (signed agreement / purchase order) ──────────
+# One document per (contractor, site, doc_type), versioned — a re-upload adds a
+# new version and keeps the history; documents are NEVER deleted. Either the
+# principal employer or the contractor may upload; both (and BSS staff) can view.
+_CSD_ALLOWED_MIME = {"application/pdf", "image/jpeg", "image/png"}
+_CSD_MAX_BYTES = 10 * 1024 * 1024
+
+
+def _csd_doc_type(value):
+    t = str(value or "").strip().upper()
+    return t if t in ("AGREEMENT", "PO") else ""
+
+
+def _csd_audit(doc):
+    """Run the AI audit for a contractor-site document (best-effort)."""
+    from api import ocr_client
+
+    from . import ai_audit
+    try:
+        data = doc.file.read()
+        doc.file.seek(0)
+        text = ocr_client.extract_text(data, doc.file_name or "document.pdf") or ""
+    except Exception:  # noqa: BLE001
+        text = ""
+    site = doc.site
+    context = [
+        f"Contractor / Service Provider: {payloads._party_name(doc.contractor)}",
+        "Principal employer: " + (payloads._party_name(site.employer)
+                                  if site and site.employer_id else ""),
+        f"Site: {getattr(site, 'site_name', '') if site else ''} "
+        f"{getattr(site, 'state', '') if site else ''}".strip(),
+    ]
+    result = ai_audit.run_document_audit(doc.doc_type, text, context_lines=context)
+    doc.ai_status = str(result.get("status") or "")
+    doc.ai_json = result
+    doc.ai_checked_at = timezone.now()
+    doc.save(update_fields=["ai_status", "ai_json", "ai_checked_at"])
+    return result
+
+
+def _csd_store(contractor, site, doc_type, upload, actor):
+    """Persist a new version of a contractor-site document."""
+    from bss_core.models import ContractorSiteDocument
+    if upload is None:
+        raise PortalMutationError("Choose a file to upload.", 400)
+    if getattr(upload, "size", 0) > _CSD_MAX_BYTES:
+        raise PortalMutationError("The document must be 10 MB or smaller.", 413)
+    head = upload.read(8)
+    upload.seek(0)
+    mime = (getattr(upload, "content_type", "") or "").lower()
+    ok = (head[:5] == b"%PDF-" or head[:3] == b"\xff\xd8\xff"
+          or head[:8] == b"\x89PNG\r\n\x1a\n")
+    if not ok or mime not in _CSD_ALLOWED_MIME:
+        raise PortalMutationError("Only PDF, JPEG or PNG files are accepted.", 415)
+    last = (ContractorSiteDocument.objects
+            .filter(contractor=contractor, site=site, doc_type=doc_type)
+            .order_by("-version").first())
+    next_version = (last.version + 1) if last else 1
+    ContractorSiteDocument.objects.filter(
+        contractor=contractor, site=site, doc_type=doc_type, is_current=True
+    ).update(is_current=False)
+    doc = ContractorSiteDocument.objects.create(
+        contractor=contractor, site=site, doc_type=doc_type,
+        file=upload, file_name=(getattr(upload, "name", "") or "document")[:255],
+        version=next_version, is_current=True, uploaded_by=actor)
+    # Audit on upload (best-effort — never block the upload itself).
+    try:
+        _csd_audit(doc)
+    except Exception:  # noqa: BLE001
+        pass
+    return doc
+
+
+def _contractor_allowed_site(contractor, site_id):
+    from bss_core.models import ContractorSiteAllotment
+    return ContractorSiteAllotment.objects.filter(
+        site_id=site_id, binding__contractor=contractor,
+        binding__binding_status="ACCEPTED", status="APPROVED").exists()
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def contractor_site_document_upload(request):
+    """Contractor uploads/replaces a signed agreement or PO for an allotted site."""
+    if request.user.role != "contractor":
+        return Response({"error": "Contractors only."}, status=status.HTTP_403_FORBIDDEN)
+    site = Site.objects.filter(pk=request.data.get("siteId")).first()
+    doc_type = _csd_doc_type(request.data.get("docType"))
+    if site is None or not doc_type:
+        return Response({"error": "A site and document type are required."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if not _contractor_allowed_site(request.user, site.id):
+        return Response({"error": "This site is not allotted to you (binding required first)."},
+                        status=status.HTTP_403_FORBIDDEN)
+    doc = _csd_store(request.user, site, doc_type, request.FILES.get("file"), request.user)
+    return Response({"data": payloads._csd_row(doc)}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def employer_site_document_upload(request):
+    """Principal employer uploads/replaces a signed agreement or PO for a
+    contractor bound to one of their sites."""
+    if request.user.role != "employer":
+        return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
+    site = Site.objects.filter(pk=request.data.get("siteId"), employer=request.user).first()
+    contractor = User.objects.filter(pk=request.data.get("contractorId"),
+                                     role="contractor").first()
+    doc_type = _csd_doc_type(request.data.get("docType"))
+    if site is None or contractor is None or not doc_type:
+        return Response({"error": "A site, contractor and document type are required."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if not _contractor_allowed_site(contractor, site.id):
+        return Response({"error": "That contractor is not bound to this site yet."},
+                        status=status.HTTP_403_FORBIDDEN)
+    doc = _csd_store(contractor, site, doc_type, request.FILES.get("file"), request.user)
+    return Response({"data": payloads._csd_row(doc)}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
-def site_agreement(request, site_id):
-    """Download a site's agreement PDF — the owning employer, any contractor the
-    site is allotted to, or BSS staff/admin/government."""
+def site_document_file(request, document_id):
+    """Stream a contractor-site document — owning employer, that contractor, or
+    BSS staff/admin/government."""
     from django.http import FileResponse
 
-    from bss_core.models import ContractorSiteAllotment
+    from bss_core.models import ContractorSiteDocument
 
-    site = Site.objects.filter(pk=site_id).first()
-    if site is None or not site.agreement_file:
-        return Response({"error": "No site agreement is available."},
-                        status=status.HTTP_404_NOT_FOUND)
+    doc = (ContractorSiteDocument.objects.filter(pk=document_id)
+           .select_related("site", "contractor").first())
+    if doc is None or not doc.file:
+        return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
     user = request.user
-    allowed = user.role in ("bss_admin", "bss_staff", "government", "admin") \
-        or site.employer_id == user.id
-    if not allowed and user.role == "contractor":
-        allowed = ContractorSiteAllotment.objects.filter(
-            site=site, binding__contractor=user, binding__binding_status="ACCEPTED",
-            status="APPROVED").exists()
+    allowed = (user.role in ("bss_admin", "bss_staff", "government", "admin")
+               or doc.contractor_id == user.id
+               or doc.site.employer_id == user.id)
     if not allowed:
         return Response({"error": "Not authorized."}, status=status.HTTP_403_FORBIDDEN)
-    filename = (site.agreement_name or f"site-agreement-{site.site_code}.pdf").split("/")[-1]
-    response = FileResponse(site.agreement_file.open("rb"), as_attachment=False, filename=filename)
-    response["Content-Type"] = "application/pdf"
+    name = (doc.file_name or f"{doc.doc_type}-{doc.id}").split("/")[-1]
+    ext = name.rsplit(".", 1)[-1].lower()
+    ctype = {"pdf": "application/pdf", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+             "png": "image/png"}.get(ext, "application/octet-stream")
+    response = FileResponse(doc.file.open("rb"), as_attachment=False, filename=name)
+    response["Content-Type"] = ctype
     response["X-Content-Type-Options"] = "nosniff"
     return response
 
@@ -475,32 +608,23 @@ def site_agreement(request, site_id):
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
-def employer_site_agreement_upload(request, site_id):
-    """Upload/replace a site's agreement PDF (owning employer only)."""
-    if request.user.role != "employer":
-        return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
-    site = Site.objects.filter(pk=site_id, employer=request.user).first()
-    if site is None:
-        return Response({"error": "Site not found."}, status=status.HTTP_404_NOT_FOUND)
-    upload = request.FILES.get("agreement") or request.FILES.get("file")
-    if upload is None:
-        return Response({"error": "Choose a PDF file."}, status=status.HTTP_400_BAD_REQUEST)
-    head = upload.read(5)
-    upload.seek(0)
-    if head != b"%PDF-":
-        return Response({"error": "The site agreement must be a PDF file."},
-                        status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
-    if getattr(upload, "size", 0) > 10 * 1024 * 1024:
-        return Response({"error": "The site agreement must be 10 MB or smaller."},
-                        status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
-    site.agreement_file = upload
-    site.agreement_name = (upload.name or "site-agreement.pdf")[:255]
-    site.agreement_uploaded_at = timezone.now()
-    site.agreement_uploaded_by = request.user
-    site.save(update_fields=["agreement_file", "agreement_name", "agreement_uploaded_at",
-                             "agreement_uploaded_by", "updated_at"])
-    return Response({"data": {"hasAgreement": True, "agreementName": site.agreement_name}},
-                    status=status.HTTP_200_OK)
+def site_document_audit(request, document_id):
+    """(Re)run the AI audit for a contractor-site document — employer owner,
+    that contractor, or BSS staff/admin/government."""
+    from bss_core.models import ContractorSiteDocument
+
+    doc = (ContractorSiteDocument.objects.filter(pk=document_id)
+           .select_related("site", "contractor").first())
+    if doc is None or not doc.file:
+        return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+    user = request.user
+    allowed = (user.role in ("bss_admin", "bss_staff", "government", "admin")
+               or doc.contractor_id == user.id
+               or doc.site.employer_id == user.id)
+    if not allowed:
+        return Response({"error": "Not authorized."}, status=status.HTTP_403_FORBIDDEN)
+    _csd_audit(doc)
+    return Response({"data": payloads._csd_row(doc)}, status=status.HTTP_200_OK)
 
 
 def _employer_set_gate_pass_block(user, body):
@@ -830,6 +954,8 @@ __all__ = [
     "_handle_rozgar_apply",
     "_handle_rozgar_respond",
     "_handle_site",
-    "employer_site_agreement_upload",
-    "site_agreement",
+    "contractor_site_document_upload",
+    "employer_site_document_upload",
+    "site_document_file",
+    "site_document_audit",
 ]

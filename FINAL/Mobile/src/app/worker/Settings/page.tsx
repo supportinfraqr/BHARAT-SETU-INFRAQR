@@ -121,7 +121,7 @@ export default function SettingsPage() {
         actions={saved ? <span className="hidden sm:flex text-xs text-white/80 gap-1 items-center font-medium"><CheckCircle2 size={14} />Saved</span> : undefined}
       />
 
-      {profileError && <p role="alert" className="p-3 bg-red-50 text-red-700 rounded-lg text-sm font-medium">{profileError}</p>}
+      {profileError && <p role="alert" className="p-3 bg-bss-soft-orange text-bss-error rounded-lg text-sm font-medium">{profileError}</p>}
 
       <SettingSection
         icon={Globe2}
@@ -188,8 +188,8 @@ export default function SettingsPage() {
           <Toggle label="Show photo on public verification" detail="Authorised roles remain unaffected" checked={prefs.consentToPublicPhoto} onChange={v => void updateSetting('consentToPublicPhoto', v)} />
           <Toggle label="Allow role-based data sharing" detail="Workbook permissions are always enforced" checked={prefs.consentToDataSharing} onChange={v => void updateSetting('consentToDataSharing', v)} />
           <Toggle label="Allow binding & unbinding" detail="Contractors can send binding requests; both parties must still consent" checked={prefs.bindingEnabled} onChange={v => void updateSetting('bindingEnabled', v)} />
-          <a href="/policy" className="mt-3 flex items-center justify-between text-xs font-semibold text-[#073B67] hover:underline">Read the privacy policy<ChevronRight size={14} /></a>
-          <a href="/data-sharing" className="mt-2 flex items-center justify-between text-xs font-semibold text-[#073B67] hover:underline">Review data-sharing policy<ChevronRight size={14} /></a>
+          <a href="/policy" className="mt-3 flex items-center justify-between text-xs font-semibold text-[#01183A] hover:underline">Read the privacy policy<ChevronRight size={14} /></a>
+          <a href="/data-sharing" className="mt-2 flex items-center justify-between text-xs font-semibold text-[#01183A] hover:underline">Review data-sharing policy<ChevronRight size={14} /></a>
         </SettingSection>
       </div>
 
@@ -201,7 +201,7 @@ export default function SettingsPage() {
         <div className="grid sm:grid-cols-2 gap-3">
           <div className="p-3 rounded-lg border border-bss-border bg-white sm:col-span-2">
             <p className="text-xs font-semibold text-bss-text-primary flex gap-2 items-center"><MonitorCog size={14} />Active Session</p>
-            <p className="text-[11px] text-green-700 font-medium mt-1">BSS Worker ID: <span className="font-mono">{worker.identity?.bssId || 'Active'}</span></p>
+            <p className="text-[11px] text-bss-green font-medium mt-1">BSS Worker ID: <span className="font-mono">{worker.identity?.bssId || 'Active'}</span></p>
             <p className="text-[11px] text-bss-text-secondary mt-1">Aadhaar Status: <strong className="text-bss-text-primary">{worker.identity?.aadhaarVerified ? 'Verified' : 'Pending Verification'}</strong></p>
           </div>
         </div>
@@ -229,7 +229,7 @@ export default function SettingsPage() {
           <button onClick={exportData} className="h-10 px-4 rounded-lg border border-bss-border text-xs font-semibold flex items-center justify-center gap-2 hover:bg-bss-bg transition">
             <Download size={15} />Download My Data
           </button>
-          <SignOutButton label="Sign Out on This Device" className="h-10 px-4 rounded-lg border border-red-200 bg-white text-red-700 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-red-50 transition" />
+          <SignOutButton label="Sign Out on This Device" className="h-10 px-4 rounded-lg border border-bss-border bg-white text-bss-error text-xs font-semibold flex items-center justify-center gap-2 hover:bg-bss-soft-orange transition" />
         </div>
       </SettingSection>
     </div>
@@ -238,7 +238,7 @@ export default function SettingsPage() {
 
 function SettingSection({ icon: Icon, title, subtitle, children }: { icon: typeof Globe2; title: string; subtitle: string; children: React.ReactNode }) {
   return (
-    <section className="bss-3d bss-scroll-rise bg-white border border-bss-border rounded-2xl overflow-hidden shadow-sm">
+    <section className="bss-3d bss-scroll-rise bss-card rounded-2xl overflow-hidden">
       <header className="p-4 border-b border-bss-border flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <span className="w-9 h-9 rounded-lg bg-bss-blue-tint text-bss-interactive-blue flex items-center justify-center"><Icon size={17} /></span>
@@ -261,7 +261,7 @@ function Toggle({ label, detail, checked, onChange }: { label: string; detail: s
         <small className="block text-[11px] text-bss-text-muted mt-0.5">{detail}</small>
       </span>
       <input type="checkbox" className="sr-only" checked={checked} onChange={e => onChange(e.target.checked)} />
-      <span className={`w-10 h-6 rounded-full p-0.5 transition ${checked ? 'bg-[#073B67]' : 'bg-bss-bg'}`}>
+      <span className={`w-10 h-6 rounded-full p-0.5 transition ${checked ? 'bg-[#01183A]' : 'bg-bss-bg'}`}>
         <span className={`block w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
       </span>
     </label>

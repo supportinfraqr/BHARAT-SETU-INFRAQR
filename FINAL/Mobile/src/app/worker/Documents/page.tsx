@@ -174,11 +174,11 @@ export default function DocumentsModule() {
 
   const getStatusConfig = (status: string) => {
     switch (label(status)) {
-      case 'Verified': return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle2 size={14} /> };
+      case 'Verified': return { bg: 'bg-bss-soft-green', text: 'text-bss-green', icon: <CheckCircle2 size={14} /> };
       case 'Uploaded': return { bg: 'bg-bss-blue-tint', text: 'text-bss-interactive-blue', icon: <FileText size={14} /> };
-      case 'Under Verification': return { bg: 'bg-blue-100', text: 'text-bss-interactive-blue', icon: <Clock size={14} /> };
-      case 'Rejected': return { bg: 'bg-red-100', text: 'text-red-700', icon: <XCircle size={14} /> };
-      case 'Expired': return { bg: 'bg-orange-100', text: 'text-orange-700', icon: <AlertTriangle size={14} /> };
+      case 'Under Verification': return { bg: 'bg-bss-blue-tint', text: 'text-bss-interactive-blue', icon: <Clock size={14} /> };
+      case 'Rejected': return { bg: 'bg-bss-soft-orange', text: 'text-bss-error', icon: <XCircle size={14} /> };
+      case 'Expired': return { bg: 'bg-bss-soft-orange', text: 'text-bss-orange', icon: <AlertTriangle size={14} /> };
       case 'Missing': return { bg: 'bg-bss-bg', text: 'text-bss-text-muted', icon: <FileText size={14} /> };
       case 'Issued': return { bg: 'bg-sky-100', text: 'text-sky-700', icon: <FileText size={14} /> };
       default: return { bg: 'bg-bss-bg', text: 'text-bss-text-muted', icon: <FileText size={14} /> };
@@ -186,31 +186,31 @@ export default function DocumentsModule() {
   };
 
   const columns: DataColumn<DocumentRow>[] = [
-    { id: 'name', header: 'Document name', value: d => d.name, render: d => <span className="font-semibold text-bss-text-primary">{d.name}{d.mandatory && <span className="text-red-500 ml-1">*</span>}</span> },
-    { id: 'type', header: 'Mandatory / Optional', value: d => d.mandatory ? 'Mandatory' : 'Optional', render: d => <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${d.mandatory ? 'bg-orange-50 text-[#F47A32]' : 'bg-bss-bg text-bss-text-muted'}`}>{d.mandatory ? 'Mandatory' : 'Optional'}</span> },
-    { id: 'owner', header: 'Document Owner', value: d => d.owner, render: d => d.owner === 'System' ? <span className="text-[10px] font-bold bg-[#073B67]/10 text-[#073B67] px-2 py-0.5 rounded">Auto-Generated</span> : d.owner },
-    { id: 'status', header: 'Document Status', value: d => gatePassFor(d)?.status ?? (gatePassDisabled(d) ? 'Disabled' : label(d.status)), render: d => { const gp = gatePassFor(d); if (gp) { const tone = gp.status === 'Approved' ? 'bg-green-100 text-green-700' : gp.status === 'Blocked' ? 'bg-bss-bg text-bss-text-secondary' : 'bg-orange-100 text-orange-700'; return <span className={`text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 ${tone}`}><CheckCircle2 size={14}/>{gp.status}</span>; } if (gatePassDisabled(d)) return <span className="text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 bg-bss-bg text-bss-text-muted">Disabled</span>; const config = getStatusConfig(d.status); return <span className="inline-flex flex-col items-start gap-1"><span className={`text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 ${config.bg} ${config.text}`}>{config.icon}{label(d.status)}</span></span>; } },
+    { id: 'name', header: 'Document name', value: d => d.name, render: d => <span className="font-semibold text-bss-text-primary">{d.name}{d.mandatory && <span className="text-bss-error ml-1">*</span>}</span> },
+    { id: 'type', header: 'Mandatory / Optional', value: d => d.mandatory ? 'Mandatory' : 'Optional', render: d => <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${d.mandatory ? 'bg-bss-soft-orange text-[#E45D24]' : 'bg-bss-bg text-bss-text-muted'}`}>{d.mandatory ? 'Mandatory' : 'Optional'}</span> },
+    { id: 'owner', header: 'Document Owner', value: d => d.owner, render: d => d.owner === 'System' ? <span className="text-[10px] font-bold bg-[#01183A]/10 text-[#01183A] px-2 py-0.5 rounded">Auto-Generated</span> : d.owner },
+    { id: 'status', header: 'Document Status', value: d => gatePassFor(d)?.status ?? (gatePassDisabled(d) ? 'Disabled' : label(d.status)), render: d => { const gp = gatePassFor(d); if (gp) { const tone = gp.status === 'Approved' ? 'bg-bss-soft-green text-bss-green' : gp.status === 'Blocked' ? 'bg-bss-bg text-bss-text-secondary' : 'bg-bss-soft-orange text-bss-orange'; return <span className={`text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 ${tone}`}><CheckCircle2 size={14}/>{gp.status}</span>; } if (gatePassDisabled(d)) return <span className="text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 bg-bss-bg text-bss-text-muted">Disabled</span>; const config = getStatusConfig(d.status); return <span className="inline-flex flex-col items-start gap-1"><span className={`text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 ${config.bg} ${config.text}`}>{config.icon}{label(d.status)}</span></span>; } },
     { id: 'date', header: 'Date', value: d => gatePassFor(d)?.validFrom ?? formatDate(d.date) ?? '-' },
     { id: 'expiry', header: 'Expiry Date', value: d => gatePassFor(d)?.validTo ?? formatDate(d.expiry) ?? '-', render: d => { const gp = gatePassFor(d); const value = gp ? gp.validTo : formatDate(d.expiry); return value ? <span className="text-xs font-semibold text-bss-text-secondary">{value}</span> : <span className="text-bss-text-muted">—</span>; } },
     {
       id: 'actions', header: 'Actions', filterable: false, value: d => label(d.status), render: d => {
         const gp = gatePassFor(d);
-        if (gp) return <button onClick={() => { void viewPass(gp); }} disabled={gp.blocked} className="h-8 px-3 rounded-lg bg-[#0F172A] text-white text-[11px] font-semibold inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"><Eye size={13}/>View pass</button>;
+        if (gp) return <button onClick={() => { void viewPass(gp); }} disabled={gp.blocked} className="h-8 px-3 rounded-lg bg-[#01183A] text-white text-[11px] font-semibold inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"><Eye size={13}/>View pass</button>;
         if (gatePassDisabled(d)) return <span className="text-[11px] font-semibold text-bss-text-muted">Not applicable</span>;
         const locked = Boolean(d.locked);
         return <div className="flex gap-1.5 items-center">
-          {d.id && label(d.status) !== 'Missing' && <button onClick={() => openDocument(d)} className="p-1.5 text-bss-text-muted hover:text-[#073B67] bg-bss-bg rounded border" title="View Document"><Eye size={15} /></button>}
-          {d.id && <a href={`/api/worker/documents/${d.id}/file`} download className="p-1.5 text-bss-text-muted hover:text-[#073B67] bg-bss-bg rounded border" title="Download"><Download size={15} /></a>}
+          {d.id && label(d.status) !== 'Missing' && <button onClick={() => openDocument(d)} className="p-1.5 text-bss-text-muted hover:text-[#01183A] bg-bss-bg rounded border" title="View Document"><Eye size={15} /></button>}
+          {d.id && <a href={`/api/worker/documents/${d.id}/file`} download className="p-1.5 text-bss-text-muted hover:text-[#01183A] bg-bss-bg rounded border" title="Download"><Download size={15} /></a>}
           {locked ? (
             d.source === 'digilocker'
               ? <span className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-100 px-2 py-1 rounded" title="Fetched from DigiLocker — upload and delete disabled">DigiLocker</span>
-              : <span className="text-[10px] font-bold text-[#073B67] bg-[#073B67]/10 px-2 py-1 rounded" title="System-generated credential — upload and delete disabled">System</span>
+              : <span className="text-[10px] font-bold text-[#01183A] bg-[#01183A]/10 px-2 py-1 rounded" title="System-generated credential — upload and delete disabled">System</span>
           ) : (
             <>
-              {d.owner !== 'System' && !d.id && <button onClick={() => chooseFile(d)} disabled={busy === d.code} className="bg-[#073B67] text-white px-2.5 py-1 rounded font-bold text-[10px] whitespace-nowrap flex items-center gap-1 disabled:opacity-60"><Upload size={12} />{busy === d.code ? 'Uploading…' : 'Upload'}</button>}
+              {d.owner !== 'System' && !d.id && <button onClick={() => chooseFile(d)} disabled={busy === d.code} className="bg-[#01183A] text-white px-2.5 py-1 rounded font-bold text-[10px] whitespace-nowrap flex items-center gap-1 disabled:opacity-60"><Upload size={12} />{busy === d.code ? 'Uploading…' : 'Upload'}</button>}
             </>
           )}
-          {!d.locked && d.owner !== 'System' && d.id && <button onClick={() => remove(d)} className="p-1.5 text-bss-text-muted hover:text-red-600 bg-bss-bg rounded border" title="Delete Document"><Trash2 size={15} /></button>}
+          {!d.locked && d.owner !== 'System' && d.id && <button onClick={() => remove(d)} className="p-1.5 text-bss-text-muted hover:text-bss-error bg-bss-bg rounded border" title="Delete Document"><Trash2 size={15} /></button>}
         </div>;
       },
     },
@@ -238,8 +238,8 @@ export default function DocumentsModule() {
 
       <input ref={inputRef} type="file" accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={e => void receiveFile(e.target.files?.[0])} />
 
-      {error && <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-      {notice && <div className="rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">{notice}</div>}
+      {error && <div className="rounded-xl border border-bss-border bg-bss-soft-orange px-4 py-3 text-sm text-bss-error">{error}</div>}
+      {notice && <div className="rounded-xl border border-bss-border bg-bss-soft-green px-4 py-3 text-sm text-bss-green">{notice}</div>}
 
       <section className="bss-scroll-rise flex items-start gap-3 rounded-2xl border border-bss-border bg-bss-blue-tint/60 p-4">
         <span className="w-9 h-9 rounded-xl bg-white border border-bss-border text-bss-interactive-blue grid place-items-center flex-shrink-0"><Info size={17}/></span>

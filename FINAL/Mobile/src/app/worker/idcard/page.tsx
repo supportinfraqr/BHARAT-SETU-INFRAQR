@@ -42,7 +42,7 @@ export default function IdentityCardPage() {
   const dateOfBirth = formatCardDate(worker.identity.dob);
   // Site colour drives the card's top band (front & back). Falls back to a
   // neutral band when the site has no colour set.
-  const siteColour = (worker.employment.siteDetails?.colour || '').trim() || '#F47A32';
+  const siteColour = (worker.employment.siteDetails?.colour || '').trim() || '#E45D24';
   const employerName = worker.employment.employer || '—';
   const siteCode = worker.employment.siteDetails?.code || '—';
 
@@ -92,16 +92,16 @@ export default function IdentityCardPage() {
         <div className="flex gap-1 w-full sm:w-auto">
           <button
             onClick={() => setCardFormat('standard')}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${!isEmployment ? 'bg-[#073B67] text-white shadow-sm' : 'bg-bss-bg text-bss-text-secondary hover:bg-bss-bg'}`}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${!isEmployment ? 'bg-[#01183A] text-white shadow-sm' : 'bg-bss-bg text-bss-text-secondary hover:bg-bss-bg'}`}
           >
             <IdCard size={15}/> Standard BSS ID Card
           </button>
           {isBound && (
           <button
             onClick={() => setCardFormat('employment')}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${isEmployment ? 'bg-[#073B67] text-white shadow-sm' : 'bg-bss-bg text-bss-text-secondary hover:bg-bss-bg'}`}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${isEmployment ? 'bg-[#01183A] text-white shadow-sm' : 'bg-bss-bg text-bss-text-secondary hover:bg-bss-bg'}`}
           >
-            <Briefcase size={15} className="text-orange-400"/> Employment Card
+            <Briefcase size={15} className="text-bss-orange"/> Employment Card
           </button>
           )}
         </div>
@@ -110,13 +110,13 @@ export default function IdentityCardPage() {
         <div className="bg-bss-bg p-1 rounded-xl flex gap-1 shadow-inner w-full sm:w-auto">
           <button 
             onClick={() => setIsFlipped(false)}
-            className={`flex-1 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${!isFlipped ? 'bg-white text-[#073B67] shadow-sm' : 'text-bss-text-muted hover:text-bss-text-primary'}`}
+            className={`flex-1 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${!isFlipped ? 'bg-white text-[#01183A] shadow-sm' : 'text-bss-text-muted hover:text-bss-text-primary'}`}
           >
             Front Side
           </button>
           <button 
             onClick={() => setIsFlipped(true)}
-            className={`flex-1 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${isFlipped ? 'bg-white text-[#073B67] shadow-sm' : 'text-bss-text-muted hover:text-bss-text-primary'}`}
+            className={`flex-1 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${isFlipped ? 'bg-white text-[#01183A] shadow-sm' : 'text-bss-text-muted hover:text-bss-text-primary'}`}
           >
             Back Side
           </button>
@@ -143,7 +143,7 @@ export default function IdentityCardPage() {
             <div 
               ref={frontRef}
               data-bss-face
-              className="absolute inset-0 backface-hidden bg-[#0A192F] rounded-xl shadow-2xl overflow-hidden border-2 border-slate-400 text-white flex flex-col font-sans"
+              className="absolute inset-0 backface-hidden bg-[#01183A] rounded-xl shadow-2xl overflow-hidden border-2 border-bss-border text-white flex flex-col font-sans"
               style={{ opacity: isFlipped ? 0 : 1, pointerEvents: isFlipped ? 'none' : 'auto' }}
               aria-hidden={isFlipped}
             >
@@ -155,67 +155,67 @@ export default function IdentityCardPage() {
               <div className="h-[57px] px-4 pt-3 flex justify-between items-start relative z-10 border-b border-white/[0.08]">
                  <div className="flex items-center gap-2.5 min-w-0">
                    <div className="leading-tight flex flex-col items-start min-w-0">
-                     <h2 className="text-[15px] font-extrabold tracking-[-0.015em] leading-none whitespace-nowrap" aria-label="Bharat Shram Setu"><span className="text-white">Bharat</span><span className="text-[#FF9933]">Shram</span><span className="text-[#2F9E67]">Setu</span></h2>
-                     <p className="text-[5.5px] text-slate-300 mt-1.5 tracking-[0.105em] font-semibold uppercase leading-none whitespace-nowrap">One Nation. One Identity. One Future.</p>
+                     <h2 className="text-[15px] font-extrabold tracking-[-0.015em] leading-none whitespace-nowrap" aria-label="Bharat Shram Setu"><span className="text-white">Bharat</span><span className="text-[#FF9933]">Shram</span><span className="text-[#14843C]">Setu</span></h2>
+                     <p className="text-[5.5px] text-bss-text-muted mt-1.5 tracking-[0.105em] font-semibold uppercase leading-none whitespace-nowrap">One Nation. One Identity. One Future.</p>
                    </div>
                  </div>
                  <div className="flex flex-col items-end">
-                   <div className="inline-flex items-center gap-1.5 h-[18px] px-2 rounded-full border border-slate-300/35 bg-white/[0.08] shadow-inner" aria-label="RFID enabled card">
-                     <RadioTower size={9} className="text-slate-200" strokeWidth={2} />
-                     <span className="text-[6px] text-slate-100 uppercase font-extrabold tracking-[0.12em]">RFID Enabled</span>
+                   <div className="inline-flex items-center gap-1.5 h-[18px] px-2 rounded-full border border-bss-border/35 bg-white/[0.08] shadow-inner" aria-label="RFID enabled card">
+                     <RadioTower size={9} className="text-bss-bg" strokeWidth={2} />
+                     <span className="text-[6px] text-bss-bg uppercase font-extrabold tracking-[0.12em]">RFID Enabled</span>
                    </div>
                  </div>
               </div>
 
               <div className="flex px-4 pt-3 pb-2 items-stretch gap-3 relative z-10 flex-1 min-h-0">
-                 <div className="w-[91px] h-[116px] bg-slate-100 rounded-[9px] overflow-hidden border-[2px] border-slate-200 shadow-[0_5px_14px_rgba(0,0,0,0.32)] ring-1 ring-white/25 flex-shrink-0 flex items-center justify-center">
+                 <div className="w-[91px] h-[116px] bg-bss-bg rounded-[9px] overflow-hidden border-[2px] border-bss-border shadow-[0_5px_14px_rgba(0,0,0,0.32)] ring-1 ring-white/25 flex-shrink-0 flex items-center justify-center">
                    {worker.identity.photoUrl && worker.identity.photoUrl !== '/worker-profile.png' ? (
                      <img src={worker.identity.photoUrl} className="w-full h-full object-cover filter contrast-[1.08] saturate-[1.03]" alt={`${worker.identity.name} profile`} />
                    ) : (
-                     <UserRound size={42} className="text-slate-400" />
+                     <UserRound size={42} className="text-bss-text-muted" />
                    )}
                  </div>
 
                  <div className="flex-1 min-w-0 flex flex-col pt-0.5">
                    <div>
-                     <p className="text-[6px] text-slate-300 uppercase tracking-[0.17em] font-bold mb-1">Worker Name</p>
+                     <p className="text-[6px] text-bss-text-muted uppercase tracking-[0.17em] font-bold mb-1">Worker Name</p>
                      <p className="text-[16px] font-extrabold tracking-[0.025em] uppercase text-white leading-[1.05] drop-shadow-sm break-words">{worker.identity.name}</p>
                    </div>
                    <div className="mt-3">
-                     <p className="text-[6px] text-slate-300 uppercase tracking-[0.17em] font-bold mb-1">BSS ID</p>
+                     <p className="text-[6px] text-bss-text-muted uppercase tracking-[0.17em] font-bold mb-1">BSS ID</p>
                      <p className="text-[10px] font-mono font-extrabold tracking-[0.095em] metallic-text embossed-text leading-none">{worker.identity.bssId}</p>
                    </div>
                    <div className="flex gap-7 mt-3.5">
                      <div>
-                       <p className="text-[6px] text-slate-300 uppercase tracking-[0.16em] font-bold mb-1">Date of Birth</p>
+                       <p className="text-[6px] text-bss-text-muted uppercase tracking-[0.16em] font-bold mb-1">Date of Birth</p>
                        <p className="text-[10px] font-bold tracking-[0.06em] text-white leading-none">{dateOfBirth || '—'}</p>
                      </div>
                      <div>
-                       <p className="text-[6px] text-slate-300 uppercase tracking-[0.16em] font-bold mb-1">Gender</p>
+                       <p className="text-[6px] text-bss-text-muted uppercase tracking-[0.16em] font-bold mb-1">Gender</p>
                        <p className="text-[10px] font-bold tracking-[0.06em] text-white leading-none">{getGenderInitial(worker.identity.gender)}</p>
                      </div>
                    </div>
                  </div>
 
                  <div className="w-[92px] flex-shrink-0 flex flex-col justify-end items-center pb-0.5">
-                    <div className="relative bg-white p-1 rounded-[6px] shadow-[0_4px_12px_rgba(0,0,0,0.3)] w-[84px] h-[84px] flex items-center justify-center border border-slate-200">
+                    <div className="relative bg-white p-1 rounded-[6px] shadow-[0_4px_12px_rgba(0,0,0,0.3)] w-[84px] h-[84px] flex items-center justify-center border border-bss-border">
                       <WorkerQr bssId={worker.identity.bssId} size={256} />
                       <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="w-[13px] h-[13px] bg-white rounded-[3px] grid place-items-center shadow-sm"><img src="/bss-original-logo.png" alt="" className="w-[10px] h-[10px] object-contain" /></span></span>
                     </div>
-                   <p className="text-[5px] text-slate-300 uppercase font-bold tracking-[0.12em] mt-1.5 whitespace-nowrap">Scan to Verify</p>
+                   <p className="text-[5px] text-bss-text-muted uppercase font-bold tracking-[0.12em] mt-1.5 whitespace-nowrap">Scan to Verify</p>
                  </div>
               </div>
 
               <div className="h-[36px] px-4 flex justify-between items-center relative z-10 border-t border-white/[0.08] bg-black/[0.08]">
                  <div>
-                   <p className="text-[5.5px] text-slate-300 uppercase tracking-[0.16em] font-bold mb-1">Issue Date</p>
+                   <p className="text-[5.5px] text-bss-text-muted uppercase tracking-[0.16em] font-bold mb-1">Issue Date</p>
                    <p className="text-[9px] font-bold tracking-[0.08em] text-white leading-none">{currentDate}</p>
                  </div>
                  <div>
-                   <p className="text-[5.5px] text-slate-300 uppercase tracking-[0.16em] font-bold mb-1">Valid Till</p>
+                   <p className="text-[5.5px] text-bss-text-muted uppercase tracking-[0.16em] font-bold mb-1">Valid Till</p>
                    <p className="text-[9px] font-bold tracking-[0.08em] text-[#FFD9A8] leading-none">{validTill}</p>
                  </div>
-                 <p className="text-[6px] text-slate-200 font-bold tracking-[0.12em] uppercase">BSS Card · National ID</p>
+                 <p className="text-[6px] text-bss-bg font-bold tracking-[0.12em] uppercase">BSS Card · National ID</p>
                  <div className="w-[57px]" aria-hidden="true" />
               </div>
             </div>
@@ -228,7 +228,7 @@ export default function IdentityCardPage() {
             <div 
               ref={backRef}
               data-bss-face
-              className="absolute inset-0 backface-hidden rotate-y-180 bg-[#0A192F] rounded-xl shadow-2xl overflow-hidden border-2 border-slate-400 text-white flex flex-col font-sans"
+              className="absolute inset-0 backface-hidden rotate-y-180 bg-[#01183A] rounded-xl shadow-2xl overflow-hidden border-2 border-bss-border text-white flex flex-col font-sans"
               style={{ opacity: isFlipped ? 1 : 0, pointerEvents: isFlipped ? 'auto' : 'none' }}
               aria-hidden={!isFlipped}
             >
@@ -238,10 +238,10 @@ export default function IdentityCardPage() {
 
               <div className="px-6 py-2 flex flex-col h-full items-center justify-between relative z-10">
                  <div className="absolute top-4 left-0 w-full h-8 bg-black/60 shadow-inner z-0"></div>
-                 <h3 className="text-[10px] font-bold text-center tracking-wider text-slate-300 mt-[44px] z-10">Your Identity. Your Work. Your Security.</h3>
+                 <h3 className="text-[10px] font-bold text-center tracking-wider text-bss-text-muted mt-[44px] z-10">Your Identity. Your Work. Your Security.</h3>
                  
                  <div className="flex-1 flex flex-col items-center justify-center w-full my-1">
-                     <div className="relative bg-white p-1.5 rounded-md shadow-lg w-[120px] h-[120px] flex items-center justify-center z-10 border-2 border-slate-300 flex-shrink-0">
+                     <div className="relative bg-white p-1.5 rounded-md shadow-lg w-[120px] h-[120px] flex items-center justify-center z-10 border-2 border-bss-border flex-shrink-0">
                        <WorkerQr bssId={worker.identity.bssId} size={320} />
                        <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="w-[22px] h-[22px] bg-white rounded-[4px] grid place-items-center shadow-sm"><img src="/bss-original-logo.png" alt="" className="w-[16px] h-[16px] object-contain" /></span></span>
                      </div>
@@ -250,26 +250,26 @@ export default function IdentityCardPage() {
 
                  <div className="flex justify-between w-full px-4 z-10">
                    <div className="flex flex-col items-center text-center">
-                     <div className="w-6 h-6 rounded-full border border-slate-400 flex items-center justify-center mb-0.5 bg-white/10 shadow-inner">
-                       <ShieldCheck size={10} className="text-slate-200" />
+                     <div className="w-6 h-6 rounded-full border border-bss-border flex items-center justify-center mb-0.5 bg-white/10 shadow-inner">
+                       <ShieldCheck size={10} className="text-bss-bg" />
                      </div>
-                     <p className="text-[5px] font-semibold tracking-widest uppercase leading-tight text-slate-300">Verified<br/>Identity</p>
+                     <p className="text-[5px] font-semibold tracking-widest uppercase leading-tight text-bss-text-muted">Verified<br/>Identity</p>
                    </div>
                    <div className="flex flex-col items-center text-center">
-                     <div className="w-6 h-6 rounded-full border border-slate-400 flex items-center justify-center mb-0.5 bg-white/10 shadow-inner">
-                       <Briefcase size={10} className="text-slate-200" />
+                     <div className="w-6 h-6 rounded-full border border-bss-border flex items-center justify-center mb-0.5 bg-white/10 shadow-inner">
+                       <Briefcase size={10} className="text-bss-bg" />
                      </div>
-                     <p className="text-[5px] font-semibold tracking-widest uppercase leading-tight text-slate-300">Portable<br/>Across Jobs</p>
+                     <p className="text-[5px] font-semibold tracking-widest uppercase leading-tight text-bss-text-muted">Portable<br/>Across Jobs</p>
                    </div>
                    <div className="flex flex-col items-center text-center">
-                     <div className="w-6 h-6 rounded-full border border-slate-400 flex items-center justify-center mb-0.5 bg-white/10 shadow-inner">
-                       <CheckCircle2 size={10} className="text-slate-200" />
+                     <div className="w-6 h-6 rounded-full border border-bss-border flex items-center justify-center mb-0.5 bg-white/10 shadow-inner">
+                       <CheckCircle2 size={10} className="text-bss-bg" />
                      </div>
-                     <p className="text-[5px] font-semibold tracking-widest uppercase leading-tight text-slate-300">Secure<br/>& Trusted</p>
+                     <p className="text-[5px] font-semibold tracking-widest uppercase leading-tight text-bss-text-muted">Secure<br/>& Trusted</p>
                    </div>
                  </div>
 
-                 <p className="text-[8px] font-bold text-center w-full tracking-widest text-slate-300 z-10 mt-1 pb-1">www.bharatshramsetu.com</p>
+                 <p className="text-[8px] font-bold text-center w-full tracking-widest text-bss-text-muted z-10 mt-1 pb-1">www.bharatshramsetu.com</p>
               </div>
             </div>
           )}
@@ -281,7 +281,7 @@ export default function IdentityCardPage() {
             <div
               ref={frontRef}
               data-bss-face
-              className="absolute inset-0 backface-hidden bg-white rounded-xl shadow-2xl overflow-hidden border border-slate-300 text-slate-900 flex flex-col font-sans"
+              className="absolute inset-0 backface-hidden bg-white rounded-xl shadow-2xl overflow-hidden border border-bss-border text-bss-text-primary flex flex-col font-sans"
               style={{ opacity: isFlipped ? 0 : 1, pointerEvents: isFlipped ? 'none' : 'auto' }}
               aria-hidden={isFlipped}
             >
@@ -306,17 +306,17 @@ export default function IdentityCardPage() {
               {/* Front Body */}
               <div className="p-4 pt-3.5 pb-10 flex-1 relative z-10 flex flex-col">
                 {/* Photo */}
-                <div className="w-[120px] h-[134px] mx-auto mb-1.5 border-2 border-slate-300 rounded-xl overflow-hidden bg-slate-100 shadow-xs flex items-center justify-center">
+                <div className="w-[120px] h-[134px] mx-auto mb-1.5 border-2 border-bss-border rounded-xl overflow-hidden bg-bss-bg shadow-xs flex items-center justify-center">
                   {worker.identity.photoUrl && worker.identity.photoUrl !== '/worker-profile.png' ? (
                     <img src={worker.identity.photoUrl} alt={worker.identity.name} className="w-full h-full object-cover" />
                   ) : (
-                    <UserRound size={52} className="text-slate-400" />
+                    <UserRound size={52} className="text-bss-text-muted" />
                   )}
                 </div>
 
                 {/* Worker Name & Role Badge */}
-                <div className="text-center text-[15px] font-extrabold text-slate-900 tracking-wide mt-0.5">{worker.identity.name.toUpperCase()}</div>
-                <div className="w-fit mx-auto my-1 px-3.5 py-0.5 border border-emerald-400 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold">
+                <div className="text-center text-[15px] font-extrabold text-bss-text-primary tracking-wide mt-0.5">{worker.identity.name.toUpperCase()}</div>
+                <div className="w-fit mx-auto my-1 px-3.5 py-0.5 border border-bss-green rounded-full bg-bss-soft-green text-bss-green text-[11px] font-bold">
                   {worker.employment.designation || (worker as any).details?.employment?.designation || 'Mason'}
                 </div>
 
@@ -324,42 +324,42 @@ export default function IdentityCardPage() {
                 <div className="grid grid-cols-2 gap-3 text-[10px] mt-2">
                   <div className="flex flex-col gap-1.5">
                     <div>
-                      <label className="block text-[#64748B] font-bold text-[8.5px] tracking-wider mb-0.5">BSS ID</label>
-                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold font-mono">{worker.identity.bssId}</strong>
+                      <label className="block text-[#7C8BA8] font-bold text-[8.5px] tracking-wider mb-0.5">BSS ID</label>
+                      <strong className="block text-[#01183A] text-[11.5px] font-extrabold font-mono">{worker.identity.bssId}</strong>
                     </div>
                     <div>
-                      <label className="block text-[#64748B] font-bold text-[8.5px] tracking-wider mb-0.5">UAN NO.</label>
-                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{(worker.socialSecurity as any)?.epfoUan || (worker as any).details?.socialSecurity?.epfoUan || '—'}</strong>
+                      <label className="block text-[#7C8BA8] font-bold text-[8.5px] tracking-wider mb-0.5">UAN NO.</label>
+                      <strong className="block text-[#01183A] text-[11.5px] font-extrabold">{(worker.socialSecurity as any)?.epfoUan || (worker as any).details?.socialSecurity?.epfoUan || '—'}</strong>
                     </div>
                     <div>
-                      <label className="block text-[#64748B] font-bold text-[8.5px] tracking-wider mb-0.5">ESIC NO.</label>
-                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{(worker.socialSecurity as any)?.esicIp || (worker as any).details?.socialSecurity?.esicIp || '—'}</strong>
+                      <label className="block text-[#7C8BA8] font-bold text-[8.5px] tracking-wider mb-0.5">ESIC NO.</label>
+                      <strong className="block text-[#01183A] text-[11.5px] font-extrabold">{(worker.socialSecurity as any)?.esicIp || (worker as any).details?.socialSecurity?.esicIp || '—'}</strong>
                     </div>
                     <div>
-                      <label className="block text-[#64748B] font-bold text-[8.5px] tracking-wider mb-0.5">CAMP NO.</label>
-                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{worker.employment.campNo || (worker as any).details?.employment?.campNo || 'Skilled'}</strong>
+                      <label className="block text-[#7C8BA8] font-bold text-[8.5px] tracking-wider mb-0.5">CAMP NO.</label>
+                      <strong className="block text-[#01183A] text-[11.5px] font-extrabold">{worker.employment.campNo || (worker as any).details?.employment?.campNo || 'Skilled'}</strong>
                     </div>
                     <div>
-                      <label className="block text-[#64748B] font-bold text-[8.5px] tracking-wider mb-0.5">ROUTE/BUS NO.</label>
-                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{(worker.employment as any).route || (worker.employment as any).busNo || '—'}</strong>
+                      <label className="block text-[#7C8BA8] font-bold text-[8.5px] tracking-wider mb-0.5">ROUTE/BUS NO.</label>
+                      <strong className="block text-[#01183A] text-[11.5px] font-extrabold">{(worker.employment as any).route || (worker.employment as any).busNo || '—'}</strong>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
                     <div>
-                      <label className="block text-[#64748B] font-bold text-[8.5px] tracking-wider mb-0.5">MOBILE NUMBER</label>
-                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{(worker.identity as any).mobile || (worker.identity as any).mobileMasked || (worker as any).details?.mobile || '—'}</strong>
+                      <label className="block text-[#7C8BA8] font-bold text-[8.5px] tracking-wider mb-0.5">MOBILE NUMBER</label>
+                      <strong className="block text-[#01183A] text-[11.5px] font-extrabold">{(worker.identity as any).mobile || (worker.identity as any).mobileMasked || (worker as any).details?.mobile || '—'}</strong>
                     </div>
                     <div>
-                      <label className="block text-[#64748B] font-bold text-[8.5px] tracking-wider mb-0.5">DEPARTMENT</label>
-                      <strong className="block text-[#0F172A] text-[11.5px] font-extrabold">{worker.employment.department || (worker as any).details?.employment?.department || 'Civil Works'}</strong>
+                      <label className="block text-[#7C8BA8] font-bold text-[8.5px] tracking-wider mb-0.5">DEPARTMENT</label>
+                      <strong className="block text-[#01183A] text-[11.5px] font-extrabold">{worker.employment.department || (worker as any).details?.employment?.department || 'Civil Works'}</strong>
                     </div>
 
                     {/* QR Code */}
-                    <div className="relative w-[96px] h-[96px] bg-white p-1 rounded-lg border border-slate-300 shadow-xs flex items-center justify-center mt-1">
+                    <div className="relative w-[96px] h-[96px] bg-white p-1 rounded-lg border border-bss-border shadow-xs flex items-center justify-center mt-1">
                       <WorkerQr bssId={worker.identity.bssId} size={220} />
                       <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <span className="w-[26px] h-[26px] bg-white rounded-full grid place-items-center shadow-md border border-blue-900/30 p-[2px]">
+                        <span className="w-[26px] h-[26px] bg-white rounded-full grid place-items-center shadow-md border border-bss-border/30 p-[2px]">
                           <img src="/bss-original-logo.png" alt="" className="w-full h-full object-contain rounded-full" />
                         </span>
                       </span>
@@ -369,12 +369,12 @@ export default function IdentityCardPage() {
               </div>
 
               {/* Front Footer */}
-              <div className="absolute left-0 right-0 bottom-0 h-[32px] bg-[#07182b] text-white flex justify-center items-center text-[8.5px] font-bold tracking-wider gap-3 z-20">
+              <div className="absolute left-0 right-0 bottom-0 h-[32px] bg-[#01183A] text-white flex justify-center items-center text-[8.5px] font-bold tracking-wider gap-3 z-20">
                 <span>✓ Verified Worker</span>
                 <span className="text-white/30">|</span>
                 <span><span className="text-sky-400">👤</span> Formal Employment</span>
                 <span className="text-white/30">|</span>
-                <span><span className="text-amber-400">↗</span> Better Opportunities</span>
+                <span><span className="text-bss-orange">↗</span> Better Opportunities</span>
               </div>
             </div>
           )}
@@ -386,7 +386,7 @@ export default function IdentityCardPage() {
             <div
               ref={backRef}
               data-bss-face
-              className="absolute inset-0 backface-hidden rotate-y-180 bg-white rounded-xl shadow-2xl overflow-hidden border border-slate-300 text-slate-900 flex flex-col font-sans"
+              className="absolute inset-0 backface-hidden rotate-y-180 bg-white rounded-xl shadow-2xl overflow-hidden border border-bss-border text-bss-text-primary flex flex-col font-sans"
               style={{ opacity: isFlipped ? 1 : 0, pointerEvents: isFlipped ? 'auto' : 'none' }}
               aria-hidden={!isFlipped}
             >
@@ -404,53 +404,53 @@ export default function IdentityCardPage() {
               {/* Back Content */}
               <div className="p-3 pb-10 flex-1 relative z-10 flex flex-col gap-1.5">
                 {/* Contractor Section */}
-                <div className="border border-slate-300 border-l-[3px] border-l-[#153C71] bg-white p-2 rounded-md shadow-2xs">
-                  <h3 className="m-0 text-[#153C71] text-[11px] font-extrabold mb-0.5">Contractor Details</h3>
-                  <div className="text-[10.5px] font-extrabold text-slate-900">{worker.employment.contractor || '—'}</div>
-                  <div className="flex flex-wrap justify-between items-center text-slate-600 text-[8.5px] mt-0.5 gap-x-2">
-                    <span>Contractor ID: <b className="text-slate-900">{worker.employment.contractorDetails?.code || '—'}</b></span>
-                    <span>Contact: <b className="text-slate-900">{worker.employment.contractorDetails?.contact || '—'}</b></span>
-                    {worker.employment.contractorDetails?.email ? <span>Email: <b className="text-slate-900">{worker.employment.contractorDetails.email}</b></span> : null}
+                <div className="border border-bss-border border-l-[3px] border-l-[#022B5E] bg-white p-2 rounded-md shadow-2xs">
+                  <h3 className="m-0 text-[#022B5E] text-[11px] font-extrabold mb-0.5">Contractor Details</h3>
+                  <div className="text-[10.5px] font-extrabold text-bss-text-primary">{worker.employment.contractor || '—'}</div>
+                  <div className="flex flex-wrap justify-between items-center text-bss-text-secondary text-[8.5px] mt-0.5 gap-x-2">
+                    <span>Contractor ID: <b className="text-bss-text-primary">{worker.employment.contractorDetails?.code || '—'}</b></span>
+                    <span>Contact: <b className="text-bss-text-primary">{worker.employment.contractorDetails?.contact || '—'}</b></span>
+                    {worker.employment.contractorDetails?.email ? <span>Email: <b className="text-bss-text-primary">{worker.employment.contractorDetails.email}</b></span> : null}
                   </div>
                 </div>
 
                 {/* Site Section */}
-                <div className="border border-slate-300 border-l-[3px] border-l-[#153C71] bg-white p-2 rounded-md shadow-2xs">
-                  <h3 className="m-0 text-[#153C71] text-[11px] font-extrabold mb-0.5">Site Details</h3>
-                  <div className="text-[10.5px] font-extrabold text-slate-900">{worker.employment.site || '—'}</div>
-                  <div className="flex justify-between items-center text-slate-600 text-[8.5px] mt-0.5">
+                <div className="border border-bss-border border-l-[3px] border-l-[#022B5E] bg-white p-2 rounded-md shadow-2xs">
+                  <h3 className="m-0 text-[#022B5E] text-[11px] font-extrabold mb-0.5">Site Details</h3>
+                  <div className="text-[10.5px] font-extrabold text-bss-text-primary">{worker.employment.site || '—'}</div>
+                  <div className="flex justify-between items-center text-bss-text-secondary text-[8.5px] mt-0.5">
                     <span>{worker.employment.siteDetails?.location || '—'}</span>
-                    <span>Site ID: <b className="text-slate-900">{worker.employment.siteDetails?.code || '—'}</b></span>
+                    <span>Site ID: <b className="text-bss-text-primary">{worker.employment.siteDetails?.code || '—'}</b></span>
                   </div>
                 </div>
 
                 {/* Supervisor Section */}
-                <div className="border border-slate-300 border-l-[3px] border-l-[#153C71] bg-white p-2 rounded-md shadow-2xs">
-                  <h3 className="m-0 text-[#153C71] text-[11px] font-extrabold mb-0.5">Supervisor Detail</h3>
-                  <div className="text-[10.5px] font-extrabold text-slate-900">{(worker.employment as any).supervisorName || (worker.employment.siteDetails as any)?.manager || '—'}</div>
-                  <div className="text-slate-600 text-[8.5px] mt-0.5">
-                    <span>Contact No.: <b className="text-slate-900">{(worker.employment as any).supervisorContact || '—'}</b></span>
+                <div className="border border-bss-border border-l-[3px] border-l-[#022B5E] bg-white p-2 rounded-md shadow-2xs">
+                  <h3 className="m-0 text-[#022B5E] text-[11px] font-extrabold mb-0.5">Supervisor Detail</h3>
+                  <div className="text-[10.5px] font-extrabold text-bss-text-primary">{(worker.employment as any).supervisorName || (worker.employment.siteDetails as any)?.manager || '—'}</div>
+                  <div className="text-bss-text-secondary text-[8.5px] mt-0.5">
+                    <span>Contact No.: <b className="text-bss-text-primary">{(worker.employment as any).supervisorContact || '—'}</b></span>
                   </div>
                 </div>
 
                 {/* Emergency & Blood Group */}
                 <div className="grid grid-cols-2 gap-2 my-0.5">
-                  <div className="bg-[#FFF3F3] border border-rose-200 border-l-[3px] border-l-rose-600 p-2 rounded-lg text-[8px] relative">
-                    <div className="text-rose-600 font-extrabold text-[8.5px] mb-1">☎ EMERGENCY CONTACT</div>
-                    <div className="text-slate-700">Name: <b className="text-slate-900">{worker.identity.emergencyContactName || '—'}</b></div>
-                    <div className="text-slate-700">Number: <b className="text-slate-900">{worker.identity.emergencyContactNumber || '—'}</b></div>
-                    <div className="text-slate-700">Relation: <b className="text-slate-900">{worker.identity.emergencyContactRelation || '—'}</b></div>
+                  <div className="bg-[#FFF3F3] border border-bss-border border-l-[3px] border-l-rose-600 p-2 rounded-lg text-[8px] relative">
+                    <div className="text-bss-error font-extrabold text-[8.5px] mb-1">☎ EMERGENCY CONTACT</div>
+                    <div className="text-bss-text-primary">Name: <b className="text-bss-text-primary">{worker.identity.emergencyContactName || '—'}</b></div>
+                    <div className="text-bss-text-primary">Number: <b className="text-bss-text-primary">{worker.identity.emergencyContactNumber || '—'}</b></div>
+                    <div className="text-bss-text-primary">Relation: <b className="text-bss-text-primary">{worker.identity.emergencyContactRelation || '—'}</b></div>
                   </div>
 
-                  <div className="bg-[#FFF3F3] border border-rose-200 border-l-[3px] border-l-rose-600 p-2 rounded-lg text-[8px] relative">
-                    <div className="text-rose-600 font-extrabold text-[8.5px] mb-1">♦ BLOOD GROUP</div>
-                    <span className="absolute top-1.5 right-2 text-[18px] font-black text-rose-600">{worker.personal.bloodGroup || '—'}</span>
-                    <div className="text-slate-500 text-[7.5px] mt-4">In case of emergency please contact</div>
+                  <div className="bg-[#FFF3F3] border border-bss-border border-l-[3px] border-l-rose-600 p-2 rounded-lg text-[8px] relative">
+                    <div className="text-bss-error font-extrabold text-[8.5px] mb-1">♦ BLOOD GROUP</div>
+                    <span className="absolute top-1.5 right-2 text-[18px] font-black text-bss-error">{worker.personal.bloodGroup || '—'}</span>
+                    <div className="text-bss-text-muted text-[7.5px] mt-4">In case of emergency please contact</div>
                   </div>
                 </div>
 
                 {/* Notice Container */}
-                <div className="mt-auto bg-[#F1F5F9] border border-slate-200 p-2 rounded-lg text-[8px] leading-snug text-slate-600 space-y-0.5">
+                <div className="mt-auto bg-[#F2F6FC] border border-bss-border p-2 rounded-lg text-[8px] leading-snug text-bss-text-secondary space-y-0.5">
                   <p className="m-0">• This identity card must always be carried & displayed for security & identification.</p>
                   {worker.employment.contractor ? (
                     <p className="m-0">• Loss or theft of this card should be reported immediately to the Contractor — <b>{worker.employment.contractor}</b>{worker.employment.contractorDetails?.contact ? <> · <b>{worker.employment.contractorDetails.contact}</b></> : null}{worker.employment.contractorDetails?.email ? <> · <b>{worker.employment.contractorDetails.email}</b></> : null}.</p>
@@ -463,18 +463,18 @@ export default function IdentityCardPage() {
                 {/* Issue & Validity Dates */}
                 <div className="flex justify-between items-center text-[8.5px] px-1">
                   <div>
-                    <span className="text-slate-500 font-bold uppercase text-[8px]">Issue Date</span>
-                    <strong className="block text-[11px] font-extrabold font-mono text-slate-900">{currentDate}</strong>
+                    <span className="text-bss-text-muted font-bold uppercase text-[8px]">Issue Date</span>
+                    <strong className="block text-[11px] font-extrabold font-mono text-bss-text-primary">{currentDate}</strong>
                   </div>
                   <div className="text-right">
-                    <span className="text-slate-500 font-bold uppercase text-[8px]">Valid Till</span>
-                    <strong className="block text-[11px] font-extrabold font-mono text-slate-900">{validTill}</strong>
+                    <span className="text-bss-text-muted font-bold uppercase text-[8px]">Valid Till</span>
+                    <strong className="block text-[11px] font-extrabold font-mono text-bss-text-primary">{validTill}</strong>
                   </div>
                 </div>
               </div>
 
               {/* Bottom Footer */}
-              <div className="absolute left-0 right-0 bottom-0 h-[32px] bg-[#07182b] text-white flex items-center justify-center text-[7.5px] font-bold tracking-wider z-20 px-2 text-center">
+              <div className="absolute left-0 right-0 bottom-0 h-[32px] bg-[#01183A] text-white flex items-center justify-center text-[7.5px] font-bold tracking-wider z-20 px-2 text-center">
                 This card is the property of the issuing organisation. Misuse is punishable under applicable laws.
               </div>
             </div>

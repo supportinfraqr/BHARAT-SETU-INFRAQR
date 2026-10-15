@@ -58,6 +58,29 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+def _bbox_iou(a, b) -> float:
+    """Intersection-over-union of two (x1, y1, x2, y2) boxes."""
+    ax1, ay1, ax2, ay2 = (int(v) for v in a)
+    bx1, by1, bx2, by2 = (int(v) for v in b)
+    ix1, iy1 = max(ax1, bx1), max(ay1, by1)
+    ix2, iy2 = min(ax2, bx2), min(ay2, by2)
+    iw, ih = max(0, ix2 - ix1), max(0, iy2 - iy1)
+    inter = iw * ih
+    if inter <= 0:
+        return 0.0
+    area_a = max(1, ax2 - ax1) * max(1, ay2 - ay1)
+    area_b = max(1, bx2 - bx1) * max(1, by2 - by1)
+    return inter / float(area_a + area_b - inter)
+
+
+def _bbox_center_dist(a, b, frame_width: int) -> float:
+    """Center shift between two boxes as a fraction of frame width."""
+    ax1, ay1, ax2, ay2 = (int(v) for v in a)
+    bx1, by1, bx2, by2 = (int(v) for v in b)
+    w = max(1, int(frame_width))
+    return abs((ax1 + ax2) / 2.0 - (bx1 + bx2) / 2.0) / float(w)
+
+
 def find_free_port(start: int, tries: int = 20) -> Optional[int]:
     """First bindable TCP port at/after `start` (for per-camera dashboards)."""
     import socket
@@ -97,6 +120,7 @@ def scan_sources(config: dict, max_webcam: int = 9) -> int:
     by looking instead of guessing indices."""
     import os as _os
     snap_dir = config.get("paths", {}).get("snapshots", "data/snapshots")
+    save_frames = bool(config.get("paths", {}).get("save_snapshots", False))
     _os.makedirs(snap_dir, exist_ok=True)
     print("=== source scan (local webcams) ===")
     live: list = []
@@ -109,10 +133,13 @@ def scan_sources(config: dict, max_webcam: int = 9) -> int:
                 ok, fr = cap.read()
                 frame_ok = bool(ok and fr is not None)
                 if frame_ok:
-                    snap = _os.path.join(snap_dir, f"scan_cam{i}.jpg")
-                    cv2.imwrite(snap, fr)
                     h, w = fr.shape[:2]
-                    print(f"  webcam {i}: OK - frame {w}x{h}, preview: {snap}")
+                    if save_frames:
+                        snap = _os.path.join(snap_dir, f"scan_cam{i}.jpg")
+                        cv2.imwrite(snap, fr)
+                        print(f"  webcam {i}: OK - frame {w}x{h}, preview: {snap}")
+                    else:
+                        print(f"  webcam {i}: OK - frame {w}x{h}")
                     live.append(str(i))
                     cap.release()
                     continue
@@ -198,8 +225,8 @@ def main() -> int:
         entry = next((c for c in config.get("cameras", []) or []
                       if str(c.get("name")) == args.camera), None)
         if entry is None:
-            # Employer-defined camera (from CCTV Setup): accept the label as long
-            # as an explicit --source is supplied. No config.yaml entry needed.
+            # Employer-defined camera (CCTV Setup): accept the label as long as
+            # an explicit --source is supplied. No config.yaml entry needed.
             if not args.source:
                 print(f"[main] unknown camera '{args.camera}' (see --list-cameras)")
                 return 2
@@ -207,14 +234,31 @@ def main() -> int:
         else:
             cam_name = str(entry["name"])
             apply_source_override(config, str(entry["source"]))
+            # Per-camera independent processing: this port's `overrides:` merge
+            # over the globals (profilers write these; see camera_profiler).
+            from src.camera_registry import CameraSpec, apply_camera_overrides
+            _spec = CameraSpec(name=cam_name, source=str(entry["source"]),
+                               web_port=int(entry.get("web_port", 0) or 0),
+                               host=str(entry.get("host", "") or "127.0.0.1"),
+                               face_level=bool(entry.get("face_level", False)),
+                               overrides=dict(entry.get("overrides", {}) or {}),
+                               profile=str(entry.get("profile", "") or ""))
+            _merged = apply_camera_overrides(config, _spec)
+            if _merged is not config:
+                config = _merged
+                print(f"[main] camera '{cam_name}' face_level={_spec.face_level} "
+                      f"overrides: {_spec.overrides or '{}'}")
             if not args.web and entry.get("web_port"):
                 web_port = int(entry["web_port"])
     if args.source:
         apply_source_override(config, args.source)
 
     paths = config["paths"]
+    # Privacy: never persist the live feed — only sighting/code rows (timestamps).
+    save_frames = bool(paths.get("save_snapshots", False))
     pg_cfg = dict(config.get("postgres", {}))
     if cam_name:
+        pg_cfg["dbname"] = f"{pg_cfg.get('dbname', 'btp')}_{cam_name}"
         snapshots_dir = os.path.join(paths["snapshots"], cam_name)
     else:
         snapshots_dir = paths["snapshots"]
@@ -231,7 +275,9 @@ def main() -> int:
     age_every = max(1, int(config["face"].get("age_reestimate_every", 3)))
     annotate_unknowns = bool(config["face"].get("annotate_unknowns", False))
     face_cache = TrackStateCache(float(config["face"].get("refresh_interval_s", 2.0)))
-    identity_tracker = TrackIdentityTracker(patience=int(config["face"].get("identity_patience", 3)))
+    identity_tracker = TrackIdentityTracker(
+        patience=int(config["face"].get("identity_patience", 3)),
+        face_absent_timeout_s=float(config["face"].get("face_absent_timeout_s", 6.0)))
     person_detector = PersonDetector(config)
     qr_detector = QRDetector(config, db=db)
     vitality = VitalityScorer(config)
@@ -250,9 +296,27 @@ def main() -> int:
         else:
             if actual != web_port:
                 print(f"[main] port {web_port} busy, serving instead on {actual}")
-            web_server = MJPEGWebServer(actual)
+            web_server = MJPEGWebServer(actual, config_path=args.config)
+    if web_server is not None:
+        # Settings UI hook: /settings saves config.yaml (comments kept) and
+        # hot-applies live-flagged values into the running objects.
+        from src.config_ui import apply_live_config
+        web_server.on_config_save = lambda fresh: apply_live_config(
+            fresh, face_engine=face_engine, qr_detector=qr_detector,
+            person_detector=person_detector, vitality=vitality)
+        print("[web] settings UI at /settings (live-marked options apply instantly)")
     annotate = show or web_server is not None
     process_every = int(config["detector"].get("process_every", 2))
+    # Fleet triage: detection stride adapts per camera (accuracy thresholds
+    # untouched — slow cameras just call YOLO less often, display stays
+    # flicker-free via cached redraw). Bounded so behavior stays sane.
+    _fleet = config.get("fleet", {}) or {}
+    adaptive_stride = bool(_fleet.get("adaptive_stride", True))
+    max_stride = max(process_every, int(_fleet.get("max_stride", 4)))
+    stride = process_every
+    qr_idle_skip = bool(_fleet.get("qr_idle_skip", True))
+    last_qr_pass = 0.0
+    last_stride_tune = time.time()
     base_window = config.get("display", {}).get("window_name", "BTP CCTV Analytics")
     window_name = f"{base_window} - {cam_name}" if cam_name else base_window
 
@@ -271,6 +335,7 @@ def main() -> int:
     sighting_ids: dict = {}
     last_vitality_write: dict = {}
     recent_scans: list = []  # short strings for the on-screen QR toast
+    prev_bbox: dict = {}     # track_id -> last bbox (ID-switch detection)
 
     # --- STAGED UX ideas 1+3 (disabled in config.yaml -> zero behavior change).
     # To activate: set display.face_zoom_enabled / display.roster_enabled to
@@ -370,18 +435,46 @@ def main() -> int:
 
             tracks = []
             try:
-                if frame_idx % process_every == 0:
+                if frame_idx % stride == 0:
                     tracks = person_detector.process(small)
 
                     cur_gray = cv2.cvtColor(cv2.resize(small, (480, 270)), cv2.COLOR_BGR2GRAY)
                     scale_x = 480 / small.shape[1]
                     scale_y = 270 / small.shape[0]
+                    if prev_gray is not None and prev_gray.shape == cur_gray.shape:
+                        frame_motion = float(abs(cur_gray.astype(float) - prev_gray.astype(float)).mean() / 255.0)
+                    else:
+                        frame_motion = 1.0  # first tick: assume active, run everything
 
                     for track in tracks:
                         x1, y1, x2, y2 = track.bbox
                         gx1, gy1 = int(x1 * scale_x), int(y1 * scale_y)
                         gx2, gy2 = int(x2 * scale_x), int(y2 * scale_y)
                         motion = compute_motion_energy(prev_gray, cur_gray, (gx1, gy1, gx2, gy2))
+
+                        # ID-switch guard: the detector reuses track IDs after
+                        # occlusion. A discontinuous box jump (near-zero IoU
+                        # plus a large center shift) means the person in this
+                        # ID probably changed -> drop lock + cached identity
+                        # so the box falls back to scanning instead of wearing
+                        # the previous occupant's name.
+                        prev = prev_bbox.get(track.track_id)
+                        if prev is not None and identity_tracker.get(track.track_id) is not None:
+                            if _bbox_iou(prev, track.bbox) < 0.05 and \
+                                    _bbox_center_dist(prev, track.bbox, small.shape[1]) > 0.25:
+                                identity_tracker.forget([track.track_id])
+                                observations.pop(track.track_id, None)
+                                age_hist.pop(track.track_id, None)
+                                age_tick.pop(track.track_id, None)
+                        prev_bbox[track.track_id] = track.bbox
+
+                        # Stale-lock guard: a locked track that stops producing
+                        # face observations (occupant turned away / left and
+                        # someone else entered the box) must not keep its name
+                        # forever. Release to scanning after the timeout.
+                        if identity_tracker.face_absent_expired(track.track_id, t_loop):
+                            identity_tracker.forget([track.track_id])
+                            observations.pop(track.track_id, None)
 
                         if track.track_id not in sighting_ids and track.active:
                             sid = db.start_sighting(track.track_id, None, None)
@@ -409,30 +502,46 @@ def main() -> int:
                         latest = face_worker.pop_result(track.track_id)
                         if latest is not None:
                             obs = latest
+                            identity_tracker.mark_face_seen(track.track_id, t_loop)
                             locked = identity_tracker.get(track.track_id)
 
                             if locked is not None:
-                                d = (face_engine.distance_to_person(obs.embedding, locked.person_id)
-                                     if obs.embedding is not None else None)
-                                if d is not None and d <= face_engine.reassign_margin:
-                                    obs.person_id, obs.name, obs.distance = locked.person_id, locked.name, d
+                                # Confident-switch: the fresh recognition voted
+                                # for a DIFFERENT person within match threshold.
+                                # Trust the face over the stale lock at once —
+                                # this is the two-people-then-one-leaves case.
+                                if (latest.person_id is not None
+                                        and latest.person_id != locked.person_id
+                                        and latest.distance is not None
+                                        and latest.distance <= face_engine.threshold):
+                                    obs.person_id, obs.name = latest.person_id, latest.name
+                                    identity_tracker.lock(track.track_id, obs.person_id, obs.name)
                                     identity_tracker.note_hit(track.track_id)
-                                    if d > face_engine.threshold:
-                                        face_engine.enroll_variant(locked.person_id, locked.name, obs.embedding)
                                 else:
-                                    release = identity_tracker.note_miss(track.track_id)
-                                    if not release:
-                                        obs.person_id, obs.name = locked.person_id, locked.name
+                                    d = (face_engine.distance_to_person(obs.embedding, locked.person_id)
+                                         if obs.embedding is not None else None)
+                                    if d is not None and d <= face_engine.reassign_margin:
+                                        obs.person_id, obs.name, obs.distance = locked.person_id, locked.name, d
+                                        identity_tracker.note_hit(track.track_id)
+                                        # Gallery variants only from clean matches:
+                                        # drifted views (d > threshold) widen the
+                                        # cluster toward other people over time.
+                                        if d <= face_engine.threshold:
+                                            face_engine.enroll_variant(locked.person_id, locked.name, obs.embedding)
                                     else:
-                                        identity_tracker.forget([track.track_id])
-                                        if (face_engine.should_auto_register(obs)
-                                                and time.time() - track.first_seen >= auto_min_seen):
-                                            res = face_engine.register_unknown(obs)
-                                            if res is not None:
-                                                obs.person_id, obs.name = res
-                                                obs.distance = 0.0
-                                        if obs.person_id is not None:
-                                            identity_tracker.lock(track.track_id, obs.person_id, obs.name)
+                                        release = identity_tracker.note_miss(track.track_id)
+                                        if not release:
+                                            obs.person_id, obs.name = locked.person_id, locked.name
+                                        else:
+                                            identity_tracker.forget([track.track_id])
+                                            if (face_engine.should_auto_register(obs)
+                                                    and time.time() - track.first_seen >= auto_min_seen):
+                                                res = face_engine.register_unknown(obs)
+                                                if res is not None:
+                                                    obs.person_id, obs.name = res
+                                                    obs.distance = 0.0
+                                            if obs.person_id is not None:
+                                                identity_tracker.lock(track.track_id, obs.person_id, obs.name)
                             else:
                                 if (face_engine.should_auto_register(obs)
                                         and time.time() - track.first_seen >= auto_min_seen):
@@ -487,6 +596,7 @@ def main() -> int:
                             db.end_sighting(sid)
                         observations.pop(tid, None)
                         vitality.forget(tid)
+                        prev_bbox.pop(tid, None)  # ID-switch guard: drop last box
                         zoom_cache.pop(tid, None)  # STAGED idea 1: drop inset pixels
                         live_vit.pop(tid, None)    # STAGED idea 3: drop roster row
                         age_hist.pop(tid, None)    # age smoothing: drop window
@@ -495,13 +605,23 @@ def main() -> int:
                     face_worker.forget(stale)
                     identity_tracker.forget(stale)
 
-                    for code in qr_detector.detect(small):
+                    # Idle QR: a static empty frame almost never grows a new code —
+                    # but a WALL-MOUNTED code sits in exactly such frames, so
+                    # still scan at 0.1 Hz instead of never. Accuracy intact,
+                    # ~10x cheaper than every tick.
+                    if qr_idle_skip and not tracks and frame_motion < 0.002:
+                        run_qr = (t_loop - last_qr_pass >= 10.0)
+                    else:
+                        run_qr = True
+                    if run_qr:
+                        last_qr_pass = t_loop
+                    for code in (qr_detector.detect(small) if run_qr else []):
                         if annotate:
                             draw_qr(small, code.bbox, code.payload,
                                     code.symbology, code.matched_label)
                         if not code.should_log:
                             continue
-                        snap_path = save_snapshot(small, snapshots_dir)
+                        snap_path = save_snapshot(small, snapshots_dir) if save_frames else ""
                         db.insert_code_scan(
                             code.payload, code.symbology,
                             code.matched_label, code.match_score, snap_path,
@@ -524,6 +644,17 @@ def main() -> int:
 
             dt = time.time() - t_loop
             fps_smoothed = 0.9 * fps_smoothed + 0.1 * (1.0 / dt) if dt > 0 else fps_smoothed
+            # Adaptive stride governor (every ~5s): slow camera → detect less
+            # often (floor: max_stride); recovered camera → step back toward
+            # base. Display is flicker-free at any stride via cached redraw.
+            if adaptive_stride and t_loop - last_stride_tune >= 5.0:
+                last_stride_tune = t_loop
+                if fps_smoothed < 8.0 and stride < max_stride:
+                    stride += 1
+                    print(f"[main] slow ({fps_smoothed:.1f} fps), stride -> {stride}")
+                elif fps_smoothed > 22.0 and stride > process_every:
+                    stride -= 1
+                    print(f"[main] recovered ({fps_smoothed:.1f} fps), stride -> {stride}")
             if annotate:
                 stats = person_detector.stats()
                 status = "● PERSON PRESENT" if person_detector.present else "○ NO PERSON"
@@ -536,9 +667,9 @@ def main() -> int:
                 ]
                 active_tracks = [t for t in person_detector.tracks.values()
                                  if t.active]
-                if frame_idx % process_every != 0:
+                if frame_idx % stride != 0:
                     # Detection skipped this frame: redraw last known boxes so
-                    # the display doesn't flicker with process_every > 1.
+                    # the display doesn't flicker with stride > 1.
                     for track in active_tracks:
                         draw_track_overlay(small, track)
                 if not active_tracks:
@@ -601,7 +732,7 @@ def main() -> int:
                 key = cv2.waitKey(1) & 0xFF
                 if key in (ord("q"), 27):
                     break
-                if key == ord("s"):
+                if key == ord("s") and save_frames:
                     path = save_snapshot(small, snapshots_dir)
                     print(f"[main] snapshot saved: {path}")
                 if key in (ord("f"), ord("F")):
@@ -630,7 +761,8 @@ def main() -> int:
             db.insert_presence_interval(interval["start"], interval["end"], True)
         db.commit()
         source.stop()
-        cv2.destroyAllWindows()
+        if show:
+            cv2.destroyAllWindows()
 
     stats = person_detector.stats()
     print("\n===== SESSION SUMMARY =====")

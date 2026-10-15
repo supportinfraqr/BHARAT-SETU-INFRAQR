@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import type { IScannerControls } from '@zxing/browser';
 import {
   ArrowLeft,
@@ -28,6 +29,9 @@ import PageHero from '@/components/portal/PageHero';
 import type { AttendanceRecord } from '@/types/portal';
 import { useWorker } from '@/contexts/WorkerContext';
 import EnterpriseDataTable, { DataColumn } from '@/components/worker/EnterpriseDataTable';
+
+// Google Maps (with OpenStreetMap fallback) preview for the captured location.
+const SiteLocationMap = dynamic(() => import('@/components/employer/SiteMap').then(m => m.SiteMapView), { ssr: false });
 import ScanFrame from '@/components/qr/ScanFrame';
 import AttendanceDetailDialog, { statusStyle, fmtDist, fmtCoord } from '@/components/attendance/AttendanceDetailDialog';
 import { createQrReader, QR_VIDEO_CONSTRAINTS, applyContinuousFocus, decodeQrFromImageFile } from '@/lib/qrScanner';
@@ -265,9 +269,9 @@ export default function AttendancePage() {
     >
       <div className="space-y-6">
         {/* Self attendance — scan the site QR + GPS */}
-        <section className="bss-3d bss-scroll-rise bg-white border border-bss-border rounded-2xl overflow-hidden">
+        <section className="bss-3d bss-scroll-rise bss-card rounded-2xl overflow-hidden">
           <header className="px-5 py-4 border-b border-bss-border flex items-center gap-2">
-            <MapPin size={16} className="text-[#073B67]" />
+            <MapPin size={16} className="text-[#01183A]" />
             <div>
               <h2 className="text-sm font-semibold text-bss-text-primary">Mark today&apos;s attendance</h2>
               <p className="text-xs text-bss-text-muted mt-0.5">Scan your site&apos;s QR code while on site. Your GPS location is recorded and compared to the site coordinates.</p>
@@ -297,6 +301,7 @@ export default function AttendancePage() {
                   </div>
                   {markLocation && <p className="text-xs text-bss-interactive-blue flex items-start gap-1.5"><MapPin size={13} className="mt-0.5 shrink-0"/><span>{markLocation}</span></p>}
                   {markCoords && <p className="text-[11px] font-mono text-bss-text-muted text-center">GPS {fmtCoord(markCoords.lat, markCoords.lng)}</p>}
+                  {markCoords && <SiteLocationMap lat={markCoords.lat} lng={markCoords.lng} name="Your location" height={150} link={false} />}
                   <p className="text-xs text-bss-text-muted text-center">{markMessage || 'Point the camera at the site QR code'}</p>
                   </>
                 )}
@@ -359,12 +364,12 @@ export default function AttendancePage() {
         )}
 
         {/* Connection Banner */}
-        <div className="bg-gradient-to-r from-[#073B67] to-[#0A4D87] rounded-3xl p-6 text-white shadow-xl shadow-[#073B67]/10 relative overflow-hidden">
+        <div className="bg-gradient-to-r from-[#01183A] to-[#1E3A8A] rounded-3xl p-6 text-white shadow-xl shadow-[#01183A]/10 relative overflow-hidden">
           <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none" />
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
             <div className="space-y-1">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/90 text-xs font-semibold backdrop-blur-md border border-white/15">
-                <ShieldCheck size={13} className="text-emerald-400" />
+                <ShieldCheck size={13} className="text-bss-green" />
                 <span>{portal.dataMode === 'demo' ? 'Verified Database Mode' : 'Live System Sync'}</span>
               </div>
               <h2 className="text-xl lg:text-2xl font-extrabold tracking-tight">Attendance Logs & Shift Summary</h2>
@@ -421,19 +426,19 @@ export default function AttendancePage() {
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-5 pt-5 border-t border-white/15">
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
               <span className="text-[11px] text-white/70 block">Present Days</span>
-              <span className="text-lg font-bold text-emerald-300">{monthCount('Present')} Days</span>
+              <span className="text-lg font-bold text-bss-soft-green">{monthCount('Present')} Days</span>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
               <span className="text-[11px] text-white/70 block">Absent Days</span>
-              <span className="text-lg font-bold text-rose-300">{monthCount('Absent')} Days</span>
+              <span className="text-lg font-bold text-bss-orange">{monthCount('Absent')} Days</span>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
               <span className="text-[11px] text-white/70 block">Approved Leave</span>
-              <span className="text-lg font-bold text-amber-300">{monthCount('Leave')} Days</span>
+              <span className="text-lg font-bold text-bss-soft-orange">{monthCount('Leave')} Days</span>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
               <span className="text-[11px] text-white/70 block">Holidays & Offs</span>
-              <span className="text-lg font-bold text-purple-300">
+              <span className="text-lg font-bold text-bss-interactive-blue">
                 {monthCount('Holiday') + monthCount('Weekly Off')} Days
               </span>
             </div>
@@ -450,13 +455,13 @@ export default function AttendancePage() {
         <div className="bss-3d bss-scroll-rise flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 border border-bss-border rounded-2xl shadow-sm">
           <div className="flex flex-wrap items-center gap-4 text-xs">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-bss-text-muted">Capture System:</span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-bss-blue-tint text-[#073B67] border border-bss-border font-bold">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-bss-blue-tint text-[#01183A] border border-bss-border font-bold">
               <QrCode size={14} /> QR Scan ({methodCounts.qr})
             </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100 font-bold">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-bss-blue-tint text-bss-interactive-blue border border-bss-border font-bold">
               <ScanLine size={14} /> CCTV ({methodCounts.cctv})
             </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-bss-soft-green text-bss-green border border-bss-border font-bold">
               <RadioTower size={14} /> RFID ({methodCounts.rfid})
             </span>
           </div>
@@ -464,8 +469,8 @@ export default function AttendancePage() {
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             {sites.length > 1 && (
               <label className="flex items-center gap-1.5 text-[11px] font-semibold text-bss-text-secondary bg-white border border-bss-border rounded-xl px-3 py-2">
-                <Building2 size={13} className="text-[#073B67]" /> Site
-                <select value={siteFilter} onChange={e => setSiteFilter(e.target.value)} className="bg-transparent text-xs font-bold text-[#073B67] focus:outline-none">
+                <Building2 size={13} className="text-[#01183A]" /> Site
+                <select value={siteFilter} onChange={e => setSiteFilter(e.target.value)} className="bg-transparent text-xs font-bold text-[#01183A] focus:outline-none">
                   <option value="">All sites</option>
                   {sites.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -475,7 +480,7 @@ export default function AttendancePage() {
               <button
                 onClick={() => setView('calendar')}
                 className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                  view === 'calendar' ? 'bg-white text-[#073B67] shadow-sm' : 'text-bss-text-secondary hover:text-bss-text-primary'
+                  view === 'calendar' ? 'bg-white text-[#01183A] shadow-sm' : 'text-bss-text-secondary hover:text-bss-text-primary'
                 }`}
               >
                 <CalendarDays size={14} /> Calendar Grid
@@ -483,7 +488,7 @@ export default function AttendancePage() {
               <button
                 onClick={() => setView('history')}
                 className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                  view === 'history' ? 'bg-white text-[#073B67] shadow-sm' : 'text-bss-text-secondary hover:text-bss-text-primary'
+                  view === 'history' ? 'bg-white text-[#01183A] shadow-sm' : 'text-bss-text-secondary hover:text-bss-text-primary'
                 }`}
               >
                 <List size={14} /> History Log
@@ -494,7 +499,7 @@ export default function AttendancePage() {
 
         {/* View Content */}
         {view === 'calendar' ? (
-          <div className="bss-3d bss-scroll-rise bg-white border border-bss-border rounded-3xl overflow-hidden shadow-sm">
+          <div className="bss-3d bss-scroll-rise bss-card rounded-3xl overflow-hidden">
             {/* Weekday Headers */}
             <div className="grid grid-cols-7 border-b border-bss-border bg-bss-bg text-center text-xs font-extrabold uppercase tracking-wider text-bss-text-muted py-3">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
@@ -521,25 +526,25 @@ export default function AttendancePage() {
                     key={date}
                     onClick={() => rec && setSelectedRecord(rec)}
                     className={`bg-white p-2.5 min-h-[5.5rem] flex flex-col justify-between transition-all relative group cursor-pointer hover:bg-bss-blue-tint/30 ${
-                      isToday ? 'ring-2 ring-inset ring-[#073B67]' : ''
+                      isToday ? 'ring-2 ring-inset ring-[#01183A]' : ''
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span
                         className={`text-xs font-extrabold w-6 h-6 rounded-full flex items-center justify-center ${
                           isToday
-                            ? 'bg-[#073B67] text-white shadow-sm'
+                            ? 'bg-[#01183A] text-white shadow-sm'
                             : rec?.presence === 'Present'
-                            ? 'text-emerald-700 bg-emerald-50'
+                            ? 'text-bss-green bg-bss-soft-green'
                             : rec?.presence === 'Absent'
-                            ? 'text-rose-600 bg-rose-50'
+                            ? 'text-bss-error bg-bss-soft-orange'
                             : 'text-bss-text-secondary'
                         }`}
                       >
                         {day}
                       </span>
                       {isToday && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-[#073B67]">
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-bss-blue-tint text-[#01183A]">
                           Today
                         </span>
                       )}
@@ -561,10 +566,10 @@ export default function AttendancePage() {
                           <span
                             className={`block text-[8.5px] font-bold px-1 rounded text-center truncate ${
                               rec.leaveStatus === 'Approved'
-                                ? 'bg-emerald-100 text-emerald-800'
+                                ? 'bg-bss-soft-green text-bss-green'
                                 : rec.leaveStatus === 'Rejected'
-                                ? 'bg-rose-100 text-rose-800'
-                                : 'bg-amber-100 text-amber-800'
+                                ? 'bg-bss-soft-orange text-bss-error'
+                                : 'bg-bss-soft-orange text-bss-orange'
                             }`}
                           >
                             {rec.leaveStatus}
@@ -588,7 +593,7 @@ export default function AttendancePage() {
                     )}
 
                     {holiday && (
-                      <span className="block text-[8.5px] font-bold text-purple-700 truncate bg-purple-50 px-1 rounded text-center">
+                      <span className="block text-[8.5px] font-bold text-bss-interactive-blue truncate bg-bss-blue-tint px-1 rounded text-center">
                         {holiday.name}
                       </span>
                     )}
@@ -601,16 +606,16 @@ export default function AttendancePage() {
             <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-bss-bg/50 border-t border-bss-border text-xs font-bold text-bss-text-secondary">
               <div className="flex flex-wrap gap-4">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500" /> Present
+                  <span className="w-3 h-3 rounded-full bg-bss-soft-green0" /> Present
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-rose-500" /> Absent
+                  <span className="w-3 h-3 rounded-full bg-bss-soft-orange0" /> Absent
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-amber-500" /> Leave (Approved / Pending)
+                  <span className="w-3 h-3 rounded-full bg-bss-soft-orange0" /> Leave (Approved / Pending)
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-purple-500" /> Holiday
+                  <span className="w-3 h-3 rounded-full bg-bss-blue-tint0" /> Holiday
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-full bg-bss-text-muted" /> Weekly Off
@@ -648,9 +653,9 @@ const attendanceColumns: DataColumn<AttendanceRow>[] = [
       <span
         className={`px-2 py-0.5 rounded text-xs font-bold border ${
           r.presence === 'Present'
-            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            ? 'bg-bss-soft-green text-bss-green border-bss-border'
             : r.presence === 'Absent'
-            ? 'bg-rose-50 text-rose-700 border-rose-200'
+            ? 'bg-bss-soft-orange text-bss-error border-bss-border'
             : 'bg-bss-bg text-bss-text-secondary border-bss-border'
         }`}
       >
@@ -664,7 +669,7 @@ const attendanceColumns: DataColumn<AttendanceRow>[] = [
     value: (r) => r.method ?? '—',
     render: (r) =>
       r.method && r.method !== '—' ? (
-        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#073B67] bg-bss-blue-tint border border-bss-border px-2 py-0.5 rounded-md">
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#01183A] bg-bss-blue-tint border border-bss-border px-2 py-0.5 rounded-md">
           {r.method.includes('QR Scan') ? (
             <QrCode size={11} />
           ) : r.method.includes('CCTV') ? (

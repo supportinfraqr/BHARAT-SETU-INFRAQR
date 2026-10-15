@@ -1137,6 +1137,7 @@ def attendance_camera_session(request):
         "running": running,
         "session": session,
         "cameras": display,
+        "allowFeedView": bool(getattr(site, "allow_cctv_feed_view", False)),
         "sightings": payload.get("sightings", []),
         "codeScans": payload.get("codeScans", []),
         "marked": marked,

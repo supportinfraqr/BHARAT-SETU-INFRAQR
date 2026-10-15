@@ -608,6 +608,46 @@ def _site_scalar_data(s):
     return out
 
 
+def _csd_row(doc):
+    """Serialise a ContractorSiteDocument (current version)."""
+    return {
+        "id": doc.id, "docType": doc.doc_type, "version": doc.version,
+        "fileName": doc.file_name, "uploadedAt": _dts(doc.uploaded_at),
+        "uploadedBy": _party_name(doc.uploaded_by) if doc.uploaded_by_id else "",
+        "url": f"/api/site-documents/{doc.id}/file",
+        "aiStatus": doc.ai_status or "",
+        "ai": doc.ai_json or {},
+    }
+
+
+def _csd_payload(contractor, site):
+    """The current AGREEMENT / PO documents for one (contractor, site) pair."""
+    from bss_core.models import ContractorSiteDocument
+    out = {"agreement": None, "po": None}
+    for d in (ContractorSiteDocument.objects
+              .filter(contractor=contractor, site=site, is_current=True)
+              .select_related("uploaded_by")):
+        out["agreement" if d.doc_type == "AGREEMENT" else "po"] = _csd_row(d)
+    return out
+
+
+def _csd_payloads_for_contractors(site, contractor_ids):
+    """A ``{contractorId: {agreement, po}}`` map for the given contractors at a
+    site (used by the employer's per-site contractor list)."""
+    from bss_core.models import ContractorSiteDocument
+    out = {str(cid): {"agreement": None, "po": None} for cid in contractor_ids}
+    if not out:
+        return out
+    rows = (ContractorSiteDocument.objects
+            .filter(site=site, contractor_id__in=list(contractor_ids), is_current=True)
+            .select_related("uploaded_by"))
+    for d in rows:
+        key = str(d.contractor_id)
+        if key in out:
+            out[key]["agreement" if d.doc_type == "AGREEMENT" else "po"] = _csd_row(d)
+    return out
+
+
 def _mask(value, keep=4):
     """Mask all but the last `keep` characters (for verified identifiers)."""
     v = str(value or "").strip()
@@ -861,6 +901,9 @@ __all__ = [
     "_ce_initiator_acceptor",
     "_compliance_doc_row",
     "_compliance_status",
+    "_csd_row",
+    "_csd_payload",
+    "_csd_payloads_for_contractors",
     "_default_site_info",
     "_doc_name_key",
     "_doc_owner_label",

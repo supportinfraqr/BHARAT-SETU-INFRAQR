@@ -122,16 +122,31 @@ def translate_texts(texts, target: str, source: str = "en"):
     if not pending:
         return results
 
-    use_cloud = setting.mode == "google_cloud" and setting.has_key
+    # Engine/key: the admin's TranslationSetting wins; otherwise fall back to the
+    # configured Google Cloud key (settings.GOOGLE_TRANSLATE_API_KEY) so translation
+    # works out of the box. With no key at all, use the free unofficial endpoint.
+    key = ""
+    if setting.mode == "google_cloud" and setting.has_key:
+        key = setting.get_api_key()
+    elif getattr(settings, "GOOGLE_TRANSLATE_API_KEY", ""):
+        key = settings.GOOGLE_TRANSLATE_API_KEY
+
+    def _run_free():
+        with ThreadPoolExecutor(max_workers=_FREE_WORKERS) as pool:
+            return list(pool.map(lambda item: _free_translate(item[1], target, source), pending))
+
     try:
-        if use_cloud:
-            translated = _cloud_translate([text for _, text in pending], target, source, setting.get_api_key())
-            for (index, _), value in zip(pending, translated):
-                results[index] = value
+        if key:
+            try:
+                translated = _cloud_translate([text for _, text in pending], target, source, key)
+                for (index, _), value in zip(pending, translated):
+                    results[index] = value
+            except Exception as exc:  # noqa: BLE001 - fall back to the free engine
+                logger.warning("Google Cloud translation failed (%s); trying the free engine.", exc)
+                for (index, _), value in zip(pending, _run_free()):
+                    results[index] = value
         else:
-            with ThreadPoolExecutor(max_workers=_FREE_WORKERS) as pool:
-                values_ = list(pool.map(lambda item: _free_translate(item[1], target, source), pending))
-            for (index, _), value in zip(pending, values_):
+            for (index, _), value in zip(pending, _run_free()):
                 results[index] = value
     except Exception as exc:  # noqa: BLE001 - degrade to English, never 500
         logger.warning("Translation to %s failed: %s", target, exc)

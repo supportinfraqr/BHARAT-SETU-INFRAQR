@@ -16,6 +16,7 @@ export default function CameraPreview({
 }) {
   const [src, setSrc] = useState('');
   const [live, setLive] = useState(false);
+  const [disabled, setDisabled] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const base = '/api/employer/cctv';
 
@@ -33,6 +34,10 @@ export default function CameraPreview({
           url = URL.createObjectURL(blob);
           setSrc(url);
           setLive(true);
+          setDisabled(false);
+        } else if (res.status === 403) {
+          setLive(false);
+          setDisabled(true);
         } else {
           setLive(false);
         }
@@ -50,13 +55,13 @@ export default function CameraPreview({
   }, [cameraId, base]);
 
   return (
-    <div className={`relative ${className} shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-slate-900`}>
+    <div className={`relative ${className} shrink-0 overflow-hidden rounded-lg border border-bss-border bg-bss-navy`}>
       {src
         ? <img src={src} alt={label || 'camera feed'} className="h-full w-full object-cover" />
-        : <div className="grid h-full w-full place-items-center text-[10px] text-gray-400">No preview</div>}
-      <span className={`absolute left-1 top-1 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${live ? 'bg-red-600 text-white' : 'bg-black/60 text-gray-200'}`}>
-        <span className={`h-1.5 w-1.5 rounded-full ${live ? 'animate-pulse bg-white' : 'bg-gray-400'}`} />
-        {live ? 'LIVE' : 'Offline'}
+        : <div className="grid h-full w-full place-items-center px-2 text-center text-[10px] text-bss-text-muted">{disabled ? 'View disabled' : 'No preview'}</div>}
+      <span className={`absolute left-1 top-1 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${live ? 'bg-bss-error text-white' : 'bg-black/60 text-bss-text-secondary'}`}>
+        <span className={`h-1.5 w-1.5 rounded-full ${live ? 'animate-pulse bg-white' : 'bg-bss-surface'}`} />
+        {disabled ? 'LOCKED' : live ? 'LIVE' : 'Offline'}
       </span>
     </div>
   );

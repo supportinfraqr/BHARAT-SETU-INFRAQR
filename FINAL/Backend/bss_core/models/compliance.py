@@ -331,7 +331,22 @@ class ComplianceDocument(models.Model):
 class ComplianceReport(models.Model):
     """A compliance audit / scorecard performed on an employer for a period."""
 
-    employer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="compliance_reports")
+    KIND = [("SUBMISSION", "Submission"), ("GLOBAL", "Global")]
+    STATUS = [("PENDING", "Pending"), ("RUNNING", "Running"),
+              ("READY", "Ready"), ("FAILED", "Failed")]
+
+    employer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True,
+                                 related_name="compliance_reports")
+    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name="+")
+    report_kind = models.CharField(max_length=20, choices=KIND, default="SUBMISSION")
+    status = models.CharField(max_length=20, choices=STATUS, default="READY")
+    # The AI audit workspace (private folder: source_documents/ + groundtruth_data/)
+    # and the AI agent's structured report + rendered HTML.
+    workspace = models.CharField(max_length=500, blank=True)
+    ai_report = models.JSONField(default=dict, blank=True)
+    ai_html = models.TextField(blank=True)
+    error_message = models.CharField(max_length=500, blank=True)
     financial_year = models.CharField(max_length=12, blank=True)
     period = models.CharField(max_length=40, blank=True)
     state = models.CharField(max_length=60, blank=True)
@@ -508,10 +523,17 @@ class LwfMaster(models.Model):
 
 
 class LicenseMaster(models.Model):
-    """Business license master (govt fee, security deposit, validity rules)."""
+    """Business license master (govt fee, security deposit, validity rules).
+
+    ``applies_to`` says who must hold the licence: contractors, employers, or
+    both — the applicable party is prompted to upload the licence copy."""
+
+    APPLIES_TO = [("Contractor", "Contractor"), ("Employer", "Employer"),
+                  ("Both", "Both")]
 
     license_name = models.CharField(max_length=160)
     state = models.CharField(max_length=60, blank=True)
+    applies_to = models.CharField(max_length=20, choices=APPLIES_TO, default="Both")
     government_fee = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     security_deposit = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     industry = models.CharField(max_length=120, blank=True)
@@ -529,6 +551,37 @@ class LicenseMaster(models.Model):
 
     def __str__(self):
         return f"{self.license_name} {self.state}"
+
+
+class PartyLicense(models.Model):
+    """A licence held (and uploaded) by a contractor or employer — one row per
+    (user, licence master). The applicable party is prompted to upload the
+    licence copy; re-uploading replaces it."""
+
+    STATUS = [("PENDING", "Pending"), ("UPLOADED", "Uploaded"),
+              ("VERIFIED", "Verified"), ("REJECTED", "Rejected")]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="party_licenses")
+    license = models.ForeignKey(LicenseMaster, on_delete=models.CASCADE,
+                                related_name="party_records")
+    license_number = models.CharField(max_length=120, blank=True)
+    valid_from = models.DateField(null=True, blank=True)
+    valid_to = models.DateField(null=True, blank=True)
+    file = models.FileField(upload_to="party_licenses/%Y/%m/", blank=True, null=True)
+    file_name = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="UPLOADED")
+    note = models.CharField(max_length=300, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "party_license"
+        constraints = [models.UniqueConstraint(fields=["user", "license"],
+                                               name="uq_party_license_user_license")]
+        indexes = [models.Index(fields=["user", "status"], name="idx_party_license_user")]
+
+    def __str__(self):
+        return f"licence #{self.license_id} · user {self.user_id} ({self.status})"
 
 
 class MinimumWage(models.Model):

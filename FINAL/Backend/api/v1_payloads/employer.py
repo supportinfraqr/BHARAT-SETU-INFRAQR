@@ -189,6 +189,9 @@ def _employer_sites(user):
             "id": str(s.id), "code": _d(s.site_code), "name": _d(s.site_name),
             "location": _d(s.location) or _d(s.city),
             "state": _d(s.state),
+            "jurisdiction": _d(s.jurisdiction) or "state",
+            "maxCctvCameras": int(getattr(s, "max_cctv_cameras", 5) or 5),
+            "allowCctvFeedView": bool(getattr(s, "allow_cctv_feed_view", False)),
             "startDate": _dts(s.site_start_date) or "",
             "endDate": _dts(s.expected_end_date) or "",
             "status": _d(s.site_status) or ("Active" if s.attendance_enabled else "Planned"),
@@ -203,8 +206,7 @@ def _employer_sites(user):
                 _d(s.appointment_letter_template.name) if s.appointment_letter_template_id else ""),
             "experienceLetterTemplateName": (
                 _d(s.experience_letter_template.name) if s.experience_letter_template_id else ""),
-            "hasAgreement": bool(s.agreement_file),
-            "agreementName": _d(s.agreement_name),
+            "contractorDocuments": _csd_payloads_for_contractors(s, cids),
             "data": _site_scalar_data(s),
         })
     return rows

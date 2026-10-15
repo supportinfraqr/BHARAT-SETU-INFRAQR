@@ -17,10 +17,12 @@ from .misc import *  # noqa: F401,F403
 from .bindings import *  # noqa: F401,F403
 from .leave import *  # noqa: F401,F403
 from .sites import *  # noqa: F401,F403
+from .licenses import *  # noqa: F401,F403
 from .submissions import *  # noqa: F401,F403
 from .mutations import *  # noqa: F401,F403
 from .portals import *  # noqa: F401,F403
 from .letter_templates import *  # noqa: F401,F403
+from .letter_adoption import *  # noqa: F401,F403
 from .register_templates import *  # noqa: F401,F403
 from .attendance import *  # noqa: F401,F403
 from .history import *  # noqa: F401,F403
@@ -30,6 +32,7 @@ from .translation import *  # noqa: F401,F403
 from .ai_audit import *  # noqa: F401,F403
 from .ai_report import *  # noqa: F401,F403
 from .audit_reports import *  # noqa: F401,F403
+from .global_audit import *  # noqa: F401,F403
 from .admin_bulk import *  # noqa: F401,F403
 from .onboarding import *  # noqa: F401,F403
 from .devices import *  # noqa: F401,F403

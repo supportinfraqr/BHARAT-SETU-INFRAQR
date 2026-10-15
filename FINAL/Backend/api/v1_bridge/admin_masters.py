@@ -152,15 +152,13 @@ def _specs():
         "model": LicenseMaster, "order": "id",
         "fields": {
             "name": ("license_name", "text"), "state": ("state", "text"),
-            "industry": ("industry", "text"), "govtFee": ("government_fee", "number"),
+            "appliesTo": ("applies_to", "text"),
+            "govtFee": ("government_fee", "number"),
             "securityDeposit": ("security_deposit", "number"),
-            "paymentFrequency": ("payment_frequency", "text"),
-            "bonusPercent": ("bonus_pct", "number"), "wageZone": ("wage_zone", "text"),
             "status": ("is_active", "active"),
-            "applicabilityCount": (None, "number"), "effectiveFrom": (None, "date"),
-            "effectiveTo": (None, "date"), "minWageApplicability": (None, "yesno"),
-            "bonusPayoutMonth": (None, "text"), "grade": (None, "text"),
-            "employmentCategory": (None, "text"),
+            "effectiveFrom": (None, "date"), "effectiveTo": (None, "date"),
+            "minWageApplicability": (None, "yesno"),
+            "bonusPayoutMonth": (None, "text"),
         },
     }
     min_wage = {

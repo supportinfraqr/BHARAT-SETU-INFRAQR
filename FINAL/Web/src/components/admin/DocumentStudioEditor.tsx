@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Copy, Download, Eye, Pencil } from 'lucide-react';
-import { DEFAULT_LETTER_LOGO, LETTER_LOGO_IMG } from '@/lib/letterBrand';
+import { DEFAULT_LETTER_LOGO, LETTER_LOGO_DISPLAY, LETTER_LOGO_IMG } from '@/lib/letterBrand';
 
 export type StudioToken = { value: string; label: string; group?: string };
 
@@ -29,14 +29,19 @@ function splitShell(html: string): { prefix: string; suffix: string; hasBody: bo
  * It edits the <body> of ``value`` while preserving the surrounding shell/style.
  */
 export default function DocumentStudioEditor({
-  value, onChange, tokens, renderPreview, defaultHtml = '',
+  value, onChange, tokens, renderPreview, defaultHtml = '', variant = 'full', logoUrl = '',
 }: {
   value: string;
   onChange: (html: string) => void;
   tokens: StudioToken[];
   renderPreview: (html: string) => string;
   defaultHtml?: string;
+  /** 'employer' hides the table/row/column/logo/undo tools (locked-body editing). */
+  variant?: 'full' | 'employer';
+  /** Optional custom logo URL used in place of the BSS default in the canvas. */
+  logoUrl?: string;
 }) {
+  const logoDisplay = logoUrl || LETTER_LOGO_DISPLAY;
   const canvasRef = useRef<HTMLDivElement>(null);
   const [shell] = useState(() => splitShell(value || defaultHtml));
   const [tab, setTab] = useState<'visual' | 'code'>('visual');
@@ -59,7 +64,7 @@ export default function DocumentStudioEditor({
   function highlightTokensForCanvas(html: string): string {
     if (!html) return '';
     // Swap the {{logoUrl}} token for the real URL so the WYSIWYG canvas shows the logo.
-    let out = html.replace(/src=["']\{\{\s*logoUrl\s*\}\}["']/gi, `src="${DEFAULT_LETTER_LOGO}" data-token="logoUrl"`);
+    const out = html.replace(/src=["']\{\{\s*logoUrl\s*\}\}["']/gi, `src="${logoDisplay}" data-token="logoUrl"`);
     // Colorize plain {{token}} text into high-contrast pill badges in Word Canvas
     return out.replace(/<span[^>]*contenteditable=["']false["'][^>]*>(\{\{[^}]+\}\})<\/span>|(\{\{[^}]+\}\})/gi, (match, badgeToken, rawToken) => {
       const tok = badgeToken || rawToken;
@@ -84,6 +89,15 @@ export default function DocumentStudioEditor({
     if (!value && body) onChange(build(body));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Swap the header logo live when the custom logo changes.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.querySelectorAll('img[data-token="logoUrl"]').forEach(img => {
+      if (img.getAttribute('src') !== logoDisplay) img.setAttribute('src', logoDisplay);
+    });
+  }, [logoDisplay]);
 
   const savedRangeRef = useRef<Range | null>(null);
 
@@ -140,6 +154,12 @@ export default function DocumentStudioEditor({
       'src="{{logoUrl}}"'
     );
     out = out.replace(/src=["']\/bss-original-logo\.png["']/gi, 'src="{{logoUrl}}"');
+    out = out.replace(/src=["']\/bss-brand\/bharatshramsetu-logo\.png["']/gi, 'src="{{logoUrl}}"');
+    if (logoUrl) {
+      // Plain string replacement (no RegExp) — a data-URI logo can be huge and
+      // building a RegExp from it throws.
+      out = out.split(`src="${logoUrl}"`).join('src="{{logoUrl}}"').split(`src='${logoUrl}'`).join('src="{{logoUrl}}"');
+    }
     // Drop the editor-only marker attribute added for canvas rendering.
     out = out.replace(/\s+data-token=["']logoUrl["']/gi, '');
     return out;
@@ -162,6 +182,17 @@ export default function DocumentStudioEditor({
     saveSelection();
     emitRich();
   }
+  function cmdColor(color: string) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    restoreSelection();
+    canvas.focus();
+    document.execCommand('styleWithCSS', false, 'true');
+    document.execCommand('foreColor', false, color);
+    document.execCommand('styleWithCSS', false, 'false');
+    saveSelection();
+    emitRich();
+  }
   function insertToken(tok: string) {
     const canvas = canvasRef.current;
     if (tab === 'visual' && canvas) {
@@ -169,7 +200,7 @@ export default function DocumentStudioEditor({
       restoreSelection();
       const sel = window.getSelection();
       if (tok.toLowerCase().includes('logourl')) {
-        cmd('insertHTML', `${LETTER_LOGO_IMG}&nbsp;`);
+        cmd('insertHTML', `${LETTER_LOGO_IMG.replace(DEFAULT_LETTER_LOGO, logoDisplay)}&nbsp;`);
         return;
       }
       const range = activeCaret();
@@ -390,9 +421,13 @@ export default function DocumentStudioEditor({
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex gap-1 bg-gray-100 p-0.5 rounded-lg">
         <button type="button" onClick={() => setTab('visual')} className={`px-3 py-1 rounded-md text-[11px] font-bold inline-flex items-center gap-1 ${tab === 'visual' ? 'bg-white text-[#073B67] shadow-sm' : 'text-gray-500'}`}><Pencil size={12} />Word Canvas</button>
-        <button type="button" onClick={() => setTab('code')} className={`px-3 py-1 rounded-md text-[11px] font-bold ${tab === 'code' ? 'bg-white text-[#073B67] shadow-sm' : 'text-gray-500'}`}>HTML Code</button>
+        {variant !== 'employer' && (
+          <button type="button" onClick={() => setTab('code')} className={`px-3 py-1 rounded-md text-[11px] font-bold ${tab === 'code' ? 'bg-white text-[#073B67] shadow-sm' : 'text-gray-500'}`}>HTML Code</button>
+        )}
       </div>
-      <button type="button" onClick={() => setPickerOpen(v => !v)} className="text-[11px] font-semibold px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50">{pickerOpen ? 'Hide fields' : 'Insert field'}</button>
+      {variant !== 'employer' && (
+        <button type="button" onClick={() => setPickerOpen(v => !v)} className="text-[11px] font-semibold px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50">{pickerOpen ? 'Hide fields' : 'Insert field'}</button>
+      )}
     </div>
 
     {tab === 'visual' && (
@@ -404,12 +439,21 @@ export default function DocumentStudioEditor({
         <button type="button" className={tool} onClick={() => cmd('formatBlock', 'H1')}>H1</button>
         <button type="button" className={tool} onClick={() => cmd('formatBlock', 'H2')}>H2</button>
         <button type="button" className={tool} onClick={() => cmd('formatBlock', 'P')}>¶</button>
+        {variant === 'employer' && (<>
+          <label title="Text / heading colour" className={`${tool} relative cursor-pointer overflow-hidden`}>
+            <span className="font-bold leading-none" style={{ borderBottom: '3px solid #cbd5e1' }}>A</span>
+            <input type="color" defaultValue="#073B67" onChange={e => cmdColor(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+          </label>
+          <button type="button" title="Clear colour" className={tool} onClick={() => cmdColor('inherit')}>×</button>
+          <button type="button" className={`${tool} text-[#073B67] font-bold bg-blue-50/70 border-blue-200`} onClick={() => cmd('insertHTML', '<h3>Additional Clause</h3><p>Enter the clause here.</p>')}>+ Add clause</button>
+        </>)}
         <span className="w-px h-5 bg-gray-200 mx-1" />
         <button type="button" className={tool} onClick={() => cmd('insertUnorderedList')}>• List</button>
         <button type="button" className={tool} onClick={() => cmd('insertOrderedList')}>1. List</button>
         <button type="button" className={tool} onClick={() => cmd('justifyLeft')}>Left</button>
         <button type="button" className={tool} onClick={() => cmd('justifyCenter')}>Center</button>
         
+        {variant !== 'employer' && (<>
         {/* Table & Column Dropdown */}
         <div className="relative inline-block">
           <button
@@ -494,6 +538,7 @@ export default function DocumentStudioEditor({
         <span className="w-px h-5 bg-gray-200 mx-1" />
         <button type="button" className={tool} onClick={() => cmd('undo')}>Undo</button>
         <button type="button" className={tool} onClick={() => cmd('redo')}>Redo</button>
+        </>)}
       </div>
     )}
 
@@ -565,7 +610,7 @@ export default function DocumentStudioEditor({
 
     <div>
       <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2 flex items-center gap-1.5"><Eye size={13} />Live preview — sample data</p>
-      <iframe title="Document live preview" srcDoc={renderPreview(build(body))} className="w-full h-[60vh] rounded-lg border border-gray-200 bg-white" sandbox="" />
+      <iframe title="Document live preview" srcDoc={renderPreview(build(body))} className="w-full h-[60vh] rounded-lg border border-gray-200 bg-white" sandbox="allow-same-origin" />
     </div>
   </div>;
 }

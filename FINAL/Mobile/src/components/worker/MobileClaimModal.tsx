@@ -58,31 +58,31 @@ export default function MobileClaimModal() {
   return (
     <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm grid place-items-center p-4">
       <section role="dialog" aria-modal="true" aria-labelledby="claim-mobile-title" className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
-        <div className="bg-[#073B67] text-white px-6 py-5">
+        <div className="bg-[#01183A] text-white px-6 py-5">
           <span className="w-10 h-10 rounded-xl bg-white/15 grid place-items-center"><Phone size={20} /></span>
           <h2 id="claim-mobile-title" className="text-lg font-bold mt-3">Add your mobile number</h2>
           <p className="text-xs text-white/80 mt-1">Your account was created with Aadhaar. Add and verify your mobile number — it becomes your login ID and contact number.</p>
         </div>
         <div className="p-6 space-y-4">
           <label className="block">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Mobile number</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-bss-text-muted">Mobile number</span>
             <div className="mt-1.5 flex">
-              <span className="bg-gray-100 border border-gray-200 border-r-0 rounded-l-xl px-3 grid place-items-center text-sm font-semibold text-gray-500">+91</span>
-              <input type="tel" inputMode="numeric" value={mobile} disabled={sent} onChange={e => { setMobile(e.target.value.replace(/\D/g, '').slice(0, 10)); setError(''); }} placeholder="10-digit mobile number" className="w-full h-11 border border-gray-200 rounded-r-xl px-3 text-sm font-medium disabled:bg-gray-50 disabled:text-gray-500" />
+              <span className="bg-bss-bg border border-bss-border border-r-0 rounded-l-xl px-3 grid place-items-center text-sm font-semibold text-bss-text-muted">+91</span>
+              <input type="tel" inputMode="numeric" value={mobile} disabled={sent} onChange={e => { setMobile(e.target.value.replace(/\D/g, '').slice(0, 10)); setError(''); }} placeholder="10-digit mobile number" className="w-full h-11 border border-bss-border rounded-r-xl px-3 text-sm font-medium disabled:bg-bss-bg disabled:text-bss-text-muted" />
             </div>
           </label>
           {sent && (
             <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">OTP</span>
-              <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otp} onChange={e => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(''); }} placeholder="6-digit OTP" className="mt-1.5 w-full h-11 border border-gray-200 rounded-xl px-3 text-center tracking-[0.4em] font-bold" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-bss-text-muted">OTP</span>
+              <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otp} onChange={e => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(''); }} placeholder="6-digit OTP" className="mt-1.5 w-full h-11 border border-bss-border rounded-xl px-3 text-center tracking-[0.4em] font-bold" />
             </label>
           )}
-          {error && <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
-          {notice && <p role="status" className="text-xs text-green-700 bg-green-50 border border-green-100 rounded-lg p-2.5">{notice}</p>}
-          <button onClick={() => void (sent ? verify() : sendOtp())} disabled={busy} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60">
+          {error && <p role="alert" className="text-xs text-bss-error bg-bss-soft-orange border border-bss-border rounded-lg p-2.5">{error}</p>}
+          {notice && <p role="status" className="text-xs text-bss-green bg-bss-soft-green border border-bss-border rounded-lg p-2.5">{notice}</p>}
+          <button onClick={() => void (sent ? verify() : sendOtp())} disabled={busy} className="w-full h-11 rounded-xl bg-[#01183A] text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60">
             {busy ? 'Please wait…' : sent ? 'Verify & save mobile' : 'Send OTP'} {sent ? <ShieldCheck size={16} /> : <ArrowRight size={16} />}
           </button>
-          {sent && <button onClick={() => { setSent(false); setOtp(''); setNotice(''); }} className="w-full text-xs font-semibold text-gray-500 hover:text-[#073B67]">Change number</button>}
+          {sent && <button onClick={() => { setSent(false); setOtp(''); setNotice(''); }} className="w-full text-xs font-semibold text-bss-text-muted hover:text-[#01183A]">Change number</button>}
           {sent && <ResendOtp onSend={() => post({ action: 'request-otp', mobile }).then(() => undefined)} className="text-center" />}
         </div>
       </section>

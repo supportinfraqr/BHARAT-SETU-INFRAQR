@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Building2, CheckCircle2, Clock3, Handshake, History, Home, Link2, MapPin, QrCode, Search, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useWorker } from '@/contexts/WorkerContext';
+import { usePortalAutoRefresh } from '@/lib/usePortalAutoRefresh';
 import PageHero from '@/components/portal/PageHero';
 import RebindAuthModal from '@/components/worker/RebindAuthModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -43,6 +44,9 @@ type BindingRequest = {
 
 export default function BindingRequestsPage() {
   const { worker, portal, refresh } = useWorker();
+  // Keep the binding register live: refresh on mount, on tab focus and every 20s
+  // so a request created/accepted by the contractor shows without a manual refresh.
+  usePortalAutoRefresh(refresh, { pollMs: 20000 });
 
   const apiRequests: BindingRequest[] = (portal.bindings ?? []).map(req => ({
     id: Number(req.id),

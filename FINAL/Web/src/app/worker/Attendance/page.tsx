@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import type { IScannerControls } from '@zxing/browser';
 import {
   ArrowLeft,
@@ -28,6 +29,9 @@ import PageHero from '@/components/portal/PageHero';
 import type { AttendanceRecord } from '@/types/portal';
 import { useWorker } from '@/contexts/WorkerContext';
 import EnterpriseDataTable, { DataColumn } from '@/components/worker/EnterpriseDataTable';
+
+// Google Maps (with OpenStreetMap fallback) preview for the captured location.
+const SiteLocationMap = dynamic(() => import('@/components/employer/SiteMap').then(m => m.SiteMapView), { ssr: false });
 import ScanFrame from '@/components/qr/ScanFrame';
 import AttendanceDetailDialog, { statusStyle, fmtDist, fmtCoord } from '@/components/attendance/AttendanceDetailDialog';
 import { createQrReader, QR_VIDEO_CONSTRAINTS, applyContinuousFocus, decodeQrFromImageFile } from '@/lib/qrScanner';
@@ -297,6 +301,7 @@ export default function AttendancePage() {
                   </div>
                   {markLocation && <p className="text-xs text-bss-interactive-blue flex items-start gap-1.5"><MapPin size={13} className="mt-0.5 shrink-0"/><span>{markLocation}</span></p>}
                   {markCoords && <p className="text-[11px] font-mono text-bss-text-muted text-center">GPS {fmtCoord(markCoords.lat, markCoords.lng)}</p>}
+                  {markCoords && <SiteLocationMap lat={markCoords.lat} lng={markCoords.lng} name="Your location" height={150} link={false} />}
                   <p className="text-xs text-bss-text-muted text-center">{markMessage || 'Point the camera at the site QR code'}</p>
                   </>
                 )}

@@ -168,4 +168,4 @@ def letter_bss_id(binding_id, letter_type):
     11-character suffix and re-rendering never changes the printed reference.
     """
     letter = LETTER_PREFIX.get(letter_type, "R")
-    return f"BSS-{letter}{_mask(int(binding_id))}"
+    return f"BSS{letter}{_mask(int(binding_id))}"

@@ -312,6 +312,85 @@ def _level1_highlights(ev):
     return out
 
 
+def batch_register_items(batches):
+    """Per-register items from each batch's stored level-1 AI audit."""
+    from bss_core.models import RegisterTemplate
+
+    items = []
+    for batch in batches or []:
+        for tid, audit in (getattr(batch, "register_audits", None) or {}).items():
+            audit = audit or {}
+            tpl = (RegisterTemplate.objects.filter(pk=int(tid)).first()
+                   if str(tid).isdigit() else None)
+            items.append({
+                "group": "Per document / register uploaded",
+                "kind": "Generated register",
+                "name": f"{tpl.form_code} · {tpl.title}" if tpl else f"Register {tid}",
+                "status": audit.get("status") or "pending",
+                "summary": audit.get("summary") or audit.get("message") or "",
+                "findings": [str(x) for x in (audit.get("findings") or [])]
+                            + [f"Missing: {x}" for x in (audit.get("missing") or [])]
+                            + [f"Issue: {x}" for x in (audit.get("issues") or [])],
+            })
+    return items
+
+
+def submission_audit_items(submissions):
+    """Per-document/register items from manual uploads (their AI audit)."""
+    items = []
+    for ev in submissions or []:
+        findings = [str(f) for f in (ev.validation_findings or []) if str(f).strip()]
+        for cp in (ev.checkpoint_results or []):
+            if isinstance(cp, dict):
+                findings.append(
+                    f"{cp.get('label') or cp.get('key')}: "
+                    + ("Passed" if cp.get("passed") else "Failed")
+                    + (f" — {cp.get('detail')}" if cp.get("detail") else ""))
+        st = (ev.ai_status or "").strip().lower()
+        if not st:
+            st = "pending" if str(ev.status).upper() == "PENDING" else str(ev.status).lower()
+        items.append({
+            "group": "Per document / register uploaded",
+            "kind": ev.doc_type or ev.document_type or "Document",
+            "name": f"{ev.original_name or 'file'} · "
+                    f"{ev.site or ''} {ev.period or ev.month or ''}".strip(" ·"),
+            "status": st,
+            "summary": findings[0] if findings else "",
+            "findings": findings,
+        })
+    return items
+
+
+def global_contract_items(contractor, site=None):
+    """Global-level items: the signed agreement & purchase/work-order copies held
+    per contractor↔site, with their stored AI audit."""
+    from bss_core.models import ContractorSiteDocument
+
+    if contractor is None:
+        return []
+    labels = {"AGREEMENT": "Signed Agreement Copy", "PO": "Purchase Order / Work Order"}
+    qs = (ContractorSiteDocument.objects.filter(contractor=contractor, is_current=True)
+          .select_related("site"))
+    if site:
+        qs = qs.filter(site__site_name=site)
+    items = []
+    for doc in qs.order_by("site__site_name", "doc_type"):
+        audit = doc.ai_json or {}
+        steps = [s for s in (audit.get("steps") or []) if isinstance(s, dict)]
+        items.append({
+            "group": "Global level — Contract Documents (Agreement / PO)",
+            "kind": labels.get(doc.doc_type, doc.doc_type),
+            "name": f"{getattr(doc.site, 'site_name', '') or '—'} · "
+                    f"{doc.file_name or ''} (v{doc.version})",
+            "status": doc.ai_status or "pending",
+            "summary": audit.get("summary") or audit.get("message") or "",
+            "findings": [f"{s.get('step')} — {s.get('status')}"
+                         + (f": {s.get('observation')}" if s.get('observation') else "")
+                         for s in steps],
+        })
+    return items
+
+
 def _scope_submissions(user, site="", period="", fy=""):
     from bss_core.models import SubmissionEvidence
 
@@ -496,6 +575,17 @@ def contractor_compliance_report(request):
         if cr is None:
             return Response({"error": "Report not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        # The AI-audit pipeline (folder → multimodal agent) writes the report HTML;
+        # when ready, that replaces the legacy line-item renderer.
+        if cr.ai_html:
+            if (request.query_params.get("download") or "").lower() == "pdf":
+                return _report_pdf(cr.ai_html, f"bss-audit-report-{cr.unique_no or cr.id}.pdf")
+            return Response({"data": {
+                "html": cr.ai_html, "status": cr.status,
+                "verdict": (cr.ai_report or {}).get("verdict", ""),
+                "summary": (cr.ai_report or {}).get("summary", ""),
+            }}, status=status.HTTP_200_OK)
+
         from .compliance_verification import build_verification_report
         from .submissions import _batch_rows
         batch_ids = [int(x) for x in (cr.batch_ids or []) if str(x).isdigit()]
@@ -525,7 +615,12 @@ def contractor_compliance_report(request):
         }
         report = build_verification_report(rows, meta, batches, files=files)
         status_by_line, obs_by_line = _derive_line_data(batches, files)
-        html = build_line_item_report_html(meta, status_by_line, obs_by_line)
+        audit_items = (batch_register_items(batches)
+                       + submission_audit_items(
+                           SubmissionEvidence.objects.filter(user=request.user, unique_no=cr.unique_no))
+                       + global_contract_items(request.user, site=cr.site_name))
+        html = build_line_item_report_html(meta, status_by_line, obs_by_line,
+                                           audit_items=audit_items)
         if (request.query_params.get("download") or "").lower() == "pdf":
             return _report_pdf(html, f"bss-verification-report-{cr.unique_no or cr.id}.pdf")
         return Response({"data": {
@@ -541,7 +636,9 @@ def contractor_compliance_report(request):
     submissions = _scope_submissions(request.user, site=site, period=period, fy=fy)
     meta = {"site": site, "period": period, "fy": fy}
     report = build_submission_report(submissions, meta)
-    html = build_line_item_report_html(meta)
+    audit_items = (submission_audit_items(submissions)
+                   + global_contract_items(request.user, site=site))
+    html = build_line_item_report_html(meta, audit_items=audit_items)
     if (request.query_params.get("download") or "").lower() == "pdf":
         return _report_pdf(html, "bss-compliance-submission-report.pdf")
     return Response({"data": {**{k: report[k] for k in ("criteria", "documents", "verdict", "total", "clean", "passed")}, "html": html}}, status=status.HTTP_200_OK)
@@ -568,7 +665,12 @@ def employer_batch_verification_report(request, batch_id):
     }
     report = build_verification_report(rows, meta, [batch], files=[])
     status_by_line, obs_by_line = _derive_line_data([batch], [])
-    html = build_line_item_report_html(meta, status_by_line, obs_by_line)
+    audit_items = (batch_register_items([batch])
+                   + global_contract_items(
+                       batch.contractor,
+                       site=batch.site.site_name if batch.site else None))
+    html = build_line_item_report_html(meta, status_by_line, obs_by_line,
+                                       audit_items=audit_items)
     if (request.query_params.get("download") or "").lower() == "pdf":
         return _report_pdf(html, f"bss-verification-report-batch-{batch.id}.pdf")
     return Response({"data": {"html": html, "verdict": report["verdict"], "totals": report["totals"]}},

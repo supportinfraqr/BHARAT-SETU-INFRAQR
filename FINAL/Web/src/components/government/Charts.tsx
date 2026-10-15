@@ -48,25 +48,33 @@ export function HBar({ data, color = BRAND.blue }: { data: Array<{ label: string
   ))}</div>;
 }
 
-export function Donut({ slices, size = 150, thickness = 26 }: { slices: Array<{ label: string; value: number; color: string }>; size?: number; thickness?: number }) {
+export function Donut({ slices, size = 124, thickness = 18 }: { slices: Array<{ label: string; value: number; color: string }>; size?: number; thickness?: number }) {
   const total = Math.max(1, slices.reduce((s, x) => s + x.value, 0));
   const r = (size - thickness) / 2;
   const c = 2 * Math.PI * r;
   const lens = slices.map(s => s.value / total * c);
   const spans = slices.map((_s, i) => ({ len: lens[i], offset: lens.slice(0, i).reduce((a, b) => a + b, 0) }));
-  return <div className="flex items-center gap-4">
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={slices.map(s => `${s.label}: ${s.value}`).join(', ')}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={BRAND.mist} strokeWidth={thickness} />
-      {slices.map((s, i) => (
-        <circle key={i} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={s.color} strokeWidth={thickness} strokeLinecap="round"
-          strokeDasharray={`${spans[i].len} ${c - spans[i].len}`} strokeDashoffset={-spans[i].offset}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          style={{ animation: `bssBarGrowX 0.8s cubic-bezier(0.22,1,0.36,1) ${i * 90}ms both` }} />
-      ))}
-      <text x="50%" y="52%" textAnchor="middle" dominantBaseline="middle" className="fill-bss-text-primary text-lg font-bold">{total}</text>
-    </svg>
-    <div className="space-y-1.5">{slices.map((s, i) => (
-      <div key={i} className="flex items-center gap-2 text-xs"><span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }}/><span className="text-bss-text-secondary">{s.label}</span><strong className="text-bss-text-primary ml-auto">{s.value}</strong></div>
+  return <div className="flex items-center justify-between gap-4 w-full">
+    <div className="relative shrink-0 flex items-center justify-center">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={slices.map(s => `${s.label}: ${s.value}`).join(', ')}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={BRAND.mist} strokeWidth={thickness} />
+        {slices.map((s, i) => (
+          <circle key={i} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={s.color} strokeWidth={thickness} strokeLinecap="round"
+            strokeDasharray={`${spans[i].len} ${c - spans[i].len}`} strokeDashoffset={-spans[i].offset}
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            style={{ animation: `bssBarGrowX 0.8s cubic-bezier(0.22,1,0.36,1) ${i * 90}ms both` }} />
+        ))}
+        <text x="50%" y="53%" textAnchor="middle" dominantBaseline="middle" className="fill-bss-text-primary text-base font-bold">{total}</text>
+      </svg>
+    </div>
+    <div className="space-y-1.5 flex-1 min-w-[120px]">{slices.map((s, i) => (
+      <div key={i} className="flex items-center justify-between gap-2 text-xs">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }}/>
+          <span className="text-bss-text-secondary truncate">{s.label}</span>
+        </div>
+        <strong className="text-bss-text-primary font-semibold shrink-0">{s.value}</strong>
+      </div>
     ))}</div>
   </div>;
 }

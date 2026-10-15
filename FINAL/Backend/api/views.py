@@ -11,6 +11,7 @@ Includes the domain workflows encoded in the schema:
 import hashlib
 import logging
 import os
+import re
 import secrets
 import uuid
 from datetime import datetime, timezone
@@ -719,8 +720,12 @@ class QrAccessActionViewSet(viewsets.GenericViewSet):
 # DigiLocker OAuth2 (backend-only, ported from EesassinErp)
 # ---------------------------------------------------------------------------
 def _digilocker_doc_kind(item):
-    """Classify a DigiLocker file into the BSS identity it can fill."""
+    """Classify a DigiLocker file from its metadata into the BSS identity it can
+    fill. Driving-licence documents are explicitly ``dl`` so they can never be
+    mistaken for a PAN."""
     blob = " ".join(str(item.get(k) or "") for k in ("doctype", "name", "uri")).upper()
+    if any(k in blob for k in ("TRANSPORT", "DRVLC", "DRIVING")):
+        return "dl"
     if "PAN" in blob:
         return "pan"
     if "AADHAAR" in blob or "ADHAR" in blob:
@@ -728,6 +733,78 @@ def _digilocker_doc_kind(item):
     if any(k in blob for k in ("EPFO", "UAN", "PRFND", "PASSBOOK", "PROVIDENT")):
         return "uan"
     return ""
+
+
+_PAN_VERIFY_RE = re.compile(r"[A-Z]{5}[0-9]{4}[A-Z]")
+
+
+def _verified_doc_kind(file_bytes, filename, meta_kind="", expected_pan=""):
+    """Confirm a fetched document's true type from its CONTENT, falling back to
+    the metadata classification. Prevents a non-PAN (e.g. a driving licence) from
+    ever being treated as a PAN."""
+    try:
+        from . import ocr_client
+        text = ocr_client.extract_text(file_bytes, filename or "document.pdf") or ""
+    except Exception as exc:  # noqa: BLE001
+        logging.getLogger(__name__).warning("DigiLocker content check failed: %s", exc)
+        return meta_kind
+    up = text.upper()
+    if any(k in up for k in ("DRIVING LICENCE", "DRIVING LICENSE", "DRVLC",
+                             "TRANSPORT DEPARTMENT", "TRANSPORT DEPT", "DRIVING")):
+        return "dl"
+    if "PERMANENT ACCOUNT NUMBER" in up or "INCOME TAX DEPARTMENT" in up:
+        m = _PAN_VERIFY_RE.search(up)
+        text_pan = m.group(0) if m else ""
+        # A genuine PAN card must show a PAN that reconciles with the URI's PAN.
+        if text_pan and (not expected_pan or text_pan == expected_pan):
+            return "pan"
+        return ""  # looks like a PAN doc but the number didn't reconcile
+    if "UNIQUE IDENTIFICATION AUTHORITY" in up or "AADHAAR" in up or "MERI PEHCHAN" in up:
+        return "aadhaar"
+    if any(k in up for k in ("PROVIDENT FUND", "EPFO", "PASSBOOK")):
+        return "uan"
+    return meta_kind
+
+
+def _apply_verified_pan(user, file_bytes):
+    """Set the worker's PAN (+ verified) and holder name from a CONTENT-VERIFIED
+    PAN document only."""
+    identity = WorkerIdentity.objects.filter(user=user).first()
+    if identity is None:
+        return
+    try:
+        from . import ocr_client
+        fields = ocr_client.extract_fields("pan", ocr_client.extract_text(file_bytes, "pan.pdf") or "")
+    except Exception:  # noqa: BLE001
+        fields = {}
+    pan = str(fields.get("pan") or "").strip().upper()
+    if pan:
+        identity.pan = pan
+        identity.pan_verified = True
+        identity.save(update_fields=["pan", "pan_verified", "updated_at"])
+    _capture_pan_name(user, file_bytes)
+
+
+def _apply_downloaded_doc(user, item, uri, file_bytes, fname):
+    """Apply one downloaded DigiLocker file using its CONTENT-verified type:
+    PAN updates the identity; a driving licence registers as DL; everything else
+    maps by metadata. A DL never touches PAN or its verified flag."""
+    if not file_bytes:
+        return
+    meta_kind = _digilocker_doc_kind(item)
+    vkind = _verified_doc_kind(file_bytes, fname, meta_kind, expected_pan=dl.extract_pan(uri))
+    if vkind == "pan":
+        _apply_verified_pan(user, file_bytes)
+        master_code = "PAN"
+    elif vkind == "dl":
+        master_code = "DL"
+    else:
+        master_code = _digilocker_master_code(item)
+    if master_code:
+        try:
+            _sync_document_register(user, master_code, file_bytes, fname, "application/pdf")
+        except Exception:  # noqa: BLE001
+            pass
 
 
 def _first_12_digit(*texts):
@@ -747,18 +824,12 @@ def _apply_digilocker_documents(user, items):
     identity_dirty = False
     for item in items:
         kind = _digilocker_doc_kind(item)
-        if not kind:
+        # PAN is set only after the file is CONTENT-verified (see
+        # _apply_downloaded_doc); a driving licence never touches the identity.
+        if not kind or kind == "dl":
             continue
         uri, name = item.get("uri") or "", item.get("name") or ""
-        if kind == "pan" and identity:
-            # DigiLocker is authoritative for PAN: a fetched PAN always wins over
-            # a manually-typed value and is the only source that marks it verified.
-            pan = dl.extract_pan(uri) or dl.extract_pan(name)
-            if pan and (identity.pan != pan or not identity.pan_verified):
-                identity.pan = pan
-                identity.pan_verified = True
-                identity_dirty = True
-        elif kind == "aadhaar" and identity and not identity.aadhaar:
+        if kind == "aadhaar" and identity and not identity.aadhaar:
             num = _first_12_digit(uri, name)
             if num:
                 identity.aadhaar = num
@@ -823,6 +894,8 @@ def _store_eaadhaar(profile, user, xml_text):
 def _digilocker_master_code(item):
     """Map a DigiLocker file to a WorkerDocumentMaster code (or None)."""
     blob = " ".join(str(item.get(k) or "") for k in ("doctype", "name", "uri")).upper()
+    if any(k in blob for k in ("TRANSPORT", "DRVLC", "DRIVING")):
+        return "DL"
     if "PAN" in blob:
         return "PAN"
     if "AADHAAR" in blob or "ADHAR" in blob:
@@ -842,6 +915,18 @@ def _sync_document_register(user, master_code, file_bytes, filename, mime=""):
     master = WorkerDocumentMaster.objects.filter(code=master_code).first()
     if master is None:
         return
+    # Safety guard: never store a file whose CONTENT contradicts the slot (e.g. a
+    # driving licence in the PAN slot). Only enforced when the content read is
+    # decisive, so an unreadable scanned doc is not blocked.
+    if master_code in ("PAN", "DL"):
+        try:
+            vkind = _verified_doc_kind(file_bytes, filename)
+        except Exception:  # noqa: BLE001
+            vkind = ""
+        if vkind and vkind != ("pan" if master_code == "PAN" else "dl"):
+            logging.getLogger(__name__).warning(
+                "Not storing %s in the %s slot — content is %s", filename, master_code, vkind)
+            return
     doc = WorkerDocument.objects.filter(user=user, document=master).first()
     if doc is None:
         doc = WorkerDocument(user=user, document=master)
@@ -858,14 +943,69 @@ def _sync_document_register(user, master_code, file_bytes, filename, mime=""):
     doc.save()
 
 
+def _reconcile_user_digilocker(user):
+    """Self-heal a worker's DigiLocker documents.
+
+    Store each fetched file in the slot its CONTENT says it is (PAN vs DL vs …)
+    and ensure the PAN identity + ``pan_verified`` are backed by a genuine PAN
+    document only. Safe to run repeatedly.
+    """
+    from bss_core.models import WorkerDocument
+
+    docs = (DigiLockerDocument.objects
+            .filter(Q(user=user) | Q(profile__user=user)).distinct())
+    for d in docs:
+        if not (d.file_path and os.path.exists(d.file_path)):
+            continue
+        try:
+            data = open(d.file_path, "rb").read()
+        except OSError:
+            continue
+        try:
+            _apply_downloaded_doc(user, {"doctype": d.doctype, "name": d.file_name or "",
+                                         "uri": d.uri or ""}, d.uri or "", data,
+                                  d.file_name or "document.pdf")
+        except Exception as exc:  # noqa: BLE001
+            logging.getLogger(__name__).warning("reconcile doc %s failed: %s", d.uri, exc)
+
+    # The PAN slot must hold a genuine PAN; otherwise remove it and clear the
+    # PAN identity so a non-PAN (e.g. a DL) can never read as "PAN verified".
+    pan_doc = WorkerDocument.objects.filter(user=user, document__code="PAN").first()
+    genuine_pan = False
+    if pan_doc and pan_doc.file:
+        try:
+            data = pan_doc.file.read()
+            pan_doc.file.seek(0)
+            vkind = _verified_doc_kind(data, pan_doc.file_name or "pan.pdf") or ""
+            genuine_pan = vkind in ("", "pan")  # unreadable => leave it alone
+        except Exception:  # noqa: BLE001
+            genuine_pan = True
+    if not genuine_pan:
+        if pan_doc is not None:
+            try:
+                pan_doc.file.delete(save=False)
+            except Exception:  # noqa: BLE001
+                pass
+            pan_doc.delete()
+        identity = WorkerIdentity.objects.filter(user=user).first()
+        if identity and (identity.pan or identity.pan_verified or identity.pan_holder_name):
+            identity.pan = ""
+            identity.pan_verified = False
+            identity.pan_holder_name = ""
+            identity.pan_name_matches_aadhaar = None
+            identity.save(update_fields=["pan", "pan_verified", "pan_holder_name",
+                                         "pan_name_matches_aadhaar", "updated_at"])
+
+
 def _capture_pan_name(user, file_bytes):
-    """Read the PAN holder name from the fetched DigiLocker PAN PDF (OCR) and
-    record whether it matches the worker's Aadhaar name."""
+    """Read the PAN holder name from the fetched DigiLocker PAN PDF and record
+    whether it matches the worker's Aadhaar name."""
     if user is None or not file_bytes:
         return
     identity = WorkerIdentity.objects.filter(user=user).first()
-    if identity is None or identity.pan_holder_name:
+    if identity is None:
         return
+    current = (identity.pan_holder_name or "").strip()
     try:
         from . import ocr_client
         text = ocr_client.extract_text(file_bytes, "pan.pdf")
@@ -875,6 +1015,10 @@ def _capture_pan_name(user, file_bytes):
         return
     name = str(fields.get("name") or "").strip()
     if not name:
+        return
+    # Keep an existing name unless the new read is better — i.e. it recovered the
+    # word gaps the earlier OCR dropped ("Syed Yasser Ali" vs "Syedyasserali").
+    if current and not (" " in name and " " not in current):
         return
     from .identity_utils import names_match, verified_aadhaar
     aadhaar_name = str((verified_aadhaar(user) or {}).get("name") or identity.name or "").strip()
@@ -939,8 +1083,7 @@ def _background_fetch_documents(session, access_token, profile, user):
                         existing.file_name = fname
                         existing.status = "DOWNLOADED"
                         existing.error_detail = ""
-                        if dl.extract_pan(uri) or dl.extract_pan(item.get("name") or ""):
-                            _capture_pan_name(user, file_bytes)
+                        _apply_downloaded_doc(user, item, uri, file_bytes, fname)
                 except Exception as exc:
                     logging.getLogger(__name__).warning("DigiLocker re-download %s failed: %s", uri, exc)
                 existing.downloaded_at = tz.now()
@@ -955,8 +1098,6 @@ def _background_fetch_documents(session, access_token, profile, user):
                 fpath = os.path.join(folder, fname)
                 with open(fpath, "wb") as f:
                     f.write(file_bytes)
-                if dl.extract_pan(uri) or dl.extract_pan(item.get("name") or ""):
-                    _capture_pan_name(user, file_bytes)
                 DigiLockerDocument.objects.create(
                     profile=profile, user=user,
                     uri=uri,
@@ -966,12 +1107,7 @@ def _background_fetch_documents(session, access_token, profile, user):
                     file_path=fpath, file_name=fname,
                     pan_number=(dl.extract_pan(uri) or dl.extract_pan(item.get("name") or "")),
                     status="DOWNLOADED", downloaded_at=tz.now())
-                master_code = _digilocker_master_code(item)
-                if master_code:
-                    try:
-                        _sync_document_register(user, master_code, file_bytes, fname, "application/pdf")
-                    except Exception:
-                        pass
+                _apply_downloaded_doc(user, item, uri, file_bytes, fname)
             except Exception as exc:
                 logging.getLogger(__name__).warning(
                     "DigiLocker download failed for uri=%s: %s", uri, exc)
@@ -985,6 +1121,11 @@ def _background_fetch_documents(session, access_token, profile, user):
         errors.append(f"fetch: {exc}")
         logging.getLogger(__name__).exception("DigiLocker background fetch crashed: %s", exc)
     finally:
+        try:
+            if user is not None:
+                _reconcile_user_digilocker(user)
+        except Exception as exc:  # noqa: BLE001 — never block on the heal step
+            logging.getLogger(__name__).warning("DigiLocker reconcile failed: %s", exc)
         if errors:
             session.error = "; ".join(errors)[:500]
         session.status = "COMPLETED"

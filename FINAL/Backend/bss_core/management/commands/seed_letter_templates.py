@@ -1,8 +1,9 @@
 """Restore the canonical default letter-template library from code.
 
-Default mode seeds the two all-India defaults (appointment letter + statutory
-Form XV service certificate) additively — it never deletes and never overwrites
-an admin's edits, so it is safe on every deploy.
+Default mode seeds the default regulatory heads (all-India + Central:
+appointment letter + statutory Form XV service certificate) additively — it
+never deletes and never overwrites an admin's edits, so it is safe on every
+deploy.
 
 With ``--reset`` it reproduces the **exact** library recorded in
 ``bss_core/seeds/letter_defaults.py`` (produced by

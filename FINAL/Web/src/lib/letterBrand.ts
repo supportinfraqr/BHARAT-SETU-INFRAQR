@@ -7,6 +7,14 @@
 export const DEFAULT_LETTER_LOGO = "https://login.bharatshramsetu.com/bss-brand/bharatshramsetu-logo.png";
 
 /**
+ * Same-origin path used only for on-screen previews. The production logo is
+ * served with `Cross-Origin-Resource-Policy: same-origin`, so a preview hosted
+ * on another origin (e.g. localhost) cannot load the absolute URL — it must use
+ * a same-origin copy. Storage/PDF rendering keeps the absolute DEFAULT_LETTER_LOGO.
+ */
+export const LETTER_LOGO_DISPLAY = "/bss-brand/bharatshramsetu-logo.png";
+
+/**
  * Print-safe overrides for the logo header. WeasyPrint does not support flexbox,
  * so the brand row must be a table; the logo also needs an explicit height or a
  * portrait PNG renders at its full 372x424 natural size.

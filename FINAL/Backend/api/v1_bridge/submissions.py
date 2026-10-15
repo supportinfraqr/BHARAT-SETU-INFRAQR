@@ -571,7 +571,7 @@ def contractor_compliance_batches(request):
             failures.append(f"The principal employer has not adopted CLRA register forms for {state} "
                             f"(site \u201c{site.site_name}\u201d).")
             continue
-        site_templates = gate_templates_by_adoption(applicable_templates(state)[0], site.employer, state, site=site)
+        site_templates = gate_templates_by_adoption(applicable_templates(state, site.jurisdiction)[0], site.employer, state, site=site)
         if freq_filter:
             site_templates = [t for t in site_templates if (_norm_freq(t.frequency) or "monthly") == freq_filter]
         selected, skipped = [], []
@@ -922,7 +922,7 @@ def contractor_clra_validate(request):
     if state and not adopted:
         report["errors"].append({"row": 0, "field": "adoption",
                                  "message": f"The principal employer has not adopted CLRA registers for this site — generation is blocked."})
-    site_templates = (gate_templates_by_adoption(applicable_templates(state)[0], employer, state, site=site)
+    site_templates = (gate_templates_by_adoption(applicable_templates(state, site.jurisdiction if site else None)[0], employer, state, site=site)
                       if state else [])
     if state and not site_templates:
         report["errors"].append({"row": 0, "field": "template",
@@ -1203,7 +1203,7 @@ def compliance_batch_site_documents(request, batch_id):
     # The applicability matrix is the authority on which forms apply in a state;
     # the templates are filtered to it (fallback: every template in the folder).
     from .register_templates import applicable_templates, employer_adopted_ids, state_strength
-    templates_list, mapped_forms = applicable_templates(state)
+    templates_list, mapped_forms = applicable_templates(state, site.jurisdiction if site else None)
     # Hard gate: once the site's employer has adopted CLRA forms for this state,
     # the site only sees the adopted ones (site-wise contractor availability).
     adopted = employer_adopted_ids(employer, state, site=site)
@@ -1386,7 +1386,7 @@ def compliance_batch_run_audits(request, batch_id):
 
     from .register_templates import applicable_templates, employer_adopted_ids
     state = batch.state
-    templates_list, _ = applicable_templates(state)
+    templates_list, _ = applicable_templates(state, batch.site.jurisdiction if batch.site else None)
     if batch.site and batch.site.employer_id:
         adopted = employer_adopted_ids(batch.site.employer, state, site=batch.site)
         if adopted:

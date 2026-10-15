@@ -178,6 +178,10 @@ STATIC_ROOT = os.environ.get("BSS_STATIC_ROOT", str(BASE_DIR / "staticfiles"))
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.environ.get("BSS_MEDIA_ROOT", str(BASE_DIR / "media"))
+# Private root for the folder-based AI-audit workspaces (source_documents/ +
+# groundtruth_data/). Deliberately OUTSIDE MEDIA_ROOT so it is never web-served.
+BSS_AUDIT_WORKSPACE_DIR = os.environ.get("BSS_AUDIT_WORKSPACE_DIR",
+                                         str(BASE_DIR / "audit_workspaces"))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -293,6 +297,17 @@ AADHAAR_GLOBAL_BACKOFF_SEC = int(os.environ.get("BSS_AADHAAR_GLOBAL_BACKOFF_SEC"
 AADHAAR_GLOBAL_COOLDOWN_SEC = int(os.environ.get("BSS_AADHAAR_GLOBAL_COOLDOWN_SEC", "900"))
 AADHAAR_MIN_INTERVAL_SEC = int(os.environ.get("BSS_AADHAAR_MIN_INTERVAL_SEC", "45"))
 AADHAAR_MAX_ATTEMPTS = int(os.environ.get("BSS_AADHAAR_MAX_ATTEMPTS", "3"))
+# UIDAI needs a few seconds to arm the OTP after a send; verifying sooner returns
+# "Request under process, please try after 30 seconds" or a spurious "OTP expired".
+# Surface this as a short verify delay, and never treat an early "expired" as real
+# (only after AADHAAR_OTP_GRACE_SEC does it count as genuinely expired).
+AADHAAR_VERIFY_DELAY_SEC = int(os.environ.get("BSS_AADHAAR_VERIFY_DELAY_SEC", "30"))
+AADHAAR_OTP_GRACE_SEC = int(os.environ.get("BSS_AADHAAR_OTP_GRACE_SEC", "180"))
+
+# Google Cloud Translation (v2, API-key). When set, the translation client uses
+# the official Cloud engine instead of the free unofficial endpoint (an admin can
+# still override the engine/key in TranslationSetting).
+GOOGLE_TRANSLATE_API_KEY = os.environ.get("GOOGLE_TRANSLATE_API_KEY", "")
 # DEMO/testing only: when true, Aadhaar oKYC send/verify are simulated locally
 # (no Sandbox call, no wallet charge) so the flow works without a funded
 # provider account. NEVER enable for real identity verification in production.

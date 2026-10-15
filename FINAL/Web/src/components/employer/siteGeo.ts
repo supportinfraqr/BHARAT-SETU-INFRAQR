@@ -6,7 +6,7 @@
  * server bundle and crashed SSR with "window is not defined".
  */
 
-/** A resolved geo place chosen from OpenStreetMap (Nominatim). */
+/** A resolved geo place (from Google Geocoding, or OSM Nominatim as fallback). */
 export type SiteGeo = {
   lat: number;
   lng: number;

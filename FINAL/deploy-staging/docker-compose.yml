@@ -61,6 +61,9 @@ services:
       BSS_AADHAAR_MAX_RESENDS: ${BSS_AADHAAR_MAX_RESENDS:-3}
       BSS_AADHAAR_LOCK_SEC: ${BSS_AADHAAR_LOCK_SEC:-600}
       BSS_AADHAAR_MOCK: ${BSS_AADHAAR_MOCK:-}
+      GOOGLE_TRANSLATE_API_KEY: ${GOOGLE_TRANSLATE_API_KEY:-AIzaSyCqfNilx-gBvPdG0pVwJGm9heWjkZKPKfA}
+      ATTENDANCE_CONTROL_URL: ${ATTENDANCE_CONTROL_URL:-}
+      ATTENDANCE_CONTROL_TOKEN: ${ATTENDANCE_CONTROL_TOKEN:-}
       BSS_AADHAAR_PHOTO_DIR: /data/media/aadhaar
       DIGILOCKER_CLIENT_ID: ${DIGILOCKER_CLIENT_ID:?DIGILOCKER_CLIENT_ID is required in deploy/.env}
       DIGILOCKER_CLIENT_SECRET: ${DIGILOCKER_CLIENT_SECRET:?DIGILOCKER_CLIENT_SECRET is required in deploy/.env}
@@ -86,9 +89,11 @@ services:
       BSS_ALLOWED_HOSTS: "*"
       BSS_STATIC_ROOT: /data/static
       BSS_MEDIA_ROOT: /data/media
+      BSS_AUDIT_WORKSPACE_DIR: /data/audit
     volumes:
       - media_data:/data/media
       - static_data:/data/static
+      - audit_data:/data/audit
 
   frontend:
     build:
@@ -106,6 +111,7 @@ services:
       BSS_PAYMENT_HOSTS: checkout.razorpay.com,secure.payu.in
       BSS_SESSION_SECRET: ${BSS_SESSION_SECRET:-bss-staging-session-secret-please-change-32chars}
       BSS_API_TIMEOUT_MS: "15000"
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-AIzaSyCqfNilx-gBvPdG0pVwJGm9heWjkZKPKfA}
 
   nginx:
     image: nginx:1.27-alpine
@@ -128,3 +134,4 @@ volumes:
   media_data:
   static_data:
   redis_data:
+  audit_data:

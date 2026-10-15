@@ -7,11 +7,14 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import SitePermissionsDialog from '@/components/ui/SitePermissionsDialog';
 import BindingHistoryDialog from '@/components/ui/BindingHistoryDialog';
 import { useContractor } from '@/contexts/ContractorContext';
+import { usePortalAutoRefresh } from '@/lib/usePortalAutoRefresh';
 import { ResendOtp } from '@/components/auth/ResendOtp';
 import type { ContractorBindingRequest } from '@/types/portal';
 
 export default function ContractorBindingRequestsPage() {
   const { contractor, replaceContractor, refresh, mutate, employerScope } = useContractor();
+  // Keep binding requests live (refresh on mount / focus / every 20s).
+  usePortalAutoRefresh(refresh, { pollMs: 20000 });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');

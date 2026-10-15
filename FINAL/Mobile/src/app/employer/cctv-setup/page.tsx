@@ -57,6 +57,7 @@ export default function CctvSetupPage() {
   const effectiveSite = siteId || String(sites[0]?.id ?? '');
 
   const [cameras, setCameras] = useState<CameraRow[]>([]);
+  const [limit, setLimit] = useState(5);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -69,9 +70,10 @@ export default function CctvSetupPage() {
     setLoading(true); setError('');
     try {
       const response = await fetch(`/api/employer/cctv/cameras?siteId=${encodeURIComponent(effectiveSite)}`, { cache: 'no-store' });
-      const body = await response.json().catch(() => ({})) as { data?: { cameras: CameraRow[] }; error?: string };
+      const body = await response.json().catch(() => ({})) as { data?: { cameras: CameraRow[]; maxCameras?: number }; error?: string };
       if (!response.ok || !body.data) throw new Error(body.error ?? 'Could not load cameras.');
       setCameras(body.data.cameras);
+      setLimit(body.data.maxCameras ?? 5);
       // No cameras for this site yet — open the config form so the IP/feed fields are immediately available.
       if (!body.data.cameras.length) setForm(current => current ?? { ...EMPTY });
     } catch (reason) {
@@ -159,13 +161,20 @@ export default function CctvSetupPage() {
           <h1 className="text-2xl font-bold mt-1 flex items-center gap-2"><Camera size={22} /> CCTV Setup</h1>
           <p className="text-sm text-bss-text-muted mt-1">Add the CCTV cameras installed at each site. Attendance is captured from these feeds only — no laptop/mobile camera.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => { setForm({ ...EMPTY }); setTestResult(null); }}
-          className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black self-start sm:self-auto"
-        >
-          <Plus size={16} /> Add camera
-        </button>
+        <div className="flex flex-col items-end gap-1 self-start sm:self-auto">
+          <button
+            type="button"
+            disabled={cameras.length >= limit}
+            onClick={() => { setForm({ ...EMPTY }); setTestResult(null); }}
+            className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Plus size={16} /> Add camera
+          </button>
+          <span className="text-[11px] text-bss-text-muted">
+            {cameras.length} of {limit} camera{limit === 1 ? '' : 's'}
+            {cameras.length >= limit ? ' · limit reached — ask BSS admin to increase' : ''}
+          </span>
+        </div>
       </header>
 
       <div className="bss-card rounded-2xl p-4">
@@ -239,7 +248,7 @@ export default function CctvSetupPage() {
       <section className="bss-card rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-bss-border">
           <h2 className="text-sm font-bold text-bss-text-primary">Cameras at this site</h2>
-          <p className="text-[11px] text-bss-text-muted mt-0.5">{cameras.length} camera{cameras.length === 1 ? '' : 's'} configured</p>
+          <p className="text-[11px] text-bss-text-muted mt-0.5">{cameras.length} of {limit} cameras configured</p>
         </div>
         {loading ? (
           <p className="p-6 text-sm text-bss-text-muted flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Loading…</p>

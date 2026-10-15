@@ -17,6 +17,7 @@ DOCUMENTS = [
     ("BOCW", "BOCW Card", False, "worker", 8),
     ("EDU", "Educational Certificate", False, "worker", 9),
     ("MED", "Medical Fitness Certificate", True, "worker", 10),
+    ("DL", "Driving Licence", False, "worker", 16),
     ("TGP", "Temporary Gate Pass", False, "system", 11),
     ("PGP", "Permanent Gate Pass", True, "system", 12),
     ("APPT", "Appointment Letter", False, "system", 13),

@@ -20,6 +20,7 @@ from .relationship import (
     WorkerContractorBinding,
     ContractorEmployerBinding,
     ContractorSiteAllotment,
+    ContractorSiteDocument,
     ContractorJob,
     RozgarRequest,
 )
@@ -78,6 +79,7 @@ from .operations import (
     WorkerComplianceChecklist,
     ComplianceChecklistField,
     LetterTemplate,
+    EmployerLetterAdoption,
 )
 from .learning import (
     LearningConfig,
@@ -142,6 +144,7 @@ from .compliance import (
     PtSlab,
     LwfMaster,
     LicenseMaster,
+    PartyLicense,
     MinimumWage,
     MenuPermission,
     UserMenuPermission,
@@ -203,7 +206,7 @@ __all__ = [
     "StateFeeMaster", "StatutoryMaster", "ComplianceMaster", "ComplianceDocument",
     "ComplianceReport", "ComplianceReportItem", "EmployerDocumentMapping",
     "EmployerRegisterMapping", "EmployerActMapping", "PtMaster", "PtSlab",
-    "LwfMaster", "LicenseMaster", "MinimumWage", "MenuPermission", "UserMenuPermission",
+    "LwfMaster", "LicenseMaster", "PartyLicense", "MinimumWage", "MenuPermission", "UserMenuPermission",
     "PayrollConfig", "EpfConfig", "EsiConfig", "PtConfig", "LwfConfig",
     "BonusConfig", "SalaryComponent", "SalaryDeduction", "SalaryBenefit",
     "SalaryReimbursement", "FfsConfig", "StaffPortalConfig", "PayrollPeriod",

@@ -63,7 +63,7 @@ export default function WorkerRozgarSetuPage() {
   };
 
   return (
-    <div className="p-4 lg:p-8 max-w-6xl mx-auto space-y-6 bg-slate-50/50 min-h-screen">
+    <div className="p-4 lg:p-8 max-w-6xl mx-auto space-y-6 bg-bss-bg/50 min-h-screen">
       {/* Header */}
       <PageHero
         title="Rozgar Setu"
@@ -71,8 +71,8 @@ export default function WorkerRozgarSetuPage() {
         actions={<Link href="/worker" className="w-10 h-10 grid place-items-center rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors" title="Go to Dashboard"><Home size={18}/></Link>}
       />
 
-      {notice && <p role="status" className="p-3.5 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-2xl text-sm font-bold flex items-center gap-2"><CheckCircle2 size={16}/>{notice}</p>}
-      {error && <p role="alert" className="p-3.5 bg-red-50 border border-red-100 text-red-800 rounded-2xl text-sm font-bold flex items-center gap-2">{error}</p>}
+      {notice && <p role="status" className="p-3.5 bg-bss-soft-green border border-bss-border text-bss-green rounded-2xl text-sm font-bold flex items-center gap-2"><CheckCircle2 size={16}/>{notice}</p>}
+      {error && <p role="alert" className="p-3.5 bg-bss-soft-orange border border-bss-border text-bss-error rounded-2xl text-sm font-bold flex items-center gap-2">{error}</p>}
 
       {/* Looking for Work Toggle Banner */}
       <div className="bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-blue-50/30 border border-bss-border rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
@@ -84,14 +84,14 @@ export default function WorkerRozgarSetuPage() {
           </p>
         </div>
 
-        <div className="bss-3d bss-scroll-rise bg-white border border-bss-border rounded-2xl px-5 py-3.5 flex items-center gap-4 shadow-sm shrink-0">
+        <div className="bss-3d bss-scroll-rise bss-card rounded-2xl px-5 py-3.5 flex items-center gap-4 shrink-0">
           <span className="text-xs font-bold text-bss-text-primary">Available for work</span>
           <button
             type="button"
             disabled={busy}
             onClick={() => handleAvailabilityToggle(!availableForWork)}
             className={`w-12 h-6 rounded-full transition-colors p-0.5 flex items-center ${
-              availableForWork ? 'bg-[#073B67] justify-end' : 'bg-bss-border justify-start'
+              availableForWork ? 'bg-[#01183A] justify-end' : 'bg-bss-border justify-start'
             }`}
           >
             <span className="w-5 h-5 rounded-full bg-white shadow-md block" />
@@ -100,9 +100,9 @@ export default function WorkerRozgarSetuPage() {
       </div>
 
       {activeBinding && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="bg-bss-soft-orange border border-bss-border text-bss-orange rounded-2xl p-4 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p><strong>You are already bound to {activeBinding.contractor}</strong>{activeBinding.site ? ` at ${activeBinding.site}` : ''}. A worker can be bound to only one contractor at a time — unbind first to apply to another contractor.</p>
-          <Link href="/worker/binding" className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold flex items-center justify-center shrink-0 hover:bg-[#062D4F]">Manage binding</Link>
+          <Link href="/worker/binding" className="h-9 px-4 rounded-lg bg-[#01183A] text-white text-xs font-bold flex items-center justify-center shrink-0 hover:bg-[#022B5E]">Manage binding</Link>
         </div>
       )}
 
@@ -115,18 +115,18 @@ export default function WorkerRozgarSetuPage() {
       {/* Job Card Listings */}
       <div className="space-y-4">
         {jobs.map(job => (
-          <div key={job.id} className="bss-3d bss-scroll-rise bg-white border border-bss-border rounded-3xl p-6 lg:p-7 space-y-5 shadow-sm hover:shadow-md transition-all">
+          <div key={job.id} className="bss-3d bss-scroll-rise bss-card rounded-3xl p-6 lg:p-7 space-y-5 hover:shadow-md transition-all">
             {/* Top row */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-bss-blue-tint text-[#073B67] flex items-center justify-center shrink-0 border border-bss-border">
+                <div className="w-12 h-12 rounded-2xl bg-bss-blue-tint text-[#01183A] flex items-center justify-center shrink-0 border border-bss-border">
                   <Briefcase size={22} />
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-base font-bold text-bss-text-primary">{job.title} — {job.subTitle}</h3>
                     {job.matchBadge && (
-                      <span className="bg-blue-100 text-bss-interactive-blue text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
+                      <span className="bg-bss-blue-tint text-bss-interactive-blue text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
                         {job.matchScore}% match
                       </span>
                     )}
@@ -136,7 +136,7 @@ export default function WorkerRozgarSetuPage() {
               </div>
 
               <div className="text-left sm:text-right shrink-0">
-                <span className="text-base font-black text-emerald-600 block">{job.wage}</span>
+                <span className="text-base font-black text-bss-green block">{job.wage}</span>
                 <span className="font-mono text-[11px] text-bss-text-muted">{job.id}</span>
               </div>
             </div>
@@ -147,7 +147,7 @@ export default function WorkerRozgarSetuPage() {
             </p>
 
             {/* Meta Table */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50/70 border border-slate-100 rounded-2xl p-4 text-xs">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-bss-bg/70 border border-bss-border rounded-2xl p-4 text-xs">
               <div>
                 <span className="block text-[10px] font-bold text-bss-text-muted uppercase tracking-wider">STATE</span>
                 <span className="font-semibold text-bss-text-primary mt-0.5 block">{job.state}</span>
@@ -173,7 +173,7 @@ export default function WorkerRozgarSetuPage() {
                 disabled={!!activeBinding || appliedJobs.includes(job.id)}
                 onClick={() => handleApply(job)}
                 title={activeBinding ? 'Unbind from your current contractor first' : undefined}
-                className="h-11 px-5 rounded-xl bg-[#0B192C] text-white text-xs font-bold flex items-center gap-2 hover:bg-[#062D4F] shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                className="h-11 px-5 rounded-xl bg-[#0B192C] text-white text-xs font-bold flex items-center gap-2 hover:bg-[#022B5E] shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Link2 size={16} /> {activeBinding ? 'Already bound — unbind to apply' : appliedJobs.includes(job.id) ? 'Application sent' : 'Apply & send binding request'}
               </button>
@@ -187,7 +187,7 @@ export default function WorkerRozgarSetuPage() {
           </div>
         ))}
         {jobs.length === 0 && (
-          <p className="bss-3d bss-scroll-rise p-6 bg-white border border-bss-border rounded-3xl text-sm text-bss-text-muted text-center">
+          <p className="bss-3d bss-scroll-rise p-6 bss-card rounded-3xl text-sm text-bss-text-muted text-center">
             No job postings are available right now. Please check back later.
           </p>
         )}

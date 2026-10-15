@@ -48,7 +48,10 @@ class Command(BaseCommand):
         reg = form = 0
 
         if only in (None, "registers"):
+            from bss_core.seeders.curated_checks import is_curated
             for t in RegisterTemplate.objects.all():
+                if is_curated(t.purpose):
+                    continue  # curated registers use their own authored set
                 if overwrite or not t.ai_checks:
                     t.ai_checks = _register_checks(t)
                     t.save(update_fields=["ai_checks"])

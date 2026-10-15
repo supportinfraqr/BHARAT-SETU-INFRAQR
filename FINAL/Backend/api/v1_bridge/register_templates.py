@@ -292,20 +292,32 @@ def _template_key(t):
     return ((t.purpose or "").strip().lower(), (t.form_code or "").strip().upper())
 
 
-def applicable_templates(state):
-    """Every active register/form template for a state — the full state library
-    **plus every Central template** (which applies to all states).
+def applicable_templates(state, jurisdiction=None):
+    """Active register/form templates for a site.
+
+    ``jurisdiction`` mirrors the site's regulatory head:
+      * ``"central"`` → only Central templates (site not tied to a state),
+      * ``"state"``   → only that state's own templates,
+      * ``None``      → legacy union (the state library **plus** every Central
+                        template), used by catalog views not tied to a site.
 
     A state-specific template overrides a Central template with the same
     purpose + form code, so a state never sees both a state and a Central copy of
-    the same register. States with no such template still get the Central one.
-    The applicability matrix is no longer used to narrow the list."""
+    the same register."""
     from django.db.models import Q
 
     from bss_core.models import RegisterTemplate
-    qs = (RegisterTemplate.objects
-          .filter(Q(state__iexact=state) | Q(jurisdiction="central"), is_active=True)
-          .order_by("jurisdiction", "form_code"))
+    if jurisdiction == "central":
+        qs = (RegisterTemplate.objects.filter(jurisdiction="central", is_active=True)
+              .order_by("form_code"))
+    elif jurisdiction == "state":
+        qs = (RegisterTemplate.objects
+              .filter(jurisdiction="state", state__iexact=state, is_active=True)
+              .order_by("form_code"))
+    else:
+        qs = (RegisterTemplate.objects
+              .filter(Q(state__iexact=state) | Q(jurisdiction="central"), is_active=True)
+              .order_by("jurisdiction", "form_code"))
     state_keys = {_template_key(t) for t in qs if getattr(t, "jurisdiction", "state") == "state"}
     seen, out = set(), []
     for t in qs:
@@ -315,7 +327,7 @@ def applicable_templates(state):
             continue
         seen.add(t.id)
         out.append(t)
-    return out, applicable_form_codes(state)
+    return out, applicable_form_codes(None if jurisdiction == "central" else state)
 
 
 def state_strength(state):
@@ -578,7 +590,7 @@ def contractor_register_templates(request):
     adoption = {}
     sites_payload = []
     for site in sites:
-        base = applicable_templates(site.state)[0]
+        base = applicable_templates(site.state, site.jurisdiction)[0]
         adopted = employer_adopted_ids(site.employer, site.state, site=site)
         mandatory = {t.id for t in base if t.is_mandatory}
         gated = bool(adopted)
@@ -614,19 +626,41 @@ def contractor_register_templates(request):
 
 
 def _employer_state_boards(user):
-    """Per-state CLRA adoption boards for the states the employer has sites in."""
-    from bss_core.models import EmployerRegisterTemplateAdoption, RegisterTemplate
-    states = sorted({(s.state or "").strip()
-                     for s in Site.objects.filter(employer=user).exclude(state="")})
+    """Per-head CLRA adoption boards for the employer.
+
+    One board per state the employer has **state-jurisdiction** sites in (that
+    state's own forms), plus a **Central** board when the employer has any
+    Central-jurisdiction site (the Central forms)."""
+    from bss_core.models import Site as _Site
+    sites = list(_Site.objects.filter(employer=user))
+    states = sorted({(s.state or "").strip() for s in sites
+                     if (s.state or "").strip() and getattr(s, "jurisdiction", "state") != "central"})
     boards = []
     for state in states:
-        templates_list = applicable_templates(state)[0]
+        templates_list = applicable_templates(state, "state")[0]
         adopted = employer_adopted_ids(user, state)
         mandatory = {t.id for t in templates_list if t.is_mandatory}
         effective = adopted | mandatory
         boards.append({
             "state": state,
-            "siteCount": Site.objects.filter(employer=user, state__iexact=state).count(),
+            "siteCount": sum(1 for s in sites
+                             if (s.state or "").strip().lower() == state.lower()
+                             and getattr(s, "jurisdiction", "state") != "central"),
+            "adoptedCount": len([t for t in templates_list if t.id in effective]),
+            "total": len(templates_list),
+            "gated": bool(adopted),
+            "forms": [{**_template_row(t), "adopted": t.id in effective,
+                       "mandatory": t.is_mandatory} for t in templates_list],
+        })
+    central_sites = [s for s in sites if getattr(s, "jurisdiction", "state") == "central"]
+    if central_sites:
+        templates_list = applicable_templates("Central", "central")[0]
+        adopted = employer_adopted_ids(user, "Central")
+        mandatory = {t.id for t in templates_list if t.is_mandatory}
+        effective = adopted | mandatory
+        boards.append({
+            "state": "Central",
+            "siteCount": len(central_sites),
             "adoptedCount": len([t for t in templates_list if t.id in effective]),
             "total": len(templates_list),
             "gated": bool(adopted),

@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Building2, Clock, FileText, Info, MapPin, Star, Users } from 'lucide-react';
+import { Building2, Clock, Info, MapPin, Star, Users } from 'lucide-react';
 import { useContractor } from '@/contexts/ContractorContext';
 import ContractorSiteDetailDialog, { type ContractorSiteDetail } from '@/components/site/ContractorSiteDetailDialog';
+import ContractorSiteDocs from '@/components/site/ContractorSiteDocs';
 
 export default function ContractorQrSitesPage() {
-  const { contractor, mutate } = useContractor();
+  const { contractor, mutate, refresh } = useContractor();
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -101,11 +102,9 @@ export default function ContractorQrSitesPage() {
                     </button>
                   )}
                 </div>
-                {site.hasAgreement && (
-                  <a href={`/api/site-agreement/${site.id}`} target="_blank" rel="noreferrer" className="h-10 text-xs font-semibold flex items-center justify-center gap-1.5 bg-bss-bg text-bss-interactive-blue hover:bg-bss-blue-tint border-t border-bss-border">
-                    <FileText size={14} /> Site agreement (PDF)
-                  </a>
-                )}
+                <div className="border-t border-bss-border p-3">
+                  <ContractorSiteDocs role="contractor" siteId={site.id} documents={site.documents ?? { agreement: null, po: null }} onChanged={() => void refresh()} />
+                </div>
               </article>
             );
           })}

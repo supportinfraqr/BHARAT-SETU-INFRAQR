@@ -8,12 +8,15 @@ import SitePermissionsDialog, { type SitePermissionStatus } from '@/components/u
 import BindingHistoryDialog from '@/components/ui/BindingHistoryDialog';
 import BindingSitesExplainer from '@/components/qr/BindingSitesExplainer';
 import { useEmployer } from '@/contexts/EmployerContext';
+import { usePortalAutoRefresh } from '@/lib/usePortalAutoRefresh';
 import type { EmployerApproval } from '@/types/portal';
 
 type Row = EmployerApproval & { __decide?: (row: EmployerApproval, status: 'Approved' | 'Rejected') => void };
 
 export default function EmployerQrBindingRequestsPage() {
   const { employer, replaceEmployer, refresh, mutate } = useEmployer();
+  // Keep binding requests live (refresh on mount / focus / every 20s).
+  usePortalAutoRefresh(refresh, { pollMs: 20000 });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');

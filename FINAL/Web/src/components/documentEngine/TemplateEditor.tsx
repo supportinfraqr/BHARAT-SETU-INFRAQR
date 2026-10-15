@@ -4,12 +4,26 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, ChevronRight, Eye, EyeOff, Lock, Plus, Save, ShieldCheck, Sparkles, Trash2, Upload } from 'lucide-react';
 import type { OwnerScope, TemplateConfig, TemplateSection, SignatureRole, DocumentType, TemplateVersionRecord } from '@/lib/documentEngine/types';
 import { DOCUMENT_TYPES, isGatePassType, isAppearanceOnlyType } from '@/lib/documentEngine/types';
+import { renderGatePassDesign, type GatePassValues } from '@/lib/documentEngine/gatePassDesigns';
 import { templateService, makeDefaultTemplate } from '@/lib/documentEngine/services';
 import { renderDocumentHtml } from '@/lib/documentEngine/render';
 import { FieldTokenPicker } from './FieldTokenPicker';
 import { TemplateStatusBadge, btnSecondary, inputCls, textareaCls } from './DocPrimitives';
 
 const SIGNATURE_ROLES: SignatureRole[] = ['Worker', 'Contractor', 'Principal Employer', 'HOD', 'HR Head', 'CSO', 'Authorized Signatory', 'Site In-charge'];
+
+/** Placeholder (demo) data for the live preview — never a real-looking name. */
+function sampleGatePassValues(type: DocumentType): GatePassValues {
+  const temp = type === 'temporary-gate-pass';
+  return {
+    workerName: 'Demo Name', bssId: 'Demo BSS ID', designation: 'Demo Designation',
+    dob: 'Demo DOB', bloodGroup: 'Demo', emergencyContact: 'Demo Contact',
+    employer: 'Demo Employer', contractor: 'Demo Contractor',
+    site: 'Demo Site', siteCode: 'DEMO', siteAddress: 'Demo Address',
+    issueDate: 'Demo Date', validTo: temp ? 'Demo Date (+7 days)' : 'Demo Date', days: temp ? '7' : '',
+    status: 'Active', type: temp ? 'Temporary' : 'Permanent', photo: '', qr: '',
+  };
+}
 
 const SECTION_TYPES: Array<{ id: TemplateSection['type']; label: string }> = [
   { id: 'heading', label: 'Heading' },
@@ -62,14 +76,25 @@ export default function TemplateEditor({
 
   // debounced preview html
   const [previewHtml, setPreviewHtml] = useState('');
-  const jsonKey = JSON.stringify(template.sections) + template.styles.theme + template.styles.themeColor + template.styles.fontSize + template.styles.fontFamily + template.styles.headingColor + template.styles.showBrandHeader + template.styles.brandHeaderText + template.styles.brandTagline + template.styles.logoAlign + template.styles.footerText + template.styles.showLogo + (template.styles.brandColors?.join(',') ?? '') + (template.styles.brandLogoUrl ?? '') + (template.styles.brandTextLogoUrl ?? '') + (template.styles.customHtml ?? '');
+  const jsonKey = JSON.stringify(template.sections) + template.styles.theme + template.styles.themeColor + template.styles.fontSize + template.styles.fontFamily + template.styles.headingColor + template.styles.showBrandHeader + template.styles.brandHeaderText + template.styles.brandTagline + template.styles.logoAlign + template.styles.footerText + template.styles.showLogo + (template.styles.brandColors?.join(',') ?? '') + (template.styles.brandLogoUrl ?? '') + (template.styles.brandTextLogoUrl ?? '') + (template.styles.customHtml ?? '') + (template.styles.gatePassDesign ?? '');
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      setPreviewHtml(renderDocumentHtml({ template: { ...template }, tokens: {} }));
+      // Gate passes render their chosen built-in design (with sample data);
+      // everything else renders the section-based layout.
+      if (isGatePassType(documentType)) {
+        setPreviewHtml(renderGatePassDesign(1, sampleGatePassValues(documentType), {
+          passColor: template.styles.themeColor, textColor: template.styles.headingColor,
+          fontFamily: template.styles.fontFamily, fontSize: template.styles.fontSize,
+          brandHeader: template.styles.brandHeaderText, brandColors: template.styles.brandColors, tagline: template.styles.brandTagline,
+          footer: template.styles.footerText, showLogo: template.styles.showLogo, logoUrl: template.styles.brandLogoUrl,
+        }));
+      } else {
+        setPreviewHtml(renderDocumentHtml({ template: { ...template }, tokens: {} }));
+      }
     }, 300);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jsonKey]);
+  }, [jsonKey, documentType]);
 
   function patchSection(id: string, patch: Partial<TemplateSection>) {
     setTemplate(current => ({ ...current, sections: current.sections.map(section => section.id === id ? { ...section, ...patch } : section) }));
@@ -270,23 +295,23 @@ export default function TemplateEditor({
           {/* CENTER — live preview */}
           <main className="flex-1 min-h-[40vh] lg:min-h-0 overflow-auto bg-gray-200/60 p-3 sm:p-4 relative">
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Live preview · {DOCUMENT_TYPES.find(item => item.id === documentType)?.short}</p>
-            <div className="bg-white rounded-lg shadow overflow-hidden mx-auto w-fit max-w-full">
-              <iframe title="Template preview" srcDoc={previewHtml} className={`bg-white ${template.pageFormat === 'PGP' ? 'w-[560px] h-[360px]' : 'w-[794px] h-[900px]'} max-w-full border-0`} />
+            <div className="rounded-lg shadow overflow-hidden mx-auto w-fit max-w-full" style={{ background: isGatePassType(documentType) ? '#eef1f5' : '#ffffff' }}>
+              <iframe title="Template preview" srcDoc={previewHtml} className={`${isGatePassType(documentType) ? 'w-[720px] h-[440px]' : (template.pageFormat === 'PGP' ? 'w-[560px] h-[360px]' : 'w-[794px] h-[900px]')} max-w-full border-0`} />
             </div>
-            <p className="text-[10px] text-gray-400 mt-2 text-center">Tokens not yet filled appear as orange chips in the preview.</p>
+            <p className="text-[10px] text-gray-400 mt-2 text-center">{isGatePassType(documentType) ? 'Card preview — the pass renders as the selected design.' : 'Tokens not yet filled appear as orange chips in the preview.'}</p>
           </main>
 
           {/* RIGHT — section properties / data fields */}
           <aside className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-gray-200 bg-white p-4 overflow-y-auto shrink-0">
             {appearanceOnly ? (
               <div className="space-y-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">{isGatePassType(documentType) ? 'Gate pass appearance' : 'Document appearance'}</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">{isGatePassType(documentType) ? 'Gate pass appearance' : 'Document appearance'}</p>
                 {isGatePassType(documentType)
-                  ? <label className="block text-xs font-semibold text-gray-600">Pass colour<input type="color" value={template.styles.themeColor ?? (documentType === 'permanent-gate-pass' ? '#15803D' : '#B91C1C')} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, themeColor: event.target.value } }))} className="mt-1 h-9 w-full rounded-lg border border-gray-200 bg-white p-1"/><span className="text-[10px] text-gray-400">Pick any colour for the pass.</span></label>
+                  ? <label className="block text-xs font-semibold text-gray-600">Pass colour<input type="color" value={template.styles.themeColor ?? (documentType === 'permanent-gate-pass' ? '#14843C' : '#B91C1C')} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, themeColor: event.target.value } }))} className="mt-1 h-9 w-full rounded-lg border border-gray-200 bg-white p-1"/><span className="text-[10px] text-gray-400">Default follows the pass type (green / red).</span></label>
                   : <label className="block text-xs font-semibold text-gray-600">Pass colour<select value={template.styles.theme} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, theme: event.target.value as typeof current.styles.theme } }))} className={inputCls + ' text-xs'}><option value="bss-navy">BSS Navy</option><option value="bss-midnight">Midnight Blue</option><option value="bss-green">Green</option><option value="bss-red">Red</option><option value="bss-plain">Plain</option></select></label>}
-                <label className="block text-xs font-semibold text-gray-600">Text colour<input type="color" value={template.styles.headingColor} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, headingColor: event.target.value } }))} className="mt-1 h-9 w-full rounded-lg border border-gray-200 bg-white p-1"/></label>
+                <label className="block text-xs font-semibold text-gray-600">Text colour
+<input type="color" value={template.styles.headingColor} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, headingColor: event.target.value } }))} className="mt-1 h-9 w-full rounded-lg border border-gray-200 bg-white p-1"/></label>
                 <label className="block text-xs font-semibold text-gray-600">Text style<select value={template.styles.fontFamily} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, fontFamily: event.target.value } }))} className={inputCls + ' text-xs'}><option value="'Arial', sans-serif">Arial</option><option value="'Segoe UI', sans-serif">Segoe UI</option><option value="Georgia, serif">Georgia (serif)</option><option value="'Times New Roman', serif">Times New Roman</option><option value="'Courier New', monospace">Courier (mono)</option></select></label>
-                <label className="block text-xs font-semibold text-gray-600">Text size ({template.styles.fontSize}px)<input type="range" min={9} max={15} value={template.styles.fontSize} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, fontSize: Number(event.target.value) } }))} className="w-full mt-1"/></label>
                 <label className="flex items-center justify-between text-xs font-semibold text-gray-600"><span>Show logo</span><input type="checkbox" checked={template.styles.showLogo} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, showLogo: event.target.checked } }))} className="accent-[#073B67] w-4 h-4"/></label>
                 {template.styles.showLogo && <div className="space-y-2 pl-1">
                   <label className="block text-xs font-semibold text-gray-600">Logo image URL<input value={template.styles.brandLogoUrl ?? ''} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, brandLogoUrl: event.target.value } }))} placeholder="/bss-original-logo.png or https://…" className={inputCls + ' text-xs'}/></label>

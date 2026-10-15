@@ -111,59 +111,59 @@ export default function EmployerBulkUpload({ portal, onImport }: {
     {error && <p role="alert" className="bss-alert bss-alert-error flex items-center gap-2"><XCircle size={15}/>{error}</p>}
 
     {/* Upload box */}
-    <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-      <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Bulk payroll upload</h2><p className="text-xs text-gray-400 mt-0.5">Download XLS template → fill worker records → upload → validate → preview (with automatic contractor mapping) → confirm import.</p></header>
+    <section className="bss-card rounded-2xl overflow-hidden">
+      <header className="px-5 py-4 border-b border-bss-border"><h2 className="text-sm font-semibold text-bss-text-primary">Bulk payroll upload</h2><p className="text-xs text-bss-text-muted mt-0.5">Download XLS template → fill worker records → upload → validate → preview (with automatic contractor mapping) → confirm import.</p></header>
       <div className="p-5 grid md:grid-cols-[1fr_auto] gap-4 items-stretch">
-        <label onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); void handleFile(e.dataTransfer.files[0]); }} className="min-h-40 border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/40">
+        <label onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); void handleFile(e.dataTransfer.files[0]); }} className="min-h-40 border-2 border-dashed border-bss-border rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-bss-border hover:bg-bss-blue-tint/40">
           <FileSpreadsheet size={30} className="text-bss-green"/>
-          <strong className="text-sm text-gray-800 mt-2">{fileName || 'Choose or drop XLS / XLSX / CSV here'}</strong>
-          <span className="text-xs text-gray-500 mt-1">Same schema as the Contractor template — Site and Contractor are auto-mapped from the worker record.</span>
+          <strong className="text-sm text-bss-text-primary mt-2">{fileName || 'Choose or drop XLS / XLSX / CSV here'}</strong>
+          <span className="text-xs text-bss-text-muted mt-1">Same schema as the Contractor template — Site and Contractor are auto-mapped from the worker record.</span>
           <input ref={fileInput} type="file" accept=".xls,.xlsx,.csv" className="sr-only" onChange={e => void handleFile(e.target.files?.[0])}/>
         </label>
         <div className="flex md:flex-col gap-2 md:w-56">
-          <button onClick={downloadTemplate} className="flex-1 h-11 rounded-lg border border-gray-200 text-xs font-bold text-gray-700 flex items-center justify-center gap-2 hover:bg-gray-50"><Download size={15}/>Download XLS Template</button>
-          <button onClick={() => fileInput.current?.click()} disabled={stage === 'validating'} className="flex-1 h-11 rounded-lg bg-[#073B67] text-white text-xs font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F] disabled:opacity-50"><Upload size={15}/>{stage === 'validating' ? 'Validating…' : 'Upload Completed XLS/XLSX'}</button>
+          <button onClick={downloadTemplate} className="flex-1 h-11 rounded-lg border border-bss-border text-xs font-bold text-bss-text-primary flex items-center justify-center gap-2 hover:bg-bss-bg"><Download size={15}/>Download XLS Template</button>
+          <button onClick={() => fileInput.current?.click()} disabled={stage === 'validating'} className="flex-1 h-11 rounded-lg bg-[#01183A] text-white text-xs font-bold flex items-center justify-center gap-2 hover:bg-[#022B5E] disabled:opacity-50"><Upload size={15}/>{stage === 'validating' ? 'Validating…' : 'Upload Completed XLS/XLSX'}</button>
         </div>
       </div>
     </section>
 
     {/* Preview */}
-    {stage === 'preview' && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-      <header className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
-        <div><h2 className="text-sm font-semibold text-gray-950">Import preview — {fileName}</h2><p className="text-xs text-gray-400 mt-0.5">{rows.length} total rows · {validRows.length} valid · {errorRows.length} with errors · {unmapped.length} unmapped (MAPPING REQUIRED)</p></div>
+    {stage === 'preview' && <section className="bss-card rounded-2xl overflow-hidden">
+      <header className="px-5 py-4 border-b border-bss-border flex flex-wrap items-center justify-between gap-3">
+        <div><h2 className="text-sm font-semibold text-bss-text-primary">Import preview — {fileName}</h2><p className="text-xs text-bss-text-muted mt-0.5">{rows.length} total rows · {validRows.length} valid · {errorRows.length} with errors · {unmapped.length} unmapped (MAPPING REQUIRED)</p></div>
         <div className="flex gap-2">
-          <button onClick={downloadErrorReport} disabled={!errorRows.length} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5 hover:bg-gray-50 disabled:opacity-50"><FileWarning size={14}/>Download Error Report</button>
+          <button onClick={downloadErrorReport} disabled={!errorRows.length} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-semibold flex items-center gap-1.5 hover:bg-bss-bg disabled:opacity-50"><FileWarning size={14}/>Download Error Report</button>
           <button onClick={confirmImport} disabled={!validRows.length} className="h-9 px-4 rounded-lg bg-bss-green text-white text-xs font-bold flex items-center gap-1.5 hover:brightness-95 disabled:opacity-50"><CheckCircle2 size={14}/>Confirm Import ({validRows.length})</button>
         </div>
       </header>
 
-      <div className="grid md:grid-cols-4 gap-3 px-5 py-4 bg-gray-50/60 border-b border-gray-100">
-        <Summary label="Total rows" value={rows.length} tone="text-gray-800"/>
+      <div className="grid md:grid-cols-4 gap-3 px-5 py-4 bg-bss-bg/60 border-b border-bss-border">
+        <Summary label="Total rows" value={rows.length} tone="text-bss-text-primary"/>
         <Summary label="Valid records" value={validRows.length} tone="text-bss-green"/>
-        <Summary label="Mapped to contractor" value={validRows.length - unmapped.length} tone="text-blue-700"/>
-        <Summary label="MAPPING REQUIRED" value={unmapped.length} tone="text-red-600"/>
+        <Summary label="Mapped to contractor" value={validRows.length - unmapped.length} tone="text-bss-interactive-blue"/>
+        <Summary label="MAPPING REQUIRED" value={unmapped.length} tone="text-bss-error"/>
       </div>
 
       <div className="overflow-x-auto max-h-96 overflow-y-auto">
         <table className="w-full min-w-[900px] text-left text-xs">
-          <thead className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-500 border-b border-gray-100 sticky top-0"><tr><th className="px-4 py-2.5">Row</th>{payroll.templateColumns.slice(0, 9).map(col => <th key={col} className="px-3 py-2.5">{col}</th>)}<th className="px-3 py-2.5">Contractor mapping</th><th className="px-3 py-2.5">Validation</th></tr></thead>
-          <tbody className="divide-y divide-gray-100">
+          <thead className="bg-bss-bg text-[10px] uppercase tracking-wider text-bss-text-muted border-b border-bss-border sticky top-0"><tr><th className="px-4 py-2.5">Row</th>{payroll.templateColumns.slice(0, 9).map(col => <th key={col} className="px-3 py-2.5">{col}</th>)}<th className="px-3 py-2.5">Contractor mapping</th><th className="px-3 py-2.5">Validation</th></tr></thead>
+          <tbody className="divide-y divide-bss-border">
             {rows.map(row => {
               const worker = workerOf(row.values[0]?.trim());
               const mapped = Boolean(worker);
               return (
-                <tr key={row.row} className={row.valid ? (mapped ? 'hover:bg-gray-50' : 'bg-orange-50/40 hover:bg-orange-50') : 'bg-red-50/40 hover:bg-red-50'}>
-                  <td className="px-4 py-2.5 font-mono text-gray-400">#{row.row}</td>
-                  {row.values.slice(0, 9).map((cell, i) => <td key={i} className={`px-3 py-2.5 ${i === 0 ? 'font-semibold text-gray-800' : 'text-gray-600'}`}>{cell || '—'}</td>)}
+                <tr key={row.row} className={row.valid ? (mapped ? 'hover:bg-bss-bg' : 'bg-bss-soft-orange/40 hover:bg-bss-soft-orange') : 'bg-bss-soft-orange/40 hover:bg-bss-soft-orange'}>
+                  <td className="px-4 py-2.5 font-mono text-bss-text-muted">#{row.row}</td>
+                  {row.values.slice(0, 9).map((cell, i) => <td key={i} className={`px-3 py-2.5 ${i === 0 ? 'font-semibold text-bss-text-primary' : 'text-bss-text-secondary'}`}>{cell || '—'}</td>)}
                   <td className="px-3 py-2.5">
                     {mapped
-                      ? <span className="inline-flex items-center gap-1 text-blue-700 font-semibold"><Network size={12}/>{worker!.contractor}</span>
-                      : <span className="inline-flex items-center gap-1 text-red-600 font-bold"><XCircle size={12}/>MAPPING REQUIRED</span>}
+                      ? <span className="inline-flex items-center gap-1 text-bss-interactive-blue font-semibold"><Network size={12}/>{worker!.contractor}</span>
+                      : <span className="inline-flex items-center gap-1 text-bss-error font-bold"><XCircle size={12}/>MAPPING REQUIRED</span>}
                   </td>
                   <td className="px-3 py-2.5">
                     {row.valid
                       ? <span className="inline-flex items-center gap-1 text-bss-green font-semibold"><CheckCircle2 size={13}/>Valid{row.warnings.length ? ` · ${row.warnings.length} warn` : ''}</span>
-                      : <span className="inline-flex items-center gap-1 text-red-600 font-semibold"><XCircle size={13}/>{row.errors.length} error{row.errors.length > 1 ? 's' : ''}</span>}
+                      : <span className="inline-flex items-center gap-1 text-bss-error font-semibold"><XCircle size={13}/>{row.errors.length} error{row.errors.length > 1 ? 's' : ''}</span>}
                   </td>
                 </tr>
               );
@@ -172,19 +172,19 @@ export default function EmployerBulkUpload({ portal, onImport }: {
         </table>
       </div>
 
-      {(errorRows.length > 0 || warningRows.length > 0 || unmapped.length > 0) && <div className="px-5 py-4 border-t border-gray-100">
-        <button onClick={() => setExpandedErrors(v => !v)} className="text-xs font-bold text-gray-700 flex items-center gap-1.5">{expandedErrors ? <ChevronUp size={14}/> : <ChevronDown size={14}/>} Row-level messages ({errorRows.length + warningRows.length + unmapped.length})</button>
+      {(errorRows.length > 0 || warningRows.length > 0 || unmapped.length > 0) && <div className="px-5 py-4 border-t border-bss-border">
+        <button onClick={() => setExpandedErrors(v => !v)} className="text-xs font-bold text-bss-text-primary flex items-center gap-1.5">{expandedErrors ? <ChevronUp size={14}/> : <ChevronDown size={14}/>} Row-level messages ({errorRows.length + warningRows.length + unmapped.length})</button>
         {expandedErrors && <ul className="mt-3 space-y-2">
-          {rows.filter(r => !r.valid || r.warnings.length || !workerOf(r.values[0]?.trim())).map(row => <li key={row.row} className="text-xs rounded-lg border border-gray-100 p-3">
-            <p className="font-mono text-gray-400 mb-1">Row #{row.row}</p>
-            {row.errors.map((e, i) => <p key={i} className="text-red-600 flex items-center gap-1.5"><XCircle size={12}/>{e}</p>)}
-            {row.warnings.map((w, i) => <p key={`w-${i}`} className="text-orange-600 flex items-center gap-1.5"><AlertTriangle size={12}/>{w}</p>)}
-            {row.valid && !workerOf(row.values[0]?.trim()) && <p className="text-red-600 flex items-center gap-1.5"><XCircle size={12}/>MAPPING REQUIRED — no valid Contractor / Site relationship for this worker.</p>}
+          {rows.filter(r => !r.valid || r.warnings.length || !workerOf(r.values[0]?.trim())).map(row => <li key={row.row} className="text-xs rounded-lg border border-bss-border p-3">
+            <p className="font-mono text-bss-text-muted mb-1">Row #{row.row}</p>
+            {row.errors.map((e, i) => <p key={i} className="text-bss-error flex items-center gap-1.5"><XCircle size={12}/>{e}</p>)}
+            {row.warnings.map((w, i) => <p key={`w-${i}`} className="text-bss-orange flex items-center gap-1.5"><AlertTriangle size={12}/>{w}</p>)}
+            {row.valid && !workerOf(row.values[0]?.trim()) && <p className="text-bss-error flex items-center gap-1.5"><XCircle size={12}/>MAPPING REQUIRED — no valid Contractor / Site relationship for this worker.</p>}
           </li>)}
         </ul>}
       </div>}
 
-      {validRows.length > 0 && <div className="px-5 py-4 border-t border-gray-100 flex items-start gap-2 text-xs text-gray-500 bg-gray-50/40"><Info size={14} className="mt-0.5 flex-shrink-0"/>Net pay is computed as Gross − (EPF 12% of restricted PF wage + EPS + ESI 0.75% + PT + one-time deductions). Every valid row is routed to the worker&apos;s contractor in the Distribution tab with source <strong className="text-gray-800">Employer Provided</strong>.</div>}
+      {validRows.length > 0 && <div className="px-5 py-4 border-t border-bss-border flex items-start gap-2 text-xs text-bss-text-muted bg-bss-bg/40"><Info size={14} className="mt-0.5 flex-shrink-0"/>Net pay is computed as Gross − (EPF 12% of restricted PF wage + EPS + ESI 0.75% + PT + one-time deductions). Every valid row is routed to the worker&apos;s contractor in the Distribution tab with source <strong className="text-bss-text-primary">Employer Provided</strong>.</div>}
     </section>}
 
     {stage === 'imported' && <section className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={16}/>Import complete — {validRows.length} record(s) routed for verification. Switch to <strong>Distribution</strong> to review contractor routing.</section>}
@@ -192,5 +192,5 @@ export default function EmployerBulkUpload({ portal, onImport }: {
 }
 
 function Summary({ label, value, tone }: { label:string; value:number; tone:string }) {
-  return <div className="bg-white border border-gray-100 rounded-xl px-4 py-3"><strong className={`block text-xl ${tone}`}>{value}</strong><span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">{label}</span></div>;
+  return <div className="bg-white border border-bss-border rounded-xl px-4 py-3"><strong className={`block text-xl ${tone}`}>{value}</strong><span className="text-[11px] font-semibold uppercase tracking-wider text-bss-text-muted">{label}</span></div>;
 }

@@ -395,6 +395,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   const [geo, setGeo] = useState<SiteGeo | null>(() => initial && initial.latitude ? { lat: Number(initial.latitude), lng: Number(initial.longitude), label: 'Saved site location' } : null);
   const [location, setLocation] = useState(String(initial?.location ?? ''));
   const [state, setState] = useState(String(initial?.state ?? ''));
+  const [jurisdiction, setJurisdiction] = useState<'state' | 'central'>(initial?.jurisdiction === 'central' ? 'central' : 'state');
   const [stateOpen, setStateOpen] = useState(false);
   const [name, setName] = useState(String(initial?.site_name ?? initial?.name ?? ''));
   const [code, setCode] = useState(String(initial?.site_code ?? initial?.code ?? ''));
@@ -402,7 +403,6 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   const [endDate, setEndDate] = useState(String(initial?.expected_end_date ?? ''));
   const [status, setStatus] = useState(String(initial?.site_status ?? 'Active'));
   const [colour, setColour] = useState(String(initial?.assign_color ?? '#E45D24'));
-  const [agreement, setAgreement] = useState<File | null>(null);
   const [geography, setGeography] = useState<Record<string, Record<string, { city: string; pins: string[] }[]>>>({});
   const [tab, setTab] = useState(FORM_SECTIONS[0].title);
   const section = useMemo(() => FORM_SECTIONS.find(s => s.title === tab) ?? FORM_SECTIONS[0], [tab]);
@@ -467,7 +467,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     name: !name.trim(),
     code: !code.trim(),
     location: !location.trim(),
-    state: !state.trim(),
+    state: jurisdiction === 'state' && !state.trim(),
     startDate: !startDate,
     endDate: !endDate,
     status: !status.trim(),
@@ -484,7 +484,8 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     payload.name = name.trim();
     payload.code = code.trim().toUpperCase();
     payload.location = location.trim();
-    payload.state = state.trim() || geo?.state || '';
+    payload.jurisdiction = jurisdiction;
+    payload.state = jurisdiction === 'state' ? (state.trim() || geo?.state || '') : '';
     payload.startDate = startDate;
     payload.endDate = endDate;
     payload.status = status || 'Active';
@@ -507,7 +508,6 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
         }
       }
     }
-    if (agreement) payload.agreement = agreement;
     onSubmit(payload);
   }
 
@@ -524,6 +524,15 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
 
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto flex-1">
           <div className="grid sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <p className="text-xs font-semibold text-bss-text-primary">Regulatory head</p>
+              <div className="inline-flex rounded-lg border border-bss-border p-1 gap-1 mt-1">
+                {([['state', 'State'], ['central', 'Central']] as const).map(([v, l]) => (
+                  <button key={v} type="button" onClick={() => setJurisdiction(v)} className={`px-4 h-8 rounded-md text-xs font-semibold transition-colors ${jurisdiction === v ? 'bg-bss-navy text-white' : 'text-bss-text-secondary hover:bg-bss-bg'}`}>{l}</button>
+                ))}
+              </div>
+              <p className="text-[11px] text-bss-text-muted mt-1">{jurisdiction === 'central' ? 'Central — the site is governed centrally (not tied to a state); only Central CLRA templates apply.' : 'State — the site follows a single state’s statutory / CLRA templates.'}</p>
+            </div>
             <label className="text-xs font-semibold text-bss-text-primary">Site name <span className="text-bss-error">*</span><input required value={name} onChange={e => setName(e.target.value)} className={fieldCls} /></label>
             <label className="text-xs font-semibold text-bss-text-primary">Site code <span className="text-bss-error">*</span>
               <div className="flex gap-2">
@@ -538,6 +547,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
               </div>
             </label>
             <label className="text-xs font-semibold text-bss-text-primary">City / location <span className="text-bss-error">*</span><input list="site-city-options" value={location} onChange={event => setLocation(event.target.value)} className={fieldCls} /></label>
+            {jurisdiction === 'state' && (
             <div className="relative text-xs font-semibold text-bss-text-primary">State (auto-filled from map if you pin) <span className="text-bss-error">*</span>
               <button type="button" onClick={() => setStateOpen(o => !o)} className={`${fieldCls} bg-white text-left flex items-center justify-between`}>
                 <span className={state ? 'text-bss-text-primary' : 'text-bss-text-muted'}>{state || 'Select state'}</span>
@@ -554,6 +564,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
                 </>
               )}
             </div>
+            )}
             <datalist id="site-city-options">{cityOptions.map(city => <option key={city} value={city} />)}</datalist>
             <label className="text-xs font-semibold text-bss-text-primary">Start date <span className="text-bss-error">*</span><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={fieldCls} /></label>
             <label className="text-xs font-semibold text-bss-text-primary">End date <span className="text-bss-error">*</span><input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={fieldCls} /></label>
@@ -561,7 +572,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
           </div>
 
           <div className="mt-4 pt-4 border-t border-bss-border">
-            <div className="flex items-center gap-2 mb-3"><MapPin size={15} className="text-[#01183A]" /><p className="text-xs font-bold uppercase tracking-wider text-bss-text-muted">Identify site on OpenStreetMap</p></div>
+            <div className="flex items-center gap-2 mb-3"><MapPin size={15} className="text-[#01183A]" /><p className="text-xs font-bold uppercase tracking-wider text-bss-text-muted">Identify site on map</p></div>
             <SiteMapPicker initial={geo ? { lat: geo.lat, lng: geo.lng } : undefined} onPick={handleGeoPick} />
           </div>
 
@@ -591,12 +602,6 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
           </div>
 
           {error && <p role="alert" className="mt-4 text-sm text-bss-error bg-bss-soft-orange rounded-lg p-3">{error}</p>}
-          <label className="mt-4 block text-xs font-semibold text-bss-text-primary">
-            Site agreement (PDF, optional)
-            <input type="file" accept="application/pdf,.pdf" onChange={e => setAgreement(e.target.files?.[0] ?? null)} className="mt-1 block w-full text-xs text-bss-text-secondary file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-bss-blue-tint file:text-[#01183A] file:text-xs file:font-semibold" />
-            <span className="block text-[10px] text-bss-text-muted mt-1">The signed agreement / work order between the principal employer and the contractor for this site. Contractors allotted to this site can view it.</span>
-            {agreement && <span className="block text-[11px] text-bss-green mt-1">{agreement.name} · {Math.round(agreement.size / 1024)} KB</span>}
-          </label>
           {hasMissing && <p className="mt-4 text-xs text-bss-text-muted">All fields except <span className="font-semibold">Additional details</span> are required.</p>}
           <div className="mt-5 flex justify-end gap-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm">Cancel</button>

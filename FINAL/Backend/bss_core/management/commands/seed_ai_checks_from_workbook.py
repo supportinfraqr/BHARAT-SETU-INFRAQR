@@ -125,7 +125,10 @@ class Command(BaseCommand):
         reg_rows = reg_added = 0
         seen_titles = set()
         unmatched_titles = set()
+        from bss_core.seeders.curated_checks import is_curated
         for t in RegisterTemplate.objects.all():
+            if is_curated(t.purpose):
+                continue  # curated registers use their own authored set
             title = (t.title or "").strip()
             seen_titles.add(title.lower())
             key = REGISTER_TITLE_MAP.get(title.lower())

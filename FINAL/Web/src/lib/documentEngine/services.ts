@@ -260,6 +260,22 @@ export const templateService = {
     return record ? record.template : null;
   },
 
+  /** Save the employer's chosen built-in gate-pass design on the active
+   *  permanent/temporary template. Gate passes are appearance-only, so this is a
+   *  simple in-place style update (no draft fork). */
+  setGatePassDesign(owner: OwnerScope, type: DocumentType, designId: number) {
+    const records = this.all();
+    const match = (r: TemplateRecord) => r.template.ownerType === owner.ownerType && r.template.ownerId === owner.ownerId && r.template.documentType === type;
+    const target = records.find(r => r.active && match(r)) ?? records.find(match);
+    if (!target) return;
+    target.template = { ...target.template, styles: { ...target.template.styles, gatePassDesign: designId } };
+    this.persist(this.all());
+  },
+
+  gatePassDesign(owner: OwnerScope, type: DocumentType): number | undefined {
+    return this.activeFor(owner, type)?.styles.gatePassDesign;
+  },
+
   /** Template used for rendering. Appearance-only types (appointment/experience
    *  letters, gate passes) always use the current fixed layout from code and take
    *  just the saved styles — so layout fixes apply without a re-seed. */

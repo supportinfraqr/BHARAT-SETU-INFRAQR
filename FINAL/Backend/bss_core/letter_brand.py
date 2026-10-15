@@ -27,15 +27,17 @@ import re
 DEFAULT_LOGO_URL = "https://login.bharatshramsetu.com/bss-brand/bharatshramsetu-logo.png"
 
 # Letter types that must never receive BSS branding (statutory government
-# format). Appointment letters are issued by the contractor/employer, so they
-# carry no BSS logo or wordmark either.
-UNBRANDED_LETTER_TYPES = {"EXPERIENCE", "APPOINTMENT"}
+# format). The experience / releasing letter is the statutory Form XV service
+# certificate, which must stay unbranded. Appointment letters DO carry the BSS
+# brand row + logo (the admin template editor expects it).
+UNBRANDED_LETTER_TYPES = {"EXPERIENCE"}
 
-# Specific states whose appointment letters must not carry the BSS logo.
-LOGO_SUPPRESSED_STATES = {"Andaman and Nicobar Islands"}
+# Optional per-state opt-out of BSS branding. Empty: no state is suppressed —
+# every state's appointment letter carries the BSS brand row + logo.
+LOGO_SUPPRESSED_STATES: set[str] = set()
 
 # Bump when the CSS changes so previously-injected stylesheets get replaced.
-_CSS_MARKER = "bss-letter-css-v3"
+_CSS_MARKER = "bss-letter-css-v5"
 _INJECTED_RE = re.compile(r"<style[^>]*>\s*bss-letter-css[^<]*</style>", re.I)
 
 # Layout safety — applied to every letter, branded or not.
@@ -44,6 +46,9 @@ PRINT_CSS = """
   .page { width:auto; max-width:100%; margin:0; padding:0; }
   table, img { max-width:100%; }
   .sign .id, .sign-col .id { font-size:8.5pt; color:#6b7280; font-family:monospace; margin-top:2px; }
+  /* On-screen / preview only: emulate the @page margins so the letter is not
+     flush to the frame edges. WeasyPrint (print media) ignores this. */
+  @media screen { .page { padding: 14mm 14mm; box-sizing: border-box; } }
 """
 
 # Form XV signature block must carry the worker's and contractor's BSS ID
@@ -82,14 +87,16 @@ _BSS_FOOTER_RE = re.compile(
 # ignores flexbox; explicit logo height so a portrait PNG cannot blow out the row.
 BRAND_CSS = """
   .bss-letter-brand { display:table; width:100%; border-bottom:2.5px solid #073B67;
-                      padding-bottom:5px; margin-bottom:8px; }
-  .bss-letter-brand .brand-left, .bss-letter-brand .brand-title { display:table-cell; vertical-align:middle; }
-  .bss-letter-brand .brand-left { width:46px; }
-  .bss-letter-brand .brand-logo { height:34px; width:auto; max-width:46px;
-                                  vertical-align:middle; margin-right:8px; }
-  .bss-letter-brand .brand-title strong { color:#073B67; font-size:15px; letter-spacing:.3px; display:block; }
+                      padding:0 0 6px; margin:2px 0 10px; }
+  .bss-letter-brand .brand-left { display:table-cell; vertical-align:middle; width:54px; }
+  .bss-letter-brand .brand-logo { height:42px; width:auto; max-width:52px;
+                                  display:block; vertical-align:middle; }
+  .bss-letter-brand .brand-title { display:table-cell; vertical-align:middle;
+                                   padding-left:10px; }
+  .bss-letter-brand .brand-title strong { color:#073B67; font-size:16px; letter-spacing:.3px;
+                                          display:block; line-height:1.15; }
   .bss-letter-brand .brand-title span { display:block; font-size:8.5px; color:#6b7280;
-                                        letter-spacing:1.2px; text-transform:uppercase; }
+                                        letter-spacing:1.2px; text-transform:uppercase; margin-top:1px; }
 """
 
 BRAND_BLOCK = (
@@ -138,9 +145,8 @@ def ensure_logo_url(value, letter_type: str = "APPOINTMENT",
                     with_logo: bool | None = None, state: str | None = None) -> str:
     """Return the template's logo URL, or the hosted BSS default.
 
-    Always blank for unbranded types (statutory Form XV) or logo-suppressed
-    states (e.g. Andaman and Nicobar Islands appointment letters), discarding
-    whatever was passed in.
+    Always blank for unbranded types (statutory Form XV) or any state listed in
+    ``LOGO_SUPPRESSED_STATES`` (currently none), discarding whatever was passed in.
     """
     text = (value or "").strip()
     if not wants_logo(letter_type, with_logo, state):
@@ -175,6 +181,20 @@ def _mark_brand_row(out: str) -> str:
             lambda m: f'class="bss-letter-brand {m.group(1)}"', tag, count=1)
 
     return re.sub(r'<div\s+class\s*=\s*"brand"[^>]*>', repl, out, count=1, flags=re.I)
+
+
+def _rebuild_brand_row(out: str) -> str:
+    """Replace an existing brand row with the canonical structure.
+
+    Older templates wrap the logo image and wordmark in bare elements (no
+    ``.brand-left`` / ``.brand-title`` table cells), which misaligns the logo and
+    crowds it against the page edge. Rebuilding to the canonical block makes the
+    logo/wordmark alignment and spacing consistent everywhere.
+    """
+    match = _BRAND_BLOCK_RE.search(out)
+    if match is None:
+        return out
+    return out[:match.start()] + BRAND_BLOCK + out[match.end():]
 
 
 def _ensure_sign_ids(out: str) -> str:
@@ -229,8 +249,10 @@ def ensure_letter_html(html_text: str, letter_type: str = "APPOINTMENT",
                 if first is not None:
                     out = out[:first.start()] + BRAND_BLOCK + "\n" + out[first.start():]
 
-        # 3. Existing brand rows need the marker class for our overrides to win.
+        # 3. Existing brand rows need the marker class, then get normalised to the
+        #    canonical block so the logo/wordmark align (legacy rows used bare divs).
         out = _mark_brand_row(out)
+        out = _rebuild_brand_row(out)
     else:
         # Unbranded types: drop any BSS brand row we previously injected, and make
         # sure the Form XV signature block identifies both signatories by BSS ID.
@@ -250,3 +272,102 @@ def ensure_letter_html(html_text: str, letter_type: str = "APPOINTMENT",
         out = style + out
 
     return out
+
+
+def _esc(value: str) -> str:
+    return (value or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _replace_brand_name(out: str, name: str) -> str:
+    """Swap the brand wordmark text inside the brand row (if present)."""
+    match = _BRAND_BLOCK_RE.search(out)
+    if match is None:
+        return out
+    block = re.sub(r"(<strong[^>]*>).*?(</strong>)",
+                   lambda m: m.group(1) + _esc(name) + m.group(2),
+                   match.group(0), count=1, flags=re.I | re.S)
+    return out[:match.start()] + block + out[match.end():]
+
+
+def _replace_footer(out: str, text: str) -> str:
+    """Replace an existing footer, or append one inside the page box."""
+    if re.search(r'<div\s+class\s*=\s*"foot"', out, re.I):
+        return re.sub(r'(<div\s+class\s*=\s*"foot"[^>]*>).*?(</div>)',
+                      lambda m: m.group(1) + _esc(text) + m.group(2),
+                      out, count=1, flags=re.I | re.S)
+    footer = ('<div style="margin-top:14px;border-top:1px solid #e5e7eb;padding-top:5px;'
+              'font-size:9px;color:#6b7280;text-align:center">' + _esc(text) + "</div>")
+    return re.sub(r"</div>\s*</body>", footer + r"\g<0>", out, count=1, flags=re.I)
+
+
+def apply_letter_customizations(html_text: str, adoption) -> str:
+    """Apply an employer's appointment-letter adoption overrides.
+
+    Text/heading colours, the brand wordmark and the footer are applied here.
+    The logo is applied through the ``logoUrl`` token at render time. Idempotent:
+    the colour override is marked and replaced, never stacked.
+    """
+    if not html_text or adoption is None:
+        return html_text
+    out = re.sub(r"<style>\s*/\* employer-letter-adoption \*/.*?</style>", "", html_text,
+                 flags=re.I | re.S)
+    css = ""
+    text_color = (getattr(adoption, "text_color", "") or "").strip()
+    heading_color = (getattr(adoption, "heading_color", "") or "").strip()
+    if text_color:
+        css += ("\n  body, .page, .page p, .page td, .page span, .page div "
+                f"{{ color:{text_color}; }}")
+    if heading_color:
+        css += (f"\n  h1, h3, .brand strong, .brand-title strong, .kv td:first-child "
+                f"{{ color:{heading_color}; }}")
+    if css:
+        style = f"<style>/* employer-letter-adoption */{css}</style>"
+        head = _HEAD_RE.search(out)
+        out = out[:head.start()] + style + out[head.start():] if head is not None else style + out
+    brand = (getattr(adoption, "brand_name", "") or "").strip()
+    if brand:
+        out = _replace_brand_name(out, brand)
+    footer = (getattr(adoption, "footer_text", "") or "").strip()
+    if footer:
+        out = _replace_footer(out, footer)
+    # Employer-authored regions (header / clauses / footer) override the base.
+    header_html = (getattr(adoption, "header_html", "") or "").strip()
+    if header_html:
+        out = _replace_header_region(out, header_html)
+    clauses_html = (getattr(adoption, "clauses_html", "") or "").strip()
+    if clauses_html:
+        out = _insert_clauses(out, clauses_html)
+    footer_html = (getattr(adoption, "footer_html", "") or "").strip()
+    if footer_html:
+        out = _set_footer_region(out, footer_html)
+    return out
+
+
+def _replace_header_region(out: str, block: str) -> str:
+    """Swap the brand/header row for employer-authored HTML (or inject one)."""
+    match = _BRAND_BLOCK_RE.search(out)
+    if match is not None:
+        return out[:match.start()] + block + out[match.end():]
+    page = _PAGE_RE.search(out)
+    if page is not None:
+        return out[:page.end()] + "\n" + block + out[page.end():]
+    head = _HEAD_RE.search(out)
+    return (out[:head.end()] + block + out[head.end():]) if head is not None else block + out
+
+
+def _set_footer_region(out: str, block: str) -> str:
+    """Replace an existing footer with employer HTML, or append one."""
+    if re.search(r'<div\s+class\s*=\s*"foot"', out, re.I):
+        return re.sub(r'<div\s+class\s*=\s*"foot"[^>]*>.*?</div>', lambda _m: block,
+                      out, count=1, flags=re.I | re.S)
+    return re.sub(r"</div>\s*</body>", block + r"\g<0>", out, count=1, flags=re.I)
+
+
+def _insert_clauses(out: str, block: str) -> str:
+    """Insert employer clauses before the signature block (else before the footer)."""
+    match = re.search(r'<div\s+class\s*=\s*"sign"', out, re.I)
+    if match is not None:
+        return out[:match.start()] + block + "\n" + out[match.start():]
+    if re.search(r'<div\s+class\s*=\s*"foot"', out, re.I):
+        return re.sub(r'(<div\s+class\s*=\s*"foot"[^>]*>)', block + r"\1", out, count=1, flags=re.I)
+    return re.sub(r"</div>\s*</body>", block + r"\g<0>", out, count=1, flags=re.I)

@@ -117,6 +117,48 @@ def _ocr_frames(engine, frames, budget_s=OCR_TIME_BUDGET_S):
     return "\n".join(lines)
 
 
+def _clean_native_text(text):
+    """Drop char-by-char noise lines (some signed PDFs render the rotated
+    signature block one glyph per line)."""
+    return "\n".join(ln.strip() for ln in (text or "").splitlines() if len(ln.strip()) >= 2)
+
+
+def _pdf_native_text(file_bytes, min_alnum=40):
+    """Return the PDF's own text layer when it is usable.
+
+    Digitally-generated PDFs (e.g. DigiLocker PAN/Aadhaar certificates) carry an
+    exact text layer — including the spacing between words — which rasterised OCR
+    often mangles (``SYED YASSER ALI`` -> ``SYEDYASSERALI``). Scanned PDFs have
+    little/no embedded text, so return "" and let the caller fall back to OCR.
+    """
+    try:
+        import pypdfium2 as pdfium
+    except Exception:  # noqa: BLE001 — no native reader available
+        return ""
+    try:
+        doc = pdfium.PdfDocument(file_bytes)
+    except Exception:  # noqa: BLE001
+        return ""
+    parts = []
+    try:
+        for page in doc:
+            try:
+                text = page.get_textpage().get_text_range() or ""
+            except Exception:  # noqa: BLE001
+                text = ""
+            if text.strip():
+                parts.append(text)
+    finally:
+        try:
+            doc.close()
+        except Exception:  # noqa: BLE001
+            pass
+    raw = "\n".join(parts).strip()
+    if sum(c.isalnum() for c in raw) < min_alnum:
+        return ""
+    return _clean_native_text(raw)
+
+
 def extract_text(file_bytes: bytes, filename: str = "", timeout: float | int | None = None) -> str:
     """Return the recognized text for a document (image or PDF).
 
@@ -129,6 +171,11 @@ def extract_text(file_bytes: bytes, filename: str = "", timeout: float | int | N
         raise OcrError("Empty document.")
 
     if _is_pdf(file_bytes) or (filename or "").lower().endswith(".pdf"):
+        # Prefer the exact text layer when present (digital PDFs); only rasterise
+        # + OCR when there is no usable embedded text (scanned documents).
+        native = _pdf_native_text(file_bytes)
+        if native:
+            return native
         frames = _rasterize_pdf(file_bytes)
     else:
         frames = _open_image(file_bytes)

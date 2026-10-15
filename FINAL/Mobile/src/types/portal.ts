@@ -366,7 +366,7 @@ export type ContractorPortalData = {
   identity: { name: string; company: string; photoUrl?: string; bssId: string; incorpDate: string; entity: string; verified: boolean; rating: number; memberSince?: string; contact: string; email: string; accountStatus?: string; cardIssueDate?: string; cardValidTill?: string };
   stats: { totalWorkers: number; activeSites: number; complianceScore: number; pendingAlerts: number };
   principalEmployer: { name: string; code: string; industry: string; email: string; lin: string };
-  sites: Array<{ id: string; code: string; name: string; employer: string; location: string; workers: number; compliance: number | null; bssId?: string; state?: string; status?: string; boundSince?: string; hasAgreement?: boolean; agreementName?: string; data?: Record<string, unknown> }>;
+  sites: Array<{ id: string; code: string; name: string; employer: string; location: string; workers: number; compliance: number | null; bssId?: string; state?: string; status?: string; boundSince?: string; documents?: SiteDocs; data?: Record<string, unknown> }>;
   pendingSites?: Array<{ id: string; code: string; name: string; employer: string; location: string; state: string; source: string }>;
   defaultSite?: { id: string; name: string; code: string } | null;
   workers: ContractorWorker[];
@@ -422,12 +422,44 @@ export type EmployerSiteDetail = {
   facilities: Array<{ label: string; enabled: boolean }>;
 };
 
+export type SiteDocAuditStep = { step: string; status: string; observation?: string; risk?: string };
+export type SiteDocAudit = {
+  status?: string; summary?: string; overall?: string;
+  steps?: SiteDocAuditStep[]; model?: string; message?: string;
+};
+export type SiteDoc = {
+  id: number; docType: string; version: number; fileName: string;
+  uploadedAt: string; uploadedBy: string; url: string;
+  aiStatus?: string; ai?: SiteDocAudit;
+} | null;
+export type SiteDocs = { agreement: SiteDoc; po: SiteDoc };
+
+export type PartyLicenseRecord = {
+  id: number; licenseNumber: string; validFrom: string; validTo: string;
+  fileName: string; status: string; note: string; uploadedAt: string; url: string;
+};
+export type PartyLicenseItem = {
+  id: number; name: string; state: string; appliesTo: string;
+  govtFee: string; securityDeposit: string; minWageApplicability: string;
+  bonusPayoutMonth: string; effectiveFrom: string; effectiveTo: string;
+  record: PartyLicenseRecord | null;
+};
+export type PartyLicenses = {
+  licenses: PartyLicenseItem[]; total: number; pending: number; role: string;
+};
+
+export type GlobalAuditReport = {
+  id: number; kind: string; status: string; requestedBy: string;
+  createdAt: string; verdict: string; summary: string; error: string; html?: string;
+};
+
 export type EmployerSite = {
   id: string;
   code: string;
   name: string;
   location: string;
   state: string;
+  jurisdiction?: 'state' | 'central';
   startDate: string;
   endDate: string;
   status: 'Active' | 'Planned' | 'Completed';
@@ -442,8 +474,7 @@ export type EmployerSite = {
   experienceLetterTemplateId?: number | null;
   appointmentLetterTemplateName?: string;
   experienceLetterTemplateName?: string;
-  hasAgreement?: boolean;
-  agreementName?: string;
+  contractorDocuments?: Record<string, SiteDocs>;
   details?: EmployerSiteDetail;
   /** Raw scalar site-master fields (snake_case model column names) from the Site Detail sheet. */
   data?: Record<string, unknown>;

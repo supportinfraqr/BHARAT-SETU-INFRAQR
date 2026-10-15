@@ -24,3 +24,7 @@ tools/mediamtx/
 # Model weights downloaded at runtime
 *.pt
 runs/
+
+# Model weights (runtime; provided on the host / baked at deploy)
+data/models/
+*.onnx

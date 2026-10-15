@@ -131,7 +131,7 @@ export default function OriginalLoginPage() {
   ];
 
   const otherRoles = [
-    { id: 'Government', icon: Landmark, label: t('government') },
+    { id: 'Government', icon: Landmark, label: 'Administrator' },
     { id: 'BSS Staff', icon: BadgeCheck, label: t('bssStaff') },
     { id: 'BSS Admin', icon: ShieldCheck, label: t('bssAdmin') },
   ];

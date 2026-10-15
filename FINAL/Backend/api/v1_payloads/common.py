@@ -144,7 +144,8 @@ _SITE_SCALAR_FIELDS = tuple(
     and not getattr(f, "many_to_one", False)
     and not getattr(f, "many_to_many", False)
     and not getattr(f, "one_to_one", False)
-    and f.name not in ("id", "site_qr_token", "created_at", "updated_at", "employer")
+    and f.name not in ("id", "site_qr_token", "created_at", "updated_at", "employer",
+                        "agreement_file")
 )
 CATEGORY_MAP = {
     "INFO": "info", "APPROVAL": "approval", "WARNING": "warning",

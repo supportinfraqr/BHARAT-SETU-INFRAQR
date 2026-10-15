@@ -69,6 +69,8 @@ export type TemplateStyles = {
   brandTextLogoUrl?: string;
   /** A fully custom pass colour (hex) that overrides the preset theme. */
   themeColor?: string;
+  /** Selected built-in gate-pass design (1–8; 1–4 permanent, 5–8 temporary). */
+  gatePassDesign?: number;
   /** A simple free-form HTML block rendered into the document (script tags stripped). */
   customHtml?: string;
   footerText: string;

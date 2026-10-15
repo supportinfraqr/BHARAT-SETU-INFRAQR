@@ -15,3 +15,6 @@ tools/ffmpeg-*/
 tools/mediamtx/
 *.exe
 *.zip
+
+# stray extracted copies
+BTP_camera_server/

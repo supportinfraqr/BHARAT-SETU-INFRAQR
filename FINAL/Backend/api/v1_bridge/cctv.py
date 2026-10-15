@@ -131,8 +131,18 @@ def employer_cctv_cameras(request):
 
     if request.method == "GET":
         rows = SiteCctvCamera.objects.filter(site=site).order_by("sort_order", "id")
-        return Response({"data": {"siteId": site.id, "siteKey": _site_key(site), "cameras": [_camera_json(c) for c in rows]}})
+        limit = int(getattr(site, "max_cctv_cameras", 5) or 5)
+        return Response({"data": {"siteId": site.id, "siteKey": _site_key(site),
+                                  "maxCameras": limit, "cameraCount": rows.count(),
+                                  "allowFeedView": bool(getattr(site, "allow_cctv_feed_view", False)),
+                                  "cameras": [_camera_json(c) for c in rows]}})
 
+    existing = SiteCctvCamera.objects.filter(site=site).count()
+    limit = int(getattr(site, "max_cctv_cameras", 5) or 5)
+    if existing >= limit:
+        return Response({"error": f"This site is limited to {limit} CCTV cameras. "
+                                  f"Ask BSS admin to increase the limit for this site."},
+                        status=status.HTTP_400_BAD_REQUEST)
     camera = SiteCctvCamera(site=site)
     _apply_camera_payload(camera, body)
     error = _validate_camera(camera)
@@ -226,6 +236,9 @@ def cctv_camera_snapshot(request, camera_id):
     allowed = user.role == "employer" and camera.site is not None and camera.site.employer_id == user.id
     if not allowed:
         return Response({"error": "You do not have access to this camera."}, status=status.HTTP_403_FORBIDDEN)
+    if not bool(getattr(camera.site, "allow_cctv_feed_view", False)):
+        return Response({"error": "Live feed viewing is disabled for this site. Ask BSS admin to enable it."},
+                        status=status.HTTP_403_FORBIDDEN)
     source = camera.build_source()
     if not source:
         return Response({"error": "This camera has no feed details yet."}, status=status.HTTP_400_BAD_REQUEST)
@@ -273,6 +286,7 @@ def cctv_status(request):
         "siteKey": key,
         "siteName": site.site_name,
         "cameras": rows,
+        "allowFeedView": bool(getattr(site, "allow_cctv_feed_view", False)),
         "anyRunning": bool(active),
     }})
 
@@ -287,3 +301,67 @@ def cameras_for_site(site):
         if source:
             out.append({"label": cam.label, "area": cam.area or cam.label, "source": source})
     return out
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def admin_sites_cctv(request):
+    """BSS admin: list all sites with their CCTV settings (limit + feed-view)."""
+    from bss_core.models import Site, SiteCctvCamera
+
+    if request.user.role not in ("bss_admin", "bss_staff"):
+        return Response({"error": "BSS admin only."}, status=status.HTTP_403_FORBIDDEN)
+    qs = Site.objects.select_related("employer").order_by("site_name")[:2000]
+    rows = []
+    for s in qs:
+        rows.append({
+            "id": s.id, "name": s.site_name, "code": s.site_code,
+            "employer": (getattr(s.employer, "username", "") if s.employer_id else ""),
+            "maxCameras": int(getattr(s, "max_cctv_cameras", 5) or 5),
+            "allowFeedView": bool(getattr(s, "allow_cctv_feed_view", False)),
+            "cameraCount": SiteCctvCamera.objects.filter(site=s).count(),
+        })
+    return Response({"rows": rows}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET", "POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def admin_site_camera_limit(request, site_id):
+    """BSS admin: read / set the per-site CCTV camera limit + live feed-view."""
+    from bss_core.models import Site, SiteCctvCamera
+
+    if request.user.role not in ("bss_admin", "bss_staff"):
+        return Response({"error": "BSS admin only."}, status=status.HTTP_403_FORBIDDEN)
+    site = Site.objects.filter(pk=site_id).first()
+    if site is None:
+        return Response({"error": "Site not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "POST":
+        body = request.data if isinstance(request.data, dict) else {}
+        fields = []
+        if body.get("maxCameras") not in (None, ""):
+            try:
+                limit = int(body.get("maxCameras"))
+            except (TypeError, ValueError):
+                return Response({"error": "Enter a camera limit."}, status=status.HTTP_400_BAD_REQUEST)
+            site.max_cctv_cameras = max(1, min(limit, 50))
+            fields.append("max_cctv_cameras")
+        if body.get("allowFeedView") is not None:
+            site.allow_cctv_feed_view = bool(body.get("allowFeedView"))
+            fields.append("allow_cctv_feed_view")
+        if fields:
+            site.save(update_fields=fields + ["updated_at"])
+            from .admin_console import log_audit
+            log_audit(request.user, "UPDATE", "site_cctv_settings", site.id,
+                      after={"summary": f"CCTV settings — max={site.max_cctv_cameras} "
+                                        f"feedView={site.allow_cctv_feed_view}",
+                             "site": site.site_name})
+
+    return Response({"data": {
+        "siteId": site.id, "siteName": site.site_name,
+        "maxCameras": int(getattr(site, "max_cctv_cameras", 5) or 5),
+        "allowFeedView": bool(getattr(site, "allow_cctv_feed_view", False)),
+        "cameraCount": SiteCctvCamera.objects.filter(site=site).count(),
+    }})
