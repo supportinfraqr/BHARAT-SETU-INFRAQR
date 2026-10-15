@@ -423,10 +423,11 @@ def employer_onboarding_submit(request):
         grouped = _parse_workbook(raw)
     except ValueError as exc:
         return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-    # Employer onboarding carries exactly two entities: workers + contractors.
-    grouped = {k: v for k, v in grouped.items() if k in ("EMPLOYER", "WORKER", "CONTRACTOR")}
+    # Employer onboarding carries exactly two entities: workers + contractors
+    # (onboarding employer accounts is a BSS-admin function).
+    grouped = {k: v for k, v in grouped.items() if k in ("WORKER", "CONTRACTOR")}
     if not grouped:
-        return Response({"error": "No Employers, Workers or Contractors sheet found in the file."},
+        return Response({"error": "No Workers or Contractors sheet found in the file."},
                         status=status.HTTP_400_BAD_REQUEST)
 
     batch = OnboardingBatch(
@@ -483,17 +484,17 @@ def _workbook_response(entities, requested=""):
 def employer_onboarding_template(request):
     """Download the onboarding workbook template.
 
-    Exactly three templates: **Employers**, **Workers** and **Contractors**.
-    ``?entity=employers|workers|contractors`` returns a single-sheet workbook;
-    with no param all three sheets are returned in one workbook.
+    An employer uploads historical **Workers** and **Contractors** only
+    (onboarding employer accounts is a BSS-admin function).
+    ``?entity=workers|contractors`` returns a single-sheet workbook.
     """
     if request.user.role != "employer":
         return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
-    allowed = ("employers", "workers", "contractors")
+    allowed = ("workers", "contractors")
     requested = str(request.query_params.get("entity") or "").strip().lower()
     if requested:
         if requested not in allowed:
-            return Response({"error": "entity must be employers, workers or contractors."},
+            return Response({"error": "entity must be workers or contractors."},
                             status=status.HTTP_400_BAD_REQUEST)
         entities = [requested]
     else:

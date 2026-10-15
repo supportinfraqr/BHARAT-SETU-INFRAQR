@@ -69,7 +69,7 @@ export default function EmployerOnboardingPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
   useEffect(() => { void load(); }, [load]);
 
-  async function downloadTemplate(entity: 'employers' | 'workers' | 'contractors') {
+  async function downloadTemplate(entity: 'workers' | 'contractors') {
     setError(''); setNotice('');
     try {
       const res = await fetch(`/api/employer/onboarding/template?entity=${entity}`);
@@ -138,7 +138,7 @@ export default function EmployerOnboardingPage() {
     <header>
       <p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Secure data onboarding</p>
       <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-bss-text-primary mt-1">Onboarding</h1>
-      <p className="text-sm text-bss-text-muted mt-1">Submit employer, worker and contractor data over a secure channel. BSS reviews and quarantines it; you then approve the verified data before accounts are created.</p>
+      <p className="text-sm text-bss-text-muted mt-1">Submit worker and contractor data over a secure channel. BSS reviews and quarantines it; you then approve the verified data before accounts are created.</p>
     </header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
@@ -146,9 +146,8 @@ export default function EmployerOnboardingPage() {
 
     <section className="bss-card rounded-2xl p-5 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#01183A]"/>Submit historical data</h2><p className="text-xs text-bss-text-muted mt-0.5">Three templates: <strong>Employer</strong>, <strong>Worker</strong> and <strong>Contractor</strong>. Each asks only the <strong>mobile number</strong> — the rest is completed when the user signs in.</p></div>
+        <div><h2 className="text-sm font-semibold text-bss-text-primary flex items-center gap-2"><FileSpreadsheet size={16} className="text-[#01183A]"/>Submit historical data</h2><p className="text-xs text-bss-text-muted mt-0.5">Two templates: <strong>Worker</strong> and <strong>Contractor</strong>. Each asks only the <strong>mobile number</strong> — the rest is completed when the user signs in.</p></div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => void downloadTemplate('employers')} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Employer template</button>
           <button onClick={() => void downloadTemplate('workers')} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Worker template</button>
           <button onClick={() => void downloadTemplate('contractors')} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-bold inline-flex items-center gap-1.5"><Download size={14}/>Contractor template</button>
         </div>
@@ -160,13 +159,12 @@ export default function EmployerOnboardingPage() {
       {preview && <div className="rounded-xl border border-bss-border bg-bss-bg px-3 py-3">
         <p className="text-[11px] font-bold uppercase tracking-wider text-bss-text-muted">This file will create</p>
         <div className="mt-2 flex flex-wrap gap-2">
-          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border border-bss-border ${preview.employers ? 'bg-bss-soft-green text-bss-green' : 'bg-white text-bss-text-muted'}`}>Employers × {preview.employers}</span>
           <span className={`text-xs font-bold px-2.5 py-1 rounded-full border border-bss-border ${preview.workers ? 'bg-bss-soft-green text-bss-green' : 'bg-white text-bss-text-muted'}`}>Workers × {preview.workers}</span>
           <span className={`text-xs font-bold px-2.5 py-1 rounded-full border border-bss-border ${preview.contractors ? 'bg-bss-soft-green text-bss-green' : 'bg-white text-bss-text-muted'}`}>Contractors × {preview.contractors}</span>
         </div>
-        {preview.employers + preview.workers + preview.contractors === 0
-          ? <p className="text-[11px] text-bss-error mt-2">No recognised sheet — name the tabs exactly <strong>Employers</strong>, <strong>Workers</strong> and/or <strong>Contractors</strong>.</p>
-          : <p className="text-[11px] text-bss-text-muted mt-2">Recognised: {preview.sheets.filter(s => ['Employers', 'Workers', 'Contractors'].includes(s)).join(', ')}.{preview.sheets.some(s => !['Employers', 'Workers', 'Contractors'].includes(s)) ? ` Ignored: ${preview.sheets.filter(s => !['Employers', 'Workers', 'Contractors'].includes(s)).join(', ')}.` : ''}</p>}
+        {preview.workers + preview.contractors === 0
+          ? <p className="text-[11px] text-bss-error mt-2">No recognised sheet — name the tabs exactly <strong>Workers</strong> and/or <strong>Contractors</strong>.</p>
+          : <p className="text-[11px] text-bss-text-muted mt-2">Recognised: {preview.sheets.filter(s => ['Workers', 'Contractors'].includes(s)).join(', ')}.{preview.sheets.some(s => !['Workers', 'Contractors'].includes(s)) ? ` Ignored: ${preview.sheets.filter(s => !['Workers', 'Contractors'].includes(s)).join(', ')}.` : ''}</p>}
       </div>}
       <label className="flex items-start gap-2 text-xs text-bss-text-primary">
         <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="accent-[#01183A] w-4 h-4 mt-0.5"/>
@@ -175,7 +173,7 @@ export default function EmployerOnboardingPage() {
       <label className="block text-xs font-semibold text-bss-text-primary">Declaration / note (optional)
         <input value={declaration} onChange={e => setDeclaration(e.target.value)} placeholder="e.g. Historical payroll for FY 2025-26" className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm"/>
       </label>
-      <button onClick={() => void submit()} disabled={busy || !file || (preview ? preview.employers + preview.workers + preview.contractors === 0 : false)} className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-xs font-bold disabled:opacity-50 inline-flex items-center gap-1.5"><ShieldCheck size={14}/>{busy ? 'Submitting…' : 'Submit securely'}</button>
+      <button onClick={() => void submit()} disabled={busy || !file || (preview ? preview.workers + preview.contractors === 0 : false)} className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-xs font-bold disabled:opacity-50 inline-flex items-center gap-1.5"><ShieldCheck size={14}/>{busy ? 'Submitting…' : 'Submit securely'}</button>
     </section>
 
     <div className="grid lg:grid-cols-[360px_1fr] gap-5">
