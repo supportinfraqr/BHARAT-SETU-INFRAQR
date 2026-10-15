@@ -27,7 +27,8 @@ import time
 # "Test connection" probe instead of the ffmpeg default (~30s). Prefer RTSP over
 # TCP — far more reliable through NAT/routers than the UDP default.
 os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS",
-                      "rtsp_transport;tcp|rw_timeout;8000000|stimeout;8000000")
+                      "rtsp_transport;tcp|rw_timeout;8000000|stimeout;8000000"
+                      "|fflags;nobuffer|flags;low_delay|analyzeduration;0|probesize;500000")
 
 from flask import Flask, Response, jsonify, request, send_file
 
@@ -59,6 +60,7 @@ class _PreviewReader:
         self.source = source
         self._lock = threading.Lock()
         self._jpeg = None
+        self._seq = 0
         self._last_access = time.time()
         self._stop = False
         self._cap = None
@@ -104,7 +106,8 @@ class _PreviewReader:
             if enc_ok:
                 with self._lock:
                     self._jpeg = buf.tobytes()
-            time.sleep(0.15)
+                    self._seq += 1
+            time.sleep(0.08)
         try:
             if self._cap is not None:
                 self._cap.release()
@@ -117,8 +120,18 @@ class _PreviewReader:
             with self._lock:
                 if self._jpeg:
                     return self._jpeg
-            time.sleep(0.1)
+            time.sleep(0.05)
         return None
+
+    def frame_after(self, since_seq: int, timeout: float = 5.0):
+        """Wait for a frame newer than ``since_seq`` → (seq, jpeg) or (since_seq, None)."""
+        end = time.time() + timeout
+        while time.time() < end:
+            with self._lock:
+                if self._seq > since_seq and self._jpeg:
+                    return self._seq, self._jpeg
+            time.sleep(0.03)
+        return since_seq, None
 
     @property
     def stopped(self) -> bool:
@@ -335,6 +348,40 @@ def frame_jpg():
     if jpeg is None:
         return jsonify(error="No frame from the feed — check the camera IP/port/path/login and that the engine can reach it."), 502
     return Response(jpeg, mimetype="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+@app.route("/stream.mjpg", methods=["GET", "POST"])
+def stream_mjpg():
+    """Continuous MJPEG stream for one feed — smooth live preview (browser <img>)."""
+    if not _authorized():
+        return jsonify(error="unauthorized"), 401
+    body = request.get_json(silent=True) or {}
+    source = str(request.args.get("source") or body.get("source") or "").strip()
+    if not source:
+        return jsonify(error="source is required"), 400
+    with _preview_lock:
+        reader = _previews.get(source)
+        if reader is None or reader.stopped:
+            reader = _PreviewReader(source)
+            _previews[source] = reader
+        reader.touch()
+
+    def generate():
+        boundary = b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"
+        seq, first = reader.frame_after(0, timeout=8.0)
+        if first is None:
+            return
+        reader.touch()
+        yield boundary + first + b"\r\n"
+        while not reader.stopped:
+            reader.touch()
+            seq, jpeg = reader.frame_after(seq, timeout=6.0)
+            if jpeg is None:
+                break
+            yield boundary + jpeg + b"\r\n"
+
+    return Response(generate(), mimetype="multipart/x-mixed-replace; boundary=frame",
+                    headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
 
 
 @app.get("/detections")

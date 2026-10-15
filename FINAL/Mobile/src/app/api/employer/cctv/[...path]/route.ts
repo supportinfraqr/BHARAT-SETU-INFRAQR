@@ -16,14 +16,15 @@ async function forward(request: Request, ctx: Ctx, method: 'GET' | 'POST' | 'PUT
     const { path } = await ctx.params;
     const suffix = (path || []).join('/');
     const search = new URL(request.url).search;
-    // A camera snapshot returns a JPEG, not JSON — stream it straight through.
-    if (method === 'GET' && suffix.endsWith('/snapshot')) {
+    // Camera snapshot/stream return JPEG/MJPEG, not JSON — stream straight through.
+    if (method === 'GET' && (suffix.endsWith('/snapshot') || suffix.endsWith('/stream'))) {
       const upstream = await upstreamStream(config.apiBaseUrl, `/v1/employer/cctv/${suffix}${search}`, session);
       return new Response(upstream.body, {
         status: 200,
         headers: {
           'Content-Type': upstream.headers.get('content-type') || 'image/jpeg',
           'Cache-Control': 'no-store',
+          'X-Accel-Buffering': 'no',
         },
       });
     }

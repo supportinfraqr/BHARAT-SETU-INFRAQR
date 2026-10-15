@@ -172,6 +172,7 @@ _v1_patterns = _v1(
     ("employer/cctv/cameras", v1_bridge.employer_cctv_cameras, "v1_employer_cctv_cameras"),
     ("employer/cctv/cameras/<int:camera_id>", v1_bridge.employer_cctv_camera_detail, "v1_employer_cctv_camera_detail"),
     ("employer/cctv/cameras/<int:camera_id>/snapshot", v1_bridge.cctv_camera_snapshot, "v1_employer_cctv_snapshot"),
+    ("employer/cctv/cameras/<int:camera_id>/stream", v1_bridge.cctv_camera_stream, "v1_employer_cctv_stream"),
     ("employer/cctv/test", v1_bridge.employer_cctv_test, "v1_employer_cctv_test"),
     ("employer/cctv/status", v1_bridge.cctv_status, "v1_employer_cctv_status"),
     ("admin/sites/<int:site_id>/camera-limit", v1_bridge.admin_site_camera_limit, "v1_admin_site_camera_limit"),

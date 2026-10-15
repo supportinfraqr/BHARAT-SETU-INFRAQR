@@ -1,9 +1,16 @@
+import os
 import time
 import threading
 from dataclasses import dataclass
 from typing import Optional, List, Tuple
 
 import cv2
+
+# Low-latency FFMPEG for RTSP/HTTP/HLS: TCP transport, fast fail, no buffering.
+os.environ.setdefault(
+    "OPENCV_FFMPEG_CAPTURE_OPTIONS",
+    "rtsp_transport;tcp|rw_timeout;8000000|stimeout;8000000"
+    "|fflags;nobuffer|flags;low_delay|analyzeduration;0|probesize;500000")
 
 from src.ivideon import (
     IvideonError,

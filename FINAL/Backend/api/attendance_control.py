@@ -96,6 +96,28 @@ def get_frame(source, timeout=10):
     return response.content, response.headers.get("Content-Type", "image/jpeg")
 
 
+def get_stream(source):
+    """Continuous MJPEG response from the engine (multipart/x-mixed-replace).
+
+    Returns the live ``requests`` Response (``stream=True``) so the caller can
+    pipe its bytes straight to the browser — a smooth live preview, not polling."""
+    url, token = _config()
+    try:
+        response = requests.get(
+            f"{url}/stream.mjpg", params={"source": str(source)},
+            headers={"X-Attendance-Token": token}, stream=True, timeout=(6, 300),
+        )
+    except requests.RequestException as exc:
+        raise AttendanceControlError(f"Attendance controller unreachable: {exc}", 502)
+    if response.status_code >= 400:
+        try:
+            detail = (response.json() or {}).get("error")
+        except ValueError:
+            detail = None
+        raise AttendanceControlError(detail or f"Attendance controller error ({response.status_code}).", 502)
+    return response
+
+
 def list_sessions():
     return _request("GET", "/sessions").get("sessions", [])
 

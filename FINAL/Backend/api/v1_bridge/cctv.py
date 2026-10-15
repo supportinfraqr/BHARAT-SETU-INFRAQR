@@ -254,6 +254,49 @@ def cctv_camera_snapshot(request, camera_id):
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
+def cctv_camera_stream(request, camera_id):
+    """Live MJPEG stream for one camera — smooth preview (employer, feed-view allowed)."""
+    from django.http import StreamingHttpResponse
+
+    from bss_core.models import SiteCctvCamera
+
+    user = request.user
+    camera = SiteCctvCamera.objects.select_related("site").filter(pk=camera_id).first()
+    if camera is None:
+        return Response({"error": "Camera not found."}, status=status.HTTP_404_NOT_FOUND)
+    allowed = user.role == "employer" and camera.site is not None and camera.site.employer_id == user.id
+    if not allowed:
+        return Response({"error": "You do not have access to this camera."}, status=status.HTTP_403_FORBIDDEN)
+    if not bool(getattr(camera.site, "allow_cctv_feed_view", False)):
+        return Response({"error": "Live feed viewing is disabled for this site. Ask BSS admin to enable it."},
+                        status=status.HTTP_403_FORBIDDEN)
+    source = camera.build_source()
+    if not source:
+        return Response({"error": "This camera has no feed details yet."}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        upstream = control.get_stream(source)
+    except control.AttendanceControlError as exc:
+        return Response({"error": str(exc)}, status=exc.status_code)
+
+    def _pipe():
+        try:
+            for chunk in upstream.iter_content(chunk_size=65536):
+                if chunk:
+                    yield chunk
+        finally:
+            upstream.close()
+
+    response = StreamingHttpResponse(
+        _pipe(),
+        content_type=upstream.headers.get("Content-Type", "multipart/x-mixed-replace; boundary=frame"))
+    response["Cache-Control"] = "no-store"
+    response["X-Accel-Buffering"] = "no"
+    return response
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def cctv_status(request):
     """Site CCTV status: configured cameras + which have a live session.
 

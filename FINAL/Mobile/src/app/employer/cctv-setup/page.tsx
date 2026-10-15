@@ -10,7 +10,7 @@ type CameraRow = {
   siteId: number;
   label: string;
   area: string;
-  sourceType: 'RTSP' | 'HTTP' | 'FILE' | 'OTHER';
+  sourceType: 'RTSP' | 'HTTP' | 'OTHER';
   host: string;
   port: number | null;
   channel: string;
@@ -26,7 +26,7 @@ type FormState = {
   id?: number;
   label: string;
   area: string;
-  sourceType: 'RTSP' | 'HTTP' | 'FILE' | 'OTHER';
+  sourceType: 'RTSP' | 'HTTP' | 'OTHER';
   host: string;
   port: string;
   channel: string;
@@ -45,7 +45,8 @@ const EMPTY: FormState = {
 
 function toForm(c: CameraRow): FormState {
   return {
-    id: c.id, label: c.label, area: c.area, sourceType: c.sourceType,
+    id: c.id, label: c.label, area: c.area,
+    sourceType: (c.sourceType === 'RTSP' || c.sourceType === 'HTTP') ? c.sourceType : 'OTHER',
     host: c.host, port: c.port ? String(c.port) : '', channel: c.channel,
     username: c.username, password: '', clearPassword: false, hasPassword: c.hasPassword, url: c.url, enabled: c.enabled,
   };
@@ -212,8 +213,7 @@ export default function CctvSetupPage() {
               <select value={form.sourceType} onChange={e => setForm({ ...form, sourceType: e.target.value as FormState['sourceType'] })} className={input}>
                 <option value="RTSP">RTSP (IP camera / NVR)</option>
                 <option value="HTTP">HTTP / MJPEG stream</option>
-                <option value="FILE">Test file / simulated feed</option>
-                <option value="OTHER">Other / direct URL</option>
+                <option value="OTHER">HLS (.m3u8) / other direct URL</option>
               </select>
             </div>
             {(form.sourceType === 'RTSP' || form.sourceType === 'HTTP') && (
@@ -229,8 +229,8 @@ export default function CctvSetupPage() {
                 </div>
               </>
             )}
-            {(form.sourceType === 'FILE' || form.sourceType === 'OTHER') && (
-              <div className="sm:col-span-2 lg:col-span-3"><label className={label}>Feed URL / file path *</label><input value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder={form.sourceType === 'FILE' ? 'tests/assets/cctv_sim.mp4' : 'rtsp://…'} className={input} /></div>
+            {form.sourceType === 'OTHER' && (
+              <div className="sm:col-span-2 lg:col-span-3"><label className={label}>Direct stream URL *</label><input value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://…/stream.m3u8 or rtsp://…" className={input} /></div>
             )}
             <div className="flex items-center gap-2 pt-1">
               <input id="cam-enabled" type="checkbox" checked={form.enabled} onChange={e => setForm({ ...form, enabled: e.target.checked })} className="w-4 h-4" />
