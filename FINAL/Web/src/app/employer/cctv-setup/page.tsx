@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Camera, CheckCircle2, Loader2, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
+import CameraPreview from '@/components/employer/CameraPreview';
 
 type CameraRow = {
   id: number;
@@ -58,6 +59,8 @@ export default function CctvSetupPage() {
 
   const [cameras, setCameras] = useState<CameraRow[]>([]);
   const [limit, setLimit] = useState(5);
+  const [allowFeedView, setAllowFeedView] = useState(false);
+  const [previewFor, setPreviewFor] = useState<CameraRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -70,10 +73,11 @@ export default function CctvSetupPage() {
     setLoading(true); setError('');
     try {
       const response = await fetch(`/api/employer/cctv/cameras?siteId=${encodeURIComponent(effectiveSite)}`, { cache: 'no-store' });
-      const body = await response.json().catch(() => ({})) as { data?: { cameras: CameraRow[]; maxCameras?: number }; error?: string };
+      const body = await response.json().catch(() => ({})) as { data?: { cameras: CameraRow[]; maxCameras?: number; allowFeedView?: boolean }; error?: string };
       if (!response.ok || !body.data) throw new Error(body.error ?? 'Could not load cameras.');
       setCameras(body.data.cameras);
       setLimit(body.data.maxCameras ?? 5);
+      setAllowFeedView(body.data.allowFeedView ?? false);
       // No cameras for this site yet — open the config form so the IP/feed fields are immediately available.
       if (!body.data.cameras.length) setForm(current => current ?? { ...EMPTY });
     } catch (reason) {
@@ -273,6 +277,9 @@ export default function CctvSetupPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
+                  {allowFeedView && c.enabled && c.configured && c.id != null && (
+                    <button type="button" onClick={() => setPreviewFor(c)} className="h-9 px-3 rounded-lg bg-bss-navy text-white text-xs font-semibold flex items-center gap-1.5 hover:opacity-90"><Camera size={14}/>See live feed</button>
+                  )}
                   <button type="button" onClick={() => { setForm(toForm(c)); setTestResult(null); }} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-semibold text-bss-text-primary hover:bg-bss-bg">Edit</button>
                   <button type="button" onClick={() => void remove(c)} disabled={busy} className="h-9 w-9 rounded-lg border border-bss-border text-bss-text-muted hover:text-bss-error hover:border-bss-border grid place-items-center disabled:opacity-50" aria-label="Delete camera"><Trash2 size={15}/></button>
                 </div>
@@ -281,6 +288,23 @@ export default function CctvSetupPage() {
           </ul>
         )}
       </section>
+
+      {previewFor && previewFor.id != null && allowFeedView && (
+        <div className="fixed inset-0 z-[100] grid place-items-center bg-black/60 p-4" onClick={() => setPreviewFor(null)}>
+          <div role="dialog" aria-modal="true" aria-label="Live feed" className="w-full max-w-3xl overflow-hidden rounded-2xl border border-bss-border bg-white" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-3 border-b border-bss-border px-4 py-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-bss-text-primary">{previewFor.label}{previewFor.area && previewFor.area !== previewFor.label ? ` · ${previewFor.area}` : ''}</p>
+                <p className="text-[11px] text-bss-text-muted">Live feed · updates ~every 1.5s</p>
+              </div>
+              <button type="button" onClick={() => setPreviewFor(null)} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-lg text-bss-text-muted hover:bg-bss-bg"><X size={18}/></button>
+            </div>
+            <div className="p-4">
+              <CameraPreview cameraId={previewFor.id} label={previewFor.label} className="w-full aspect-video" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Banknote, BookOpenCheck, Camera, ChevronDown, Link2, Menu, Users, X } from 'lucide-react';
+import { Banknote, BookOpenCheck, ChevronDown, Link2, Menu, Users, X } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import BrandText from '@/components/BrandText';
@@ -34,9 +34,6 @@ const mappingsGroup = { key: 'Mappings', icon: Link2, items: [
   ['Employer Act Mapping', '/admin/mappings/employer-act'],
   ['Employer Register Mapping', '/admin/mappings/employer-register'],
 ] as const };
-const cctvGroup = { key: 'CCTV', icon: Camera, items: [
-  ['Site CCTV Controls', '/admin/cctv'],
-] as const };
 const accessGroup = { key: 'Users & Access', icon: Users, items: [
   ['Permission Page', '/admin/permissions'],
   ['Onboarding', '/admin/onboarding'],
@@ -48,6 +45,7 @@ const auditOpsGroup = { key: 'Audit & Reports', icon: BookOpenCheck, items: [
   ['Courses & Skills', '/admin/courses'],
   ['Activity Report', '/admin/activity'],
   ['AI Audit Settings', '/admin/audit-settings'],
+  ['Site CCTV Controls', '/admin/cctv'],
   ['Translation', '/admin/translation-settings'],
 ] as const };
 
@@ -57,7 +55,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const [profile, setProfile] = useState(false);
   const pathname = usePathname();
   const { t } = useLanguage();
-  const groups = [wageCostGroup, clraGroup, partyGroup, mappingsGroup, cctvGroup, accessGroup, auditOpsGroup];
+  const groups = [wageCostGroup, clraGroup, partyGroup, mappingsGroup, accessGroup, auditOpsGroup];
   const flat = groups.reduce<Array<readonly [string, string]>>((acc, g) => acc.concat(g.items as unknown as readonly [string, string][]), []);
 
   const itemActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
