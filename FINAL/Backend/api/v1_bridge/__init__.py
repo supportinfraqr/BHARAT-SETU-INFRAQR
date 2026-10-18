@@ -30,9 +30,6 @@ from .cctv import *  # noqa: F401,F403
 from .ai import *  # noqa: F401,F403
 from .translation import *  # noqa: F401,F403
 from .ai_audit import *  # noqa: F401,F403
-from .ai_report import *  # noqa: F401,F403
-from .audit_reports import *  # noqa: F401,F403
-from .global_audit import *  # noqa: F401,F403
 from .admin_bulk import *  # noqa: F401,F403
 from .onboarding import *  # noqa: F401,F403
 from .devices import *  # noqa: F401,F403

@@ -115,7 +115,6 @@ services:
       BSS_CONTACT_CC_EMAIL: ${BSS_CONTACT_CC_EMAIL:-}
       BSS_STATIC_ROOT: /data/static
       BSS_MEDIA_ROOT: /data/media
-      BSS_AUDIT_WORKSPACE_DIR: /data/audit
       BSS_AUDIT_JOBS_DIR: /data/audit/jobs
       BSS_AUDIT_AGENT_DIR: /app/audit_agent
       BSS_AUDIT_HANDOFF_KEY: ${BSS_AUDIT_HANDOFF_KEY:?BSS_AUDIT_HANDOFF_KEY is required in .env}

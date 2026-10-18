@@ -183,8 +183,6 @@ MEDIA_ROOT = os.environ.get("BSS_MEDIA_ROOT", str(BASE_DIR / "media"))
 BSS_PRIVATE_MEDIA_DIR = os.environ.get("BSS_PRIVATE_MEDIA_DIR", str(BASE_DIR / "private_media"))
 # Private root for the folder-based AI-audit workspaces (source_documents/ +
 # groundtruth_data/). Deliberately OUTSIDE MEDIA_ROOT so it is never web-served.
-BSS_AUDIT_WORKSPACE_DIR = os.environ.get("BSS_AUDIT_WORKSPACE_DIR",
-                                         str(BASE_DIR / "audit_workspaces"))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

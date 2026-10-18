@@ -1,12 +1,11 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, Calendar, CheckCircle2, ChevronDown, Clock3, Download, FileCheck2, FileSpreadsheet, FileText, Info, Landmark, Loader2, TriangleAlert } from 'lucide-react';
+import { Activity, Calendar, CheckCircle2, ChevronDown, Clock3, Download, FileCheck2, FileSpreadsheet, FileText, Info, Landmark, TriangleAlert } from 'lucide-react';
 import ComplianceSubmissions from '@/components/contractor/ComplianceSubmissions';
 import BatchDrilldown from '@/components/compliance/BatchDrilldown';
 import VersionHistory from '@/components/compliance/VersionHistory';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorPortalData } from '@/types/portal';
-import { openPrintHtml } from '@/lib/documentEngine/render';
 
 type Tab = 'records' | 'master' | 'report';
 type ValidationIssue = { row:number; field:string; message:string };
@@ -90,8 +89,6 @@ export default function ContractorCompliancePage() {
   const [allSites, setAllSites] = useState<Array<{ siteId:number; siteName:string; siteCode:string; state:string; gated:boolean; adoptedCount:number; total:number }>>([]);
   const [report, setReport] = useState<ValidationReport | null>(null);
   const [batchView, setBatchView] = useState<string | null>(null);
-  const [repBusy, setRepBusy] = useState(false);
-  const [repError, setRepError] = useState('');
   const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
 
   // States the contractor is allowed to register for — derived from allotted sites.
@@ -258,19 +255,6 @@ export default function ContractorCompliancePage() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Registers could not be generated.'); }
     finally { setBusy(false); }
   };
-
-  // Level-2: open the detailed AI audit report for a single submitted package.
-  async function viewDetailedReport(reportId: string, label: string) {
-    setRepBusy(true); setRepError('');
-    try {
-      const response = await fetch(`/api/contractor/compliance-report?reportId=${encodeURIComponent(reportId)}`, { cache: 'no-store' });
-      const body = await response.json().catch(() => ({})) as { data?: { html?: string }; error?: string };
-      if (!response.ok || !body.data?.html) throw new Error(body.error ?? 'The detailed report could not be generated.');
-      openPrintHtml(body.data.html, `${label} — BSS Detailed AI Audit Report`);
-    } catch (reason) {
-      setRepError(reason instanceof Error ? reason.message : 'The detailed report could not be generated.');
-    } finally { setRepBusy(false); }
-  }
 
   return <div className="space-y-6 pb-12">
     <header className="relative overflow-hidden rounded-3xl bss-anim-gradient bg-gradient-to-br from-bss-navy via-bss-deep-navy to-bss-interactive-blue text-white p-5 sm:p-6 shadow-lg">
@@ -508,8 +492,6 @@ export default function ContractorCompliancePage() {
             <span className="w-12 h-12 rounded-2xl bg-white/10 border border-white/15 grid place-items-center flex-shrink-0"><FileCheck2 size={22}/></span>
           </div>
         </div>
-        {repError && <p className="px-4 pt-4 text-sm text-bss-error">{repError}</p>}
-        {repBusy && <p className="px-4 pt-4 text-xs text-bss-text-muted inline-flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Generating detailed report…</p>}
         <div className="p-4">
           {contractor.auditReports.length === 0
             ? <p className="text-sm text-bss-text-muted py-4 text-center">No submissions yet — submit a register package and its detailed report will appear here.</p>
@@ -522,7 +504,6 @@ export default function ContractorCompliancePage() {
                      <th className="py-2.5 px-3">Ver</th>
                      <th className="py-2.5 px-3">Submitted</th>
                     <th className="py-2.5 px-3">Score</th>
-                    <th className="py-2.5 px-3">Detailed AI Report</th>
                   </tr></thead>
                   <tbody className="divide-y divide-bss-border text-xs">
                     {contractor.auditReports.map(r => <tr key={r.id} className="hover:bg-bss-bg">
@@ -532,10 +513,6 @@ export default function ContractorCompliancePage() {
                       <td className="py-2.5 px-3"><VersionHistory versions={(r.versions || []).map(v => ({ version:v.version, isCurrent:v.isCurrent, status:v.uniqueNo, date:v.reportDate }))} /></td>
                       <td className="py-2.5 px-3 text-bss-text-muted">{r.reportDate || '—'}</td>
                       <td className="py-2.5 px-3 font-bold text-bss-navy">{r.scorePercent != null ? `${r.scorePercent}%` : (r.score || '—')}</td>
-                      <td className="py-2.5 px-3"><div className="flex items-center gap-3">
-                        <button type="button" disabled={repBusy} onClick={() => void viewDetailedReport(r.id, r.uniqueNo || r.site || 'Submission')} className="text-bss-interactive-blue font-semibold hover:underline disabled:opacity-50">View report</button>
-                        <a href={`/api/contractor/compliance-report?reportId=${r.id}&download=pdf`} className="text-bss-text-secondary font-semibold hover:underline inline-flex items-center gap-1"><Download size={12}/>PDF</a>
-                      </div></td>
                     </tr>)}
                   </tbody>
                 </table>
