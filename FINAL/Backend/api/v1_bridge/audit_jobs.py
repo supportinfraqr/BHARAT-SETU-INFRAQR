@@ -476,8 +476,8 @@ def _run_agent(job, cred):
     }
     if cred.base_url:
         env["DEEPSEEK_BASE_URL"] = cred.base_url
-    if cred.model:
-        env["DEEPSEEK_MODEL"] = cred.model
+    # Do not force the BSS Admin model onto every agent role; the agent uses
+    # its supported role-specific models. The active provider/key is what matters.
     cmd = [sys.executable, str(runner), "--groundtruth", str(gt), "--query", str(query),
            "--job", str(root / "job.json"), "--out", str(out)]
     with open(log_path, "w", encoding="utf-8") as log:

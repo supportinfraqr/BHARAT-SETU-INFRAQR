@@ -141,8 +141,10 @@ def run_one(root: Path, request_path: Path) -> None:
         }
         if request.get("baseUrl"):
             env["DEEPSEEK_BASE_URL"] = str(request["baseUrl"])
-        if request.get("model"):
-            env["DEEPSEEK_MODEL"] = str(request["model"])
+        # The agent uses its own role-specific models (deepseek-flash for
+        # reading/vision and deepseek-v4-pro for audit/narrative). The BSS Admin
+        # model field is not forced onto every role; the active provider/key and
+        # base URL are what the runner takes from BSS Admin.
         cmd = [
             sys.executable, str(AGENT_DIR / "run_agent.py"),
             "--groundtruth", str(groundtruth),
