@@ -370,6 +370,8 @@ def _handle_submission_review(user, body):
         raise PortalMutationError("Only employers can review submissions.", 403)
     raw_id = str(body.get("id") or "").strip()
     decision = str(body.get("status") or "").strip().upper()
+    if not raw_id.startswith("pkg-"):
+        raise PortalMutationError("Approve or reject the whole submission package.", 403)
 
     if raw_id.startswith("batch-"):
         from bss_core.models import ComplianceBatch

@@ -1,0 +1,28 @@
+{
+  "_note": "Statutory parameters the checks reference. This file stands in for the BSS Admin masters (state PT slabs, LWF, minimum wages, due dates). Replace values from BSS Admin when wired to the server.",
+  "pf": {"ee_rate": 0.12, "er_eps_rate": 0.0833, "er_epf_rate": 0.0367, "wage_ceiling": 15000,
+         "eps_edli_ceiling": 25000, "exclusion_basic_threshold": 25000, "due_day": 15},
+  "esi": {"ee_rate": 0.0075, "er_rate": 0.0325, "wage_ceiling": 21000, "due_day": 15,
+          "contribution_periods": [[4, 9], [10, 3]]},
+  "code_on_wages": {"exclusion_cap": 0.5},
+  "wages": {"monthly_due_day": 7, "basic_min_share": 0.5},
+  "bonus": {"min_pct": 8.33, "max_pct": 20.0, "pay_within_months": 8},
+  "overtime": {"multiplier": 2.0},
+  "min_age": 18,
+  "form11_within_days": 30,
+  "states": {
+    "MH": {
+      "name": "Maharashtra",
+      "pt": {"Male": [[7500, 0], [10000, 175], [1000000000, 200]],
+             "Female": [[25000, 0], [1000000000, 200]],
+             "february_top_slab": 300,
+             "due": "last day of the following month (monthly PTRC payer)"},
+      "lwf": {"months": [6, 12], "employee": 25, "employer": 75,
+              "_note": "verify current rates in BSS Admin"},
+      "mandatory_holidays": [["26-01", "Republic Day"], ["01-05", "Maharashtra Day"],
+                             ["15-08", "Independence Day"], ["02-10", "Gandhi Jayanti"]],
+      "minimum_wages": {},
+      "_minimum_wages_note": "Empty until the BSS Admin minimum-wage master for the zone/category is loaded. Format: {\"SECURITY GUARD\": 13000, ...} monthly all-inclusive rate."
+    }
+  }
+}

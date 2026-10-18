@@ -4,4 +4,8 @@ venv/
 .env
 staticfiles/
 media/
-.git/
+.git/audit_jobs/
+audit_agent/cache/
+audit_agent/output/
+private_media/
+audit_workspaces/

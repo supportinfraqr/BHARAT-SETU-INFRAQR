@@ -98,6 +98,7 @@ KEY=/home/yasser/BSS_Project/bharat-shram-setu-staging-key.pem
 HOST=ubuntu@ec2-3-109-68-143.ap-south-1.compute.amazonaws.com
 rsync -az -e "ssh -i $KEY" --exclude 'venv/' --exclude '.venv/' --exclude '__pycache__/' \
   --exclude '*.pyc' --exclude '.env' --exclude 'media/' --exclude 'staticfiles/' \
+  --exclude 'audit_jobs/' --exclude 'audit_agent/cache/' --exclude 'audit_agent/output/' \
   /home/yasser/BSS_Project/FINAL/Backend/ $HOST:~/bss/FINAL/Backend/
 rsync -az -e "ssh -i $KEY" --exclude 'node_modules/' --exclude '.next/' --exclude '.env*' \
   --exclude 'out/' --exclude 'coverage/' --exclude '*.log' --exclude '.vercel/' \

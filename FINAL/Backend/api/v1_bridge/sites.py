@@ -233,10 +233,11 @@ def _handle_compliances(user, body, method):
         # The submission audit runs the SAME folder→agent pipeline as the global
         # audit — its workspace also carries the CLRA registers + uploaded docs.
         report.report_kind = "SUBMISSION"
-        report.status = "PENDING"
+        # The monthly Document Audit Agent replaces the old auto-generated
+        # submission report. The package record remains for its unique number
+        # and batch lineage; the contractor runs the audit after employer review.
+        report.status = "READY"
         report.save(update_fields=["report_kind", "status", "updated_at"])
-        from .audit_workspace import schedule_report
-        schedule_report(report.id)
         # A "hard submit" overrides failed OCR — keep that on record per document.
         force = str(body.get("force") or "").lower() in ("1", "true", "yes")
         if force:

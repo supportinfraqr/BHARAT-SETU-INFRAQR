@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpangoft2-1.0-0 \
     libgdk-pixbuf-2.0-0 \
     shared-mime-info \
+    poppler-utils \
     fonts-dejavu-core \
     fonts-noto-core \
     && rm -rf /var/lib/apt/lists/*

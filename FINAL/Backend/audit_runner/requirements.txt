@@ -1,0 +1,7 @@
+reportlab==4.4.10
+openpyxl==3.1.5
+requests==2.34.2
+pillow>=10.0
+jinja2==3.1.6
+cryptography>=42
+pypdfium2==5.13.0

@@ -178,6 +178,9 @@ STATIC_ROOT = os.environ.get("BSS_STATIC_ROOT", str(BASE_DIR / "staticfiles"))
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.environ.get("BSS_MEDIA_ROOT", str(BASE_DIR / "media"))
+# Private media root for sensitive uploads (Aadhaar documents). Outside
+# MEDIA_ROOT so it is never web-served; access goes through authenticated views.
+BSS_PRIVATE_MEDIA_DIR = os.environ.get("BSS_PRIVATE_MEDIA_DIR", str(BASE_DIR / "private_media"))
 # Private root for the folder-based AI-audit workspaces (source_documents/ +
 # groundtruth_data/). Deliberately OUTSIDE MEDIA_ROOT so it is never web-served.
 BSS_AUDIT_WORKSPACE_DIR = os.environ.get("BSS_AUDIT_WORKSPACE_DIR",
@@ -313,3 +316,39 @@ GOOGLE_TRANSLATE_API_KEY = os.environ.get("GOOGLE_TRANSLATE_API_KEY", "")
 # provider account. NEVER enable for real identity verification in production.
 AADHAAR_MOCK = os.environ.get("BSS_AADHAAR_MOCK", "").strip().lower() in ("1", "true", "yes", "on")
 AADHAAR_PHOTO_DIR = os.environ.get("BSS_AADHAAR_PHOTO_DIR", str(BASE_DIR / "media/aadhaar"))
+
+
+# ---------------------------------------------------------------------------
+# Outbound email — BSS support contact / grievance notifications.
+# Provide BSS_SMTP_HOST + credentials to enable delivery. Until SMTP is
+# configured, submissions are still stored in ContactMessage (nothing is lost)
+# and the email step is skipped.
+# ---------------------------------------------------------------------------
+EMAIL_HOST = os.environ.get("BSS_SMTP_HOST", "")
+EMAIL_PORT = int(os.environ.get("BSS_SMTP_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("BSS_SMTP_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("BSS_SMTP_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("BSS_SMTP_USE_TLS", True)
+EMAIL_USE_SSL = env_bool("BSS_SMTP_USE_SSL", False)
+EMAIL_TIMEOUT = int(os.environ.get("BSS_SMTP_TIMEOUT", "20"))
+EMAIL_BACKEND = os.environ.get(
+    "BSS_EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend" if EMAIL_HOST
+    else "django.core.mail.backends.locmem.EmailBackend",
+)
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "BSS_MAIL_FROM", "Bharat Shram Setu <no-reply@bharatshramsetu.com>")
+BSS_CONTACT_TO_EMAIL = os.environ.get("BSS_CONTACT_TO_EMAIL", "support@bharatshramsetu.com")
+BSS_CONTACT_CC_EMAIL = os.environ.get("BSS_CONTACT_CC_EMAIL", "")
+
+
+# ---------------------------------------------------------------------------
+# Monthly contractor document audits (BSS Document Audit Agent).
+# The job folder holds contractor documents, worker documents and the worker
+# master snapshot. The agent runs as a separate process/container (sandbox)
+# and receives only folder paths + the active AI provider key.
+# ---------------------------------------------------------------------------
+BSS_AUDIT_JOBS_DIR = os.environ.get("BSS_AUDIT_JOBS_DIR", str(BASE_DIR / "audit_jobs"))
+BSS_AUDIT_AGENT_DIR = os.environ.get("BSS_AUDIT_AGENT_DIR", str(BASE_DIR / "audit_agent"))
+
+BSS_AUDIT_HANDOFF_KEY = os.environ.get("BSS_AUDIT_HANDOFF_KEY", "")

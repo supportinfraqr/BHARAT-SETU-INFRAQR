@@ -15,14 +15,3 @@ export async function GET() {
   } catch (error) { return apiError(error, 'Audit reports could not be loaded.'); }
 }
 
-export async function POST(request: Request) {
-  try {
-    const session = await requireApiSession('BSS Admin');
-    const config = getRuntimeConfig();
-    const body = Buffer.from(await request.arrayBuffer());
-    const result = await upstreamRequest(config.apiBaseUrl, '/v1/audit-reports/generate', session, {
-      method: 'POST', body, headers: { 'Content-Type': 'application/json' },
-    });
-    return NextResponse.json(result, { status: 201, headers: { 'Cache-Control': 'private, no-store' } });
-  } catch (error) { return apiError(error, 'Audit reports could not be generated.'); }
-}

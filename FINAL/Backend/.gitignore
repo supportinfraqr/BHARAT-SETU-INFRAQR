@@ -13,3 +13,8 @@ media/
 .venv/
 venv/
 .DS_Store
+
+# Audit job workspaces (contain worker PII)
+audit_jobs/
+audit_agent/cache/
+audit_agent/output/

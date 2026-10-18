@@ -15,8 +15,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 const groups = [
   { key:'nav.dashboard', href:'/contractor/dashboard', icon:Home },
-  { key:'nav.master', icon:Database, items:[['nav.gatePass','/contractor/gate-pass'],['Gate Scan','/contractor/gate-scan'],['nav.rozgar','/contractor/rozgar'],['nav.leaveApprovals','/contractor/leave'],['nav.siteCalendar','/contractor/calendar'],['nav.compliance','/contractor/compliance'],['Licences','/contractor/licenses'],['AI Audit','/contractor/audit-reports'],['nav.workerMaster','/contractor/workers'],['nav.salaries','/contractor/salaries']] },
-  { key:'nav.operations', icon:Briefcase, items:[['Attendance','/contractor/attendance'],['nav.workforceHistory','/contractor/history'],['nav.payroll','/contractor/payroll'],['nav.advances','/contractor/advances'],['nav.grievanceCentre','/contractor/grievances']] },
+  { key:'nav.master', icon:Database, items:[['nav.gatePass','/contractor/gate-pass'],['Gate Scan','/contractor/gate-scan'],['nav.rozgar','/contractor/rozgar'],['nav.leaveApprovals','/contractor/leave'],['nav.siteCalendar','/contractor/calendar'],['nav.compliance','/contractor/compliance'],['Licences','/contractor/licenses'],['Monthly Audit','/contractor/audit-reports'],['nav.workerMaster','/contractor/workers'],['Onboard Worker','/contractor/onboard-worker'],['nav.salaries','/contractor/salaries']] },
+  { key:'nav.operations', icon:Briefcase, items:[['Attendance','/contractor/attendance'],['nav.workforceHistory','/contractor/history'],['nav.payroll','/contractor/payroll'],['nav.advances','/contractor/advances'],['nav.grievanceCentre','/contractor/grievances'],['Contact BSS','/contractor/contact']] },
   { key:'nav.qrSystem', icon:ScanLine, items:[['nav.allottedSites','/contractor/qr/sites'],['nav.myWorkers','/contractor/workers'],['nav.myEmployers','/contractor/qr/employers'],['nav.bindingRequestsCentre','/contractor/qr/requests'],['nav.idCard','/contractor/idcard'],['nav.scanQr','/contractor/scan']] },
 ] as const;
 
@@ -49,6 +49,7 @@ export default function ContractorShell({ children }: { children:React.ReactNode
 
   const toggleMenu = (key: string) => setOpenMenu(current => (current === key ? null : key));
   const mobileItems = groups.reduce<Array<{ label:string; items:Array<readonly [string,string]> }>>((list, group) => list.concat('href' in group ? [{ label:group.key, items:[[group.key, group.href]] }] : [{ label:group.key, items:[...group.items] }]), []);
+  const isFullBleed = pathname === '/contractor/onboard-worker';
 
   return <div className="bss-shell min-h-screen text-[#1D1D1F] flex flex-col">
     <header ref={headerRef} className="bss-shell-header sticky top-0 z-50 w-full bg-white/85 backdrop-blur-xl border-b border-black/5">
@@ -88,7 +89,16 @@ export default function ContractorShell({ children }: { children:React.ReactNode
         <SignOutButton className="w-full flex items-center gap-2 px-4 py-3 text-bss-error"/>
       </nav>}
     </header>
-    <main key={pathname} className="bss-app-main bss-content-fade flex-1 w-full max-w-[1200px] mx-auto py-6 md:py-10 px-4 md:px-8">{children}</main>
+    <main
+      key={pathname}
+      className={`bss-app-main flex-1 w-full ${
+        isFullBleed
+          ? 'p-0 m-0 max-w-none flex flex-col overflow-hidden'
+          : 'bss-content-fade max-w-[1200px] mx-auto py-6 md:py-10 px-4 md:px-8'
+      }`}
+    >
+      {children}
+    </main>
     <MpinSetupGate />
   </div>;
 }

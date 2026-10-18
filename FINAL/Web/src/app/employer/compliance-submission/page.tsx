@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import { CheckCircle2, Clock3, FileCheck2 } from 'lucide-react';
-import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
-import { openPrintHtml } from '@/lib/documentEngine/render';
 import BatchDrilldown from '@/components/compliance/BatchDrilldown';
 import VersionHistory from '@/components/compliance/VersionHistory';
 import { useEmployer } from '@/contexts/EmployerContext';
@@ -45,7 +43,6 @@ export default function EmployerComplianceSubmissionPage() {
   const [freqFilter, setFreqFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState('all');
   const [batchView, setBatchView] = useState<string | null>(null);
-  const [tab, setTab] = useState<'records' | 'reports'>('records');
   const [rejectRow, setRejectRow] = useState<EmployerSubmission | null>(null);
   const [rejectNote, setRejectNote] = useState('');
 
@@ -81,7 +78,7 @@ export default function EmployerComplianceSubmissionPage() {
     return true;
   }), [employer.submissions, siteFilter, contractorFilter, yearFilter, freqFilter, periodFilter]);
 
-  const registers = filtered.filter(s => s.kind === 'package' || s.kind === 'register' || s.kind === 'form');
+  const registers = filtered.filter(s => s.kind === 'package');
 
   async function review(row: EmployerSubmission, status: 'Verified' | 'Rejected', note = '') {
     setBusy(true);
@@ -108,52 +105,6 @@ export default function EmployerComplianceSubmissionPage() {
     }
   }
 
-  async function viewAiReport(row: EmployerSubmission) {
-    setError(''); setNotice('');
-    try {
-      const response = await fetch(`/api/employer/submissions/${row.id}/ai-report`, { cache: 'no-store' });
-      const body = await response.json().catch(() => ({})) as { data?: { html?: string }; error?: string };
-      if (!response.ok || !body.data?.html) throw new Error(body.error || 'The AI report could not be generated.');
-      openPrintHtml(body.data.html, `${row.type} — BSS AI Audit Report`);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'The AI report could not be generated.');
-    }
-  }
-
-  async function viewBatchReport(batchId: string) {
-    setError(''); setNotice('');
-    try {
-      const response = await fetch(`/api/employer/compliance-batches/${batchId}/verification-report`, { cache: 'no-store' });
-      const body = await response.json().catch(() => ({})) as { data?: { html?: string }; error?: string };
-      if (!response.ok || !body.data?.html) throw new Error(body.error || 'The report could not be generated.');
-      openPrintHtml(body.data.html, 'BSS Contractor Compliance & Verification Report');
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'The report could not be generated.');
-    }
-  }
-
-  const aiReportCell = (row: EmployerSubmission) => {
-    if (row.kind === 'package') {
-      return row.batchId ? (
-        <div className="flex flex-col gap-1">
-          <button type="button" onClick={() => void viewBatchReport(row.batchId as string)} className="text-[11px] text-[#01183A] font-semibold hover:underline text-left">View report</button>
-          <a href={`/api/employer/compliance-batches/${row.batchId}/verification-report?download=pdf`} className="text-[11px] text-bss-interactive-blue font-semibold hover:underline">Download PDF</a>
-        </div>
-      ) : <span className="text-bss-text-muted text-xs">—</span>;
-    }
-    return (
-      <div className="flex flex-col gap-1">
-        <button type="button" onClick={() => void viewAiReport(row)} className="text-[11px] text-[#01183A] font-semibold hover:underline text-left">View report</button>
-        <a href={`/api/employer/submissions/${row.id}/ai-report?format=pdf`} className="text-[11px] text-bss-interactive-blue font-semibold hover:underline">Download PDF</a>
-      </div>
-    );
-  };
-
-  const contractorCell = (row: EmployerSubmission) => <div><strong className="text-bss-text-primary">{row.contractor || '—'}</strong>{row.contractorId && <p className="font-mono text-[10px] text-bss-text-muted">{row.contractorId}</p>}</div>;  const statusCell = (row: EmployerSubmission) => <Status value={row.status}/>;
-  const actionCell = (row: EmployerSubmission) => row.status === 'Pending review'
-    ? <div className="flex gap-3"><button disabled={busy} onClick={() => void review(row, 'Verified')} className="text-bss-green font-semibold hover:underline whitespace-nowrap">Accept all</button><button disabled={busy} onClick={() => { setRejectNote(''); setRejectRow(row); }} className="text-bss-error font-semibold hover:underline">Reject</button></div>
-    : <span className="text-bss-text-muted">No action</span>;
-
   const auditBadge = (status?: string) => {
     const s = status || 'pending';
     const tone = s === 'passed' ? 'bg-bss-soft-green text-bss-green border-bss-border'
@@ -164,15 +115,9 @@ export default function EmployerComplianceSubmissionPage() {
     return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${tone}`}>{label}</span>;
   };
 
-  const reportColumns: DataColumn<EmployerSubmission>[] = [
-    { id:'contractor', header:'Contractor', value:row => row.contractor, render:contractorCell },
-    { id:'site', header:'Site', value:row => row.site },
-    { id:'type', header:'Submission', value:row => row.type },
-    { id:'period', header:'Period', value:row => row.period },
-    { id:'submitted', header:'Submitted', value:row => row.submittedAt.slice(0, 10) },
-    { id:'status', header:'Status', value:row => row.status, render:statusCell },
-    { id:'aiReport', header:'Detailed AI report', filterable:false, value:row => row.id, render:aiReportCell },
-  ];
+  const actionCell = (row: EmployerSubmission) => row.status === 'Pending review'
+    ? <div className="flex gap-3"><button disabled={busy} onClick={() => void review(row, 'Verified')} className="text-bss-green font-semibold hover:underline whitespace-nowrap">Accept all</button><button disabled={busy} onClick={() => { setRejectNote(''); setRejectRow(row); }} className="text-bss-error font-semibold hover:underline">Reject</button></div>
+    : <span className="text-bss-text-muted">No action</span>;
 
   const pending = filtered.filter(item => item.status === 'Pending review');
   const verified = filtered.filter(item => item.status === 'Verified').length;
@@ -225,13 +170,7 @@ export default function EmployerComplianceSubmissionPage() {
     {error && <p role="alert" className="text-sm text-bss-error bg-bss-soft-orange border border-bss-border rounded-xl p-3">{error}</p>}
     {notice && <p role="status" className="text-sm text-bss-green bg-bss-soft-green border border-bss-border rounded-xl p-3">{notice}</p>}
 
-    <div className="flex border-b overflow-x-auto">
-      {([['records', 'Compliance Records'], ['reports', 'Reports']] as Array<['records' | 'reports', string]>).map(([id, label]) => (
-        <button key={id} onClick={() => setTab(id)} className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${tab === id ? 'border-bss-interactive-blue text-bss-interactive-blue' : 'border-transparent text-bss-text-muted hover:text-bss-text-primary'}`}>{label}</button>
-      ))}
-    </div>
-
-    {tab === 'records' && <div className="space-y-4">
+    <div className="space-y-4">
       {registers.length === 0
         ? <p className="text-sm text-bss-text-muted bss-card rounded-2xl p-5">No contractor submissions yet.</p>
         : registers.map(row => (
@@ -279,9 +218,7 @@ export default function EmployerComplianceSubmissionPage() {
             {row.source === 'evidence' && <div className="px-5 py-3 border-t border-bss-border"><button type="button" onClick={() => void viewEvidence(row.id)} className="text-[11px] text-bss-interactive-blue hover:underline">View evidence</button></div>}
           </section>
         ))}
-    </div>}
-
-    {tab === 'reports' && <EnterpriseDataTable title={`Detailed AI reports (${filtered.length})`} rows={filtered} columns={reportColumns} rowKey={row => row.id} filename="employer-ai-reports"/>}
+    </div>
 
     {rejectRow && <div className="fixed inset-0 z-[90] bg-black/50 grid place-items-center p-4" onMouseDown={e => { if (e.target === e.currentTarget) setRejectRow(null); }}>
       <section role="dialog" aria-modal="true" className="w-full max-w-md bg-white rounded-2xl shadow-xl">

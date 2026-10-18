@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ClipboardCheck, FileSpreadsheet, FileText, LayoutDashboard, Menu, Network, Settings, ShieldCheck, X, Banknote, Calculator } from 'lucide-react';
+import { ChevronDown, ClipboardCheck, FileSpreadsheet, FileText, LayoutDashboard, LifeBuoy, Menu, Network, Settings, ShieldCheck, X, Banknote, Calculator, Stethoscope, HardHat, UserCog } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import BrandText from '@/components/BrandText';
@@ -19,7 +19,7 @@ const workforceGroup = { key:'nav.workforce', icon:Network, items:[
   ['Attendance','/employer/attendance'],
   ['nav.pastRecords','/employer/history'],
   ['nav.gatePass','/employer/gate-pass'],['Gate Scan','/employer/gate-scan'],['Welfare & Safety','/employer/worker-compliance-checklists'],
-  ['nav.grievanceCentre','/employer/grievances'],
+  ['nav.grievanceCentre','/employer/grievances'],['Contact BSS','/employer/contact'],
 ] };
 const sitesGroup = { key:'nav.sites', icon:LayoutDashboard, items:[
   ['nav.mySites','/employer/sites'],
@@ -30,7 +30,7 @@ const complianceGroup = { key:'nav.compliance', icon:ClipboardCheck, items:[
   ['nav.complianceSubmission','/employer/compliance-submission'],
   ['Onboarding','/employer/onboarding'],
   ['Licences','/employer/licenses'],
-  ['AI Audit','/employer/audit-reports'],
+  ['Monthly Audit','/employer/audit-reports'],
 ] };
 const qrGroup = { key:'nav.qrSystem', icon:Network, items:[
   ['nav.myWorkers','/employer/workers'],
@@ -41,13 +41,7 @@ const qrGroup = { key:'nav.qrSystem', icon:Network, items:[
   ['nav.scanQr','/employer/scan'],
 ] };
 const adminGroup = { key:'nav.administration', icon:ShieldCheck, items:[
-  ['nav.adminContractors','/employer/admin/contractors'],
-  ['nav.userManagement','/employer/admin/users'],
-  ['nav.permissions','/employer/admin/permissions'],
-  ['nav.siteManagement','/employer/admin/sites'],
-  ['nav.workerDocuments','/employer/admin/documents'],
-  ['nav.auditLog','/employer/admin/audit'],
-  ['nav.transport','/employer/admin/transport'],
+  ['Staff Accounts','/employer/manage-staff'],
 ] };
 
 export default function EmployerShell({ children }: { children:React.ReactNode }) {
@@ -58,7 +52,14 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
   const headerRef = useRef<HTMLElement>(null);
   const { employer } = useEmployer();
   const { t } = useLanguage();
-  const groups = [ { key:'nav.dashboard', href:'/employer/dashboard', icon:LayoutDashboard }, workforceGroup, sitesGroup, { key:'nav.payroll', href:'/employer/payroll', icon:Banknote }, complianceGroup, qrGroup, ...(employer.canAccessAdmin ? [adminGroup] : []) ];
+  const isStaff = Boolean(employer.isStaff);
+  const staffPerms = employer.staffPermissions ?? [];
+  const staffGroups = [
+    ...(staffPerms.includes('medical') ? [{ key: 'Medical', href: '/employer/worker-compliance-checklists?tab=medical', icon: Stethoscope }] : []),
+    ...(staffPerms.includes('safety') ? [{ key: 'Health & Safety', href: '/employer/worker-compliance-checklists?tab=safety', icon: HardHat }] : []),
+    ...(staffPerms.includes('gate_pass') ? [{ key: 'Gate Pass', href: '/employer/gate-pass', icon: ShieldCheck }] : []),
+  ];
+  const groups = isStaff ? staffGroups : [ { key:'nav.dashboard', href:'/employer/dashboard', icon:LayoutDashboard }, workforceGroup, sitesGroup, { key:'nav.payroll', href:'/employer/payroll', icon:Banknote }, complianceGroup, qrGroup, ...(employer.canAccessAdmin ? [adminGroup] : []) ];
   const mobileItems = groups.reduce<Array<readonly [string,string]>>((items, group) => items.concat('href' in group ? [[group.key, group.href]] : group.items as unknown as readonly [string,string][]), []);
 
   // Close every popover on navigation (adjust state during render — the
@@ -112,14 +113,19 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
               <ChevronDown size={14}/>
             </button>
             {profile && <div className="absolute right-0 top-full mt-2 w-60 bg-white border border-bss-border rounded-xl shadow-xl p-1">
-              <div className="p-3 border-b border-bss-border"><p className="font-semibold text-sm">{employer.identity.company}</p><p className="text-xs text-bss-text-muted font-mono mt-0.5">{employer.identity.bssId}</p></div>
+              <div className="p-3 border-b border-bss-border"><p className="font-semibold text-sm">{employer.identity.company}</p><p className="text-xs text-bss-text-muted font-mono mt-0.5">{employer.identity.bssId}</p>{isStaff && <p className="text-[10px] text-bss-text-muted mt-1">Staff · {employer.staffProfile?.name ?? employer.identity.company}</p>}</div>
+              {!isStaff && <>
               <Link href="/employer/profile" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><Settings size={16}/>{t('nav.profile')}</Link>
               <Link href="/employer/onboarding" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><FileSpreadsheet size={16}/>Onboarding</Link>
+              <Link href="/employer/manage-staff" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><UserCog size={16}/>Staff Accounts</Link>
               <Link href="/employer/clra-registers" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><ClipboardCheck size={16}/>Registers Adoption</Link>
               <Link href="/employer/letter-adoption" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><FileText size={16}/>Appointment Letter Adoption</Link>
               <Link href="/employer/cost-sheets" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><Calculator size={16}/>Cost Sheet Adoption</Link>
+              <Link href="/employer/medical-form-adoption" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><ShieldCheck size={16}/>Medical Form Adoption</Link>
               <Link href="/employer/templates" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><FileText size={16}/>{t('nav.templates')}</Link>
               <Link href="/employer/settings" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><Settings size={16}/>{t('nav.settings')}</Link>
+              </>}
+              <Link href="/employer/contact" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><LifeBuoy size={16}/>Contact BSS Support</Link>
               <SignOutButton className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-bss-error rounded-lg hover:bg-bss-soft-orange"/>
             </div>}
           </div>
@@ -128,12 +134,10 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
       </div>
       {mobile && <nav aria-label={t('nav.mobile')} className="bss-mobile-menu absolute top-16 w-full bg-white border-b border-bss-border shadow-xl p-4">
         {mobileItems.map(item => <Link key={`${item[0]}-${item[1]}`} href={item[1]} onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t(item[0])}</Link>)}
-        <Link href="/employer/profile" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t('nav.profile')}</Link>
-        <Link href="/employer/onboarding" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">Onboarding</Link>
-        <Link href="/employer/clra-registers" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">Registers Adoption</Link>
-        <Link href="/employer/letter-adoption" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">Appointment Letter Adoption</Link>
-        <Link href="/employer/templates" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t('nav.templates')}</Link>
-        <Link href="/employer/settings" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t('nav.settings')}</Link>
+        {!isStaff && <Link href="/employer/profile" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t('nav.profile')}</Link>}
+        {!isStaff && <Link href="/employer/templates" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t('nav.templates')}</Link>}
+        {!isStaff && <Link href="/employer/settings" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t('nav.settings')}</Link>}
+        <Link href="/employer/contact" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">Contact BSS Support</Link>
         <SignOutButton className="w-full flex items-center gap-2 px-4 py-3 text-bss-error"/>
       </nav>}
     </header>

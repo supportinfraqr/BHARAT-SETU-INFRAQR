@@ -1,0 +1,31 @@
+{
+  "_note": "Run settings for the BSS Document Audit Agent. Paths are relative to this agent's folder.",
+  "paths": {
+    "catalogue": "Agent1_AuditableFields_v3.xlsx",
+    "output": "output",
+    "work": "work"
+  },
+  "audit": {
+    "auditor": "BSS Document Audit Agent (DeepSeek AI-assisted)",
+    "report_prefix": "BSS-AUD",
+    "classification": "Confidential — for Principal Employer & Contractor use",
+    "worker_chunk": 40,
+    "_worker_chunk_note": "Workers per DeepSeek audit call. Any roster size is audited; larger rosters simply take more calls."
+  },
+  "policy": {
+    "bss_bound_workers": false,
+    "bss_generated_documents_count_as_signed": false,
+    "tolerance_rupees": 1.0,
+    "final_verdict": "deepseek"
+  },
+  "ingest": {
+    "render_dpi": 150,
+    "max_image_side": 2000
+  },
+  "corrective_action_days": {
+    "Critical": 7,
+    "High": 15,
+    "Medium": 30,
+    "Low": 45
+  }
+}

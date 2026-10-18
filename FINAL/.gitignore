@@ -26,3 +26,6 @@ staticfiles/
 *.zip
 !Backend/data/clra-registers.zip
 *.rar
+# Original audit-agent archive (contains sample worker PII; stored privately)
+Requirements/bss-audit-agent-*.tar.gz
+Requirements/bss-audit-agent-*.tar.gz.sha256

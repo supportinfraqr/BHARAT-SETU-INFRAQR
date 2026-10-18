@@ -1,0 +1,26 @@
+{
+  "_note": "Copy to config/deepseek.json and put the key here, or set the DEEPSEEK_API_KEY environment variable (preferred on servers). session_token_budget 0 = no cap; max_tokens is the largest single reply (the model allows up to 384K).",
+  "api_key": "sk-REPLACE-ME",
+  "base_url": "https://api.deepseek.com",
+  "models": {
+    "classify": "deepseek-flash",
+    "extract": "deepseek-flash",
+    "vision": "deepseek-flash",
+    "audit": "deepseek-v4-pro",
+    "narrative": "deepseek-v4-pro"
+  },
+  "temperature": 0.0,
+  "max_tokens": 65536,
+  "timeout_s": 600,
+  "max_retries": 6,
+  "max_parallel": 3,
+  "image_detail": "high",
+  "cache_dir": "cache/deepseek",
+  "session_token_budget": 0,
+  "thinking": {
+    "_note": "per role: enabled / disabled; omit a role to use the model default (thinking on)"
+  },
+  "reasoning_effort": {
+    "_note": "per role: low / high / max (only when thinking is on)"
+  }
+}

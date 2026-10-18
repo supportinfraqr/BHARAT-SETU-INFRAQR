@@ -45,3 +45,8 @@ from .verification import *  # noqa: F401,F403
 from .accounts_admin import *  # noqa: F401,F403
 from .employer_analytics import *  # noqa: F401,F403
 from .workforce import *  # noqa: F401,F403
+from .worker_onboarding import *  # noqa: F401,F403
+from .medical import *  # noqa: F401,F403
+from .employer_staff import *  # noqa: F401,F403
+from .contact import *  # noqa: F401,F403
+from .audit_jobs import *  # noqa: F401,F403

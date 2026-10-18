@@ -87,9 +87,22 @@ services:
       BSS_JWT_REFRESH_DAYS: "7"
       BSS_CORS_ALLOW_ALL: "True"
       BSS_ALLOWED_HOSTS: "*"
+      BSS_SMTP_HOST: ${BSS_SMTP_HOST:-}
+      BSS_SMTP_PORT: ${BSS_SMTP_PORT:-587}
+      BSS_SMTP_USER: ${BSS_SMTP_USER:-}
+      BSS_SMTP_PASSWORD: ${BSS_SMTP_PASSWORD:-}
+      BSS_SMTP_USE_TLS: ${BSS_SMTP_USE_TLS:-1}
+      BSS_SMTP_USE_SSL: ${BSS_SMTP_USE_SSL:-0}
+      BSS_SMTP_TIMEOUT: ${BSS_SMTP_TIMEOUT:-20}
+      BSS_MAIL_FROM: "${BSS_MAIL_FROM:-Bharat Shram Setu <no-reply@bharatshramsetu.com>}"
+      BSS_CONTACT_TO_EMAIL: ${BSS_CONTACT_TO_EMAIL:-support@bharatshramsetu.com}
+      BSS_CONTACT_CC_EMAIL: ${BSS_CONTACT_CC_EMAIL:-}
       BSS_STATIC_ROOT: /data/static
       BSS_MEDIA_ROOT: /data/media
       BSS_AUDIT_WORKSPACE_DIR: /data/audit
+      BSS_AUDIT_JOBS_DIR: /data/audit/jobs
+      BSS_AUDIT_AGENT_DIR: /app/audit_agent
+      BSS_AUDIT_HANDOFF_KEY: ${BSS_AUDIT_HANDOFF_KEY:?BSS_AUDIT_HANDOFF_KEY is required in .env}
     volumes:
       - media_data:/data/media
       - static_data:/data/static
@@ -113,6 +126,32 @@ services:
       BSS_API_TIMEOUT_MS: "15000"
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-AIzaSyCqfNilx-gBvPdG0pVwJGm9heWjkZKPKfA}
 
+  audit-runner:
+    build:
+      context: ../Backend
+      dockerfile: ../deploy-staging/audit-runner/Dockerfile
+    restart: unless-stopped
+    networks:
+      - audit_net
+    volumes:
+      - audit_data:/data/audit
+    environment:
+      BSS_AUDIT_JOBS_DIR: /data/audit/jobs
+      BSS_AUDIT_AGENT_DIR: /app/audit_agent
+      BSS_AUDIT_HANDOFF_KEY: ${BSS_AUDIT_HANDOFF_KEY:?BSS_AUDIT_HANDOFF_KEY is required in .env}
+      DEEPSEEK_CACHE_DIR: /data/audit/cache
+      BSS_AUDIT_RUNNER_POLL_SECONDS: "5"
+      PYTHONDONTWRITEBYTECODE: "1"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 3g
+    cpus: "2.0"
+
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
@@ -135,3 +174,6 @@ volumes:
   static_data:
   redis_data:
   audit_data:
+
+networks:
+  audit_net:

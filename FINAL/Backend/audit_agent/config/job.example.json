@@ -1,0 +1,12 @@
+{
+  "_note": "Optional context the BSS platform already knows. Anything given here overrides what DeepSeek reads from the documents. Remove keys you do not know.",
+  "principal_employer": "Carlsberg India Private Limited",
+  "contractor_legal_name": "Primo Hansford & Consulting Private Limited",
+  "site": "CIPL Sambhaji Nagar — Gut No-131, Karodi, Chh. Sambhaji Nagar, Maharashtra",
+  "site_short": "Sambhaji Nagar (Karodi), Maharashtra",
+  "state": "MH",
+  "state_name": "Maharashtra",
+  "wage_month": "2025-01",
+  "nature_of_work": "Loading & Unloading / Security / Warehouse services",
+  "is_construction": false
+}

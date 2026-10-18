@@ -1,0 +1,10 @@
+# BSS Document Audit Agent — Python >= 3.10
+reportlab>=4.0      # branded PDF
+openpyxl>=3.1       # catalogue reader + findings workbook
+requests>=2.31      # DeepSeek API
+pillow>=10.0        # page images for DeepSeek vision
+jinja2>=3.1         # branded HTML report
+flask>=3.0          # admin console
+# production server (optional): gunicorn>=22
+# system package (not pip): poppler-utils  ->  pdftotext, pdftoppm, pdfinfo
+# tests (optional): pytest
