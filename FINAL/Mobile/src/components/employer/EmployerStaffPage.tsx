@@ -99,13 +99,15 @@ export default function EmployerStaffPage() {
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   }
-  async function deactivate(row: StaffRow) {
+  async function setActive(row: StaffRow, active: boolean) {
     setBusy(true); setError(''); setNotice('');
     try {
-      const res = await fetch(`/api/employer/staff/${row.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/employer/staff/${row.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active }),
+      });
       const body = await res.json().catch(() => ({})) as { error?: string };
-      if (!res.ok) throw new Error(body.error ?? 'The account could not be deactivated.');
-      setNotice(`${row.name} deactivated.`);
+      if (!res.ok) throw new Error(body.error ?? `The account could not be ${active ? 'enabled' : 'disabled'}.`);
+      setNotice(`${row.name} ${active ? 'enabled' : 'disabled'}.`);
       await load();
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
@@ -144,7 +146,9 @@ export default function EmployerStaffPage() {
                 <td className="px-5 py-3"><div className="flex justify-end gap-1.5">
                   <button type="button" onClick={() => { setEditing(row); setEditPerms(row.permissions); setEditTitle(row.title); }} className={`${btn} border border-bss-border bg-white text-bss-text-primary`}>Edit</button>
                   <button type="button" onClick={() => { setMpinFor(row); setNewMpin(''); }} className={`${btn} border border-bss-border bg-white text-bss-text-primary`}>Set MPIN</button>
-                  {row.active && <button type="button" onClick={() => void deactivate(row)} className={`${btn} border border-bss-border bg-white text-[#DC2626]`}>Disable</button>}
+                  {row.active
+                    ? <button type="button" disabled={busy} onClick={() => void setActive(row, false)} className={`${btn} border border-bss-border bg-white text-[#DC2626]`}>Disable</button>
+                    : <button type="button" disabled={busy} onClick={() => void setActive(row, true)} className={`${btn} border border-bss-border bg-white text-[#14843C]`}>Enable</button>}
                 </div></td>
               </tr>)}
             </tbody>

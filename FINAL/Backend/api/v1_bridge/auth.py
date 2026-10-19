@@ -44,6 +44,9 @@ def login(request):
         label = PORTAL_ROLE.get(user.role, user.role)
         return Response({"error": f"This account is registered as a {label}. Please use the {label} portal."},
                         status=status.HTTP_401_UNAUTHORIZED)
+    if user.role == "employer_staff" and method != "mpin":
+        return Response({"error": "Staff accounts sign in with their MPIN only."},
+                        status=status.HTTP_403_FORBIDDEN)
 
     if not _verify_credential(user, method, credential):
         return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
@@ -103,6 +106,10 @@ def otp_challenge(request):
             return Response(
                 {"error": f"This mobile is registered as a {label} account. Please use the {label} portal."},
                 status=status.HTTP_403_FORBIDDEN)
+        if user.role == "employer_staff":
+            return Response(
+                {"error": "Staff accounts sign in with their MPIN only. OTP is not available."},
+                status=status.HTTP_403_FORBIDDEN)
         mobile = _user_mobile(user)
     if not _otp_send_allowed("register" if mode == "register" else "login", mobile):
         return Response({"error": "Too many OTP requests. Please try again in a few minutes."},
@@ -131,6 +138,9 @@ def mpin_set(request):
     OTP-gated: first call with {action:'request-otp'} to send an OTP to the
     account's mobile, then submit {mpin, otp} to save it.
     """
+    if _staff_permissions(request) is not None:
+        return Response({"error": "Your employer manages your MPIN. Sign in with your MPIN."},
+                        status=status.HTTP_403_FORBIDDEN)
     body = request.data or {}
     action = str(body.get("action") or "set").lower()
     mobile = _user_mobile(request.user)
@@ -189,6 +199,9 @@ def security_status(request):
 @permission_classes([IsAuthenticated])
 def password_set(request):
     """Set/replace the caller's login password. OTP-gated (same flow as MPIN)."""
+    if _staff_permissions(request) is not None:
+        return Response({"error": "Staff accounts sign in with their MPIN only."},
+                        status=status.HTTP_403_FORBIDDEN)
     body = request.data or {}
     action = str(body.get("action") or "set").lower()
     mobile = _user_mobile(request.user)
@@ -229,6 +242,9 @@ def mpin_reset(request):
     user = _find_user(identifier)
     if user is None:
         return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+    if user.role == "employer_staff":
+        return Response({"error": "Your employer manages your MPIN. Ask them to reset it."},
+                        status=status.HTTP_403_FORBIDDEN)
     if not _verify_login_otp(_user_mobile(user), otp_value):
         return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
     cred = _mobile_credential_for(user)
