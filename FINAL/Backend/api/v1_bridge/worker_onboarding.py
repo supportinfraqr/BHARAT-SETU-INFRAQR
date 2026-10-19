@@ -48,6 +48,56 @@ def _aadhaar_checksum_ok(value):
         check = _VERHOEFF_D[check][_VERHOEFF_P[index % 8][int(ch)]]
     return check == 0
 
+_DOC_CODE_BY_KIND = {"aadhaar": "AADHAR", "pan": "PAN", "uan": "UAN", "esic": "ESIC", "dl": "DL"}
+_DOC_VERIFY_TYPE = {"AADHAR": "aadhaar", "PAN": "pan", "UAN": "uan", "ESIC": "esic", "DL": "dl"}
+_DOC_LABEL = {"AADHAR": "Aadhaar", "PAN": "PAN", "UAN": "UAN", "ESIC": "ESIC", "DL": "Driving Licence"}
+
+
+def _same_person_name(a, b):
+    def words(value):
+        return [w for w in re.split(r"[^A-Z0-9]+", str(value or "").upper()) if len(w) >= 2]
+    aw, bw = words(a), words(b)
+    if not aw or not bw:
+        return False
+    short, long = (aw, bw) if len(aw) <= len(bw) else (bw, aw)
+    return all(word in long for word in short)
+
+
+def _validate_doc_upload(upload, code, expected_number="", expected_name=""):
+    """Validate a contractor-uploaded document against its catalogue slot.
+
+    Returns (ocr_text, error). The upload is rewound for the caller/storage.
+    """
+    from .. import ocr_client
+    label = _DOC_LABEL.get(code, code)
+    if upload is None:
+        return None, f"Upload the {label} document (image or PDF)."
+    try:
+        upload.seek(0)
+        raw = upload.read()
+        upload.seek(0)
+    except Exception:  # noqa: BLE001
+        return None, f"Could not read the uploaded {label}."
+    if not raw:
+        return None, f"The uploaded {label} file is empty."
+    if len(raw) > 12 * 1024 * 1024:
+        return None, f"The {label} document must be under 12 MB."
+    try:
+        text = ocr_client.extract_text(raw, upload.name or f"{code.lower()}.pdf")
+        upload.seek(0)
+    except Exception as exc:  # noqa: BLE001
+        return None, f"Could not read the {label} document: {exc}"
+    ok, message, _points = ocr_client.check_worker_document(code, text)
+    if not ok:
+        return None, message
+    ok, message = ocr_client.verify_document_text(
+        _DOC_VERIFY_TYPE[code], text,
+        expected_number=expected_number, expected_name=expected_name,
+    )
+    if not ok:
+        return None, message
+    return text, ""
+
 
 def _require_contractor(user):
     if getattr(user, "role", "") != "contractor":
@@ -384,18 +434,23 @@ def contractor_worker_pan(request, bss_id):
     if not _PAN_RE.match(pan):
         return Response({"error": "Enter a valid PAN (AAAAA9999A)."},
                         status=status.HTTP_400_BAD_REQUEST)
+    if not ident.aadhaar or not ident.name:
+        return Response({"error": "Complete Aadhaar verification first so we can match the PAN holder name."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    text, error = _validate_doc_upload(upload, "PAN", expected_number=pan, expected_name=ident.name)
+    if error:
+        return Response({"error": error}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    from .. import ocr_client
+    pan_fields = ocr_client.extract_fields("pan", text)
+    holder = str(pan_fields.get("name") or "").strip()
+    if holder and not _same_person_name(ident.name, holder):
+        return Response({"error": "PAN holder name does not match the Aadhaar name."},
+                        status=status.HTTP_422_UNPROCESSABLE_ENTITY)
     ident.pan = pan
     ident.pan_verified = True
-    if name:
-        ident.pan_holder_name = name
-        if not ident.name:
-            ident.name = name
-    ident.save(update_fields=["pan", "pan_verified", "pan_holder_name", "name", "updated_at"])
-    if upload is not None:
-        try:
-            _store_worker_document(ident, upload, "PAN", {"pan": pan, "name": name})
-        except Exception:  # noqa: BLE001
-            pass
+    ident.pan_holder_name = holder or name
+    ident.save(update_fields=["pan", "pan_verified", "pan_holder_name", "updated_at"])
+    _store_worker_document(ident, upload, "PAN", {"pan": pan, "name": ident.pan_holder_name})
     return Response({"data": _worker_payload(ident)}, status=status.HTTP_200_OK)
 
 
@@ -413,15 +468,14 @@ def contractor_worker_uan(request, bss_id):
     uan = re.sub(r"\D", "", str(body.get("uan") or ""))
     if len(uan) != 12:
         return Response({"error": "A UAN is 12 digits."}, status=status.HTTP_400_BAD_REQUEST)
+    _text, error = _validate_doc_upload(upload, "UAN", expected_number=uan)
+    if error:
+        return Response({"error": error}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
     social, _ = WorkerSocialSecurity.objects.get_or_create(user=ident.user)
     social.epfo_uan = uan
     social.uan_verified = True
     social.save(update_fields=["epfo_uan", "uan_verified", "updated_at"])
-    if upload is not None:
-        try:
-            _store_worker_document(ident, upload, "UAN", {"uan": uan})
-        except Exception:  # noqa: BLE001
-            pass
+    _store_worker_document(ident, upload, "UAN", {"uan": uan})
     return Response({"data": _worker_payload(ident)}, status=status.HTTP_200_OK)
 
 
@@ -440,15 +494,14 @@ def contractor_worker_esic(request, bss_id):
     if not (10 <= len(esic) <= 17):
         return Response({"error": "Enter a valid ESIC IP number."},
                         status=status.HTTP_400_BAD_REQUEST)
+    _text, error = _validate_doc_upload(upload, "ESIC", expected_number=esic)
+    if error:
+        return Response({"error": error}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
     social, _ = WorkerSocialSecurity.objects.get_or_create(user=ident.user)
     social.esic_ip_number = esic
     social.esic_verified = True
     social.save(update_fields=["esic_ip_number", "esic_verified", "updated_at"])
-    if upload is not None:
-        try:
-            _store_worker_document(ident, upload, "ESIC", {"esic": esic})
-        except Exception:  # noqa: BLE001
-            pass
+    _store_worker_document(ident, upload, "ESIC", {"esic": esic})
     return Response({"data": _worker_payload(ident)}, status=status.HTTP_200_OK)
 
 
@@ -696,10 +749,13 @@ def contractor_worker_dl(request, bss_id):
     from bss_core.models import WorkerDocument, WorkerDocumentMaster
 
     body, upload = _request_body_upload(request)
-    number = str(body.get("number") or "").strip().upper()[:40]
-    if not number:
-        return Response({"error": "Enter the driving licence number."},
+    number = re.sub(r"[^A-Z0-9]", "", str(body.get("number") or "").strip().upper())[:20]
+    if not re.fullmatch(r"[A-Z]{2}\d{13,14}", number):
+        return Response({"error": "Enter a valid driving licence number (e.g. DL0420110149646)."},
                         status=status.HTTP_400_BAD_REQUEST)
+    _text, error = _validate_doc_upload(upload, "DL", expected_number=number)
+    if error:
+        return Response({"error": error}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
     details = json.dumps({"number": number, "validTill": str(body.get("validTill") or ""),
                           "status": str(body.get("status") or "")})
     master = WorkerDocumentMaster.objects.filter(code="DL").first()
@@ -719,11 +775,7 @@ def contractor_worker_dl(request, bss_id):
         if expiry:
             wc.gig_dl_expiry = expiry
         wc.save()
-    if upload is not None:
-        try:
-            _store_worker_document(ident, upload, "DL", {"number": number, "validTill": str(body.get("validTill") or "")})
-        except Exception:  # noqa: BLE001
-            pass
+    _store_worker_document(ident, upload, "DL", {"number": number, "validTill": str(body.get("validTill") or "")})
     return Response({"data": _worker_payload(ident)}, status=status.HTTP_200_OK)
 
 
@@ -774,12 +826,17 @@ def contractor_worker_extract(request, bss_id):
     kind = str((request.data or {}).get("kind") or "").strip().lower()
     if not kind:
         kind = ocr_client.detect_document_type(text) or ""
-    if kind == "aadhaar":
-        ok, message, points = ocr_client.check_worker_document("AADHAR", text)
+    fields = ocr_client.extract_fields(kind or "aadhaar", text) if kind else {}
+    code = _DOC_CODE_BY_KIND.get(kind)
+    if code:
+        ok, message, points = ocr_client.check_worker_document(code, text)
         if not ok:
             return Response({"error": message, "points": points},
                             status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-    fields = ocr_client.extract_fields(kind or "aadhaar", text) if kind else {}
+        actual_key = _DOC_VERIFY_TYPE[code]
+        if not fields.get(actual_key):
+            return Response({"error": f"Could not read a valid {_DOC_LABEL[code]} number from this document. Please upload a clearer copy."},
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
     # Digitally generated PDFs can merge name words in their text layer (e.g.
     # "SyedYasserali"). Refine the name from a forced OCR pass when it yields
     # more words, and fill any missing fields from it.

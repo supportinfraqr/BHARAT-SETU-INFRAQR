@@ -131,6 +131,16 @@ _DOC_MARKERS = {
         "EMPLOYEES STATE INSURANCE",
         "ESIC",
     ],
+    "dl": [
+        "DRIVING LICENCE",
+        "DRIVING LICENSE",
+        "LICENCE TO DRIVE",
+        "LICENSE TO DRIVE",
+        "TRANSPORT DEPARTMENT",
+        "MOTOR VEHICLE DEPARTMENT",
+        "SARATHI",
+        "PARIVAHAN",
+    ],
     "bank": [
         "PASSBOOK",
         "PASS BOOK",
@@ -231,6 +241,7 @@ _DOC_DISPLAY = {
     "pan": "PAN",
     "uan": "UAN",
     "esic": "ESIC",
+    "dl": "Driving Licence",
     "bank": "Bank Passbook / Cancelled Cheque",
     "bocw": "BOCW Card",
     "education": "Educational Certificate",
@@ -242,13 +253,13 @@ _DOC_DISPLAY = {
 # Most-specific first: an Aadhaar/passbook also carries an address, so identity
 # document types must win over the generic "address_proof" bucket when we name
 # the type a document looks like.
-_DETECT_ORDER = ("aadhaar", "pan", "uan", "esic", "bank", "bocw", "medical",
+_DETECT_ORDER = ("aadhaar", "dl", "uan", "esic", "pan", "bank", "bocw", "medical",
                  "education", "skill", "address_proof")
 
 # Distinctive identity/bank documents whose detection reliably identifies a
 # *different* type than the slot the user picked. Certificate-like slots share
 # generic words, so they are excluded from the hard cross-type block.
-_STRONG_TYPES = frozenset({"aadhaar", "pan", "uan", "esic", "bank"})
+_STRONG_TYPES = frozenset({"aadhaar", "dl", "pan", "uan", "esic", "bank"})
 
 # Master document code -> expected OCR type (None/unlisted = no OCR check: the
 # photo/signature slots and system-issued letters carry no readable text).
@@ -261,6 +272,7 @@ _WORKER_DOC_TYPE = {
     "BANK": "bank",
     "UAN": "uan",
     "ESIC": "esic",
+    "DL": "dl",
     "BOCW": "bocw",
     "MED": "medical",
 }
@@ -300,10 +312,13 @@ def detect_document_type(text: str):
         return None
     markers_by_type = dict(_DOC_MARKERS)
     for doc_type in _DETECT_ORDER:
-        if doc_type == "aadhaar" and _AADHAAR_NUM_RE.search(text or ""):
-            return "aadhaar"
         if any(_present(marker, upper, squashed) for marker in markers_by_type.get(doc_type, ())):
             return doc_type
+    # A bare 12-digit Aadhaar scan may have no header text; use the number
+    # pattern only after every marker-based type has been ruled out (UAN/ESIC
+    # also carry 12-digit numbers and must not be mistaken for Aadhaar).
+    if _AADHAAR_NUM_RE.search(text or ""):
+        return "aadhaar"
     return None
 
 
