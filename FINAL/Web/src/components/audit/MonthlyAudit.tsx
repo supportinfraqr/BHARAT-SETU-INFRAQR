@@ -77,6 +77,12 @@ export default function MonthlyAudit({ role, listEndpoint, sites, defaultSiteId 
   const months = useMemo(() => previousMonths(18), []);
   const [siteId, setSiteId] = useState(() => defaultSiteId || sites[0]?.id || '');
   const [month, setMonth] = useState(() => months[0]?.value || '');
+  const selectedPeriod = months.find(m => m.value === month)?.label || '';
+  const auditRunningForSelection = rows.some(job =>
+    ['PENDING', 'BUILDING', 'RUNNING'].includes(job.status)
+    && job.siteId === String(siteId)
+    && job.period === selectedPeriod,
+  );
 
   const load = useCallback(async () => {
     try {
@@ -150,6 +156,10 @@ export default function MonthlyAudit({ role, listEndpoint, sites, defaultSiteId 
   }
 
   async function runAudit() {
+    if (auditRunningForSelection) {
+      setError('An audit is already running for this site and month. Wait for it to finish.');
+      return;
+    }
     setBusy(true); setError(''); setNotice('');
     try {
       const res = await fetch('/api/contractor/audit-jobs', {
@@ -202,8 +212,8 @@ export default function MonthlyAudit({ role, listEndpoint, sites, defaultSiteId 
               {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
           </label>
-          <button type="button" disabled={busy || !siteId || !month} onClick={() => void runAudit()} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#01183A] px-5 text-sm font-bold text-white shadow-lg shadow-bss-navy/20 transition-all hover:-translate-y-0.5 hover:bg-[#022B5E] disabled:translate-y-0 disabled:opacity-60">
-            {busy ? <><Loader2 size={16} className="animate-spin"/>Starting…</> : <><Play size={16}/>Run audit</>}
+          <button type="button" disabled={busy || !siteId || !month || auditRunningForSelection} onClick={() => void runAudit()} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#01183A] px-5 text-sm font-bold text-white shadow-lg shadow-bss-navy/20 transition-all hover:-translate-y-0.5 hover:bg-[#022B5E] disabled:translate-y-0 disabled:opacity-60">
+            {busy || auditRunningForSelection ? <><Loader2 size={16} className="animate-spin"/>{auditRunningForSelection ? 'Audit running…' : 'Starting…'}</> : <><Play size={16}/>Run audit</>}
           </button>
         </div>
         <p className="mt-2 text-[11px] text-bss-text-muted">Only an employer-approved month can be audited. Two runs are allowed per site per month; the second run is useful after corrections.</p>
