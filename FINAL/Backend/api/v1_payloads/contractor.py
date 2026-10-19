@@ -1152,41 +1152,6 @@ def _contractor_audit_report_row(r):
     }
 
 
-def _report_version_row(r):
-    """A compact entry for a report's version history."""
-    return {
-        "id": str(r.id), "version": int(r.version or 1),
-        "uniqueNo": _d(r.unique_no), "reportDate": _dts(r.report_date),
-        "scorePercent": _num(r.score_pct),
-        "isCurrent": bool(getattr(r, "is_current", True)),
-    }
-
-
-def _contractor_audit_reports(user):
-    """The contractor's per-submission audit reports. The current version of each
-    (site, period) is the row; every version is listed under ``versions``."""
-    if not hasattr(user, "compliance_reports"):
-        return []
-    qs = list(user.compliance_reports.order_by("-id")[:200])
-    by_key: dict = {}
-    for r in qs:
-        by_key.setdefault((r.site_name, r.period, r.financial_year), []).append(r)
-    rows, seen = [], set()
-    for r in qs:
-        key = (r.site_name, r.period, r.financial_year)
-        if key in seen:
-            continue
-        seen.add(key)
-        group = sorted(by_key[key], key=lambda x: (x.version or 1))
-        current = next((x for x in group if getattr(x, "is_current", True)), group[-1])
-        row = _contractor_audit_report_row(current)
-        row["versions"] = [_report_version_row(v) for v in group]
-        rows.append(row)
-        if len(rows) >= 20:
-            break
-    return rows
-
-
 def _contractor_payroll_config(user):
     pc = PayrollConfig.objects.filter(employer=user).first()
     today = timezone.localdate()
@@ -1445,7 +1410,6 @@ def build_contractor_portal(user):
         "registers": _contractor_registers(user),
         "complianceBatches": _contractor_compliance_batches(user),
         "complianceStateSummary": _contractor_compliance_state_summary(user),
-        "auditReports": _contractor_audit_reports(user),
         "recentActivities": _contractor_recent_activities(user),
         "grievances": _contractor_grievances(user),
         "payroll": {
@@ -1464,7 +1428,6 @@ __all__ = [
     "_contractor_applicability",
     "_contractor_applications",
     "_contractor_audit_report_row",
-    "_contractor_audit_reports",
     "_contractor_available_workers",
     "_contractor_binding_requests",
     "_contractor_bindings",

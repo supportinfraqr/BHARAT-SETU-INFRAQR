@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, Calendar, CheckCircle2, ChevronDown, Clock3, Download, FileCheck2, FileSpreadsheet, FileText, Info, Landmark, TriangleAlert } from 'lucide-react';
+import { Activity, Calendar, CheckCircle2, ChevronDown, Clock3, Download, FileSpreadsheet, FileText, Info, Landmark, TriangleAlert } from 'lucide-react';
 import ComplianceSubmissions from '@/components/contractor/ComplianceSubmissions';
+import ContractorMonthlyAudit from '@/components/audit/ContractorMonthlyAudit';
 import BatchDrilldown from '@/components/compliance/BatchDrilldown';
-import VersionHistory from '@/components/compliance/VersionHistory';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorPortalData } from '@/types/portal';
 
@@ -67,6 +67,13 @@ function currentFyStartYear(d: Date = new Date()): number {
 export default function ContractorCompliancePage() {
   const { contractor, replaceContractor, refresh } = useContractor();
   const [tab, setTab] = useState<Tab>('master');
+  // Open the requested tab from deep links, e.g. /contractor/compliance?tab=report.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const requested = new URLSearchParams(window.location.search).get('tab');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync deep-link tab once
+    if (requested === 'report' || requested === 'records' || requested === 'master') setTab(requested);
+  }, []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -306,7 +313,7 @@ export default function ContractorCompliancePage() {
     {tab === 'records' && <div className="space-y-6">
       <ComplianceSubmissions embedded onSubmitted={() => {
         setTab('report');
-        setNotice('Registers submitted — the detailed audit report is ready in the Contractor Report tab.');
+        setNotice('Package submitted for employer review. After approval, run the audit here — up to 2 runs per site per month.');
       }} />
     </div>}
 
@@ -480,45 +487,7 @@ export default function ContractorCompliancePage() {
     </div>}
 
     {tab === 'report' && <div className="space-y-6">
-      <section className="bss-3d bss-scroll-rise bg-white rounded-2xl overflow-hidden border border-bss-border">
-        <div className="relative overflow-hidden bg-gradient-to-br from-bss-navy via-bss-deep-navy to-[#022B5E] text-white p-5">
-          <div className="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-white/5" />
-          <div className="relative flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/60">Per submission</p>
-              <h2 className="text-lg font-extrabold mt-0.5">Detailed AI Audit Reports</h2>
-              <p className="text-[11px] text-white/75 mt-1 max-w-xl">Every submitted package gets its own detailed AI audit report — triggered when you submit, ready to view or download as a branded PDF.</p>
-            </div>
-            <span className="w-12 h-12 rounded-2xl bg-white/10 border border-white/15 grid place-items-center flex-shrink-0"><FileCheck2 size={22}/></span>
-          </div>
-        </div>
-        <div className="p-4">
-          {contractor.auditReports.length === 0
-            ? <p className="text-sm text-bss-text-muted py-4 text-center">No submissions yet — submit a register package and its detailed report will appear here.</p>
-            : <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead><tr className="bg-bss-bg border-b border-bss-border text-[11px] font-extrabold text-bss-text-secondary uppercase tracking-wider">
-                    <th className="py-2.5 px-3">Ref No.</th>
-                    <th className="py-2.5 px-3">Site</th>
-                     <th className="py-2.5 px-3">Period</th>
-                     <th className="py-2.5 px-3">Ver</th>
-                     <th className="py-2.5 px-3">Submitted</th>
-                    <th className="py-2.5 px-3">Score</th>
-                  </tr></thead>
-                  <tbody className="divide-y divide-bss-border text-xs">
-                    {contractor.auditReports.map(r => <tr key={r.id} className="hover:bg-bss-bg">
-                      <td className="py-2.5 px-3 font-mono font-semibold text-bss-interactive-blue">{r.uniqueNo || '—'}</td>
-                      <td className="py-2.5 px-3 text-bss-text-secondary">{r.site || '—'}</td>
-                      <td className="py-2.5 px-3 text-bss-text-secondary">{r.period || '—'}</td>
-                      <td className="py-2.5 px-3"><VersionHistory versions={(r.versions || []).map(v => ({ version:v.version, isCurrent:v.isCurrent, status:v.uniqueNo, date:v.reportDate }))} /></td>
-                      <td className="py-2.5 px-3 text-bss-text-muted">{r.reportDate || '—'}</td>
-                      <td className="py-2.5 px-3 font-bold text-bss-navy">{r.scorePercent != null ? `${r.scorePercent}%` : (r.score || '—')}</td>
-                    </tr>)}
-                  </tbody>
-                </table>
-              </div>}
-        </div>
-      </section>
+      <ContractorMonthlyAudit />
     </div>}
 
     {batchView && <BatchDrilldown batchId={batchView} role="contractor" onClose={() => setBatchView(null)} />}

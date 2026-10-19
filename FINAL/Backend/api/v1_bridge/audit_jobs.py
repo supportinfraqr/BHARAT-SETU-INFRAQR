@@ -196,12 +196,12 @@ def _notify_job(job):
         title = f"Audit ready — {period}{f' · {site}' if site else ''}"
         body = (f"The audit report for {period}{f' at {site}' if site else ''} is ready. "
                 f"Compliance: {(summary.get('verdict') or summary.get('executiveSummary') or 'See report')[:180]}")
-        link = "/contractor/audit-reports"
+        link = "/contractor/compliance?tab=report"
         notif_type = "COMPLIANCE"
     else:
         title = f"Audit {status.lower()} — {period}{f' · {site}' if site else ''}"
         body = (job.error_message or "The audit could not be completed.")[:400]
-        link = "/contractor/audit-reports"
+        link = "/contractor/compliance?tab=report"
         notif_type = "WARNING"
 
     recipients = [job.contractor, job.employer]

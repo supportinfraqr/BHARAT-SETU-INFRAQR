@@ -194,15 +194,14 @@ def _handle_compliances(user, body, method):
         upload_ids = body.get("uploadIds") if isinstance(body.get("uploadIds"), list) else []
         submissions = SubmissionEvidence.objects.filter(user=user, id__in=upload_ids)
         batch_ids = body.get("batchIds") if isinstance(body.get("batchIds"), list) else []
-        generated = ComplianceBatch.objects.filter(
-            contractor=user, id__in=batch_ids).count() if batch_ids else 0
         period = str(body.get("period") or "")
         if period_in_future(str(body.get("month") or "") or period, "", body.get("financialYear")):
             raise PortalMutationError(
                 "This is a future period — compliance can only be submitted for months that "
                 "have already started.", 400)
-        # Version history: each submission of the same period creates a new report
-        # version; the previous current version is kept as history.
+        # Version history: each submission of the same period creates a new package
+        # record. It is only a reference for the unique number and batch lineage;
+        # the AI audit is run separately from Contractor Report after employer approval.
         from django.db.models import Max
 
         from bss_core.models import ComplianceReport
@@ -213,31 +212,26 @@ def _handle_compliances(user, body, method):
             financial_year=_fy[:12])
         next_version = (prior_reports.aggregate(m=Max("version"))["m"] or 0) + 1
         prior_reports.update(is_current=False)
-        report = compliance.build_audit_report(
-            user,
-            employer=str(body.get("employer") or ""), site=str(body.get("site") or ""),
-            period=period,
-            financial_year=str(body.get("financialYear") or ""),
-            state=str(body.get("state") or ""), submissions=list(submissions),
-            generated_registers=generated,
-            version=next_version, is_current=True,
+        report = ComplianceReport.objects.create(
+            employer=user,
+            client_name=str(body.get("employer") or "")[:200],
+            site_name=_site_name[:200],
+            period=period[:40],
+            financial_year=_fy[:12],
+            state=str(body.get("state") or "")[:60],
+            auditor=user,
+            report_date=timezone.localdate(),
+            version=next_version,
+            is_current=True,
+            report_kind="SUBMISSION",
+            status="READY",
+            batch_ids=[int(b) for b in batch_ids if str(b).isdigit()],
         )
+        report.unique_no = f"UN{report.id:06d}"
+        report.save(update_fields=["unique_no"])
         # Stamp the submitted evidence rows with the package's Unique No. so the
-        # listing can track them (Unique No. + Days Left) like the old app.
+        # listing can track them (Unique No. + Days Left).
         submissions.update(unique_no=report.unique_no, status="PENDING")
-        # Remember the generated register batches behind this package so the
-        # detailed per-submission AI report can compile their register audits.
-        if batch_ids:
-            report.batch_ids = [int(b) for b in batch_ids if str(b).isdigit()]
-            report.save(update_fields=["batch_ids"])
-        # The submission audit runs the SAME folder→agent pipeline as the global
-        # audit — its workspace also carries the CLRA registers + uploaded docs.
-        report.report_kind = "SUBMISSION"
-        # The monthly Document Audit Agent replaces the old auto-generated
-        # submission report. The package record remains for its unique number
-        # and batch lineage; the contractor runs the audit after employer review.
-        report.status = "READY"
-        report.save(update_fields=["report_kind", "status", "updated_at"])
         # A "hard submit" overrides failed OCR — keep that on record per document.
         force = str(body.get("force") or "").lower() in ("1", "true", "yes")
         if force:

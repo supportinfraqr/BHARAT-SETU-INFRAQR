@@ -101,7 +101,7 @@ function isFutureMonth(fy: string, monthName: string): boolean {
 }
 
 export default function ComplianceSubmissions({ embedded = false, onSubmitted }: { embedded?: boolean; onSubmitted?: (ctx: { site:string; month:string; financialYear:string }) => void }) {
-  const { contractor, replaceContractor, refresh, employerScope, scoped } = useContractor();
+  const { contractor, refresh, employerScope, scoped } = useContractor();
   const [tab, setTab] = useState<Tab>(embedded ? 'create' : 'submissions');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -561,12 +561,11 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kind: 'submit', employer: empName, site: subSiteName, period: `${createPeriod} ${fy.replace('FY ', '')}`, financialYear: fy, state: stName, month, location: '', complianceType: '', docName: '', uploadIds: pendingUploads, batchIds }),
       });
-      const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['auditReports'][number]; error?: string };
+      const result = await response.json().catch(() => ({})) as { data?: { uniqueNo?: string }; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error ?? 'The submission could not be completed.');
-      replaceContractor({ ...contractor, auditReports: [result.data, ...contractor.auditReports] });
       setOptimisticSubmitted(prev => Array.from(new Set([...prev, ...[...additionalDocs, ...registerForms].filter(d => uploads[d.name]?.id != null).map(d => d.name)])));
       setUploads({});
-      setNotice(`Submitted! Ref No: ${result.data.uniqueNo}. The detailed audit report is ready in the Contractor Report tab.`);
+      setNotice(`Submitted! Ref No: ${result.data.uniqueNo}. Package is pending employer review. After approval, run the audit from Contractor Report.`);
       onSubmitted?.({ site: subSiteName, month, financialYear: fy });
       void refresh();
     } catch (reason) {
@@ -587,13 +586,12 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kind: 'submit', employer: empName, site: subSiteName, period: `${createPeriod} ${fy.replace('FY ', '')}`, financialYear: fy, state: stName, month, location: '', complianceType: docName, docName, uploadIds: [uploadId], batchIds: [], force }),
       });
-      const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['auditReports'][number]; error?: string };
+      const result = await response.json().catch(() => ({})) as { data?: { uniqueNo?: string }; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error ?? 'Document could not be submitted.');
-      replaceContractor({ ...contractor, auditReports: [result.data, ...contractor.auditReports] });
       // Flip the row to Submitted immediately; the full portal refresh runs in the background.
       setOptimisticSubmitted(prev => (prev.includes(docName) ? prev : [...prev, docName]));
       setUploads(current => { const next = { ...current }; delete next[docName]; return next; });
-      setNotice(`Submitted successfully! Ref No: ${result.data.uniqueNo} (${docName})${force ? ' — submitted despite OCR issues' : ''}.`);
+      setNotice(`Submitted successfully! Ref No: ${result.data.uniqueNo} (${docName})${force ? ' — submitted despite OCR issues' : ''}. Pending employer review.`);
       void refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Document could not be submitted.');

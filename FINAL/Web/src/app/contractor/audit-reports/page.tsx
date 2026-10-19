@@ -1,7 +1,7 @@
-import ContractorMonthlyAudit from '@/components/audit/ContractorMonthlyAudit';
+import { redirect } from 'next/navigation';
 import { requireSession } from '@/server/session';
 
-export default async function ContractorAuditReportsPage() {
+export default async function ContractorAuditReportsRedirect() {
   await requireSession('Contractor');
-  return <ContractorMonthlyAudit />;
+  redirect('/contractor/compliance?tab=report');
 }

@@ -278,7 +278,6 @@ export type ContractorRegister = {
 };
 
 export type BatchVersionEntry = { id: string; version: number; status: string; generatedOn?: string; generatedBy?: string; isCurrent: boolean; hasFile?: boolean; auditStatus?: string };
-export type ReportVersionEntry = { id: string; version: number; uniqueNo: string; reportDate: string; scorePercent: number; isCurrent: boolean };
 
 export type ContractorComplianceBatch = {
   id: string; financialYear: string; month: string; year: string; state: string; site: string; siteCode: string; frequency?: string; employeeCount: number; locationCount: number; generatedOn: string; generatedBy: string; status: 'Generated' | 'Pending' | 'Submitted' | 'Verified' | 'Returned' | 'Rejected' | 'Failed';
@@ -286,10 +285,6 @@ export type ContractorComplianceBatch = {
   version?: number; isCurrent?: boolean; versions?: BatchVersionEntry[];
 };
 
-export type ContractorAuditReport = {
-  id: string; uniqueNo: string; site: string; employer: string; period: string; reportDate: string; score: number; scorePercent: number; actWise: Array<{ act: string; form: string; nature: string; score: number; status: string; auditorRemarks: string; vendorRemarks: string }>;
-  version?: number; isCurrent?: boolean; versions?: ReportVersionEntry[];
-};
 
 export type GrievanceStatus = 'Submitted' | 'Open' | 'In Progress' | 'Resolved' | 'Reopened' | 'Closed';
 export type GrievanceReply = { id:string; by:'Worker'|'Contractor'|'Employer'|'BSS'; text:string; at:string; attachment:boolean; attachmentName:string|null };
@@ -415,7 +410,6 @@ export type ContractorPortalData = {
   registers: ContractorRegister[];
   complianceBatches: ContractorComplianceBatch[];
   complianceStateSummary?: Array<{ state: string; month: string; year: string; sites: number; employees: number }>;
-  auditReports: ContractorAuditReport[];
   recentActivities?: Array<{ title: string; time: string; type: string }>;
   grievances: ContractorGrievance[];
   payroll: {
