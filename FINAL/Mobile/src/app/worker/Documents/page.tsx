@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, CheckCircle2, Clock, AlertTriangle, Upload, Eye, XCircle, Download, RefreshCcw, Trash2, ChevronLeft, Info } from 'lucide-react';
+import { FileText, CheckCircle2, Clock, AlertTriangle, Upload, Eye, XCircle, Download, RefreshCcw, ChevronLeft, Info } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
 import PageHero from '@/components/portal/PageHero';
@@ -136,23 +136,6 @@ export default function DocumentsModule() {
     }
   };
 
-  const remove = async (doc: DocumentRow) => {
-    if (!doc.id) return;
-    if (!window.confirm(`Delete the uploaded ${doc.name}?`)) return;
-    setBusy(doc.code);
-    setError('');
-    try {
-      const response = await fetch(`/api/worker/documents/${doc.id}`, { method: 'DELETE' });
-      const json = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(json.error || 'Delete failed.');
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed.');
-    } finally {
-      setBusy(null);
-    }
-  };
-
   const openDocument = (doc: DocumentRow) => {
     if (!doc.id) return;
     window.open(`/api/worker/documents/${doc.id}/file`, '_blank', 'noopener,noreferrer');
@@ -210,7 +193,6 @@ export default function DocumentsModule() {
               {d.owner !== 'System' && !d.id && <button onClick={() => chooseFile(d)} disabled={busy === d.code} className="bg-[#01183A] text-white px-2.5 py-1 rounded font-bold text-[10px] whitespace-nowrap flex items-center gap-1 disabled:opacity-60"><Upload size={12} />{busy === d.code ? 'Uploading…' : 'Upload'}</button>}
             </>
           )}
-          {!d.locked && d.owner !== 'System' && d.id && <button onClick={() => remove(d)} className="p-1.5 text-bss-text-muted hover:text-bss-error bg-bss-bg rounded border" title="Delete Document"><Trash2 size={15} /></button>}
         </div>;
       },
     },

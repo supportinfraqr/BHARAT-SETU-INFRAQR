@@ -136,23 +136,15 @@ def worker_documents(request):
     }}, status=status.HTTP_201_CREATED)
 
 
-@api_view(["GET", "DELETE"])
+@api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def worker_document_detail(request, document_id):
-    """Download (GET) or delete (DELETE) a single worker document."""
+    """Download a single worker document. Uploaded documents cannot be deleted."""
     from bss_core.models import WorkerDocument
     doc = WorkerDocument.objects.filter(pk=document_id, user=request.user).first()
     if doc is None:
         return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
-    if request.method == "DELETE":
-        if doc.auto_generated:
-            return Response({"error": "This document is issued by the system and cannot be deleted."},
-                            status=status.HTTP_400_BAD_REQUEST)
-        if doc.file:
-            doc.file.delete(save=False)
-        doc.delete()
-        return Response({"success": True, "deleted": True}, status=status.HTTP_200_OK)
     if not doc.file:
         # Legacy private-root file (contractor upload before unification).
         from django.conf import settings
