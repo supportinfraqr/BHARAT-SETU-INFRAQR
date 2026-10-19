@@ -66,12 +66,16 @@ const FIELD_KEYS: Record<DocId, string[]> = {
 
 const genderText = (g: string) => ({ MALE: 'Male', FEMALE: 'Female', TRANSGENDER: 'Transgender', M: 'Male', F: 'Female', T: 'Transgender' }[g.toUpperCase()] ?? (g || '—'));
 const mask = (v: string) => (v ? `XXXX XXXX ${v.slice(-4)}` : '');
+const ddmmyyyy = (value: string) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value || '');
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : (value || '');
+};
 
 function rowsFor(w: WorkerPayload, def: DocDef): Array<{ label: string; value: string; result: Result }> {
   const r = (label: string, value: string, verified: boolean): { label: string; value: string; result: Result } =>
     ({ label, value, result: value ? (verified ? 'pass' : 'review') : 'missing' });
   switch (def.id) {
-    case 'aadhaar': return [r('Name', w.name, !!w.aadhaar), r('Father', w.fatherName, !!w.aadhaar), r('Address', w.address.permanent, !!w.aadhaar), r('DOB', w.dateOfBirth, !!w.aadhaar), r('Gender', genderText(w.gender), !!w.aadhaar), r('Number', mask(w.aadhaar), !!w.aadhaar)];
+    case 'aadhaar': return [r('Name', w.name, !!w.aadhaar), r('Father', w.fatherName, !!w.aadhaar), r('Address', w.address.permanent, !!w.aadhaar), r('DOB', ddmmyyyy(w.dateOfBirth), !!w.aadhaar), r('Gender', genderText(w.gender), !!w.aadhaar), r('Number', mask(w.aadhaar), !!w.aadhaar)];
     case 'pan': return [r('PAN', w.pan, w.panVerified), r('Holder', w.panHolderName, w.panVerified)];
     case 'uan': return [r('UAN', w.socialSecurity.epfoUan, w.socialSecurity.uanVerified)];
     case 'esic': return [r('IP number', w.socialSecurity.esicIp, w.socialSecurity.esicVerified)];
@@ -264,7 +268,7 @@ export default function OnboardWorkerPage() {
                 <div className="worker-card-tags">
                   {worker.mobile && <span className="worker-card-tag">📱 {worker.mobile}</span>}
                   {worker.gender && <span className="worker-card-tag">{genderText(worker.gender)}</span>}
-                  {worker.dateOfBirth && <span className="worker-card-tag">🗓 {worker.dateOfBirth}</span>}
+                  {worker.dateOfBirth && <span className="worker-card-tag">🗓 {ddmmyyyy(worker.dateOfBirth)}</span>}
                 </div>
               </div>
 
@@ -466,7 +470,7 @@ export default function OnboardWorkerPage() {
                         )}
                         {FIELD_KEYS[def.id].map(k => (
                           <label key={k} style={{ textTransform: 'capitalize' }}>{k.replace(/([A-Z])/g, ' $1').trim()}
-                            <input value={fields[k] ?? ''} onChange={e => setFields(f => ({ ...f, [k]: e.target.value }))} disabled={busy} />
+                            <input value={fields[k] ?? ''} onChange={e => setFields(f => ({ ...f, [k]: e.target.value }))} placeholder={def.id === 'aadhaar' && k === 'dob' ? 'dd/mm/yyyy' : undefined} disabled={busy} />
                           </label>
                         ))}
                         {!busy && Object.values(fields).some(v => v) && (

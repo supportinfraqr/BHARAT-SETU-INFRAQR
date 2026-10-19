@@ -23,6 +23,31 @@ from .misc import _handle_bank_verify
 
 _PAN_RE = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]$")
 
+# Verhoeff checksum used by UIDAI Aadhaar numbers.
+_VERHOEFF_D = (
+    (0, 1, 2, 3, 4, 5, 6, 7, 8, 9), (1, 2, 3, 4, 0, 6, 7, 8, 9, 5),
+    (2, 3, 4, 0, 1, 7, 8, 9, 5, 6), (3, 4, 0, 1, 2, 8, 9, 5, 6, 7),
+    (4, 0, 1, 2, 3, 9, 5, 6, 7, 8), (5, 9, 8, 7, 6, 0, 4, 3, 2, 1),
+    (6, 5, 9, 8, 7, 1, 0, 4, 3, 2), (7, 6, 5, 9, 8, 2, 1, 0, 4, 3),
+    (8, 7, 6, 5, 9, 3, 2, 1, 0, 4), (9, 8, 7, 6, 5, 4, 3, 2, 1, 0),
+)
+_VERHOEFF_P = (
+    (0, 1, 2, 3, 4, 5, 6, 7, 8, 9), (1, 5, 7, 6, 2, 8, 3, 0, 9, 4),
+    (5, 8, 0, 3, 7, 9, 6, 1, 4, 2), (8, 9, 1, 6, 0, 4, 3, 5, 2, 7),
+    (9, 4, 5, 3, 1, 2, 6, 8, 7, 0), (4, 2, 8, 6, 5, 7, 3, 9, 0, 1),
+    (2, 7, 9, 3, 8, 0, 6, 4, 1, 5), (7, 0, 4, 6, 9, 1, 3, 2, 5, 8),
+)
+
+
+def _aadhaar_checksum_ok(value):
+    digits = "".join(ch for ch in str(value or "") if ch.isdigit())
+    if len(digits) != 12:
+        return False
+    check = 0
+    for index, ch in enumerate(reversed(digits)):
+        check = _VERHOEFF_D[check][_VERHOEFF_P[index % 8][int(ch)]]
+    return check == 0
+
 
 def _require_contractor(user):
     if getattr(user, "role", "") != "contractor":
@@ -545,7 +570,33 @@ def contractor_worker_aadhaar_apply(request, bss_id):
             body = {}
     elif isinstance(payload, dict):
         body = payload
+    if upload is None:
+        return Response({"error": "Upload the Aadhaar document (image or PDF)."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    from .. import ocr_client
+    try:
+        upload.seek(0)
+        raw = upload.read()
+        upload.seek(0)
+        text = ocr_client.extract_text(raw, upload.name or "aadhaar")
+    except Exception as exc:  # noqa: BLE001
+        return Response({"error": f"Could not read the Aadhaar document: {exc}"},
+                        status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    ok, message, points = ocr_client.check_worker_document("AADHAR", text)
+    if not ok:
+        return Response({"error": message, "points": points},
+                        status=status.HTTP_422_UNPROCESSABLE_ENTITY)
     aadhaar = _sanitize_aadhaar(body.get("aadhaar"))
+    if not aadhaar:
+        return Response({"error": "Enter a valid 12-digit Aadhaar number."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if not _aadhaar_checksum_ok(aadhaar):
+        return Response({"error": "The Aadhaar number checksum is invalid. Check the number and upload again."},
+                        status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    ok, message = ocr_client.verify_document_text("aadhaar", text, expected_number=aadhaar)
+    if not ok:
+        return Response({"error": message}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    upload.seek(0)
     name = str(body.get("name") or "").strip()[:120]
     gender = _gender_full(body.get("gender"))
     dob = _parse_dob(body.get("dob") or "")
@@ -723,6 +774,11 @@ def contractor_worker_extract(request, bss_id):
     kind = str((request.data or {}).get("kind") or "").strip().lower()
     if not kind:
         kind = ocr_client.detect_document_type(text) or ""
+    if kind == "aadhaar":
+        ok, message, points = ocr_client.check_worker_document("AADHAR", text)
+        if not ok:
+            return Response({"error": message, "points": points},
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
     fields = ocr_client.extract_fields(kind or "aadhaar", text) if kind else {}
     # Digitally generated PDFs can merge name words in their text layer (e.g.
     # "SyedYasserali"). Refine the name from a forced OCR pass when it yields
