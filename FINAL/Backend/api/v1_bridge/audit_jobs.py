@@ -747,8 +747,9 @@ def _create_job(contractor, site, month, year, user):
         raise AuditJobError("Only a previous month can be audited.")
     report, batches, evidence = _approved_docs(contractor, site, period)
     if AuditJob.objects.filter(contractor=contractor, site=site, month=period["month"],
-                               year=period["year"], status="READY").exists():
-        raise AuditJobError("A completed audit report already exists for this site and month.")
+                               year=period["year"],
+                               status__in=("PENDING", "BUILDING", "RUNNING")).exists():
+        raise AuditJobError("An audit is already running for this site and month.")
     schedule, _ = AuditSchedule.objects.get_or_create(
         contractor=contractor, site=site, defaults={"runs_per_month": 2})
     if not schedule.is_active:
@@ -990,8 +991,9 @@ def contractor_audit_job_retry(request, job_id):
         return Response({"error": "Only a failed or cancelled audit can be retried."},
                         status=status.HTTP_400_BAD_REQUEST)
     if AuditJob.objects.filter(contractor=user, site=old.site, month=old.month,
-                               year=old.year, status="READY").exists():
-        return Response({"error": "A completed audit report already exists for this site and month."},
+                               year=old.year,
+                               status__in=("PENDING", "BUILDING", "RUNNING")).exists():
+        return Response({"error": "An audit is already running for this site and month."},
                         status=status.HTTP_400_BAD_REQUEST)
     if not old.job_dir or not Path(old.job_dir).exists():
         return Response({"error": "The original job folder is no longer available."},

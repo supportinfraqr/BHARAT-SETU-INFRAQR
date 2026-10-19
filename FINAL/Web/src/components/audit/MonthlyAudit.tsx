@@ -83,12 +83,14 @@ export default function MonthlyAudit({ role, listEndpoint, sites, defaultSiteId 
     && job.siteId === String(siteId)
     && job.period === selectedPeriod,
   );
-  const auditCompletedForSelection = rows.some(job =>
-    job.status === 'READY'
+  const auditUsedForSelection = rows.filter(job =>
+    (job.triggerType || 'manual') === 'manual'
     && job.siteId === String(siteId)
     && job.period === selectedPeriod,
-  );
-  const auditLockedForSelection = auditActiveForSelection || auditCompletedForSelection;
+  ).length;
+  const auditRemainingForSelection = Math.max(0, 2 - auditUsedForSelection);
+  const auditLimitReached = auditRemainingForSelection === 0;
+  const auditLockedForSelection = auditActiveForSelection || auditLimitReached;
 
   const load = useCallback(async () => {
     try {
@@ -162,12 +164,12 @@ export default function MonthlyAudit({ role, listEndpoint, sites, defaultSiteId 
   }
 
   async function runAudit() {
-    if (auditCompletedForSelection) {
-      setError('A completed audit report already exists for this site and month.');
-      return;
-    }
     if (auditActiveForSelection) {
       setError('An audit is already running for this site and month. Wait for it to finish.');
+      return;
+    }
+    if (auditLimitReached) {
+      setError('This site and month has used both monthly audit runs.');
       return;
     }
     setBusy(true); setError(''); setNotice('');
@@ -225,12 +227,14 @@ export default function MonthlyAudit({ role, listEndpoint, sites, defaultSiteId 
           <button type="button" disabled={busy || !siteId || !month || auditLockedForSelection} onClick={() => void runAudit()} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#01183A] px-5 text-sm font-bold text-white shadow-lg shadow-bss-navy/20 transition-all hover:-translate-y-0.5 hover:bg-[#022B5E] disabled:translate-y-0 disabled:opacity-60">
             {busy || auditActiveForSelection
               ? <><Loader2 size={16} className="animate-spin"/>{auditActiveForSelection ? 'Audit running…' : 'Starting…'}</>
-              : auditCompletedForSelection
-                ? <><ShieldCheck size={16}/>Audit completed</>
-                : <><Play size={16}/>Run audit</>}
+              : auditLimitReached
+                ? <><ShieldCheck size={16}/>Monthly limit reached</>
+                : auditUsedForSelection > 0
+                  ? <><Play size={16}/>Run second audit</>
+                  : <><Play size={16}/>Run audit</>}
           </button>
         </div>
-        <p className="mt-2 text-[11px] text-bss-text-muted">Only an employer-approved month can be audited. Once a report is ready, that site and month are locked; failed runs can still be retried within the monthly limit.</p>
+        <p className="mt-2 text-[11px] text-bss-text-muted">Only an employer-approved month can be audited. <strong>{auditRemainingForSelection} of 2 runs remaining</strong> for this site and month. The next run unlocks after the current one fails or completes.</p>
       </section>
     )}
 
