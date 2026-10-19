@@ -4,6 +4,8 @@ import { Building2, CheckCircle2, Clock, Info, MapPin, X } from 'lucide-react';
 import { formatDate } from '@/lib/date';
 import type { AttendanceRecord } from '@/types/portal';
 
+type AttendanceRecordWithLeave = AttendanceRecord & { leaveType?: string; leaveStatus?: string };
+
 /** Presence → badge classes. Shared by the attendance tables + detail dialog. */
 export const statusStyle = (presence: string) => {
   switch (presence) {
@@ -109,13 +111,13 @@ export default function AttendanceDetailDialog({ record, onClose, subtitle }: {
             </div>
           )}
 
-          {record.presence === 'Leave' && (record as any).leaveType && (
+          {record.presence === 'Leave' && (record as AttendanceRecordWithLeave).leaveType && (
             <div className="p-3 rounded-2xl bg-bss-soft-orange border border-bss-border space-y-1">
               <span className="text-[10px] font-bold text-bss-orange uppercase block">Leave Application</span>
               <div className="flex items-center justify-between gap-2">
-                <strong className="text-sm text-bss-text-primary">{(record as any).leaveType}</strong>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${(record as any).leaveStatus === 'Approved' ? 'bg-bss-soft-green text-bss-green border-bss-border' : (record as any).leaveStatus === 'Rejected' ? 'bg-bss-soft-red text-bss-error border-bss-border' : 'bg-bss-soft-orange text-bss-orange border-bss-border'}`}>
-                  {(record as any).leaveStatus}
+                <strong className="text-sm text-bss-text-primary">{(record as AttendanceRecordWithLeave).leaveType}</strong>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${(record as AttendanceRecordWithLeave).leaveStatus === 'Approved' ? 'bg-bss-soft-green text-bss-green border-bss-border' : (record as AttendanceRecordWithLeave).leaveStatus === 'Rejected' ? 'bg-bss-soft-red text-bss-error border-bss-border' : 'bg-bss-soft-orange text-bss-orange border-bss-border'}`}>
+                  {(record as AttendanceRecordWithLeave).leaveStatus}
                 </span>
               </div>
             </div>

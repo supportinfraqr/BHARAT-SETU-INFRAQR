@@ -796,15 +796,9 @@ def admin_onboarding_edit_record(request, batch_id, record_id):
 
 
 # ── worker onboarding wizard (OTP → Consent → MPIN → Integrations) ───────────
-@api_view(["GET"])
-@authentication_classes([BssSessionAuthentication])
-@permission_classes([IsAuthenticated])
-def worker_onboarding_status(request):
+def _worker_onboarding_payload(user):
     from bss_core.models import (WorkerBanking, WorkerIdentity, WorkerOther,
                                  WorkerSocialSecurity)
-    user = request.user
-    if user.role != "worker":
-        return Response({"error": "Workers only."}, status=status.HTTP_403_FORBIDDEN)
     other = WorkerOther.objects.filter(user=user).first()
     cred = _mobile_credential_for(user)
     ident = WorkerIdentity.objects.filter(user=user).first()
@@ -820,12 +814,22 @@ def worker_onboarding_status(request):
     consent = bool(other and (other.consent_registration or other.consent_date))
     mpin = bool(cred and cred.mpin_hash)
     any_integration = any(integrations.values())
-    return Response({"data": {
+    return {
         "steps": {"consent": consent, "mpin": mpin, "integrations": any_integration},
         "integrations": integrations,
         # The gateway steps are consent + MPIN; integrations are a nudge.
         "complete": consent and mpin,
-    }}, status=status.HTTP_200_OK)
+    }
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_onboarding_status(request):
+    user = request.user
+    if user.role != "worker":
+        return Response({"error": "Workers only."}, status=status.HTTP_403_FORBIDDEN)
+    return Response({"data": _worker_onboarding_payload(user)}, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
@@ -837,7 +841,7 @@ def worker_onboarding_consent(request):
         return Response({"error": "Workers only."}, status=status.HTTP_403_FORBIDDEN)
     _record_registration_consent(user, source="Onboarding Consent (BSS App)",
                                  registered_by="Worker Onboarding Wizard")
-    return worker_onboarding_status(request)
+    return Response({"data": _worker_onboarding_payload(user)}, status=status.HTTP_200_OK)
 
 
 __all__ = [

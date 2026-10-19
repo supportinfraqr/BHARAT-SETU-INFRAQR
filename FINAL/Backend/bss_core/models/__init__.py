@@ -8,6 +8,7 @@ from .auth import (
     EmployerProfile,
     GovernmentProfile,
     BssStaffProfile,
+    EmployerStaffMember,
 )
 from .relationship import (
     Site,
@@ -80,7 +81,10 @@ from .operations import (
     ComplianceChecklistField,
     LetterTemplate,
     EmployerLetterAdoption,
+    ContactMessage,
 )
+from .audit import AuditSchedule, AuditJob, AuditJobEvent
+
 from .learning import (
     LearningConfig,
     Course,
@@ -174,10 +178,15 @@ from .payroll import (
     BonusStateMinWage,
 )
 
+from .medical import (
+    MedicalFormTemplate, MedicalFormDispatch, MedicalFormDispatchSite, MedicalExam, SafetyRecord, SafetyCertificate,
+    EmployerMedicalFormAdoption,
+)
+
 __all__ = [
     "AppRole", "User", "UserManager", "UserCredential",
     "ContractorProfile", "EmployerProfile", "GovernmentProfile", "EntityVerificationDocument",
-    "BssStaffProfile",
+    "BssStaffProfile", "EmployerStaffMember",
     "Site", "SiteDocument", "SiteGate", "SiteLicense", "SiteOrder",
     "SiteBocwRegistration", "SiteClraRegistration",
     "SiteCctvCamera", "encrypt_cctv_password", "decrypt_cctv_password",
@@ -214,4 +223,7 @@ __all__ = [
     "SupportTicket", "SupportCaseState", "GatePassScan", "GatePassComplianceTemplate", "WorkerComplianceChecklist", "ComplianceChecklistField",
     "CostSheetTemplate", "CostSheetDesignation", "CostSheetMinimumWage",
     "CostSheetStatutoryLine", "CostSheetCustomLine",
+    "MedicalFormTemplate", "MedicalFormDispatch", "MedicalFormDispatchSite", "MedicalExam", "SafetyRecord", "SafetyCertificate",
+    "EmployerMedicalFormAdoption", "ContactMessage",
+    "AuditSchedule", "AuditJob", "AuditJobEvent",
 ]

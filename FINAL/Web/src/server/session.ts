@@ -7,7 +7,7 @@ import type { PortalRole, PortalSession } from '@/types/portal';
 
 export { SESSION_COOKIE };
 
-export async function createSession(input: { subject: string; role: PortalRole; sessionId: string; accessToken?: string }): Promise<PortalSession> {
+export async function createSession(input: { subject: string; role: PortalRole; sessionId: string; accessToken?: string; employerId?: number | string; staffId?: number | string; permissions?: string[] }): Promise<PortalSession> {
   const issuedAt = Date.now();
   const session: PortalSession = { ...input, issuedAt, expiresAt: issuedAt + SESSION_TTL_SECONDS * 1000 };
   const store = await cookies();

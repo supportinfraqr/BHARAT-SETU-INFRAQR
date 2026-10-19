@@ -116,6 +116,21 @@ def _satisfied_keys(worker):
     return keys
 
 
+def _backfill_fields(checklist):
+    """Ensure a checklist has every default field (adds newly-introduced ones,
+    e.g. Site Induction) so existing checklists stay in sync."""
+    from bss_core.models import ComplianceChecklistField
+    required = (checklist.template.required_fields
+                if checklist.template_id and checklist.template.required_fields
+                else {k: True for k, *_ in DEFAULT_FIELDS})
+    for key, label, category, order in DEFAULT_FIELDS:
+        if required.get(key, True) is False:
+            continue
+        ComplianceChecklistField.objects.get_or_create(
+            checklist=checklist, key=key,
+            defaults={"label": label, "category": category, "sort_order": order})
+
+
 def _checklist_row(checklist):
     # A field reads as DONE when the officer ticked it OR the worker's own
     # records satisfy it (keeps the checklist aligned with gate-pass eligibility).
@@ -128,6 +143,9 @@ def _checklist_row(checklist):
         "completedAt": payloads._dts(f.completed_at) if f.completed_at else "",
     } for f in checklist.fields.select_related("officer")]
     wi = getattr(checklist.worker, "worker_identity", None)
+    eligibility = payloads._gate_pass_eligibility(checklist.worker)
+    pass_type = ("Permanent" if eligibility.get("permanentEligible")
+                 else "Temporary" if eligibility.get("temporaryEligible") else "Not eligible")
     return {
         "id": checklist.id,
         "worker": payloads._d(wi.name if wi and wi.name else checklist.worker.username),
@@ -136,6 +154,9 @@ def _checklist_row(checklist):
         "fields": fields,
         "done": sum(1 for f in fields if f["status"] == "DONE"),
         "total": len(fields),
+        "passType": pass_type,
+        "missing": payloads._gate_pass_missing(checklist.worker),
+        "eligibility": eligibility,
     }
 
 
@@ -181,10 +202,15 @@ def compliance_checklists(request):
     from bss_core.models import WorkerComplianceChecklist
     if request.user.role != "employer":
         return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
+    _require_permission(request, "gate_pass")
     qs = (WorkerComplianceChecklist.objects
           .filter(binding__site__employer=request.user)
           .select_related("worker", "template")[:200])
-    return Response({"rows": [_checklist_row(c) for c in qs]}, status=status.HTTP_200_OK)
+    rows = []
+    for c in qs:
+        _backfill_fields(c)
+        rows.append(_checklist_row(c))
+    return Response({"rows": rows}, status=status.HTTP_200_OK)
 
 
 @api_view(["PATCH", "POST"])

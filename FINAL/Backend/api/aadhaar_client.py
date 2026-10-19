@@ -223,3 +223,31 @@ def verify_ifsc(ifsc: str) -> dict:
     if resp.status_code != 200:
         raise SandboxError(_error_message(resp), resp.status_code)
     return resp.json()
+
+def verify_pan(pan: str, name: str, dob: str = "", consent: str = "Y",
+               reason: str = "onboarding") -> dict:
+    """POST /kyc/pan/verify (Sandbox PAN verification).
+
+    Body: {pan, name_as_per_pan, date_of_birth?, consent, reason}. Returns
+    { code, data: { pan, status ('valid'|'invalid'), name_as_per_pan_match,
+    date_of_birth_match, category, aadhaar_seeding_status } }.
+    """
+    payload = {
+        "@entity": "in.co.sandbox.kyc.pan_verification.request",
+        "pan": str(pan or "").strip().upper(),
+        "name_as_per_pan": str(name or "").strip(),
+        "consent": consent,
+        "reason": reason,
+    }
+    if dob:
+        payload["date_of_birth"] = dob
+    token = get_access_token()
+    resp = _post_with_retry(
+        f"{settings.AADHAAR_BASE_URL}/kyc/pan/verify",
+        json=payload,
+        headers=_authed_headers(token, include_version=True),
+        timeout=25,
+    )
+    if resp.status_code != 200:
+        _raise_sandbox(resp, action="pan")
+    return resp.json()

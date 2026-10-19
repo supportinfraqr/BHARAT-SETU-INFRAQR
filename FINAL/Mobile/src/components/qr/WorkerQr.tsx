@@ -35,6 +35,37 @@ function loadImage(src: string) {
   });
 }
 
+/** Render the worker QR (same payload as the ID card) with the BSS logo
+ *  overlaid on a white tile, returning a PNG data URL. */
+export async function renderWorkerQrDataUrl(bssId: string, size = 512): Promise<string> {
+  const qrDataUrl = await QRCode.toDataURL(createWorkerQrPayload(bssId), {
+    errorCorrectionLevel: "H", margin: 4, width: size,
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return qrDataUrl;
+  const qrImg = await loadImage(qrDataUrl);
+  ctx.drawImage(qrImg, 0, 0, size, size);
+  const tile = Math.round(size * TILE_RATIO);
+  const logo = Math.round(size * LOGO_RATIO);
+  const radius = Math.round(size * RADIUS_RATIO);
+  const tilePos = (size - tile) / 2;
+  ctx.save();
+  roundedRect(ctx, tilePos, tilePos, tile, tile, radius);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fill();
+  ctx.restore();
+  try {
+    const logoImg = await loadImage(LOGO_SRC);
+    ctx.drawImage(logoImg, (size - logo) / 2, (size - logo) / 2, logo, logo);
+  } catch {
+    /* cosmetic overlay — the QR still scans without it */
+  }
+  return canvas.toDataURL("image/png");
+}
+
 function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);

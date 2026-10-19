@@ -948,3 +948,48 @@ class ComplianceChecklistField(models.Model):
 
     def __str__(self):
         return f"{self.key} {self.status}"
+
+
+class ContactMessage(models.Model):
+    """A BSS support / grievance message from a Worker, Contractor or Employer."""
+
+    ROLE = [("worker", "Worker"), ("contractor", "Contractor"),
+            ("employer", "Employer"), ("employer_staff", "Employer staff")]
+    CATEGORY = [
+        ("account", "Account & access"),
+        ("attendance", "Attendance & wages"),
+        ("gate_pass", "Gate pass"),
+        ("compliance", "Compliance & documents"),
+        ("technical", "Technical issue"),
+        ("other", "Other"),
+    ]
+    STATUS = [("NEW", "New"), ("READ", "Read"), ("RESOLVED", "Resolved")]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name="contact_messages")
+    reference = models.CharField(max_length=40, unique=True)
+    name = models.CharField(max_length=120)
+    role = models.CharField(max_length=20, choices=ROLE, default="worker")
+    bss_id = models.CharField(max_length=40, blank=True)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20, blank=True)
+    category = models.CharField(max_length=20, choices=CATEGORY, default="other")
+    subject = models.CharField(max_length=160)
+    message = models.TextField()
+    status = models.CharField(max_length=10, choices=STATUS, default="NEW")
+    emailed = models.BooleanField(default=False)
+    email_error = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "contact_message"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["role"], name="idx_contact_role"),
+            models.Index(fields=["created_at"], name="idx_contact_created"),
+        ]
+
+    def __str__(self):
+        return f"{self.reference} {self.role} {self.subject}"

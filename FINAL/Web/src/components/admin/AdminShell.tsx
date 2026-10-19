@@ -24,6 +24,7 @@ const clraGroup = { key: 'CLRA Registers', icon: BookOpenCheck, items: [
   ['CLRA Templates', '/admin/masters/register-template'],
   ['State Applicability', '/admin/masters/state-applicability'],
   ['Compliance Master', '/admin/masters/compliance'],
+  ['Medical Forms', '/admin/masters/medical-forms'],
 ] as const };
 const partyGroup = { key: 'Party & Templates', icon: BookOpenCheck, items: [
   ['Party Master', '/admin/masters/party'],

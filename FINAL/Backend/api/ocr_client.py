@@ -456,17 +456,44 @@ def extract_fields(doc_type, ocr_text):
             fields["gender"] = gender.group(1).title()
         name, address = _extract_aadhaar_name_address(raw)
         if name:
-            fields["name"] = name
+            fields["name"] = _normalise_name(name)
         if address:
             fields["address"] = address
+        # Care of (S/O, D/O, W/O, C/O) → also the father's name for S/O / D/O.
+        care = re.search(r"(?im)\b([SDWC])\s*/\s*O\s*[:\-]?\s*([A-Za-z][A-Za-z .']{2,60})", raw)
+        if care:
+            rel = care.group(1).upper()
+            who = re.sub(r"\s+", " ", care.group(2)).strip().title()
+            fields["care_of"] = f"{rel}/O {who}"
+            if rel in ("S", "D"):
+                fields["father"] = who
+        # Labelled "Address:" fallback (when no PIN-anchored block was found).
+        if not fields.get("address"):
+            al = re.search(r"(?im)^\s*address\s*[:\-]\s*(.+?)(?:\n\s*\n|$)", raw, re.S)
+            if al:
+                addr = re.sub(r"\s+", " ", al.group(1)).strip()
+                if len(addr) >= 6:
+                    fields["address"] = addr
 
     elif key == "pan":
         m = re.search(r"\b[A-Z]{5}\d{4}[A-Z]\b", raw.upper())
         if m:
             fields["pan"] = m.group(0)
         name = _extract_near_label(raw, "NAME")
+        if not name:
+            # e-PAN: the holder name is the first person-name line after the
+            # headers (Income Tax / Govt of India), before the father/DOB/PAN.
+            for ln in raw.splitlines():
+                t = ln.strip()
+                if not t:
+                    continue
+                if re.search(r"(?i)(income\s*tax|department|govt|government|permanent\s*account|account\s*number|signature|date\s*of\s*birth|father|dob|\bcard\b)", t):
+                    continue
+                if _looks_like_person_name(t):
+                    name = _normalise_name(t)
+                    break
         if name:
-            fields["name"] = name
+            fields["name"] = _normalise_name(name)
 
     elif key == "uan":
         m = re.search(r"(?<!\d)\d{12}(?!\d)", raw)
@@ -478,23 +505,64 @@ def extract_fields(doc_type, ocr_text):
         if m:
             fields["esic"] = m.group(0)
 
+    elif key == "dl":
+        m = re.search(r"\b([A-Z]{2}[\s-]?\d{2}[\s-]?\d{4}[\s-]?\d{7})\b", raw.upper())
+        if m:
+            fields["dl"] = re.sub(r"[\s-]+", "", m.group(1))
+        vt = re.search(r"(?:VALID\s*(?:TILL|UPTO|UP TO|TO))\D{0,20}(\d{1,2}[/.-]\d{1,2}[/.-]\d{4})", raw.upper())
+        if vt:
+            fields["validTill"] = vt.group(1).replace("/", "-")
+
     return fields
 
 
+def _normalise_name(value: str) -> str:
+    """Insert word gaps into camel-cased OCR names and title-case them.
+
+    "SyedYasserAli" -> "Syed Yasser Ali" (preserves the gaps the text layer or
+    OCR did provide)."""
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    text = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", text)
+    text = re.sub(r"(?<=[A-Za-z])(?=[0-9])|(?<=[0-9])(?=[A-Za-z])", " ", text)
+    words = []
+    for word in text.split():
+        if word.isupper() and len(word) > 1:
+            words.append(word.title())
+        else:
+            words.append(word[:1].upper() + word[1:] if word else word)
+    return " ".join(words).strip()
+
+
 def _extract_dob(raw: str):
-    m = re.search(r"\b\d{1,2}[/.-]\d{1,2}[/.-]\d{4}\b", raw)
+    # Prefer the date labelled DOB / Date of Birth — never the issue date.
+    m = re.search(r"(?is)(?:date\s*of\s*birth|dob|जन्म)[^\d]{0,25}?(\d{1,2}[/.-]\d{1,2}[/.-]\d{4})", raw)
+    if not m:
+        for cand in re.finditer(r"\b\d{1,2}[/.-]\d{1,2}[/.-]\d{4}\b", raw):
+            prefix = raw[max(0, cand.start() - 24):cand.start()].lower()
+            if "issue" in prefix:
+                continue
+            m = cand
+            break
     if not m:
         return None
-    value = m.group(0).replace(".", "/").replace("-", "/")
+    value = m.group(1) if m.lastindex else m.group(0)
+    value = value.replace(".", "/").replace("-", "/")
     parts = value.split("/")
-    if parts[0].isdigit() and parts[1].isdigit() and parts[2].isdigit():
+    if len(parts) == 3 and all(p.isdigit() for p in parts):
         return f"{int(parts[0]):02d}/{int(parts[1]):02d}/{parts[2]}"
     return None
 
 
 _LABELS = ("ADDRESS", "GENDER", "DOB", "YEAR OF BIRTH", "AADHAAR", "UIDAI",
            "GOVERNMENT", "UNIQUE", "MERI", "HINDI", "हिन्दी", "PHOTO", "SIGN",
-           "NAME", "DATE", "FATHER", "MOTHER", "SPOUSE")
+           "NAME", "DATE", "FATHER", "MOTHER", "SPOUSE", "INFORMATION", "ISSUE")
+
+_HEADER_WORDS = re.compile(
+    r"(UNIQUE|IDENTIFICATION|AUTHORITY|GOVERNMENT|AADHAAR|UIDAI|INDIA|MERA|"
+    r"PEHCHAN|ENROL|INFORMATION|PHOTO|SIGNATURE|SIGN|\bVID\b|MALE|FEMALE|"
+    r"TRANSGENDER|ISSUE|CITIZENSHIP|AUTHENTICATION|VERIFY|SECURE|QRCODE)",
+    re.I,
+)
 
 
 def _looks_like_name(line: str) -> bool:
@@ -505,10 +573,16 @@ def _looks_like_name(line: str) -> bool:
         return False
     if re.search(r"\d", t):
         return False
-    if re.search(r"[\u0900-\u097F]", t):  # Devanagari = "मेरी पहचान" slogan, not a name
+    if re.search(r"[\u0900-\u097F]", t):  # Devanagari slogan, not a name
         return False
     letters = sum(c.isalpha() for c in t)
     if letters < max(4, int(len(t) * 0.6)) or letters < 4:
+        return False
+    if _HEADER_WORDS.search(t):
+        return False
+    if re.search(r"\b[SDWC]\s*/\s*O\b", t, re.I):
+        return False
+    if ":" in t or re.match(r"(?i)^(name|father|mother|spouse|dob|gender|address|care of|s/o|d/o|w/o|to\b|this\b|verify\b)", t):
         return False
     up = t.upper()
     core = re.sub(r"^[^A-Z]+", "", up)
@@ -518,64 +592,105 @@ def _looks_like_name(line: str) -> bool:
     return True
 
 
-_ADDRESS_HINTS = ("VILLAGE", "POST", "MANDAL", "TEHSIL", "TALUK", "TALUKA",
-                  "DISTRICT", "STATE", "ROAD", "STREET", "NAGAR", "NAGAR "
-                  "HNO", "HOUSE", "NEAR", "LAXMI", "GOVIND", "RAM", "SHIVA")
+def _looks_like_person_name(line: str) -> bool:
+    """Title-case 1–5 word personal name (rejects sentence-like OCR lines)."""
+    if not _looks_like_name(line):
+        return False
+    words = re.split(r"\s+", line.strip())
+    if not (1 <= len(words) <= 5):
+        return False
+    return all(re.match(r"^[A-Z][A-Za-z.'-]*$", w) for w in words)
+
+
+_ADDRESS_HINTS = re.compile(
+    r"(?i)(floor|house|nagar|delhi|road|street|colony|village|post|district|"
+    r"state|block|sector|apartment|flat|marg|chowk|manzil|jamia|batla|near|"
+    r"area|city|pin|tehsil|taluk|mandal)",
+)
+
+
+def _address_line(line: str, name: str | None = None) -> bool:
+    t = line.strip()
+    if not t:
+        return False
+    if re.match(r"(?i)^(address|issue date|date of birth|dob|vid|enrolment|government|unique|aadhaar|uidai|india|to\b|this\b)", t):
+        return False
+    if re.search(r"(?i)\b(male|female|transgender)\b", t):
+        return False
+    if re.search(r"\b[SDWC]\s*/\s*O\b", t, re.I):
+        return False
+    if name and t.lower() == name.lower():
+        return False
+    if re.fullmatch(r"\d{10}", t) or re.fullmatch(r"\d{4}\s?\d{4}\s?\d{4}", t):
+        return False
+    if re.search(r"[\u0900-\u097F]", t):
+        return False
+    return bool(_ADDRESS_HINTS.search(t) or re.search(r"\d", t))
+
+
+def _clean_address(text: str) -> str:
+    text = re.sub(r"(?i)\b(address|hindi|हिन्दी|पता|meri pehchan|मेरी पहचान)\b", " ", text)
+    text = re.sub(r"\s+", " ", text).strip(" ,-")
+    return text
 
 
 def _extract_aadhaar_name_address(raw: str):
     lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
     name = None
-    dob_idx = next(
-        (i for i, ln in enumerate(lines)
-         if re.search(r"DOB|YEAR\s*OF\s*BIRTH|JANM", ln, re.IGNORECASE)),
+    # An explicitly labelled "Name: …" line wins.
+    lab = re.search(r"(?im)^\s*name\s*[:\-]\s*(.+?)\s*$", raw)
+    if lab:
+        cand = re.sub(r"\s+", " ", lab.group(1)).strip()
+        if _looks_like_person_name(cand):
+            name = _normalise_name(cand)
+
+    care_idx = next(
+        (i for i, ln in enumerate(lines) if re.search(r"\b[SDWC]\s*/\s*O\b", ln, re.I)),
         None,
     )
-    if dob_idx is None:
-        date_idx = next(
-            (i for i, ln in enumerate(lines) if re.search(r"\b\d{1,2}[/.-]\d{1,2}[/.-]\d{4}\b", ln)),
+    # Usually the name sits directly above the S/O line.
+    if not name and care_idx is not None:
+        for i in range(care_idx - 1, max(-1, care_idx - 4), -1):
+            if _looks_like_person_name(lines[i]):
+                name = _normalise_name(lines[i])
+                break
+    # Otherwise the first person-name line near the top (after the headers).
+    if not name:
+        for ln in lines[:18]:
+            if _looks_like_person_name(ln):
+                name = _normalise_name(ln)
+                break
+    # Final fallback: near the DOB line.
+    if not name:
+        dob_idx = next(
+            (i for i, ln in enumerate(lines)
+             if re.search(r"DOB|DATE\s*OF\s*BIRTH|JANM|जन्म", ln, re.I)),
             None,
         )
-    else:
-        date_idx = None
-    window = dob_idx if dob_idx is not None else date_idx
-    if window is not None:
-        for i in range(max(0, window - 2), window):
-            if _looks_like_name(lines[i]):
-                name = re.sub(r"\s+", " ", lines[i]).title()
-                break
-        if name is None:
-            for i in range(window + 1, min(len(lines), window + 4)):
-                if _looks_like_name(lines[i]):
-                    name = re.sub(r"\s+", " ", lines[i]).title()
+        if dob_idx is not None:
+            for i in range(max(0, dob_idx - 3), dob_idx):
+                if _looks_like_person_name(lines[i]):
+                    name = _normalise_name(lines[i])
                     break
 
+    # Address: the block ending at the first PIN code, starting after S/O.
     address = None
-    pin = None
-    pin_idx = None
-    for i, ln in enumerate(lines):
-        m = re.search(r"\b([1-9]\d{5})(?!\d)", ln)
-        if m:
-            pin = m.group(1)
-            pin_idx = i
-            break
+    pin_idx = next(
+        (i for i, ln in enumerate(lines) if re.search(r"\b[1-9]\d{5}(?!\d)", ln)),
+        None,
+    )
     if pin_idx is not None:
-        gender_idx = next(
-            (i for i, ln in enumerate(lines) if re.match(r"^(MALE|FEMALE|TRANSGENDER)$", ln.upper())),
-            window if window is not None else -1,
-        )
-        start = gender_idx + 1 if gender_idx is not None and gender_idx >= 0 else (window + 2 if window is not None else 0)
-        if start < 0:
-            start = 0
-        if start < pin_idx:
-            chunk = " ".join(lines[start:pin_idx + 1])
-        else:
-            chunk = lines[pin_idx]
-        chunk = re.sub(r"(?i)(address|hindi|हिन्दी|पता|meri pehchan|मेरी पहचान)", " ", chunk)
-        chunk = re.sub(r"\b\d{4}\s?\d{4}\s?\d{4}\b", " ", chunk)
-        chunk = re.sub(r"\s+", " ", chunk).strip()
-        if len(chunk) >= 6:
-            address = chunk
+        start = care_idx + 1 if care_idx is not None and care_idx < pin_idx else max(0, pin_idx - 7)
+        block = [ln for ln in lines[start:pin_idx + 1] if _address_line(ln, name)]
+        if block:
+            address = _clean_address(" ".join(block))
+    # Labelled "Address:" fallback.
+    if not address:
+        al = re.search(r"(?im)^\s*address\s*[:\-]\s*(.+?)(?:\n\s*\n|$)", raw, re.S)
+        if al:
+            addr = _clean_address(re.sub(r"\s+", " ", al.group(1)).strip())
+            if len(addr) >= 6:
+                address = addr
     return name, address
 
 

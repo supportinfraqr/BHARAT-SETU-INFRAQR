@@ -701,16 +701,16 @@ def aadhaar_verify(request):
     return Response(payload, status=status.HTTP_201_CREATED)
 
 
-@api_view(["POST"])
-@authentication_classes([BssSessionAuthentication])
-@permission_classes([IsAuthenticated])
-def worker_link_aadhaar(request):
-    """Link/verify Aadhaar for the currently authenticated worker and fill
-    identity (name/gender/dob/aadhaar/photo) + current address from oKYC."""
-    body = request.data or {}
-    aadhaar = _sanitize_aadhaar(body.get("aadhaar"))
-    reference_id = str(body.get("referenceId") or "").strip()
-    otp = str(body.get("otp") or "").strip()
+def link_aadhaar_for_worker(user, body):
+    """Verify an Aadhaar OTP and fill the given worker's identity/address from oKYC.
+
+    Shared by the worker's own profile flow (``user = request.user``) and the
+    contractor-assisted onboarding desk (``user`` = the target worker). Returns a
+    DRF ``Response`` describing the error, or ``None`` on success.
+    """
+    aadhaar = _sanitize_aadhaar((body or {}).get("aadhaar"))
+    reference_id = str((body or {}).get("referenceId") or "").strip()
+    otp = str((body or {}).get("otp") or "").strip()
     if not aadhaar or not otp:
         return Response({"error": "Aadhaar number and OTP are required"},
                         status=status.HTTP_400_BAD_REQUEST)
@@ -737,7 +737,6 @@ def worker_link_aadhaar(request):
     if result.get("code") != 200 or data.get("message") != "Aadhaar Card Exists":
         return _verify_failure(aadhaar, challenge, str(data.get("message") or "").strip())
 
-    user = request.user
     if UserCredential.objects.filter(identity_type="aadhaar", identity_value=aadhaar).exclude(user=user).exists():
         return Response({"error": "This Aadhaar is already linked to another account."},
                         status=status.HTTP_400_BAD_REQUEST)
@@ -797,6 +796,18 @@ def worker_link_aadhaar(request):
                                   "full_address", "state", "district", "pincode",
                                   "photo_path", "status", "updated_at"])
 
+    return None
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_link_aadhaar(request):
+    """Link/verify Aadhaar for the currently authenticated worker and fill
+    identity (name/gender/dob/aadhaar/photo) + current address from oKYC."""
+    err = link_aadhaar_for_worker(request.user, request.data or {})
+    if err is not None:
+        return err
     return Response({"success": True, "aadhaarVerified": True}, status=status.HTTP_200_OK)
 
 
@@ -811,4 +822,5 @@ __all__ = [
     "aadhaar_otp",
     "aadhaar_verify",
     "worker_link_aadhaar",
+    "link_aadhaar_for_worker",
 ]

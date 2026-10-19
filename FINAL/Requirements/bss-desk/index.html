@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BSS Worker Verification Desk</title>
+  <link rel="icon" href="assets/bss-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="tricolor" aria-hidden="true"><span></span><span></span><span></span></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/bss-logo.png" alt="" width="28" height="32">
+      <div><strong>Bharat Shram Setu</strong><small>Verification Desk</small></div>
+    </div>
+    <div class="case"><small>Case</small><b id="caseId"></b></div>
+    <label class="op"><small>Operator</small><input id="operator" placeholder="Your name" autocomplete="name"></label>
+    <button class="rec-btn" id="recBtn" type="button" title="Records the whole screen for the audit trail">
+      <span class="dot"></span><span id="recText">Record session</span>
+    </button>
+    <div class="progress-ring" aria-live="polite"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5" class="track"/><circle cx="18" cy="18" r="15.5" class="bar" id="progressBar"/></svg><span id="progressText">0/5</span></div>
+    <div class="top-actions">
+      <button class="btn ghost" id="resetBtn" type="button">New case</button>
+      <button class="btn primary" id="lockBtn" type="button">Lock &amp; download</button>
+    </div>
+  </header>
+
+  <div class="desk">
+    <!-- LEFT: what the worker declares -->
+    <aside class="declared">
+      <section class="panel">
+        <h2>Declared by worker</h2>
+        <div class="f" data-w="name"><label>Full name<input id="w_name" data-key="name" autocomplete="off" placeholder="As the worker states it"></label><small class="msg"></small></div>
+        <div class="row2">
+          <div class="f" data-w="dob"><label>Date of birth<input id="w_dob" data-key="dob" type="date"></label><small class="msg"></small></div>
+          <div class="f" data-w="gender"><label>Gender<select id="w_gender" data-key="gender"><option value="">—</option><option value="M">Male</option><option value="F">Female</option><option value="T">Transgender</option></select></label><small class="msg"></small></div>
+        </div>
+        <div class="row2">
+          <div class="f" data-w="mobile"><label>Mobile<input id="w_mobile" data-key="mobile" inputmode="numeric" maxlength="10" placeholder="10 digits"></label><small class="msg"></small></div>
+          <div class="f"><label>BSS ID<input id="w_bssid" data-key="bssid" autocomplete="off" placeholder="Optional"></label><small class="msg"></small></div>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Document numbers</h2>
+        <div id="docFields" class="doc-fields"></div>
+      </section>
+      <section class="panel photos" id="photoStrip" hidden></section>
+      <section class="panel live-panel">
+        <h2>Live capture</h2>
+        <div class="lv-row"><span class="lv-dot" id="liveDot" data-state="off"></span><div class="lv-text"><b id="liveTitle">Live reading off</b><small id="liveSub"></small></div><button class="chip" id="liveBtn" type="button">Start</button></div>
+        <div class="lv-row"><span class="lv-dot" id="watchDot" data-state="off"></span><div class="lv-text"><b id="watchTitle">Download folder</b><small id="watchSub"></small></div><button class="chip" id="watchBtn" type="button">Pick</button></div>
+        <div class="lv-row"><span class="lv-dot" id="jsonDot" data-state="off"></span><div class="lv-text"><b id="jsonTitle">Case JSON</b><small id="jsonSub"></small></div><button class="chip" id="jsonBtn" type="button">⬇ JSON</button></div>
+        <small class="lv-hint">Chrome won't watch the Downloads folder itself: make a folder such as <b>Downloads/BSS</b>, set it as the browser's download location, and pick it here.</small>
+      </section>
+      <p class="consent">OTPs go to the worker's phone: verify only with the worker present and consenting. Live reading sees only the portal window you share. Data stays in this browser and the folder you pick.</p>
+    </aside>
+
+    <!-- RIGHT: five documents + integrity -->
+    <main class="tiles" id="grid">
+      <section class="tile integrity" id="integrity">
+        <header class="t-head">
+          <span class="t-icon">✓</span>
+          <div class="t-title"><h3>Case integrity</h3><small>Declared vs official · proof · audit</small></div>
+          <span class="score" id="intScore">—</span>
+        </header>
+        <table class="matrix" id="matrix"></table>
+        <ul class="flags" id="flags"></ul>
+        <div class="audit"><small>Audit trail</small><ol id="auditList"></ol></div>
+      </section>
+    </main>
+  </div>
+
+  <template id="tileTpl">
+    <article class="tile">
+      <header class="t-head">
+        <span class="t-icon"></span>
+        <div class="t-title"><h3></h3><small class="t-source"></small></div>
+        <span class="status" data-state="pending">Pending</span>
+      </header>
+      <div class="t-num"><button class="t-value" type="button" title="Declared number: click to copy">—</button></div>
+      <ol class="t-steps"></ol>
+      <div class="t-links"></div>
+      <div class="t-actions">
+        <button class="act open" type="button"></button>
+        <label class="act main"><input type="file" hidden><span></span></label>
+      </div>
+      <div class="t-record"><div class="rec-head"><span>Official record</span><span>vs declared</span></div><div class="rec-rows"></div></div>
+      <div class="t-ev"><div class="ev-strip"></div></div>
+      <footer class="t-foot">
+        <small class="blockers"></small>
+        <button class="chip bad" type="button">Mismatch</button>
+        <button class="chip ok" type="button">Verify</button>
+      </footer>
+    </article>
+  </template>
+
+  <!-- Override -->
+  <dialog id="overrideDlg" class="kyc-dlg small-dlg" aria-labelledby="ovTitle">
+    <header class="kyc-head"><div><h2 id="ovTitle">Verify with open issues?</h2><p>These checks have not passed. An override is logged with your name and reason, and shown in the case file.</p></div></header>
+    <ul class="kyc-checks" id="ovList"></ul>
+    <label class="ov-label">Reason (at least 15 characters)<textarea id="ovReason" rows="3" placeholder="e.g. PAN shows initials R K YADAV; card checked in person"></textarea></label>
+    <footer class="kyc-foot"><small id="ovWho"></small><button class="btn ghost-dark" id="ovCancel" type="button">Cancel</button><button class="btn primary" id="ovOk" type="button" disabled>Override &amp; verify</button></footer>
+  </dialog>
+
+  <!-- Evidence viewer -->
+  <dialog id="evDlg" class="kyc-dlg ev-dlg" aria-label="Evidence">
+    <header class="kyc-head"><div><h2 id="evTitle">Evidence</h2><p id="evMeta"></p></div><button class="chip icon" id="evClose" type="button" aria-label="Close">✕</button></header>
+    <div class="ev-view" id="evView"></div>
+    <details class="ev-text"><summary>Text read from this file</summary><pre id="evText"></pre></details>
+    <footer class="kyc-foot"><code id="evHash"></code><a class="btn ghost-dark" id="evSave" download>Save</a><button class="btn danger" id="evRemove" type="button">Remove (logged)</button></footer>
+  </dialog>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@zip.js/zip.js@2.7.52/dist/zip.min.js"></script>
+  <script src="app.js"></script>
+  <script src="readers.js"></script>
+  <script src="evidence.js"></script>
+  <script src="live.js"></script>
+</body>
+</html>

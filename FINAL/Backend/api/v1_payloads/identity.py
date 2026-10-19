@@ -32,6 +32,64 @@ def _addr_line(obj, prefix):
     return ", ".join(_d(p) for p in parts if _d(p))
 
 
+def _gate_pass_dict(gp=None, status="", number="", valid_from=None, valid_to=None):
+    """Latest issued pass when present, else the welfare-record fallback."""
+    if gp is not None:
+        status_text = _d(gp.status)
+        return {
+            "status": status_text,
+            "number": _d(gp.gate_pass_no),
+            "validFrom": _date_str(gp.start_date),
+            "validTo": _date_str(gp.end_date),
+            "site": _d(gp.site.site_name) if gp.site_id else "",
+            "issued": status_text.upper() != "PENDING",
+            "dispatched": bool(gp.dispatched),
+            "source": _d(gp.source),
+        }
+    status_text = _d(status)
+    issued = bool(_d(number)) or status_text.strip().lower() in (
+        "issued", "active", "approved", "valid", "dispatched")
+    return {
+        "status": status_text,
+        "number": _d(number),
+        "validFrom": _date_str(valid_from),
+        "validTo": _date_str(valid_to),
+        "site": "",
+        "issued": issued,
+        "dispatched": issued,
+        "source": "",
+    }
+
+
+def _org_identity(user_obj):
+    """Proper display name + BSS code for a contractor/employer account.
+
+    Never exposes a raw login username such as ``contractor_44444``: when the
+    profile has no usable name, the BSS code is shown instead.
+    """
+    if user_obj is None:
+        return "", ""
+    cp = getattr(user_obj, "contractor_profile", None)
+    if cp is None:
+        cp = ContractorProfile.objects.filter(user=user_obj).first()
+    if cp is not None:
+        code = _d(cp.contractor_code)
+        name = _d(cp.contractor_name) or _d(cp.trade_name)
+        if not name or name.lower().startswith(("contractor_", "contractor ")):
+            name = _d(cp.trade_name) or code or name
+        return name, code
+    ep = getattr(user_obj, "employer_profile", None)
+    if ep is None:
+        ep = EmployerProfile.objects.filter(user=user_obj).first()
+    if ep is not None:
+        code = _d(ep.employer_code)
+        name = _d(ep.employer_name) or _d(ep.trade_name)
+        if not name or name.lower().startswith(("employer_", "employer ")):
+            name = _d(ep.trade_name) or code or name
+        return name, code
+    return _org_name(user_obj), ""
+
+
 def _worker_relationship(worker_user, viewer):
     """'self' | 'bound' | 'public' — whether the viewer may see the full record."""
     if viewer is None or not getattr(viewer, "is_authenticated", False):
@@ -98,10 +156,18 @@ def _worker_details(wi, user):
     welfare = WorkerWelfareSafety.objects.filter(user=user).first()
     addr = WorkerAddressMobility.objects.filter(user=user).first()
     wage = WorkerWages.objects.filter(worker=user).order_by("-period_end", "-id").first()
+    passes = {}
+    for gp in (WorkerGatePass.objects.filter(worker=user)
+               .select_related("site").order_by("-created_at")):
+        passes.setdefault(gp.gate_pass_type, gp)
+    from .shared import _gate_pass_eligibility
+    eligibility = _gate_pass_eligibility(user)
     binding = (WorkerContractorBinding.objects
                .filter(worker=user, binding_status="ACCEPTED")
                .select_related("contractor", "site", "site__employer").first())
     site = binding.site if binding and binding.site else None
+    contractor_name, contractor_code = _org_identity(binding.contractor) if binding else ("", "")
+    employer_name, employer_code = _org_identity(site.employer) if site else ("", "")
     return {
         "aadhaar": _d(wi.aadhaar),
         "pan": _d(wi.pan),
@@ -140,9 +206,12 @@ def _worker_details(wi, user):
             "eshram": _d(ss.e_shram_no if ss else ""),
         },
         "employment": {
-            "contractor": _org_name(binding.contractor) if binding else "",
-            "employer": _org_name(site.employer) if site else "",
+            "contractor": contractor_name,
+            "contractorBssId": contractor_code,
+            "employer": employer_name,
+            "employerBssId": employer_code,
             "site": _d(site.site_name) if site else "",
+            "siteCode": _d(site.site_code) if site else "",
             "designation": _d((emp.designation if emp else "") or (binding.designation if binding else "")),
             "department": _d((emp.department if emp else "") or (binding.department if binding else "")),
             "shift": _d((emp.shift if emp else "") or (binding.shift if binding else "")),
@@ -156,10 +225,45 @@ def _worker_details(wi, user):
             "periodEnd": _dts(wage.period_end) if wage and wage.period_end else "",
         } if wage else None,
         "welfare": {
+            "ppeRequired": welfare.ppe_required if welfare else None,
             "ppe": _d(welfare.types_of_ppe_given if welfare else ""),
             "safetyTraining": bool(welfare.safety_training_completed) if welfare else False,
+            "siteInduction": _d(welfare.site_induction_status if welfare else ""),
             "insurance": _d(welfare.insurance_status if welfare else ""),
             "policeVerification": _d(welfare.police_verification if welfare else ""),
+            "trainingDate": _date_str(welfare.training_date) if welfare else "",
+            "trainerName": _d(welfare.trainer_name if welfare else ""),
+            "contractorVerified": bool(welfare.contractor_verified) if welfare else False,
+        },
+        "gatePass": {
+            "temporary": _gate_pass_dict(
+                passes.get("TGP"),
+                welfare.temp_gatepass_status if welfare else "",
+                welfare.tgp_no if welfare else "",
+                welfare.temp_gatepass_start_date if welfare else None,
+                welfare.temp_gatepass_end_date if welfare else None,
+            ),
+            "permanent": _gate_pass_dict(
+                passes.get("PGP"),
+                welfare.permanent_gatepass_status if welfare else "",
+                welfare.pgp_no if welfare else "",
+                welfare.permanent_gatepass_start_date if welfare else None,
+                welfare.permanent_gatepass_end_date if welfare else None,
+            ),
+            "eligibility": eligibility,
+        },
+        "verification": {
+            "aadhaar": eligibility["aadhaar"] == "Done",
+            "pan": eligibility["pan"] == "Done",
+            "bank": eligibility["bank"] == "Done",
+            "uan": eligibility["uan"] == "Done",
+            "esi": eligibility["esi"] == "Done",
+        },
+        "medical": {
+            "examinationStatus": _d(welfare.medical_examination_status if welfare else ""),
+            "lastExamination": _date_str(welfare.last_medical_examination) if welfare else "",
+            "fitnessStatus": _d(welfare.medical_fitness_status if welfare else ""),
+            "nextDue": _date_str(welfare.next_medical_due) if welfare else "",
         },
     }
 

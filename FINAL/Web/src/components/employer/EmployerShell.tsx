@@ -58,6 +58,10 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
     ...(staffPerms.includes('medical') ? [{ key: 'Medical', href: '/employer/worker-compliance-checklists?tab=medical', icon: Stethoscope }] : []),
     ...(staffPerms.includes('safety') ? [{ key: 'Health & Safety', href: '/employer/worker-compliance-checklists?tab=safety', icon: HardHat }] : []),
     ...(staffPerms.includes('gate_pass') ? [{ key: 'Gate Pass', href: '/employer/gate-pass', icon: ShieldCheck }] : []),
+    ...(staffPerms.includes('compliance') ? [
+      { key: 'Compliance Review', href: '/employer/compliance-submission', icon: ClipboardCheck },
+      { key: 'Monthly Audit', href: '/employer/audit-reports', icon: FileSpreadsheet },
+    ] : []),
   ];
   const groups = isStaff ? staffGroups : [ { key:'nav.dashboard', href:'/employer/dashboard', icon:LayoutDashboard }, workforceGroup, sitesGroup, { key:'nav.payroll', href:'/employer/payroll', icon:Banknote }, complianceGroup, qrGroup, ...(employer.canAccessAdmin ? [adminGroup] : []) ];
   const mobileItems = groups.reduce<Array<readonly [string,string]>>((items, group) => items.concat('href' in group ? [[group.key, group.href]] : group.items as unknown as readonly [string,string][]), []);

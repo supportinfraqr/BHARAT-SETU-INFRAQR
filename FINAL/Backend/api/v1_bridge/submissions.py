@@ -260,6 +260,7 @@ def _submissions(request):
 @permission_classes([IsAuthenticated])
 def submission_file_token(request, role_path, submission_id):
     """Issue a single-use, 5-minute token to view submission evidence inline in a new tab."""
+    _require_permission(request, "compliance")
     import hashlib
     import secrets
     from bss_core.models import DocumentAccessToken
@@ -336,6 +337,7 @@ def submission_file_serve(request, token):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def submission_file_download(request, role_path, submission_id):
+    _require_permission(request, "compliance")
     submission = SubmissionEvidence.objects.filter(pk=submission_id).first()
     if submission is None:
         return Response({"error": "submission not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -689,6 +691,7 @@ def contractor_compliance_batches(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def compliance_batch_download(request, role_path, batch_id):
+    _require_permission(request, "compliance")
     from bss_core.models import ComplianceBatch
     batch = ComplianceBatch.objects.filter(pk=batch_id).first()
     if batch is None:
@@ -1141,6 +1144,7 @@ def _visible_batch(user, batch_id):
 @permission_classes([IsAuthenticated])
 def compliance_batch_summary(request, batch_id):
     """State/Site-wise drill-down of a generated batch."""
+    _require_permission(request, "compliance")
     batch = _visible_batch(request.user, batch_id)
     if batch is None:
         return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -1171,6 +1175,7 @@ def compliance_batch_summary(request, batch_id):
 @permission_classes([IsAuthenticated])
 def compliance_batch_master_download(request, batch_id):
     """Download the master file a batch was generated from."""
+    _require_permission(request, "compliance")
     from django.http import FileResponse
     batch = _visible_batch(request.user, batch_id)
     if batch is None:
@@ -1188,6 +1193,7 @@ def compliance_batch_master_download(request, batch_id):
 @permission_classes([IsAuthenticated])
 def compliance_batch_site_documents(request, batch_id):
     """Documents applicable to one site of a batch: employer mapping + state templates."""
+    _require_permission(request, "compliance")
     from bss_core.models import EmployerDocumentMapping
     batch = _visible_batch(request.user, batch_id)
     if batch is None:
@@ -1381,6 +1387,7 @@ def compliance_batch_run_audits(request, batch_id):
     """(Re)run the AI audit for every register in a batch (in the background).
 
     Useful when the audit ran before an AI provider was configured."""
+    _require_permission(request, "compliance")
     batch = _visible_batch(request.user, batch_id)
     if batch is None:
         return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -1449,6 +1456,7 @@ def _signature_data_uri(signature):
 @permission_classes([IsAuthenticated])
 def compliance_batch_register(request, batch_id, template_id):
     """Render one register (a State+Form template) from a generated batch."""
+    _require_permission(request, "compliance")
     from api import clra
     from bss_core.models import RegisterTemplate
     batch = _visible_batch(request.user, batch_id)
@@ -1485,6 +1493,7 @@ def compliance_batch_register(request, batch_id, template_id):
 @permission_classes([IsAuthenticated])
 def compliance_batch_register_export(request, batch_id, template_id):
     """Export one register (State+Form template) from a batch as XLSX."""
+    _require_permission(request, "compliance")
     import io
 
     from django.http import FileResponse
@@ -1526,6 +1535,7 @@ def compliance_batch_register_export(request, batch_id, template_id):
 @permission_classes([IsAuthenticated])
 def compliance_batch_register_pdf(request, batch_id, template_id):
     """Render one register (State+Form template) from a batch as a PDF download."""
+    _require_permission(request, "compliance")
     import io
 
     from django.http import FileResponse
@@ -1573,6 +1583,7 @@ def compliance_batch_register_pdf(request, batch_id, template_id):
 @permission_classes([IsAuthenticated])
 def compliance_batch_register_issues(request, batch_id, template_id):
     """Download the AI-audit problems for one register (Excel)."""
+    _require_permission(request, "compliance")
     import io
 
     from django.http import FileResponse
@@ -1623,6 +1634,7 @@ def _visible_evidence(user, submission_id):
 @permission_classes([IsAuthenticated])
 def submission_audit_issues(request, submission_id):
     """Download the AI-audit problems for one uploaded document (Excel)."""
+    _require_permission(request, "compliance")
     import io
 
     from django.http import FileResponse

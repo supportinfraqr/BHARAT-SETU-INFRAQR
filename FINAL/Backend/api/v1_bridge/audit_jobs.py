@@ -144,6 +144,118 @@ def _write_runner_request(job, cred):
     return path
 
 
+def _dt(value):
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _event(job, type_, payload=None):
+    from bss_core.models import AuditJobEvent
+    try:
+        AuditJobEvent.objects.create(job=job, type=type_, payload=payload or {})
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _progress_payload(data):
+    return {key: data.get(key) for key in ("stage", "percent", "message", "done", "total", "elapsedSeconds", "stalled")
+            if data.get(key) is not None}
+
+
+def _profile_email(user):
+    if user is None:
+        return ""
+    cp = getattr(user, "contractor_profile", None)
+    ep = getattr(user, "employer_profile", None)
+    return (payloads._d(getattr(cp, "email", "") if cp else "")
+            or payloads._d(getattr(ep, "email", "") if ep else "")
+            or payloads._d(getattr(user, "email", "")))
+
+
+def _notify_job(job):
+    """In-app + email notification once a job reaches a terminal state."""
+    if job.notified_at:
+        return
+    from django.core.mail import EmailMultiAlternatives
+    from bss_core.models import User
+
+    status = str(job.status or "").upper()
+    if status not in ("READY", "FAILED", "CANCELLED"):
+        return
+    summary = job.summary or {}
+    counts = summary.get("statusCounts") or {}
+    risk = summary.get("riskCounts") or {}
+    site = payloads._d(job.site.site_name) if job.site_id else ""
+    period = f"{job.month} {job.year}"
+    if status == "READY":
+        title = f"Audit ready — {period}{f' · {site}' if site else ''}"
+        body = (f"The audit report for {period}{f' at {site}' if site else ''} is ready. "
+                f"Compliance: {(summary.get('verdict') or summary.get('executiveSummary') or 'See report')[:180]}")
+        link = "/contractor/audit-reports"
+        notif_type = "COMPLIANCE"
+    else:
+        title = f"Audit {status.lower()} — {period}{f' · {site}' if site else ''}"
+        body = (job.error_message or "The audit could not be completed.")[:400]
+        link = "/contractor/audit-reports"
+        notif_type = "WARNING"
+
+    recipients = [job.contractor, job.employer]
+    if status != "READY":
+        admin = User.objects.filter(role="bss_admin", is_active=True).first()
+        if admin is not None:
+            recipients.append(admin)
+    seen = set()
+    for user in recipients:
+        if user is None or user.id in seen:
+            continue
+        seen.add(user.id)
+        user_link = ("/employer/audit-reports" if user.role == "employer"
+                     else "/admin/audit-reports" if user.role in ("bss_admin", "bss_staff", "admin")
+                     else link)
+        _create_notification(user, title, body, notif_type, user_link)
+
+    emails = sorted({email for email in (_profile_email(u) for u in recipients if u) if email})
+    if emails:
+        base = str(getattr(settings, "BSS_PUBLIC_BASE_URL", "")).rstrip("/")
+        url = f"{base}{link}"
+        counts_text = ", ".join(f"{k}: {v}" for k, v in counts.items()) or "—"
+        risk_text = ", ".join(f"{k}: {v}" for k, v in risk.items()) or "—"
+        text = (f"Bharat Shram Setu — monthly contractor audit\n\n"
+                f"Status: {status}\nPeriod: {period}\nSite: {site or '—'}\n"
+                f"Contractor: {payloads._party_name(job.contractor) if job.contractor_id else ''}\n"
+                f"Checkpoints: {counts_text}\nRisk: {risk_text}\n"
+                f"{('Error: ' + job.error_message) if job.error_message else ''}\n\n"
+                f"Open the report: {url}\n")
+        html = (f"<div style=\"font-family:Arial,sans-serif;color:#0f172a\">"
+                f"<h2 style=\"color:#01183A\">Monthly contractor audit — {status.title()}</h2>"
+                f"<p><b>Period:</b> {period}<br/><b>Site:</b> {site or '—'}<br/>"
+                f"<b>Contractor:</b> {payloads._party_name(job.contractor) if job.contractor_id else ''}</p>"
+                f"<p><b>Checkpoints:</b> {counts_text}<br/><b>Risk:</b> {risk_text}</p>"
+                + (f"<p style=\"color:#b91c1c\"><b>Error:</b> {job.error_message}</p>" if job.error_message else "")
+                + f"<p><a href=\"{url}\" style=\"background:#01183A;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none\">Open report</a></p>"
+                f"<p style=\"color:#64748b;font-size:12px\">Bharat Shram Setu · audit job {job.id}</p></div>")
+        try:
+            msg = EmailMultiAlternatives(
+                subject=f"[BSS Audit] {period}{f' · {site}' if site else ''} — {status.title()}",
+                body=text, from_email=settings.DEFAULT_FROM_EMAIL, to=emails,
+            )
+            msg.attach_alternative(html, "text/html")
+            if status == "READY" and job.report_pdf:
+                path = Path(job.job_dir) / job.report_pdf
+                if path.exists() and path.stat().st_size <= 8 * 1024 * 1024:
+                    msg.attach(path.name, path.read_bytes(), "application/pdf")
+            msg.send(fail_silently=True)
+        except Exception:  # noqa: BLE001
+            logger.exception("Audit notification email failed for %s", job.id)
+    job.notified_at = timezone.now()
+    job.save(update_fields=["notified_at", "updated_at"])
+
+
 def _sync_job_from_status(job):
     """Read the runner's status.json and update the DB (BSS side only)."""
     if not job.job_dir:
@@ -157,39 +269,91 @@ def _sync_job_from_status(job):
     except Exception:  # noqa: BLE001
         return False
     status = str(data.get("status") or "").upper()
+    progress = _progress_payload(data)
+    heartbeat = _dt(data.get("lastHeartbeat")) or timezone.now()
+    changed = False
     if status == "RUNNING":
+        changed = job.status != "RUNNING" or job.progress != progress
         job.status = "RUNNING"
+        job.progress = progress
+        job.last_heartbeat = heartbeat
         if not job.started_at:
-            job.started_at = timezone.now()
-        job.save(update_fields=["status", "started_at", "updated_at"])
+            job.started_at = _dt(data.get("startedAt")) or timezone.now()
+        job.save(update_fields=["status", "progress", "last_heartbeat", "started_at", "updated_at"])
+        if changed:
+            _event(job, "progress", progress)
         return True
-    if status == "READY":
-        job.status = "READY"
-        job.report_html = str(data.get("reportHtml") or "")
-        job.report_pdf = str(data.get("reportPdf") or "")
-        job.report_xlsx = str(data.get("reportXlsx") or "")
-        job.report_json = str(data.get("reportJson") or "")
-        job.evidence_json = str(data.get("evidenceJson") or "")
-        job.summary = data.get("summary") or {}
-        job.token_usage = data.get("tokenUsage") or (job.summary or {}).get("llmUsage") or {}
-        job.error_message = ""
-        job.finished_at = timezone.now()
-        job.save(update_fields=["status", "report_html", "report_pdf", "report_xlsx", "report_json",
-                                "evidence_json", "summary", "token_usage", "error_message",
-                                "finished_at", "updated_at"])
-    elif status == "FAILED":
-        job.status = "FAILED"
-        job.error_message = str(data.get("error") or "The audit agent failed.")[:4000]
-        job.finished_at = timezone.now()
-        job.save(update_fields=["status", "error_message", "finished_at", "updated_at"])
-    else:
-        return False
-    try:
-        (root / "run.request").unlink(missing_ok=True)
-        (root / "run.processing").unlink(missing_ok=True)
-    except OSError:
-        pass
-    return True
+    if status in ("READY", "FAILED", "CANCELLED"):
+        job.status = status
+        job.progress = {**progress, "stage": "ready" if status == "READY" else status.lower(),
+                        "percent": 100 if status == "READY" else progress.get("percent", 0)}
+        job.last_heartbeat = heartbeat
+        job.finished_at = _dt(data.get("finishedAt")) or timezone.now()
+        if status == "READY":
+            job.report_html = str(data.get("reportHtml") or "")
+            job.report_pdf = str(data.get("reportPdf") or "")
+            job.report_xlsx = str(data.get("reportXlsx") or "")
+            job.report_json = str(data.get("reportJson") or "")
+            job.evidence_json = str(data.get("evidenceJson") or "")
+            job.artifacts = data.get("artifacts") or []
+            job.summary = data.get("summary") or {}
+            job.token_usage = data.get("tokenUsage") or (job.summary or {}).get("llmUsage") or {}
+            job.error_message = ""
+        else:
+            job.error_message = str(data.get("error") or ("Cancelled by the contractor." if status == "CANCELLED"
+                                                          else "The audit agent failed."))[:4000]
+        job.save(update_fields=["status", "progress", "last_heartbeat", "finished_at", "report_html",
+                                "report_pdf", "report_xlsx", "report_json", "evidence_json", "artifacts",
+                                "summary", "token_usage", "error_message", "updated_at"])
+        _event(job, status.lower(), {"error": job.error_message} if job.error_message else {})
+        _notify_job(job)
+        try:
+            (root / "run.request").unlink(missing_ok=True)
+            (root / "run.processing").unlink(missing_ok=True)
+        except OSError:
+            pass
+        return True
+    return False
+
+
+def _reap_stale_jobs():
+    """Requeue jobs whose runner heartbeat disappeared, or fail after max attempts."""
+    from datetime import timedelta
+    stale_after = int(getattr(settings, "BSS_AUDIT_STALE_SECONDS", 300))
+    cutoff = timezone.now() - timedelta(seconds=stale_after)
+    for job in (AuditJob.objects.filter(status="RUNNING", last_heartbeat__lt=cutoff)
+                .exclude(job_dir="").select_related("contractor", "site")):
+        root = Path(job.job_dir)
+        if (root / "run.processing").exists():
+            continue
+        if job.attempts >= job.max_attempts:
+            job.status = "FAILED"
+            job.error_message = "Runner heartbeat lost and the retry limit was reached."
+            job.finished_at = timezone.now()
+            job.save(update_fields=["status", "error_message", "finished_at", "updated_at"])
+            _event(job, "failed", {"error": job.error_message})
+            _notify_job(job)
+            continue
+        try:
+            cred = _active_credential()
+            job.attempts += 1
+            job.trigger_type = "system_retry"
+            job.status = "PENDING"
+            job.error_message = "Runner heartbeat lost; retrying."
+            job.progress = {"stage": "queued", "percent": 0, "message": "Retrying after runner loss"}
+            job.last_heartbeat = None
+            job.started_at = None
+            job.finished_at = None
+            job.save()
+            _write_runner_request(job, cred)
+            _event(job, "retry", {"reason": "runner heartbeat lost", "attempt": job.attempts})
+        except Exception as exc:  # noqa: BLE001
+            job.status = "FAILED"
+            job.error_message = str(exc)[:1000]
+            job.finished_at = timezone.now()
+            job.save(update_fields=["status", "error_message", "finished_at", "updated_at"])
+            _event(job, "failed", {"error": job.error_message})
+            _notify_job(job)
 
 
 def _contractor_site(contractor, site_id):
@@ -532,7 +696,10 @@ def _execute_job(job_id):
         connections.close_all()
 
 
-def _job_row(job):
+def _job_row(job, user=None):
+    artifacts = list(job.artifacts or [])
+    if user is not None and user.role not in ("bss_admin", "bss_staff", "admin"):
+        artifacts = [a for a in artifacts if not a.get("adminOnly")]
     return {
         "id": str(job.id),
         "contractor": payloads._d(payloads._party_name(job.contractor)) if job.contractor_id else "",
@@ -559,6 +726,14 @@ def _job_row(job):
         "hasPdf": bool(job.report_pdf),
         "hasXlsx": bool(job.report_xlsx),
         "hasJson": bool(job.report_json),
+        "hasEvidence": bool(job.evidence_json),
+        "progress": job.progress or {},
+        "lastHeartbeat": payloads._dts(job.last_heartbeat),
+        "attempts": job.attempts,
+        "maxAttempts": job.max_attempts,
+        "cancelRequested": bool(job.cancel_requested),
+        "triggerType": job.trigger_type,
+        "artifacts": artifacts,
         "agentVersion": job.agent_version,
         "provider": job.provider,
         "model": job.model,
@@ -575,17 +750,20 @@ def _create_job(contractor, site, month, year, user):
         contractor=contractor, site=site, defaults={"runs_per_month": 2})
     if not schedule.is_active:
         raise AuditJobError("Audits are disabled for this site.")
+    all_runs = AuditJob.objects.filter(contractor=contractor, site=site, month=period["month"],
+                                       year=period["year"]).count()
     used = AuditJob.objects.filter(contractor=contractor, site=site, month=period["month"],
-                                   year=period["year"]).count()
+                                   year=period["year"], trigger_type="manual").count()
     if used >= schedule.runs_per_month:
-        raise AuditJobError(f"This month already has {used} of {schedule.runs_per_month} audit runs.")
+        raise AuditJobError(f"This month already has {used} of {schedule.runs_per_month} manual audit runs.")
     AuditJob.objects.filter(contractor=contractor, site=site, month=period["month"],
                             year=period["year"]).update(is_current=False)
     job = AuditJob.objects.create(
         contractor=contractor, employer=site.employer, site=site,
         month=period["month"], year=period["year"], financial_year=period["financial_year"],
-        period_start=period["start"], period_end=period["end"], version=used + 1,
-        is_current=True, status="BUILDING", requested_by=user,
+        period_start=period["start"], period_end=period["end"], version=all_runs + 1,
+        is_current=True, status="BUILDING", requested_by=user, trigger_type="manual",
+        progress={"stage": "preparing", "percent": 0, "message": "Preparing the job folder"},
     )
     try:
         _build_job_folder(job, period, batches, evidence)
@@ -643,14 +821,14 @@ def contractor_audit_jobs(request):
     if request.method == "GET":
         qs = (AuditJob.objects.filter(contractor=user)
               .select_related("contractor", "employer", "site").order_by("-created_at")[:200])
-        return Response({"data": [_job_row(j) for j in qs]}, status=status.HTTP_200_OK)
+        return Response({"data": [_job_row(j, request.user) for j in qs]}, status=status.HTTP_200_OK)
     body = request.data or {}
     try:
         site = _contractor_site(user, body.get("siteId"))
         job = _create_job(user, site, body.get("month"), body.get("year"), user)
     except AuditJobError as exc:
         return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-    return Response({"data": _job_row(job)}, status=status.HTTP_201_CREATED)
+    return Response({"data": _job_row(job, request.user)}, status=status.HTTP_201_CREATED)
 
 
 @api_view(["GET"])
@@ -661,7 +839,7 @@ def contractor_audit_job_detail(request, job_id):
            .select_related("contractor", "employer", "site").first())
     if job is None:
         return Response({"error": "Audit job not found."}, status=status.HTTP_404_NOT_FOUND)
-    return Response({"data": _job_row(job)}, status=status.HTTP_200_OK)
+    return Response({"data": _job_row(job, request.user)}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
@@ -671,15 +849,17 @@ def employer_audit_jobs(request):
     user = request.user
     if user.role != "employer":
         return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
+    _require_permission(request, "compliance")
     qs = (AuditJob.objects.filter(Q(employer=user) | Q(site__employer=user))
           .select_related("contractor", "employer", "site").order_by("-created_at")[:200])
-    return Response({"data": [_job_row(j) for j in qs]}, status=status.HTTP_200_OK)
+    return Response({"data": [_job_row(j, request.user) for j in qs]}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def audit_job_file(request, job_id, kind):
+    _require_permission(request, "compliance")
     job = AuditJob.objects.filter(pk=job_id).select_related("contractor", "employer", "site").first()
     if job is None or not _can_view(request.user, job):
         return Response({"error": "Audit job not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -693,7 +873,7 @@ def admin_audit_jobs(request):
     if request.user.role not in ("bss_admin", "bss_staff", "admin"):
         return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
     qs = AuditJob.objects.select_related("contractor", "employer", "site").order_by("-created_at")[:300]
-    return Response({"data": [_job_row(j) for j in qs]}, status=status.HTTP_200_OK)
+    return Response({"data": [_job_row(j, request.user) for j in qs]}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET", "PATCH"])
@@ -756,7 +936,186 @@ def admin_audit_schedules(request):
     return Response({"data": rows[:500]}, status=status.HTTP_200_OK)
 
 
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def contractor_audit_job_cancel(request, job_id):
+    user = request.user
+    job = AuditJob.objects.filter(pk=job_id, contractor=user).select_related("contractor", "site").first()
+    if job is None:
+        return Response({"error": "Audit job not found."}, status=status.HTTP_404_NOT_FOUND)
+    if job.status in ("READY", "FAILED", "CANCELLED"):
+        return Response({"error": f"This audit is already {job.status.lower()}."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    job.cancel_requested = True
+    if job.status in ("PENDING", "BUILDING"):
+        job.status = "CANCELLED"
+        job.error_message = "Cancelled by the contractor."
+        job.finished_at = timezone.now()
+        job.progress = {"stage": "cancelled", "percent": 0, "message": "Cancelled"}
+        job.save()
+        root = Path(job.job_dir) if job.job_dir else None
+        if root:
+            try:
+                (root / "run.request").unlink(missing_ok=True)
+            except OSError:
+                pass
+        _event(job, "cancelled", {"reason": "before start"})
+        _notify_job(job)
+    else:
+        job.save(update_fields=["cancel_requested", "updated_at"])
+        if job.job_dir:
+            try:
+                (Path(job.job_dir) / "cancel.request").write_text("cancel", encoding="utf-8")
+            except OSError:
+                pass
+        _event(job, "cancel_requested", {"message": "Cancellation requested"})
+    return Response({"data": _job_row(job, user)}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def contractor_audit_job_retry(request, job_id):
+    """Manual retry: new version, counts against the monthly manual-run limit."""
+    user = request.user
+    old = (AuditJob.objects.filter(pk=job_id, contractor=user)
+           .select_related("contractor", "employer", "site").first())
+    if old is None:
+        return Response({"error": "Audit job not found."}, status=status.HTTP_404_NOT_FOUND)
+    if old.status not in ("FAILED", "CANCELLED"):
+        return Response({"error": "Only a failed or cancelled audit can be retried."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if not old.job_dir or not Path(old.job_dir).exists():
+        return Response({"error": "The original job folder is no longer available."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    schedule, _ = AuditSchedule.objects.get_or_create(
+        contractor=user, site=old.site, defaults={"runs_per_month": 2})
+    used = AuditJob.objects.filter(contractor=user, site=old.site, month=old.month,
+                                   year=old.year, trigger_type="manual").count()
+    if used >= schedule.runs_per_month:
+        return Response({"error": f"This month already has {used} of {schedule.runs_per_month} manual audit runs."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    try:
+        cred = _active_credential()
+    except AuditJobError as exc:
+        return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    all_runs = AuditJob.objects.filter(contractor=user, site=old.site, month=old.month, year=old.year).count()
+    job = AuditJob.objects.create(
+        contractor=old.contractor, employer=old.employer, site=old.site,
+        month=old.month, year=old.year, financial_year=old.financial_year,
+        period_start=old.period_start, period_end=old.period_end,
+        version=all_runs + 1, is_current=True, status="BUILDING",
+        requested_by=user, trigger_type="manual",
+        progress={"stage": "preparing", "percent": 0, "message": "Preparing the retry"},
+    )
+    AuditJob.objects.filter(contractor=user, site=old.site, month=old.month,
+                            year=old.year).exclude(pk=job.pk).update(is_current=False)
+    source = Path(old.job_dir)
+    target = Path(settings.BSS_AUDIT_JOBS_DIR) / str(job.id)
+    try:
+        shutil.copytree(source, target,
+                        ignore=shutil.ignore_patterns("output", "logs", "status.json", "run.request",
+                                                      "run.request.tmp", "run.processing", "cancel.request"))
+        job.job_dir = str(target)
+        job.query_count = old.query_count
+        job.worker_count = old.worker_count
+        job.save(update_fields=["job_dir", "query_count", "worker_count", "updated_at"])
+        _write_runner_request(job, cred)
+        job.status = "PENDING"
+        job.save(update_fields=["status", "updated_at"])
+        _event(job, "queued", {"reason": "manual retry", "previous": str(old.id)})
+    except Exception as exc:  # noqa: BLE001
+        job.status = "FAILED"
+        job.error_message = str(exc)[:2000]
+        job.finished_at = timezone.now()
+        job.save(update_fields=["status", "error_message", "finished_at", "updated_at"])
+        return Response({"error": f"The retry could not be started: {exc}"},
+                        status=status.HTTP_400_BAD_REQUEST)
+    return Response({"data": _job_row(job, user)}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def audit_job_artifact(request, job_id):
+    _require_permission(request, "compliance")
+    job = AuditJob.objects.filter(pk=job_id).select_related("contractor", "employer", "site").first()
+    if job is None or not _can_view(request.user, job):
+        return Response({"error": "Audit job not found."}, status=status.HTTP_404_NOT_FOUND)
+    rel_path = str(request.query_params.get("path") or "").strip()
+    if not rel_path:
+        return Response({"error": "A file path is required."}, status=status.HTTP_400_BAD_REQUEST)
+    root = Path(job.job_dir).resolve()
+    path = (root / rel_path).resolve()
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return Response({"error": "Invalid file path."}, status=status.HTTP_400_BAD_REQUEST)
+    if not path.is_file():
+        return Response({"error": "File not found."}, status=status.HTTP_404_NOT_FOUND)
+    name = path.name
+    admin_only = name in ("extraction_raw.json", "deepseek_calls.json") or (
+        "evidence" in path.parts and name != "evidence.json")
+    if admin_only and request.user.role not in ("bss_admin", "bss_staff", "admin"):
+        return Response({"error": "This file is restricted to BSS Admin."},
+                        status=status.HTTP_403_FORBIDDEN)
+    from django.http import FileResponse
+    content_type = ("text/html; charset=utf-8" if name.endswith(".html") else
+                    "application/pdf" if name.endswith(".pdf") else
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if name.endswith(".xlsx") else
+                    "application/json" if name.endswith(".json") else "application/octet-stream")
+    return FileResponse(open(path, "rb"), as_attachment=not name.endswith(".html"),
+                        filename=name, content_type=content_type)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def audit_job_events(request, job_id):
+    _require_permission(request, "compliance")
+    job = AuditJob.objects.filter(pk=job_id).select_related("contractor", "employer", "site").first()
+    if job is None or not _can_view(request.user, job):
+        return Response({"error": "Audit job not found."}, status=status.HTTP_404_NOT_FOUND)
+    from django.http import StreamingHttpResponse
+    from bss_core.models import AuditJobEvent
+    import time as _time
+
+    try:
+        last_id = int(request.headers.get("Last-Event-ID") or request.query_params.get("lastEventId") or 0)
+    except (TypeError, ValueError):
+        last_id = 0
+
+    def stream():
+        nonlocal last_id
+        idle = 0
+        while True:
+            events = list(AuditJobEvent.objects.filter(job_id=job.id, id__gt=last_id).order_by("id")[:50])
+            if events:
+                idle = 0
+                for event in events:
+                    last_id = event.id
+                    payload = {"type": event.type, "jobId": str(job.id), **event.payload}
+                    yield f"id: {event.id}\ndata: {json.dumps(payload, default=str)}\n\n"
+            else:
+                idle += 1
+                yield ": keepalive\n\n"
+            job.refresh_from_db(fields=["status"])
+            if job.status in ("READY", "FAILED", "CANCELLED") and not events:
+                break
+            if idle > 30:
+                break
+            _time.sleep(2)
+
+    response = StreamingHttpResponse(stream(), content_type="text/event-stream")
+    response["Cache-Control"] = "no-cache"
+    response["X-Accel-Buffering"] = "no"
+    return response
+
+
 __all__ = [
     "contractor_audit_jobs", "contractor_audit_job_detail", "employer_audit_jobs",
     "audit_job_file", "admin_audit_jobs", "admin_audit_schedules",
+    "contractor_audit_job_cancel", "contractor_audit_job_retry",
+    "audit_job_artifact", "audit_job_events",
 ]

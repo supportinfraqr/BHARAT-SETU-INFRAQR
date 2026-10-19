@@ -30,3 +30,7 @@ development-demo/
 # Local DB/media backups (contain PII — never commit)
 backups/
 *.sql.gz
+
+# Private local archives and live-credential probes (never commit)
+private_archives/
+FINAL/Requirements/Sandbox_DigiLocker_Test.sh

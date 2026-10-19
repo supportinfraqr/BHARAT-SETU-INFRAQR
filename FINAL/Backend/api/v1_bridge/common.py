@@ -207,6 +207,7 @@ PORTAL_ROLE = {
     "worker": "Worker",
     "contractor": "Contractor",
     "employer": "Employer",
+    "employer_staff": "Employer",
     "government": "Government",
     "bss_staff": "BSS Staff",
     "bss_admin": "BSS Admin",
@@ -406,9 +407,10 @@ class BssSessionAuthentication(BaseAuthentication):
                 result = None
             if result is not None:
                 user, validated = result
-                if not _session_ok(user, validated.get("sid") if hasattr(validated, "get") else None):
+                sid = validated.get("sid") if hasattr(validated, "get") else None
+                if not _session_ok(user, sid):
                     raise AuthenticationFailed(STALE_SESSION_MESSAGE)
-                return (user, validated)
+                return _principal(user, request, validated)
             # Invalid/expired Bearer: fall through to the header path below,
             # which requires the active session id.
         subject = request.META.get("HTTP_X_BSS_SUBJECT", "")
@@ -419,8 +421,43 @@ class BssSessionAuthentication(BaseAuthentication):
                 return None
             if not _session_ok(user, request.META.get("HTTP_X_BSS_SESSION", "")):
                 raise AuthenticationFailed(STALE_SESSION_MESSAGE)
-            return (user, None)
+            return _principal(user, request, None)
         return None
+
+
+def _staff_permissions(request):
+    """Permission set for an employer-staff session (None for the owner)."""
+    return getattr(request, "staff_permissions", None)
+
+
+def _require_permission(request, key):
+    """Deny an employer-staff session that lacks ``key``. The employer owner
+    (staff_permissions None) is always allowed."""
+    perms = _staff_permissions(request)
+    if perms is not None and key not in perms:
+        from rest_framework.exceptions import PermissionDenied
+        raise PermissionDenied("You do not have permission for this section.")
+
+
+def _principal(user, request, validated):
+    """Return the acting user for the session.
+
+    An employer-staff token acts **as its employer** (so every existing employer
+    endpoint scopes correctly), while the staff identity + permissions are
+    attached to the request for permission checks and audit."""
+    if getattr(user, "role", "") != "employer_staff":
+        return (user, validated)
+    from bss_core.models import EmployerStaffMember
+    member = (EmployerStaffMember.objects.filter(user=user, is_active=True)
+              .select_related("employer").first())
+    if member is None or not getattr(member.employer, "is_active", True):
+        raise AuthenticationFailed("This staff account is disabled.")
+    try:
+        request._request.actor = user
+        request._request.staff_permissions = set(member.permissions or [])
+    except Exception:  # noqa: BLE001
+        pass
+    return (member.employer, validated)
 
 
 def _session_ok(user, sid):
@@ -453,13 +490,22 @@ def _make_session_payload(user):
     _set_current_session(user, sid)
     access, refresh = _issue_tokens(user, sid)
     role = user.role
-    return {
+    payload = {
         "subject": user.username,
         "role": PORTAL_ROLE.get(role, role),
         "sessionId": sid,
         "accessToken": access,
         "refreshToken": refresh,
     }
+    if role == "employer_staff":
+        from bss_core.models import EmployerStaffMember
+        member = (EmployerStaffMember.objects.filter(user=user, is_active=True)
+                  .select_related("employer").first())
+        if member is not None:
+            payload["staffId"] = user.id
+            payload["employerId"] = member.employer_id
+            payload["permissions"] = list(member.permissions or [])
+    return payload
 
 
 def _normalize_mobile(value):
@@ -530,6 +576,8 @@ def _requested_roles(role):
         return []
     role_lower = str(role).lower()
     roles = [portal for portal, label in PORTAL_ROLE.items() if label.lower() == role_lower]
+    if "employer" in roles and "employer_staff" not in roles:
+        roles.append("employer_staff")
     if not roles and role in dict(User.ROLE_CHOICES):
         roles = [role]
     return roles
@@ -810,6 +858,9 @@ __all__ = [
     "JWTAuthentication",
     "Notification",
     "PORTAL_ROLE",
+    "_require_permission",
+    "_staff_permissions",
+    "logger",
     "PortalMutationError",
     "period_in_future",
     "Q",

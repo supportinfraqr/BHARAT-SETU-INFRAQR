@@ -16,6 +16,9 @@ type AuthResult = {
   role: PortalRole;
   sessionId: string;
   accessToken?: string;
+  employerId?: number | string;
+  staffId?: number | string;
+  permissions?: string[];
 };
 
 function cleanIdentifier(value: string): string {

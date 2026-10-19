@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { IScannerControls } from "@zxing/browser";
-import { Building2, Camera, CheckCircle2, Handshake, KeyRound, Link2, ScanLine, ShieldCheck, TriangleAlert, Upload, UserRound, X, XCircle } from "lucide-react";
+import { Briefcase, Building2, Camera, Check, CheckCircle2, Handshake, KeyRound, Link2, MapPin, ScanLine, ShieldCheck, TriangleAlert, Upload, UserRound, X, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useContractor } from "@/contexts/ContractorContext";
 import ScanIdentityCard, { type ScanVerifyData } from "@/components/scan/ScanIdentityCard";
@@ -19,6 +19,15 @@ type ScannedEntity = { kind: 'worker' | 'employer'; bssId: string; name: string;
 function todayIso(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function Stat({ icon, label, value, full }: { icon: ReactNode; label: string; value: ReactNode; full?: boolean }) {
+  return (
+    <div className={`min-w-0 rounded-xl border border-bss-border bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.03)] ${full ? 'col-span-2' : ''}`}>
+      <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-bss-text-muted">{icon}{label}</p>
+      <p className="mt-1 text-xs font-semibold text-bss-text-primary break-words">{value}</p>
+    </div>
+  );
 }
 
 export default function ContractorScanPage() {
@@ -101,6 +110,16 @@ export default function ContractorScanPage() {
   const boundWorker = entity?.kind === 'worker'
     ? contractor.bindingRequests.find(b => b.type === 'Worker' && b.bssId === entity.bssId && (b.status === 'Accepted' || b.status === 'Pending'))
     : undefined;
+  const isBoundWorker = entity?.kind === 'worker'
+    ? contractor.workers.some(w => w.bssId === entity.bssId)
+    : false;
+  const relationshipLabel = entity
+    ? contractor.workers.some(w => w.bssId === entity.bssId)
+      ? 'Already bound'
+      : alreadyPending
+        ? 'Binding request pending'
+        : 'Not bound — request required'
+    : '';
 
   const verify = async (text: string) => {
     try {
@@ -298,14 +317,14 @@ export default function ContractorScanPage() {
   const reset = () => { controls.current?.stop(); setResult(null); setVerifyData(null); setEntity(null); setRequestSent(false); setAttendanceMarked(false); setWorkerToday(null); setConfirmOpen(false); setMessage(""); setState("idle"); };
   // A live binding unlocks the worker's verified identity details for this contractor.
 
-  return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
-    <header className="relative overflow-hidden rounded-3xl bss-anim-gradient bg-gradient-to-br from-bss-navy via-bss-deep-navy to-bss-interactive-blue text-white p-5 sm:p-6 shadow-lg">
+  return <div className="mx-auto flex max-w-6xl flex-col gap-4 p-4 md:h-[calc(100vh-3.5rem)] md:overflow-hidden lg:gap-5 lg:p-6">
+    <header className="relative shrink-0 overflow-hidden rounded-3xl bss-anim-gradient bg-gradient-to-br from-bss-navy via-bss-deep-navy to-bss-interactive-blue text-white p-4 sm:p-5 shadow-lg">
       <div aria-hidden className="absolute -right-8 -top-10 w-44 h-44 rounded-full bg-white/5 blur-2xl" />
       <div className="relative z-10 flex flex-col sm:flex-row justify-between sm:items-end gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">One QR · Bind · Verify</p>
-          <h1 className="text-2xl md:text-3xl font-bold mt-1">QR Scan &amp; Bind</h1>
-          <p className="text-sm text-white/75 mt-1 max-w-xl">Scan a Worker QR to request binding · scan an Employer QR to request employer binding. Identity is verified before anything is committed.</p>
+          <h1 className="text-xl md:text-2xl font-bold mt-1">QR Scan &amp; Bind</h1>
+          <p className="text-xs sm:text-sm text-white/75 mt-1 max-w-xl">Scan a Worker QR to request binding · scan an Employer QR to request employer binding. Identity is verified before anything is committed.</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <ListenButton />
@@ -314,69 +333,122 @@ export default function ContractorScanPage() {
       </div>
     </header>
 
-    <div className="grid md:grid-cols-2 gap-6">
-      <section className="bss-3d bss-scroll-rise bg-white rounded-2xl border shadow-sm overflow-hidden">
-        <header className="p-4 border-b border-bss-border bg-gradient-to-r from-bss-navy/5 to-transparent flex items-center gap-2 font-bold text-bss-text-primary"><span className="w-8 h-8 rounded-lg bg-bss-blue-tint text-bss-interactive-blue grid place-items-center"><Camera size={16}/></span> Scanner</header>
+    <div className="grid gap-4 md:min-h-0 md:flex-1 md:grid-cols-2 md:items-stretch lg:gap-5">
+      <section className="bss-3d bss-scroll-rise bg-white rounded-3xl border border-bss-border shadow-[0_18px_50px_-32px_rgba(1,24,58,0.5)] overflow-hidden md:overflow-y-auto">
+        <header className="flex items-center gap-3 border-b border-bss-border bg-gradient-to-r from-bss-navy/5 via-white to-transparent px-5 py-4"><span className="w-9 h-9 rounded-xl bg-bss-blue-tint text-bss-interactive-blue grid place-items-center flex-shrink-0"><Camera size={17}/></span><div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-bss-text-muted">Secure capture</p><p className="text-sm font-bold text-bss-text-primary">Scan credential</p></div></header>
         <div className="p-5 space-y-4">
-          <div className="relative bg-black rounded-xl h-64 overflow-hidden flex items-center justify-center">
+          <div className="relative bg-black rounded-2xl h-64 overflow-hidden flex items-center justify-center ring-1 ring-black/5">
             <video ref={videoRef} className={`w-full h-full object-cover ${state==="scanning"?"block":"hidden"}`} muted playsInline/>
             <ScanFrame active={state==="scanning"} />
             {state!=="scanning"&&<div className="text-center text-white px-6">{state==="verified"?<CheckCircle2 size={48} className="mx-auto text-bss-soft-green bss-pulse-halo"/>:state==="error"?<XCircle size={48} className="mx-auto text-bss-orange"/>:state==="binding"?<Handshake size={48} className="mx-auto text-bss-soft-orange"/>:<ScanLine size={48} className="mx-auto text-bss-text-muted bss-pulse-halo"/>}<p className="mt-3 text-sm font-semibold">{message||"Ready to scan a secure credential"}</p></div>}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <button onClick={state==="idle"||state==="error"||state==="verified"||state==="binding"?startCamera:reset} className="bg-[#01183A] text-white py-2.5 rounded-lg font-bold text-sm"><Camera size={16} className="inline mr-2"/>{state==="scanning"?"Reset":"Use camera"}</button>
-            <button onClick={()=>fileRef.current?.click()} className="border py-2.5 rounded-lg font-bold text-sm"><Upload size={16} className="inline mr-2"/>Upload image</button>
+            <button onClick={state==="idle"||state==="error"||state==="verified"||state==="binding"?startCamera:reset} className="bg-[#01183A] text-white h-11 rounded-xl font-bold text-sm transition-colors hover:bg-[#022B5E]"><Camera size={16} className="inline mr-2"/>{state==="scanning"?"Reset":"Use camera"}</button>
+            <button onClick={()=>fileRef.current?.click()} className="h-11 rounded-xl border border-bss-border bg-white font-bold text-sm text-bss-text-primary transition-colors hover:bg-bss-bg"><Upload size={16} className="inline mr-2"/>Upload image</button>
           </div>
-          <button type="button" onClick={() => setManualOpen(true)} className="w-full py-2 bg-bss-bg hover:bg-bss-bg border border-bss-border text-bss-text-primary rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"><KeyRound size={14}/>Enter BSS ID manually</button>
+          <button type="button" onClick={() => setManualOpen(true)} className="w-full h-10 bg-bss-bg hover:bg-bss-surface border border-bss-border text-bss-text-primary rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"><KeyRound size={14}/>Enter BSS ID manually</button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e=>scanFile(e.target.files?.[0])}/>
           <p className="text-xs text-bss-text-muted">Camera permission is requested only while scanning. Scans are processed locally — no scan-to-autobind.</p>
         </div>
       </section>
 
-      <section className="bss-3d bss-scroll-rise bg-white rounded-2xl border shadow-sm overflow-hidden">
-        <header className="p-4 border-b border-bss-border bg-gradient-to-r from-bss-navy/5 to-transparent flex gap-2 items-center font-bold text-bss-text-primary"><span className="w-8 h-8 rounded-lg bg-bss-soft-green text-bss-green grid place-items-center"><ShieldCheck size={16}/></span> {state==="binding"?"Binding request":"Identified entity"}</header>
-        <div className="p-5">
+      <section className="bss-3d bss-scroll-rise flex h-[86vh] min-h-0 flex-col overflow-hidden rounded-3xl border border-bss-border bg-white shadow-[0_18px_50px_-32px_rgba(1,24,58,0.5)] md:h-full">
+        <header className="relative overflow-hidden bg-gradient-to-br from-bss-navy via-bss-deep-navy to-bss-interactive-blue px-5 py-4 text-white">
+          <div aria-hidden className="absolute -right-8 -top-10 w-36 h-36 rounded-full bg-white/10 blur-2xl" />
+          <div className="relative flex items-center gap-3">
+            <span className="w-9 h-9 rounded-xl bg-white/15 text-white grid place-items-center flex-shrink-0"><ShieldCheck size={17}/></span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/55">Scan result</p>
+              <p className="text-sm font-bold truncate">{state==="binding" ? "Identity verified" : "Identified entity"}</p>
+            </div>
+            {isBoundWorker && <span className="rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[10px] font-bold">Bound</span>}
+          </div>
+        </header>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5">
           {state==="binding"&&entity?(
             <div className="space-y-4">
-              <div className="flex items-center gap-4"><span className={`w-14 h-14 rounded-full grid place-items-center ${entity.kind === 'worker' ? 'bg-bss-soft-orange text-[#E45D24]' : 'bg-bss-blue-tint text-bss-interactive-blue'}`}>{entity.kind === 'worker' ? <UserRound size={26}/> : <Building2 size={26}/>}</span><div><h2 className="font-bold text-lg">{entity.name}</h2><code className="text-xs text-[#01183A]">{entity.bssId}</code><p className="text-xs text-bss-orange mt-1 font-semibold">{entity.kind === 'worker' ? 'Worker QR identified' : 'Employer QR identified'}</p></div></div>
-              <dl className="grid grid-cols-2 gap-3 text-xs">
-                <div><dt className="text-bss-text-muted">Principal employer</dt><dd className="font-semibold text-bss-text-primary mt-0.5">{entity.employer}</dd></div>
-                <div><dt className="text-bss-text-muted">Site</dt><dd className="font-semibold text-bss-text-primary mt-0.5">{entity.site}</dd></div>
-                <div><dt className="text-bss-text-muted">Designation</dt><dd className="font-semibold text-bss-text-primary mt-0.5">{entity.designation}</dd></div>
-                <div><dt className="text-bss-text-muted">Current relationship</dt><dd className="font-semibold text-bss-text-primary mt-0.5">{contractor.workers.some(w => w.bssId === entity.bssId) ? 'Already bound' : alreadyPending ? 'Binding request pending' : 'Not bound — request required'}</dd></div>
-              </dl>
+              <div className="relative overflow-hidden rounded-2xl border border-bss-border bg-gradient-to-br from-bss-bg via-white to-bss-blue-tint/40 p-4">
+                <div aria-hidden className="absolute -right-6 -bottom-8 w-28 h-28 rounded-full bg-bss-interactive-blue/5 blur-xl" />
+                <div className="relative flex items-start gap-3.5">
+                  <span className={`relative w-16 h-16 rounded-2xl grid place-items-center flex-shrink-0 shadow-sm ${entity.kind === 'worker' ? 'bg-bss-soft-orange text-[#E45D24]' : 'bg-bss-blue-tint text-bss-interactive-blue'}`}>
+                    {entity.kind === 'worker' ? <UserRound size={28}/> : <Building2 size={28}/>}
+                    <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-bss-green ring-2 ring-white grid place-items-center"><Check size={11} strokeWidth={3} className="text-white"/></span>
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-lg font-bold leading-tight text-bss-text-primary break-words">{entity.name}</h2>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <code className="rounded-full border border-bss-border bg-white px-2 py-0.5 text-[11px] font-semibold text-[#01183A]">{entity.bssId}</code>
+                      <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${isBoundWorker ? 'border-bss-green/20 bg-bss-soft-green text-bss-green' : alreadyPending ? 'border-bss-orange/20 bg-bss-soft-orange text-bss-orange' : 'border-bss-border bg-bss-bg text-bss-text-secondary'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isBoundWorker ? 'bg-bss-green' : alreadyPending ? 'bg-bss-orange' : 'bg-bss-text-muted'}`} />
+                        {relationshipLabel}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-[11px] font-semibold text-bss-text-muted">{entity.kind === 'worker' ? 'Worker QR identified' : 'Employer QR identified'}</p>
+                  </div>
+                </div>
+              </div>
+              {isBoundWorker && entity && (
+                <div className="space-y-2.5">
+                  <div className="rounded-2xl border border-bss-border bg-bss-bg/60 p-3.5">
+                    <div className="flex items-start gap-2.5">
+                      <span className="w-8 h-8 rounded-lg bg-white border border-bss-border text-bss-interactive-blue grid place-items-center flex-shrink-0"><MapPin size={15}/></span>
+                      <p className="text-xs leading-relaxed text-bss-text-secondary">Bound at <strong className="text-bss-text-primary">{entity.site}</strong>. A worker holds one active site at a time — bind this worker at another site to move them there directly; no unbind needed.</p>
+                    </div>
+                    {boundWorker?.costSheetName && (
+                      <div className="mt-2.5 flex items-center gap-1.5 rounded-lg bg-bss-blue-tint px-2.5 py-1.5 text-[11px] font-semibold text-[#01183A]">
+                        <Link2 size={12} className="flex-shrink-0" />
+                        <span className="truncate">Cost sheet: {boundWorker.costSheetName}{boundWorker.costSheet ? <span className="font-normal text-bss-text-muted"> · {boundWorker.costSheet}</span> : null}</span>
+                      </div>
+                    )}
+                  </div>
+                  {!attendanceMarked && workerToday?.nextAction === 'OUT' && (
+                    <div className="flex items-center gap-2 rounded-2xl border border-bss-green/20 bg-bss-soft-green px-3.5 py-3 text-xs font-semibold text-bss-green"><span className="w-2 h-2 rounded-full bg-bss-green animate-pulse"/> Currently in the premises{workerToday.checkIn ? ` — checked in at ${workerToday.checkIn}` : ''}.</div>
+                  )}
+                  {!attendanceMarked && workerToday?.nextAction === 'IN' && (
+                    <div className="flex items-center gap-2 rounded-2xl border border-bss-orange/20 bg-bss-soft-orange px-3.5 py-3 text-xs font-semibold text-bss-orange"><span className="w-2 h-2 rounded-full bg-bss-orange"/> Checked out{workerToday.checkOut ? ` at ${workerToday.checkOut}` : ''}.</div>
+                  )}
+                  {attendanceMarked
+                    ? <div className="flex items-center gap-2.5 rounded-2xl border border-bss-green/20 bg-bss-soft-green px-3.5 py-3 text-xs font-semibold text-bss-green"><CheckCircle2 size={17} className="flex-shrink-0"/>Attendance marked for {entity.name}. It is now visible on the worker&apos;s Attendance page.</div>
+                    : <button onClick={markAttendance} className={`w-full h-12 rounded-2xl text-white text-sm font-bold flex items-center justify-center gap-2 shadow-lg transition-all hover:-translate-y-0.5 active:translate-y-0 ${workerToday?.nextAction === 'OUT' ? 'bg-bss-navy hover:bg-bss-deep-navy shadow-bss-navy/25' : 'bg-bss-green shadow-bss-green/25'}`}><CheckCircle2 size={18}/>{workerToday?.nextAction === 'OUT' ? 'Mark check-out' : workerToday?.nextAction === 'IN' ? 'Mark check-in again' : "Mark today's attendance"}</button>}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2.5">
+                <Stat icon={<Building2 size={11}/>} label="Principal employer" value={entity.employer} full />
+                <Stat icon={<MapPin size={11}/>} label="Site" value={entity.site} />
+                <Stat icon={<Briefcase size={11}/>} label="Designation" value={entity.designation} />
+              </div>
               {verifyData && <ScanIdentityCard data={verifyData} />}
-              <p className="text-xs text-bss-text-muted bg-bss-bg rounded-xl p-3">{entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId) ? 'This worker is bound to you. Mark attendance for today; it syncs to the worker\u2019s Attendance page.' : entity.kind === 'worker' && alreadyPending ? 'A binding request is already pending with this worker. Binding completes once the worker approves it.' : `A binding request asks ${entity.kind === 'worker' ? 'the worker to accept employment' : 'the principal employer to accept the contractor relationship'}. Binding completes only after both parties approve.`}</p>
+              {!isBoundWorker && <p className="rounded-2xl border border-bss-border bg-bss-bg px-3.5 py-3 text-xs leading-relaxed text-bss-text-muted">{entity.kind === 'worker' && alreadyPending ? 'A binding request is already pending with this worker. Binding completes once the worker approves it.' : `A binding request asks ${entity.kind === 'worker' ? 'the worker to accept employment' : 'the principal employer to accept the contractor relationship'}. Binding completes only after both parties approve.`}</p>}
               {entity.kind === 'worker' && !contractor.workers.some(w => w.bssId === entity.bssId) && !alreadyPending && contractor.sites.length > 0 && (
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-bss-text-muted mb-1">Site for this binding</label>
-                  <select value={selectedSite} onChange={e => setSelectedSite(e.target.value)} className="w-full h-10 rounded-lg border border-bss-border px-3 text-sm bg-white">
+                <div className="rounded-2xl border border-bss-border bg-bss-bg/50 p-3.5">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-bss-text-muted mb-1.5">Site for this binding</label>
+                  <select value={selectedSite} onChange={e => setSelectedSite(e.target.value)} className="w-full h-11 rounded-xl border border-bss-border px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/20">
                     {contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.employer ? ` — ${s.employer}` : ''}</option>)}
                   </select>
-                  {contractor.defaultSite && <p className="text-[11px] text-bss-text-muted mt-1">Default site: {contractor.defaultSite.name}</p>}
+                  {contractor.defaultSite && <p className="text-[11px] text-bss-text-muted mt-1.5">Default site: {contractor.defaultSite.name}</p>}
                 </div>
               )}
               {entity.kind === 'worker' && !contractor.workers.some(w => w.bssId === entity.bssId) && !alreadyPending && contractor.sites.length === 0 && (
-                <div className="rounded-xl border border-bss-border bg-bss-soft-orange p-3 text-xs text-bss-orange flex items-start gap-2">
+                <div className="rounded-2xl border border-bss-orange/20 bg-bss-soft-orange p-3.5 text-xs text-bss-orange flex items-start gap-2">
                   <TriangleAlert size={15} className="mt-0.5 flex-shrink-0"/>
                   <div>
                     <p className="font-bold">No site available for this binding.</p>
                     <p className="mt-0.5">Ask the principal employer to allot a site to you first — you can only bind a worker to a site allotted to you.</p>
-                    <Link href="/contractor/qr/requests" className="mt-1.5 inline-block font-bold underline">Open Binding Requests</Link>
+                    <Link href="/contractor/qr/requests" className="mt-2 inline-flex items-center gap-1 rounded-lg bg-white/70 px-2.5 py-1.5 font-bold text-bss-orange">Open Binding Requests</Link>
                   </div>
                 </div>
               )}
               {entity.kind === 'worker' && !contractor.workers.some(w => w.bssId === entity.bssId) && !alreadyPending && (
-                <div className="space-y-3">
+                <div className="space-y-3.5 rounded-2xl border border-bss-border bg-bss-bg/40 p-3.5">
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-bss-text-muted mb-1">Wage terms (required)</label>
-                    <div className="inline-flex rounded-lg border border-bss-border bg-bss-bg p-0.5 text-xs font-semibold">
-                      <button type="button" onClick={() => { setWageMode('sheet'); setWageError(''); }} className={`px-3 py-1.5 rounded-md transition-colors ${wageMode === 'sheet' ? 'bg-white text-[#01183A] shadow-sm' : 'text-bss-text-muted'}`}>Cost sheet</button>
-                      <button type="button" onClick={() => { setWageMode('manual'); setWageError(''); }} className={`px-3 py-1.5 rounded-md transition-colors ${wageMode === 'manual' ? 'bg-white text-[#01183A] shadow-sm' : 'text-bss-text-muted'}`}>Enter wage</button>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-bss-text-muted mb-1.5">Wage terms (required)</label>
+                    <div className="inline-flex rounded-xl border border-bss-border bg-bss-bg p-1 text-xs font-semibold">
+                      <button type="button" onClick={() => { setWageMode('sheet'); setWageError(''); }} className={`px-3.5 py-1.5 rounded-lg transition-all ${wageMode === 'sheet' ? 'bg-white text-[#01183A] shadow-sm' : 'text-bss-text-muted hover:text-bss-text-secondary'}`}>Cost sheet</button>
+                      <button type="button" onClick={() => { setWageMode('manual'); setWageError(''); }} className={`px-3.5 py-1.5 rounded-lg transition-all ${wageMode === 'manual' ? 'bg-white text-[#01183A] shadow-sm' : 'text-bss-text-muted hover:text-bss-text-secondary'}`}>Enter wage</button>
                     </div>
                     {wageMode === 'sheet' ? (
                       <>
-                        <select value={costSheetId} onChange={e => { setCostSheetId(e.target.value); setWageError(''); }} disabled={!availableCostSheets.length} className="mt-2 w-full h-10 rounded-lg border border-bss-border px-3 text-sm bg-white disabled:bg-bss-bg disabled:text-bss-text-muted">
+                        <select value={costSheetId} onChange={e => { setCostSheetId(e.target.value); setWageError(''); }} disabled={!availableCostSheets.length} className="mt-2 w-full h-11 rounded-xl border border-bss-border px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/20 disabled:bg-bss-bg disabled:text-bss-text-muted">
                           <option value="">{availableCostSheets.length ? "Select an employer-accepted cost sheet…" : "No accepted cost sheet for this site"}</option>
                           {availableCostSheets.map(s => <option key={s.id} value={s.id}>{s.name}{s.siteName ? ` · ${s.siteName}` : ""} · {s.code}</option>)}
                         </select>
@@ -388,52 +460,61 @@ export default function ContractorScanPage() {
                       </>
                     ) : (
                       <>
-                        <input inputMode="numeric" value={offeredWage} onChange={e => { setOfferedWage(e.target.value.replace(/[^0-9]/g, '')); setWageError(''); }} placeholder="Monthly gross wage (₹)" className="mt-2 w-full h-10 rounded-lg border border-bss-border px-3 text-sm bg-white" />
+                        <input inputMode="numeric" value={offeredWage} onChange={e => { setOfferedWage(e.target.value.replace(/[^0-9]/g, '')); setWageError(''); }} placeholder="Monthly gross wage (₹)" className="mt-2 w-full h-11 rounded-xl border border-bss-border px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/20" />
                         <p className="text-[11px] text-bss-text-muted mt-1">The agreed monthly gross wage. It is printed on the worker&apos;s appointment letter.</p>
                       </>
                     )}
                     {wageError && <p className="text-[11px] text-bss-error font-semibold mt-1">{wageError}</p>}
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-bss-text-muted mb-1">Date of joining (optional)</label>
-                    <input type="date" value={dateOfJoining} max={todayIso()} onChange={e => { setDateOfJoining(e.target.value); setDojError(''); }} className="w-full h-10 rounded-lg border border-bss-border px-3 text-sm bg-white" />
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-bss-text-muted mb-1.5">Date of joining (optional)</label>
+                    <input type="date" value={dateOfJoining} max={todayIso()} onChange={e => { setDateOfJoining(e.target.value); setDojError(''); }} className="w-full h-11 rounded-xl border border-bss-border px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/20" />
                     <p className="text-[11px] text-bss-text-muted mt-1">The worker&apos;s real employment start date. Leave blank to use the binding date. Must be today or earlier.</p>
                     {dojError && <p className="text-[11px] text-bss-error font-semibold mt-1">{dojError}</p>}
                   </div>
                 </div>
               )}
-              {entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId)
-                ? <div className="space-y-3">
-                    <p className="text-xs text-bss-text-secondary bg-bss-bg rounded-xl p-3">This worker is bound to you at <strong>{entity.site}</strong>. A worker holds one active site at a time — bind this worker at another site to move them there directly; no unbind needed.</p>
-                    {boundWorker?.costSheetName && <p className="text-xs text-[#01183A] bg-bss-blue-tint rounded-xl p-3">Cost sheet: <strong>{boundWorker.costSheetName}</strong>{boundWorker.costSheet ? <span className="text-bss-text-muted"> · {boundWorker.costSheet}</span> : null}</p>}
-                    {!attendanceMarked && workerToday?.nextAction === 'OUT' && (
-                      <div className="p-3 rounded-2xl bg-bss-soft-green border border-bss-border flex items-center gap-2 text-sm text-bss-green font-semibold"><CheckCircle2 size={16}/> Currently in the premises{workerToday.checkIn ? ` — checked in at ${workerToday.checkIn}` : ''}.</div>
-                    )}
-                    {!attendanceMarked && workerToday?.nextAction === 'IN' && (
-                      <div className="p-3 rounded-2xl bg-bss-soft-orange border border-bss-border flex items-center gap-2 text-sm text-bss-orange font-semibold"><CheckCircle2 size={16}/> Checked out{workerToday.checkOut ? ` at ${workerToday.checkOut}` : ''}.</div>
-                    )}
-                    {attendanceMarked
-                      ? <p className="p-3 bg-bss-soft-green border border-bss-border text-bss-green rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Attendance marked for {entity.name}. It is now visible on the worker&apos;s Attendance page.</p>
-                      : <button onClick={markAttendance} className={`w-full h-11 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-2 transition-colors ${workerToday?.nextAction === 'OUT' ? 'bg-bss-navy hover:bg-bss-deep-navy' : 'bg-bss-green'}`}><CheckCircle2 size={17}/>{workerToday?.nextAction === 'OUT' ? 'Mark check-out' : workerToday?.nextAction === 'IN' ? 'Mark check-in again' : "Mark today's attendance"}</button>}
-                  </div>
-                : alreadyPending
+              {alreadyPending
                   ? <p className="p-3 bg-bss-soft-orange border border-bss-border text-bss-orange rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>Binding request already sent — awaiting {entity.name}&apos;s approval. Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
                   : requestSent
                     ? <p className="p-3 bg-bss-soft-green border border-bss-border text-bss-green rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request sent! Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
                     : <div className="space-y-3">
-                        {sendError && <p role="alert" className="p-3 bg-bss-soft-orange border border-bss-border text-bss-error rounded-xl text-xs font-semibold flex items-start gap-2"><XCircle size={14} className="mt-0.5 flex-shrink-0"/><span>{sendError}</span></p>}
+                        {sendError && <p role="alert" className="p-3.5 bg-bss-soft-orange border border-bss-orange/20 text-bss-error rounded-2xl text-xs font-semibold flex items-start gap-2"><XCircle size={14} className="mt-0.5 flex-shrink-0"/><span>{sendError}</span></p>}
                         {entity.kind === 'worker' && (contractor.sites.length === 0 || (wageMode === 'sheet' ? !costSheetId : !(Number(offeredWage) > 0)))
-                          ? <button type="button" disabled className="w-full h-11 rounded-xl bg-bss-surface text-bss-text-muted text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed"><TriangleAlert size={17}/>{contractor.sites.length === 0 ? 'No site allotted — cannot bind' : wageMode === 'sheet' ? 'Pick an accepted cost sheet to bind' : 'Enter a monthly wage to bind'}</button>
-                          : <button onClick={() => { setWageError(''); setDojError(''); setConfirmOpen(true); }} className="w-full h-11 rounded-xl bg-[#01183A] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#022B5E]"><Link2 size={17}/>Send binding request</button>}
+                          ? <button type="button" disabled className="w-full h-12 rounded-2xl bg-bss-surface text-bss-text-muted text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed"><TriangleAlert size={17}/>{contractor.sites.length === 0 ? 'No site allotted — cannot bind' : wageMode === 'sheet' ? 'Pick an accepted cost sheet to bind' : 'Enter a monthly wage to bind'}</button>
+                          : <button onClick={() => { setWageError(''); setDojError(''); setConfirmOpen(true); }} className="w-full h-12 rounded-2xl bg-[#01183A] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-bss-navy/20 transition-all hover:-translate-y-0.5 hover:bg-[#022B5E] active:translate-y-0"><Link2 size={17}/>Send binding request</button>}
                       </div>}
             </div>
           ):result?(
-            <div className="space-y-5">
-              <div className="flex items-center gap-4">{result.identity.photoUrl ? <img src={result.identity.photoUrl} alt="Worker" className="w-16 h-16 rounded-full object-cover"/> : <span className="w-16 h-16 rounded-full bg-bss-bg border border-bss-border grid place-items-center text-bss-text-muted"><UserRound size={26}/></span>}<div><h2 className="font-bold text-lg">{result.identity.name}</h2><code className="text-xs text-[#01183A]">{result.identity.bssId}</code><p className="text-xs text-bss-green mt-1">Verified BSS credential</p></div></div>
-              <dl className="grid grid-cols-2 gap-3 text-sm">{result.identity.category&&<><dt className="text-bss-text-muted">Category</dt><dd className="font-semibold">{result.identity.category}</dd></>}{result.employment?.status&&<><dt className="text-bss-text-muted">Employment</dt><dd className="font-semibold">{result.employment.status}</dd></>}{result.employment?.site&&<><dt className="text-bss-text-muted">Site</dt><dd className="font-semibold">{result.employment.site}</dd></>}{result.skills?.primary?.name&&<><dt className="text-bss-text-muted">Primary skill</dt><dd className="font-semibold">{result.skills?.primary?.name}</dd></>}</dl>
-              <p className="p-3 bg-bss-blue-tint rounded-lg text-xs text-bss-text-primary">Sensitive identifiers and banking details are withheld according to the selected relationship.</p>
+            <div className="space-y-4">
+              <div className="relative overflow-hidden rounded-2xl border border-bss-border bg-gradient-to-br from-bss-bg via-white to-bss-blue-tint/40 p-4">
+                <div aria-hidden className="absolute -right-6 -bottom-8 w-28 h-28 rounded-full bg-bss-interactive-blue/5 blur-xl" />
+                <div className="relative flex items-center gap-3.5">
+                  {result.identity.photoUrl
+                    ? <img src={result.identity.photoUrl} alt="Worker" className="w-16 h-16 rounded-2xl object-cover ring-2 ring-white shadow-sm"/>
+                    : <span className="w-16 h-16 rounded-2xl bg-bss-bg border border-bss-border grid place-items-center text-bss-text-muted flex-shrink-0"><UserRound size={26}/></span>}
+                  <div className="min-w-0">
+                    <h2 className="font-bold text-lg leading-tight text-bss-text-primary break-words">{result.identity.name}</h2>
+                    <code className="mt-1 inline-block rounded-full border border-bss-border bg-white px-2 py-0.5 text-[11px] font-semibold text-[#01183A]">{result.identity.bssId}</code>
+                    <p className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-bss-green"><CheckCircle2 size={12}/>Verified BSS credential</p>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {result.identity.category && <Stat label="Category" value={result.identity.category} icon={<UserRound size={11}/>} />}
+                {result.employment?.status && <Stat label="Employment" value={result.employment.status} icon={<Briefcase size={11}/>} />}
+                {result.employment?.site && <Stat label="Site" value={result.employment.site} icon={<MapPin size={11}/>} />}
+                {result.skills?.primary?.name && <Stat label="Primary skill" value={result.skills.primary.name} icon={<ShieldCheck size={11}/>} />}
+              </div>
+              <p className="rounded-2xl border border-bss-blue-tint bg-bss-blue-tint/60 px-3.5 py-3 text-xs leading-relaxed text-bss-text-primary">Sensitive identifiers and banking details are withheld according to the selected relationship.</p>
             </div>
-          ):<div className="py-20 text-center text-bss-text-muted"><ScanLine size={44} className="mx-auto mb-3"/><p className="text-sm">Scanned result will appear here.</p></div>}
+          ):(
+            <div className="py-16 text-center text-bss-text-muted">
+              <span className="mx-auto w-16 h-16 rounded-2xl border border-dashed border-bss-border bg-bss-bg grid place-items-center"><ScanLine size={30}/></span>
+              <p className="mt-4 text-sm font-semibold text-bss-text-secondary">Scanned result will appear here</p>
+              <p className="mt-1 text-xs">Scan a Worker or Employer QR to review the identity before binding.</p>
+            </div>
+          )}
         </div>
       </section>
     </div>

@@ -2,18 +2,26 @@
 """Isolated BSS audit runner.
 
 Watches the shared audit job volume for run.request files, decrypts the active
-AI key in memory, runs the vendored audit agent, and writes status.json.
-It has no database code, no BSS backend code and no DB credentials.
+AI key in memory, runs the vendored audit agent, and writes status.json. It has
+no database code, no BSS backend code and no DB credentials.
+
+Long jobs are monitored with a heartbeat, stage/percentage progress and a
+4-hour safety cap. Cancel is a cooperative file (cancel.request).
 """
 
 from __future__ import annotations
 
 import base64
+import datetime as dt
 import hashlib
 import json
 import os
+import queue
+import re
+import signal
 import subprocess
 import sys
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -26,10 +34,17 @@ JOBS_DIR = Path(os.environ.get("BSS_AUDIT_JOBS_DIR", str(HERE.parent / "audit_jo
 AGENT_DIR = Path(os.environ.get("BSS_AUDIT_AGENT_DIR", str(DEFAULT_AGENT_DIR)))
 CACHE_DIR = Path(os.environ.get("DEEPSEEK_CACHE_DIR", str(JOBS_DIR.parent / "cache")))
 POLL_SECONDS = max(2, int(os.environ.get("BSS_AUDIT_RUNNER_POLL_SECONDS", "5")))
+HEARTBEAT_SECONDS = max(5, int(os.environ.get("BSS_AUDIT_HEARTBEAT_SECONDS", "15")))
+STALL_AFTER_SECONDS = max(300, int(os.environ.get("BSS_AUDIT_STALL_AFTER_SECONDS", "1800")))
+MAX_RUNTIME_SECONDS = max(600, int(os.environ.get("BSS_AUDIT_MAX_RUNTIME_SECONDS", "14400")))
 
 
 def log(message: str) -> None:
     print(f"[audit-runner] {message}", flush=True)
+
+
+def _now() -> str:
+    return dt.datetime.now(dt.timezone.utc).isoformat()
 
 
 def fernet() -> Fernet:
@@ -107,18 +122,128 @@ def rel(job_dir: Path, path: Path | None) -> str:
         return ""
 
 
+def _content_type(name: str) -> str:
+    low = name.lower()
+    if low.endswith(".html"):
+        return "text/html; charset=utf-8"
+    if low.endswith(".pdf"):
+        return "application/pdf"
+    if low.endswith(".xlsx"):
+        return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    if low.endswith(".json"):
+        return "application/json"
+    return "application/octet-stream"
+
+
+def _artifacts(job_dir: Path, report_dir: Path) -> list[dict]:
+    items = []
+    for path in sorted(report_dir.rglob("*")):
+        if not path.is_file():
+            continue
+        name = path.name
+        admin_only = name in ("extraction_raw.json", "deepseek_calls.json") or (
+            "evidence" in path.parts and name != "evidence.json")
+        items.append({
+            "name": name,
+            "path": rel(job_dir, path),
+            "size": path.stat().st_size,
+            "contentType": _content_type(name),
+            "adminOnly": admin_only,
+        })
+    return items
+
+
+def _terminate(proc: subprocess.Popen) -> None:
+    if proc.poll() is not None:
+        return
+    try:
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+    except OSError:
+        try:
+            proc.terminate()
+        except OSError:
+            return
+    try:
+        proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except OSError:
+            try:
+                proc.kill()
+            except OSError:
+                pass
+
+
+def _read_lines(stream, lines: queue.Queue, log_file) -> None:
+    try:
+        for line in iter(stream.readline, ""):
+            log_file.write(line)
+            log_file.flush()
+            lines.put(line.rstrip("\n"))
+    finally:
+        try:
+            stream.close()
+        except OSError:
+            pass
+
+
+def _stage_from_line(line: str, state: dict) -> None:
+    text = line.strip()
+    low = text.lower()
+    if not text:
+        return
+    changed = False
+    if "ingesting" in low:
+        state.update(stage="ingesting", percent=10, message="Reading the document folders")
+        changed = True
+    elif "classifying" in low:
+        state.update(stage="classifying", percent=20, message="Classifying documents")
+        changed = True
+    elif low.startswith("reading ") or "reading " in low and "documents" in low:
+        state.update(stage="reading", percent=30, message="Extracting document data")
+        changed = True
+    elif "deepseek auditing" in low:
+        state.update(stage="auditing", percent=35, message="Auditing statutory checkpoints")
+        changed = True
+    elif low.startswith("audit progress:"):
+        match = re.search(r"audit progress:\s*(\d+)\s*/\s*(\d+)", low)
+        if match:
+            done, total = int(match.group(1)), int(match.group(2))
+            percent = 35 + (50 * done / total if total else 0)
+            state.update(stage="auditing", percent=min(85, round(percent, 1)),
+                         message=f"Auditing checkpoints ({done}/{total})", done=done, total=total)
+            changed = True
+    elif "deepseek verdicts" in low:
+        state.update(stage="auditing", percent=88, message="Applying audit verdicts")
+        changed = True
+    elif "writing narrative and reports" in low:
+        state.update(stage="reporting", percent=90, message="Writing the report")
+        changed = True
+    elif "reports written" in low:
+        state.update(stage="reporting", percent=95, message="Packaging the report files")
+        changed = True
+    if changed:
+        state["lastProgress"] = time.monotonic()
+        state["logLine"] = text[:300]
+
+
 def run_one(root: Path, request_path: Path) -> None:
-    started = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    started_mono = time.monotonic()
+    started_at = _now()
     processing = root / "run.processing"
     try:
         os.replace(request_path, processing)
     except OSError:
         return
+    proc: subprocess.Popen | None = None
+    log_file = None
     try:
-        root_uuid = uuid.UUID(root.name)
-        if str(root_uuid) != root.name:
-            raise RuntimeError("Invalid job id.")
-        write_status(root, {"status": "RUNNING", "startedAt": started})
+        uuid.UUID(root.name)
+        state = {"stage": "starting", "percent": 0, "message": "Starting the audit",
+                 "lastProgress": started_mono, "done": None, "total": None}
+        write_status(root, {"status": "RUNNING", "startedAt": started_at, "lastHeartbeat": _now(),
+                            "elapsedSeconds": 0, **{k: state[k] for k in ("stage", "percent", "message")}})
         request = read_request(processing)
         query = next(root.glob("contractor_documents_*"), None)
         groundtruth = root / "worker_documents"
@@ -141,10 +266,6 @@ def run_one(root: Path, request_path: Path) -> None:
         }
         if request.get("baseUrl"):
             env["DEEPSEEK_BASE_URL"] = str(request["baseUrl"])
-        # The agent uses its own role-specific models (deepseek-flash for
-        # reading/vision and deepseek-v4-pro for audit/narrative). The BSS Admin
-        # model field is not forced onto every role; the active provider/key and
-        # base URL are what the runner takes from BSS Admin.
         cmd = [
             sys.executable, str(AGENT_DIR / "run_agent.py"),
             "--groundtruth", str(groundtruth),
@@ -152,9 +273,70 @@ def run_one(root: Path, request_path: Path) -> None:
             "--job", str(job_json),
             "--out", str(out_dir),
         ]
-        with open(log_path, "w", encoding="utf-8") as log_file:
-            proc = subprocess.run(cmd, cwd=str(AGENT_DIR), env=env, stdout=log_file,
-                                  stderr=subprocess.STDOUT, timeout=3600)
+        log_file = open(log_path, "w", encoding="utf-8")
+        proc = subprocess.Popen(cmd, cwd=str(AGENT_DIR), env=env, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, bufsize=1,
+                                start_new_session=True)
+        lines: queue.Queue = queue.Queue()
+        threading.Thread(target=_read_lines, args=(proc.stdout, lines, log_file), daemon=True).start()
+
+        cancelled = False
+        timed_out = False
+        last_heartbeat = 0.0
+        while True:
+            while True:
+                try:
+                    line = lines.get_nowait()
+                except queue.Empty:
+                    break
+                _stage_from_line(line, state)
+            now = time.monotonic()
+            elapsed = now - started_mono
+            if (root / "cancel.request").exists():
+                cancelled = True
+                _terminate(proc)
+                break
+            if elapsed >= MAX_RUNTIME_SECONDS:
+                timed_out = True
+                _terminate(proc)
+                break
+            stalled = now - state["lastProgress"] >= STALL_AFTER_SECONDS
+            if now - last_heartbeat >= HEARTBEAT_SECONDS:
+                write_status(root, {
+                    "status": "RUNNING", "startedAt": started_at, "lastHeartbeat": _now(),
+                    "elapsedSeconds": round(elapsed, 1), "stalled": stalled,
+                    "stage": state["stage"], "percent": state["percent"], "message": state["message"],
+                    "done": state.get("done"), "total": state.get("total"), "logLine": state.get("logLine", ""),
+                })
+                last_heartbeat = now
+            if proc.poll() is not None:
+                break
+            time.sleep(1)
+
+        # Drain any final lines after the process exits.
+        try:
+            while True:
+                line = lines.get_nowait()
+                _stage_from_line(line, state)
+        except queue.Empty:
+            pass
+        elapsed = time.monotonic() - started_mono
+        for path in (processing, root / "cancel.request"):
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        if cancelled:
+            write_status(root, {"status": "CANCELLED", "startedAt": started_at, "finishedAt": _now(),
+                                "elapsedSeconds": round(elapsed, 1), "error": "Cancelled by the contractor."})
+            log(f"audit cancelled · {root.name}")
+            return
+        if timed_out:
+            write_status(root, {"status": "FAILED", "startedAt": started_at, "finishedAt": _now(),
+                                "elapsedSeconds": round(elapsed, 1),
+                                "error": f"Audit exceeded the {MAX_RUNTIME_SECONDS // 3600}-hour safety limit."})
+            log(f"audit timed out · {root.name}")
+            return
         if proc.returncode != 0:
             tail = log_path.read_text(encoding="utf-8", errors="ignore")[-2000:]
             raise RuntimeError(f"The audit agent failed (exit {proc.returncode}). {tail}")
@@ -168,27 +350,29 @@ def run_one(root: Path, request_path: Path) -> None:
         evidence = report_dir / "evidence" / "evidence.json"
         summary = summarise_json(report_json)
         write_status(root, {
-            "status": "READY",
-            "startedAt": started,
-            "finishedAt": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-            "reportHtml": rel(root, html),
-            "reportPdf": rel(root, pdf),
-            "reportXlsx": rel(root, xlsx),
-            "reportJson": rel(root, report_json),
+            "status": "READY", "startedAt": started_at, "finishedAt": _now(),
+            "elapsedSeconds": round(elapsed, 1), "lastHeartbeat": _now(), "stalled": False,
+            "stage": "ready", "percent": 100, "message": "Report ready",
+            "reportHtml": rel(root, html), "reportPdf": rel(root, pdf),
+            "reportXlsx": rel(root, xlsx), "reportJson": rel(root, report_json),
             "evidenceJson": rel(root, evidence if evidence.exists() else None),
-            "summary": summary,
-            "tokenUsage": summary.get("llmUsage") or {},
+            "artifacts": _artifacts(root, report_dir),
+            "summary": summary, "tokenUsage": summary.get("llmUsage") or {},
         })
         log(f"audit ready · {root.name} · {summary.get('reportNo', '')}")
     except Exception as exc:  # noqa: BLE001
-        write_status(root, {
-            "status": "FAILED",
-            "startedAt": started,
-            "finishedAt": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-            "error": str(exc)[:4000],
-        })
+        if proc is not None:
+            _terminate(proc)
+        write_status(root, {"status": "FAILED", "startedAt": started_at, "finishedAt": _now(),
+                            "elapsedSeconds": round(time.monotonic() - started_mono, 1),
+                            "error": str(exc)[:4000]})
         log(f"audit failed · {root.name} · {exc}")
     finally:
+        if log_file is not None:
+            try:
+                log_file.close()
+            except OSError:
+                pass
         for path in (processing, request_path):
             try:
                 path.unlink(missing_ok=True)
@@ -196,9 +380,35 @@ def run_one(root: Path, request_path: Path) -> None:
                 pass
 
 
+def recover_processing() -> None:
+    """Requeue jobs interrupted by a runner restart."""
+    for processing in JOBS_DIR.glob("*/run.processing"):
+        root = processing.parent
+        status_path = root / "status.json"
+        terminal = False
+        if status_path.exists():
+            try:
+                terminal = str(json.loads(status_path.read_text(encoding="utf-8")).get("status")).upper() in (
+                    "READY", "FAILED", "CANCELLED")
+            except Exception:  # noqa: BLE001
+                terminal = False
+        if terminal:
+            try:
+                processing.unlink(missing_ok=True)
+            except OSError:
+                pass
+            continue
+        try:
+            os.replace(processing, root / "run.request")
+            log(f"recovered interrupted job · {root.name}")
+        except OSError:
+            pass
+
+
 def main() -> int:
     JOBS_DIR.mkdir(parents=True, exist_ok=True)
-    log(f"watching {JOBS_DIR} · agent {AGENT_DIR} · poll {POLL_SECONDS}s")
+    recover_processing()
+    log(f"watching {JOBS_DIR} · agent {AGENT_DIR} · poll {POLL_SECONDS}s · max {MAX_RUNTIME_SECONDS}s")
     while True:
         for request in sorted(JOBS_DIR.glob("*/run.request")):
             root = request.parent

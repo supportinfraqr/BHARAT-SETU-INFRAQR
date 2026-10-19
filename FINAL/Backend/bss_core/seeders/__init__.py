@@ -28,6 +28,8 @@ MODULE_SEEDERS: list[tuple[str, str]] = [
     ("CLRA register templates (state-wise defaults)", "bss_core.seeders.clra"),
     # AI checkpoints for register templates + additional forms (after templates).
     ("AI checkpoints (templates + forms)", "bss_core.seeders.ai_checks"),
+    # Default (Central) occupational health-examination form (Form-VIII/IX).
+    ("medical health-examination form (Central default)", "bss_core.seeders.medical_forms"),
 ]
 
 

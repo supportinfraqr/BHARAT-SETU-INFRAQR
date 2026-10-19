@@ -12,6 +12,7 @@ process (lazy, thread-safe) and reused across requests.
 
 import io
 import logging
+import pathlib
 import threading
 import time
 
@@ -127,10 +128,8 @@ def _pdf_native_text(file_bytes, min_alnum=40):
     """Return the PDF's own text layer when it is usable.
 
     Digitally-generated PDFs (e.g. DigiLocker PAN/Aadhaar certificates) carry an
-    exact text layer — including the spacing between words — which rasterised OCR
-    often mangles (``SYED YASSER ALI`` -> ``SYEDYASSERALI``). Scanned PDFs have
-    little/no embedded text, so return "" and let the caller fall back to OCR.
-    """
+    exact text layer; scanned PDFs have little/no embedded text, so return "" and
+    let the caller fall back to OCR."""
     try:
         import pypdfium2 as pdfium
     except Exception:  # noqa: BLE001 — no native reader available
@@ -183,5 +182,179 @@ def extract_text(file_bytes: bytes, filename: str = "", timeout: float | int | N
     return _ocr_frames(_get_engine(), frames)
 
 
+def extract_text_ocr(file_bytes: bytes, filename: str = "") -> str:
+    """Force rasterisation + OCR (ignore the PDF text layer). Used to refine a
+    name that the native text layer merged (e.g. "YasserAli")."""
+    if not file_bytes:
+        raise OcrError("Empty document.")
+    if _is_pdf(file_bytes) or (filename or "").lower().endswith(".pdf"):
+        frames = _rasterize_pdf(file_bytes)
+    else:
+        frames = _open_image(file_bytes)
+    return _ocr_frames(_get_engine(), frames)
+
+
 # Alias used by legacy call-sites that import this module path.
 get_text = extract_text
+
+def extract_photo(file_bytes: bytes, filename: str = ""):
+    """Best-effort: return the passport photo embedded in a PDF (JPEG bytes) or None.
+
+    Looks at the first two pages, keeps portrait-shaped images (ratio ~1.05–1.9),
+    and among those picks the one with the most colours (the photo, not the
+    emblem/QR). Only PDFs are handled; images are returned as-is.
+    """
+    name = (filename or "").lower()
+    if not (name.endswith(".pdf") or file_bytes[:5] == b"%PDF-"):
+        return None
+    try:
+        import pypdfium2 as pdfium
+    except Exception:  # noqa: BLE001
+        return None
+    try:
+        doc = pdfium.PdfDocument(io.BytesIO(file_bytes))
+    except Exception:  # noqa: BLE001
+        return None
+    best = None
+    try:
+        for pno in range(min(2, len(doc))):
+            for obj in doc[pno].get_objects():
+                if not isinstance(obj, pdfium.PdfImage):
+                    continue
+                pil = None
+                try:
+                    pil = obj.extract()
+                except Exception:  # noqa: BLE001
+                    try:
+                        pil = obj.get_bitmap().to_pil()
+                    except Exception:  # noqa: BLE001
+                        pil = None
+                if pil is None:
+                    continue
+                try:
+                    w, h = pil.size
+                    if w < 40 or h < 40:
+                        continue
+                    ratio = h / max(w, 1)
+                    if not (1.05 < ratio < 1.95):
+                        continue
+                    colours = len(pil.convert("RGB").resize((48, 48)).getcolors(48 * 48) or [])
+                    score = (colours, w * h)
+                    if colours < 60:
+                        continue
+                    if best is None or score > best[0]:
+                        best = (score, pil)
+                except Exception:  # noqa: BLE001
+                    continue
+    finally:
+        try:
+            doc.close()
+        except Exception:  # noqa: BLE001
+            pass
+    if best is None:
+        return None
+    img = best[1]
+    w, h = img.size
+    # A full Aadhaar page/card was embedded (not a cropped passport photo) —
+    # crop the top-right photo area of the page.
+    if w >= 600 and h >= 800:
+        img = img.crop((int(w * 0.60), int(h * 0.06), int(w * 0.98), int(h * 0.42)))
+    buf = io.BytesIO()
+    img.convert("RGB").save(buf, "JPEG", quality=90)
+    return buf.getvalue()
+
+# ── Face (person photo) extraction ───────────────────────────────────────────
+FACE_MODEL_PATH = str(pathlib.Path(__file__).resolve().parent / "models" / "face_detection_yunet_2023mar.onnx")
+
+
+def render_page_image(file_bytes: bytes, filename: str = "", max_side: int = 1400):
+    """Render page 1 of a PDF (or the image itself) to a downscaled JPEG.
+
+    Used as the "whole Aadhaar card" preview/evidence. No OCR is performed."""
+    try:
+        if _is_pdf(file_bytes) or (filename or "").lower().endswith(".pdf"):
+            frames = _rasterize_pdf(file_bytes)
+        else:
+            frames = _open_image(file_bytes)
+    except OcrError:
+        return None
+    if not frames:
+        return None
+    img = frames[0]
+    w, h = img.size
+    longest = max(w, h)
+    if longest > max_side and longest > 0:
+        ratio = max_side / longest
+        img = img.resize((max(1, int(w * ratio)), max(1, int(h * ratio))))
+    buf = io.BytesIO()
+    img.convert("RGB").save(buf, "JPEG", quality=85)
+    return buf.getvalue()
+
+
+def _face_crop(image):
+    """Largest face in a PIL image → padded 3:4 JPEG bytes, or None."""
+    if image is None:
+        return None
+    try:
+        import os
+
+        import cv2
+        import numpy as np
+    except Exception:  # noqa: BLE001
+        return None
+    if not os.path.exists(FACE_MODEL_PATH):
+        return None
+    try:
+        w, h = image.size
+        if w < 80 or h < 80:
+            return None
+        scale = min(1.0, 1600.0 / max(w, h))
+        det = image.resize((max(1, int(w * scale)), max(1, int(h * scale)))) if scale < 1 else image
+        arr = np.asarray(det.convert("RGB"))[:, :, ::-1].copy()  # RGB -> BGR
+        dh, dw = arr.shape[:2]
+        detector = cv2.FaceDetectorYN.create(FACE_MODEL_PATH, "", (dw, dh), 0.6, 0.3, 5000)
+        detector.setInputSize((dw, dh))
+        _, faces = detector.detect(arr)
+        if faces is None or len(faces) == 0:
+            return None
+        best = max(faces, key=lambda f: float(f[2]) * float(f[3]))
+        x, y, fw, fh = (float(best[i]) / scale for i in range(4))
+        pad = 0.30
+        cx, cy = x + fw / 2, y + fh / 2
+        cw, ch = fw * (1 + 2 * pad), fh * (1 + 2 * pad)
+        if cw / ch < 0.75:
+            cw = ch * 0.75
+        else:
+            ch = cw / 0.75
+        left, top = max(0, int(cx - cw / 2)), max(0, int(cy - ch / 2))
+        right, bottom = min(w, int(cx + cw / 2)), min(h, int(cy + ch / 2))
+        if right - left < 40 or bottom - top < 40:
+            return None
+        crop = image.crop((left, top, right, bottom)).resize((400, 500))
+        buf = io.BytesIO()
+        crop.convert("RGB").save(buf, "JPEG", quality=90)
+        return buf.getvalue()
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def extract_face(file_bytes: bytes, filename: str = ""):
+    """Return the worker's passport photo (JPEG bytes) from the document.
+
+    Renders the PDF pages and uses the YuNet face detector; scans the first two
+    pages and returns the first face found. Falls back to the legacy embedded
+    portrait-image heuristic when no face is detected."""
+    try:
+        if _is_pdf(file_bytes) or (filename or "").lower().endswith(".pdf"):
+            frames = _rasterize_pdf(file_bytes)
+        else:
+            frames = _open_image(file_bytes)
+    except OcrError:
+        return None
+    for image in frames[:2]:
+        crop = _face_crop(image)
+        if crop:
+            return crop
+    # Fallback: embedded portrait image (old behaviour).
+    return extract_photo(file_bytes, filename)
+

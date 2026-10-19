@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Building2, CalendarDays, Clock3, Download, FileSpreadsheet, FileText, Loader2, Play, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Building2, CalendarDays, Clock3, Download, FileSpreadsheet, FileText, Loader2, Play, RefreshCw, RotateCcw, ShieldCheck, XCircle } from 'lucide-react';
 
 type StatusCounts = Record<string, number>;
 type JobSummary = {
@@ -12,11 +12,15 @@ type JobSummary = {
   verdict?: string;
   reportNo?: string;
 };
+type JobArtifact = { name: string; path: string; size: number; contentType: string; adminOnly: boolean };
+type JobProgress = { stage?: string; percent?: number; message?: string; elapsedSeconds?: number; stalled?: boolean; done?: number; total?: number };
 type JobRow = {
   id: string; site: string; siteId: string; contractor: string; employer: string;
   month: string; year: string; period: string; version: number; status: string;
   error?: string; workerCount: number; queryCount: number; summary?: JobSummary;
-  createdAt: string; finishedAt?: string; hasHtml: boolean; hasPdf: boolean; hasXlsx: boolean; hasJson: boolean;
+  createdAt: string; finishedAt?: string; hasHtml: boolean; hasPdf: boolean; hasXlsx: boolean; hasJson: boolean; hasEvidence?: boolean;
+  progress?: JobProgress; lastHeartbeat?: string; attempts?: number; maxAttempts?: number;
+  cancelRequested?: boolean; triggerType?: string; artifacts?: JobArtifact[];
 };
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -41,6 +45,20 @@ const statusTone: Record<string, string> = {
   PENDING: 'bg-amber-50 text-amber-700 border-amber-200',
 };
 
+function formatElapsed(value?: number) {
+  const total = Math.max(0, Math.round(Number(value || 0)));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  return h ? `${h}h ${m}m` : m ? `${m}m ${sec}s` : `${sec}s`;
+}
+
+function formatSize(value: number) {
+  if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+  if (value >= 1024) return `${Math.round(value / 1024)} KB`;
+  return `${value} B`;
+}
+
 function statusLabel(value: string) {
   return value === 'READY' ? 'Ready' : value === 'FAILED' ? 'Failed' : value === 'RUNNING' ? 'Running' : value === 'BUILDING' ? 'Preparing' : 'Queued';
 }
@@ -51,6 +69,7 @@ export default function MonthlyAudit({ role, listEndpoint, sites, defaultSiteId 
   const [rows, setRows] = useState<JobRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [busyId, setBusyId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const timer = useRef<number | null>(null);
@@ -79,9 +98,56 @@ export default function MonthlyAudit({ role, listEndpoint, sites, defaultSiteId 
   useEffect(() => {
     const active = rows.some(r => ['PENDING', 'BUILDING', 'RUNNING'].includes(r.status));
     if (!active) return;
-    timer.current = window.setTimeout(() => { void load(); }, 5000);
+    timer.current = window.setTimeout(() => { void load(); }, 15000);
     return () => { if (timer.current) window.clearTimeout(timer.current); };
   }, [rows, load]);
+
+  const activeKey = rows.filter(r => ['PENDING', 'BUILDING', 'RUNNING'].includes(r.status)).map(r => `${r.id}:${r.status}`).join('|');
+  useEffect(() => {
+    if (!activeKey) return;
+    const active = rows.filter(r => ['PENDING', 'BUILDING', 'RUNNING'].includes(r.status));
+    const sources = active.map(job => {
+      const source = new EventSource(`/api/audit-jobs/${encodeURIComponent(job.id)}/events`);
+      source.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data) as { type?: string; stage?: string; percent?: number; message?: string; elapsedSeconds?: number; stalled?: boolean; done?: number; total?: number };
+          if (data.type === 'progress' || data.type === 'queued') {
+            setRows(current => current.map(row => row.id === job.id ? { ...row, progress: { ...(row.progress || {}), ...data } } : row));
+          } else if (['ready', 'failed', 'cancelled', 'retry'].includes(String(data.type))) {
+            void load();
+          }
+        } catch { /* ignore malformed event */ }
+      };
+      // EventSource reconnects automatically; the 15s list poll is the fallback.
+      return source;
+    });
+    return () => sources.forEach(source => source.close());
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- restart only when the active set changes
+  }, [activeKey, load]);
+
+  async function cancelJob(id: string) {
+    setBusyId(id); setError(''); setNotice('');
+    try {
+      const res = await fetch(`/api/contractor/audit-jobs/${encodeURIComponent(id)}/cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const body = await res.json().catch(() => ({})) as { error?: string };
+      if (!res.ok) throw new Error(body.error || 'The audit could not be cancelled.');
+      setNotice('Cancellation requested.');
+      await load();
+    } catch (e) { setError(e instanceof Error ? e.message : 'The audit could not be cancelled.'); }
+    finally { setBusyId(''); }
+  }
+
+  async function retryJob(id: string) {
+    setBusyId(id); setError(''); setNotice('');
+    try {
+      const res = await fetch(`/api/contractor/audit-jobs/${encodeURIComponent(id)}/retry`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const body = await res.json().catch(() => ({})) as { error?: string };
+      if (!res.ok) throw new Error(body.error || 'The audit could not be retried.');
+      setNotice('Retry started.');
+      await load();
+    } catch (e) { setError(e instanceof Error ? e.message : 'The audit could not be retried.'); }
+    finally { setBusyId(''); }
+  }
 
   async function runAudit() {
     setBusy(true); setError(''); setNotice('');
@@ -176,19 +242,41 @@ export default function MonthlyAudit({ role, listEndpoint, sites, defaultSiteId 
                     </p>
                     {job.summary?.executiveSummary && <p className="mt-2 line-clamp-2 max-w-3xl text-xs leading-relaxed text-bss-text-secondary">{job.summary.executiveSummary}</p>}
                     {job.error && <p className="mt-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700">{job.error}</p>}
-                    {active && <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-700"><Clock3 size={12}/>{job.status === 'RUNNING' ? 'Reading documents and auditing — this can take a few minutes.' : 'Preparing the job folder.'}</p>}
+                    {active && (
+                      <div className="mt-3 max-w-2xl">
+                        <div className="flex items-center justify-between gap-3 text-[11px] font-semibold text-bss-text-secondary">
+                          <span className={`inline-flex min-w-0 items-center gap-1.5 ${job.progress?.stalled ? 'text-amber-700' : 'text-blue-700'}`}><Clock3 size={12}/><span className="truncate">{job.progress?.message || (job.status === 'RUNNING' ? 'Working…' : 'Preparing the job folder…')}{job.progress?.stalled ? ' · no progress for a while' : ''}</span></span>
+                          <span className="flex-shrink-0">{Math.round(Number(job.progress?.percent || 0))}%</span>
+                        </div>
+                        <div className="mt-1 h-2 overflow-hidden rounded-full bg-bss-bg"><div className="h-full rounded-full bg-bss-interactive-blue transition-all" style={{ width: `${Math.max(2, Math.min(100, Number(job.progress?.percent || 0)))}%` }} /></div>
+                        <p className="mt-1 text-[10px] text-bss-text-muted">Elapsed {formatElapsed(job.progress?.elapsedSeconds)} · You can leave this page — the audit continues.</p>
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {job.hasHtml && <a href={fileUrl(job.id, 'html')} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#01183A] px-3 text-xs font-bold text-white hover:bg-[#022B5E]"><FileText size={13}/>View report</a>}
                     {job.hasPdf && <a href={fileUrl(job.id, 'pdf')} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-bss-border bg-white px-3 text-xs font-bold text-bss-text-primary hover:bg-bss-bg"><Download size={13}/>PDF</a>}
                     {job.hasXlsx && <a href={fileUrl(job.id, 'xlsx')} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-bss-border bg-white px-3 text-xs font-bold text-bss-text-primary hover:bg-bss-bg"><FileSpreadsheet size={13}/>Excel</a>}
                     {job.hasJson && <a href={fileUrl(job.id, 'json')} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-bss-border bg-white px-3 text-xs font-bold text-bss-text-primary hover:bg-bss-bg"><FileText size={13}/>JSON</a>}
+                    {job.hasEvidence && <a href={fileUrl(job.id, 'evidence')} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-bss-border bg-white px-3 text-xs font-bold text-bss-text-primary hover:bg-bss-bg"><FileText size={13}/>Evidence</a>}
+                    {role === 'contractor' && active && <button type="button" disabled={busyId === job.id} onClick={() => void cancelJob(job.id)} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50"><XCircle size={13}/>Cancel</button>}
+                    {role === 'contractor' && ['FAILED', 'CANCELLED'].includes(job.status) && <button type="button" disabled={busyId === job.id} onClick={() => void retryJob(job.id)} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#01183A] px-3 text-xs font-bold text-white hover:bg-[#022B5E] disabled:opacity-50"><RotateCcw size={13}/>Retry</button>}
                   </div>
                 </div>
                 {(Object.keys(sc).length > 0 || Object.keys(rc).length > 0) && <div className="mt-3 flex flex-wrap gap-1.5">
                   {Object.entries(sc).map(([k, v]) => <span key={k} className="rounded-full border border-bss-border bg-bss-bg px-2 py-0.5 text-[10px] font-semibold text-bss-text-secondary">{k}: {v}</span>)}
                   {Object.entries(rc).map(([k, v]) => <span key={`r-${k}`} className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${k === 'High' ? 'border-rose-200 bg-rose-50 text-rose-700' : k === 'Medium' ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{k} risk: {v}</span>)}
                 </div>}
+                {(job.artifacts?.length || 0) > 0 && (
+                  <details className="mt-3 rounded-xl border border-bss-border bg-bss-bg/50 px-3 py-2.5">
+                    <summary className="cursor-pointer select-none text-[11px] font-bold text-bss-text-secondary">All generated files ({job.artifacts?.length})</summary>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {job.artifacts?.map(file => <a key={file.path} href={`/api/audit-jobs/${job.id}/artifact?path=${encodeURIComponent(file.path)}`} target={file.name.endsWith('.html') ? '_blank' : undefined} rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-bss-border bg-white px-2 py-1 text-[10px] font-semibold text-bss-text-secondary hover:bg-bss-surface">
+                        <Download size={10}/>{file.name}{file.adminOnly ? ' · admin' : ''} · {formatSize(file.size)}
+                      </a>)}
+                    </div>
+                  </details>
+                )}
               </div>;
             })}
           </div>}

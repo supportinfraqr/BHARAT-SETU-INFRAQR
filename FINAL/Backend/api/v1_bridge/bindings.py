@@ -524,6 +524,19 @@ def _sync_employment_from_binding(binding):
         _ensure_checklist(binding)
     except Exception:  # noqa: BLE001 — checklist creation must never block a bind
         pass
+    # Safety checks are site-specific: a (re)accepted binding makes the site's
+    # induction/PPE start "not done", so the site's Safety Officer records them.
+    try:
+        from bss_core.models import WorkerWelfareSafety
+        wws, _ = WorkerWelfareSafety.objects.get_or_create(user=binding.worker)
+        if wws.ppe_required or wws.safety_training_completed or wws.site_induction_status:
+            wws.ppe_required = False
+            wws.safety_training_completed = False
+            wws.site_induction_status = ""
+            wws.save(update_fields=["ppe_required", "safety_training_completed",
+                                    "site_induction_status", "updated_at"])
+    except Exception:  # noqa: BLE001 — safety reset must never block a bind
+        pass
 
 
 def _unlink_employment_from_binding(binding):

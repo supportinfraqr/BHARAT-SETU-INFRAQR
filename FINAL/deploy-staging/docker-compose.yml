@@ -102,6 +102,8 @@ services:
       BSS_AUDIT_JOBS_DIR: /data/audit/jobs
       BSS_AUDIT_AGENT_DIR: /app/audit_agent
       BSS_AUDIT_HANDOFF_KEY: ${BSS_AUDIT_HANDOFF_KEY:?BSS_AUDIT_HANDOFF_KEY is required in .env}
+      BSS_PUBLIC_BASE_URL: https://bharat-shram-setu-staging.bharatshramsetu.com
+      BSS_AUDIT_STALE_SECONDS: ${BSS_AUDIT_STALE_SECONDS:-300}
     volumes:
       - media_data:/data/media
       - static_data:/data/static
@@ -140,6 +142,9 @@ services:
       BSS_AUDIT_HANDOFF_KEY: ${BSS_AUDIT_HANDOFF_KEY:?BSS_AUDIT_HANDOFF_KEY is required in .env}
       DEEPSEEK_CACHE_DIR: /data/audit/cache
       BSS_AUDIT_RUNNER_POLL_SECONDS: "5"
+      BSS_AUDIT_HEARTBEAT_SECONDS: "15"
+      BSS_AUDIT_STALL_AFTER_SECONDS: "1800"
+      BSS_AUDIT_MAX_RUNTIME_SECONDS: "14400"
       PYTHONDONTWRITEBYTECODE: "1"
     read_only: true
     tmpfs:
@@ -148,8 +153,8 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    mem_limit: 3g
-    cpus: "2.0"
+    mem_limit: 6g
+    cpus: "3.0"
 
   nginx:
     image: nginx:1.27-alpine

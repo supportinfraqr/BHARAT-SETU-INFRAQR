@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from 'react';
 import { ShieldCheck, HardHat, FileCheck, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { formatDate } from '@/lib/date';
 import { useWorker } from '@/contexts/WorkerContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import PageHero from '@/components/portal/PageHero';
+import SafetyCertificateCard from '@/components/worker/SafetyCertificate';
 
 const isDone = (value?: string | boolean) => typeof value === 'boolean'
   ? value
@@ -28,11 +30,18 @@ function Stat({ label, value, ok, sub }: { label: string; value: string; ok: boo
 
 export default function ComplianceModule() {
   const { t } = useLanguage();
-  const { worker } = useWorker();
+  const { worker, refresh } = useWorker();
+  useEffect(() => { void refresh(); }, [refresh]);
   const welfare = worker.welfare ?? {};
   const gatePasses = worker.gatePasses ?? [];
   const records = worker.complianceRecords ?? [];
   const ppeIssued = (welfare.typesOfPpeGiven ?? '').split(',').map(s => s.trim()).filter(Boolean);
+  const hs = worker.healthSafety;
+  const exams = hs?.medicalExams ?? [];
+  const kit = hs?.kitItems ?? [];
+  const trainings = hs?.trainings ?? [];
+  const cert = hs?.certificate ?? null;
+  const induction = hs?.induction ?? null;
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
@@ -120,6 +129,70 @@ export default function ComplianceModule() {
         </div>
       </div>
 
+      {/* Health & Safety records captured by the employer */}
+      {(exams.length > 0 || kit.length > 0 || trainings.length > 0 || cert) && (
+        <section className="bss-3d bss-scroll-rise bg-white rounded-2xl p-5 shadow-sm border border-bss-border space-y-5">
+          <div className="flex items-center justify-between border-b border-bss-border pb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-bss-soft-green flex items-center justify-center text-[#14843C]"><HardHat size={20}/></div>
+              <div>
+                <h2 className="text-base font-bold text-bss-text-primary">Health &amp; Safety records</h2>
+                <p className="text-xs text-bss-text-muted">Medical examination, PPE kit and safety training captured by your employer</p>
+              </div>
+            </div>
+          </div>
+          <SafetyCertificateCard worker={worker} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider mb-2">Medical Examinations</p>
+              {exams.length ? <div className="space-y-2">{exams.map((e, i) => (
+                <div key={i} className="p-3 rounded-lg border border-bss-border bg-bss-bg/40">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-bss-text-primary">{formatDate(e.date)}</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isDone(e.fitness) ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-bss-orange'}`}>{e.fitness || 'Pending'}</span>
+                  </div>
+                  {e.nextDue && <p className="text-[10px] text-bss-text-muted mt-1">Next due {formatDate(e.nextDue)}</p>}
+                  {e.remarks && <p className="text-[10px] text-bss-text-muted mt-0.5">{e.remarks}</p>}
+                </div>
+              ))}</div> : <p className="text-sm text-bss-text-muted">No examination recorded yet.</p>}
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider mb-2">PPE Kit Issued</p>
+              {kit.length ? <div className="space-y-2">{kit.map((k, i) => (
+                <div key={i} className="flex justify-between items-center p-3 rounded-lg border border-bss-border bg-bss-bg/40">
+                  <div>
+                    <p className="text-xs font-semibold text-bss-text-primary">{k.name}</p>
+                    {k.issueDate && <p className="text-[10px] text-bss-text-muted">Issued {formatDate(k.issueDate)}</p>}
+                  </div>
+                  <CheckCircle2 size={15} className="text-[#14843C]"/>
+                </div>
+              ))}</div> : <p className="text-sm text-bss-text-muted">No PPE recorded yet.</p>}
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-bss-text-muted uppercase tracking-wider mb-2">Safety Trainings</p>
+              {induction && (
+                <div className="p-3 mb-2 rounded-lg border border-bss-border bg-bss-soft-green/40">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-semibold text-bss-text-primary">Site Induction &amp; Orientation</span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-bss-soft-green text-bss-green uppercase">Induction</span>
+                  </div>
+                  <p className="text-[10px] text-bss-text-muted mt-1">{induction.na ? 'Not applicable for your site' : [induction.date && `Done ${formatDate(induction.date)}`, induction.trainer && `Trainer ${induction.trainer}`, induction.validUntil && `Valid to ${formatDate(induction.validUntil)}`].filter(Boolean).join(' · ')}</p>
+                </div>
+              )}
+              {trainings.length ? <div className="space-y-2">{trainings.map((tr, i) => (
+                <div key={i} className="p-3 rounded-lg border border-bss-border bg-bss-bg/40">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-semibold text-bss-text-primary">{tr.name}</span>
+                    {tr.mandatory && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-bss-soft-green text-bss-green uppercase">Mandatory</span>}
+                  </div>
+                  <p className="text-[10px] text-bss-text-muted mt-1">{[tr.date && `Done ${formatDate(tr.date)}`, tr.trainer && `Trainer ${tr.trainer}`, tr.validUntil && `Valid to ${formatDate(tr.validUntil)}`].filter(Boolean).join(' · ')}</p>
+                </div>
+              ))}</div> : induction ? null : <p className="text-sm text-bss-text-muted">No training recorded yet.</p>}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Historical records */}
       <section className="bss-3d bss-scroll-rise bss-card rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-bss-border"><h2 className="text-sm font-semibold text-bss-text-primary">Historical records</h2><p className="text-xs text-bss-text-muted mt-0.5">Past examinations, trainings, passes and renewals on your record</p></div>
@@ -127,6 +200,7 @@ export default function ComplianceModule() {
           {records.map((h, i) => <tr key={i} className="hover:bg-bss-bg"><td className="px-5 py-3 whitespace-nowrap">{formatDate(h.date)}</td><td className="px-5 py-3 font-semibold text-bss-text-primary">{h.record}</td><td className="px-5 py-3 text-bss-text-muted">{h.detail}</td><td className="px-5 py-3 font-mono text-[11px] text-[#01183A]">{h.ref || '—'}</td><td className="px-5 py-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${['fit', 'completed', 'active'].includes((h.result || '').toLowerCase()) ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-bss-orange'}`}>{h.result}</span></td></tr>)}
         </tbody></table></div> : <p className="p-8 text-center text-sm text-bss-text-muted">No compliance history recorded yet.</p>}
       </section>
+
     </div>
   );
 }

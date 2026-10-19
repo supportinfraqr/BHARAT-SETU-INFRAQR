@@ -5,6 +5,7 @@ import { BssTaxonomies } from '@/data/taxonomies';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
 import PageHero from '@/components/portal/PageHero';
+import SafetyCertificateCard from '@/components/worker/SafetyCertificate';
 import type { WorkerRecord } from '@/types/portal';
 import { MobilitySection, type MobilitySectionHandle } from '@/components/worker/MobilitySection';
 import { workerCompletion, completionTab } from '@/lib/workerProfileCompletion';
@@ -56,6 +57,8 @@ export default function WorkerProfilePage() {
   // from the previous tab, so a missing-field warning never leaks onto another
   // section's Save Persona.
   useEffect(() => { setDirty(false); setProfileError(''); setInvalidFields([]); setSaveAttempted(false); }, [activeTab]);
+  // Keep welfare/safety data (certificate, medical, gate pass) fresh when the tab opens.
+  useEffect(() => { if (activeTab === 'welfare') void refresh(); }, [activeTab, refresh]);
 
   // ── Dynamic nominees ──────────────────────────────────────────────────
   type NomineeDoc = { type: string; name: string; fileName?: string; url?: string };
@@ -2057,6 +2060,8 @@ export default function WorkerProfilePage() {
               <div className="bg-[#FDEEE6] p-5 rounded-2xl border border-[#E45D24]/20 mb-6">
                 <p className="text-[13px] text-[#E45D24] font-medium">Welfare and safety records are maintained by your employer and site safety team. For detailed records and actions, visit the <a href="/worker/Compliance" className="underline font-semibold">Compliance module</a>.</p>
               </div>
+
+              <SafetyCertificateCard worker={worker} />
 
               <div className="bg-[#F2F6FC] rounded-2xl p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>

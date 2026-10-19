@@ -45,6 +45,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         ("worker", "Worker"),
         ("contractor", "Contractor"),
         ("employer", "Employer"),
+        ("employer_staff", "Employer Staff"),
         ("government", "Government"),
         ("bss_staff", "BSS Staff"),
         ("bss_admin", "BSS Admin"),
@@ -391,3 +392,39 @@ class BssStaffProfile(models.Model):
 
     def __str__(self):
         return self.full_name or str(self.user_id)
+
+
+class EmployerStaffMember(models.Model):
+    """An employer-created sub-account (Medical / H&S / Security officer).
+
+    One staff account belongs to exactly one employer (OneToOne). The staff logs
+    in with phone + MPIN and is scoped to that employer; permissions decide which
+    workspaces/endpoints are available. Only the employer may set/reset the MPIN.
+    """
+
+    PERMISSION_CHOICES = [
+        ("medical", "Medical Officer"),
+        ("safety", "Health & Safety Officer"),
+        ("gate_pass", "Security Officer"),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE,
+                                related_name="employer_staff_profile",
+                                limit_choices_to={"role": "employer_staff"})
+    employer = models.ForeignKey(User, on_delete=models.CASCADE,
+                                 related_name="staff_members",
+                                 limit_choices_to={"role": "employer"})
+    permissions = models.JSONField(default=list, blank=True)  # ["medical", "safety"]
+    title = models.CharField(max_length=120, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="staff_created")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "employer_staff_member"
+        indexes = [models.Index(fields=["employer"], name="idx_employer_staff_employer")]
+
+    def __str__(self):
+        return f"{self.user_id} -> {self.employer_id}"

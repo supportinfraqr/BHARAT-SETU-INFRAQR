@@ -49,6 +49,7 @@ class SiteCctvCamera(models.Model):
     SOURCE_TYPES = [
         ("RTSP", "RTSP (IP camera / NVR)"),
         ("HTTP", "HTTP / MJPEG stream"),
+        ("HLS", "HLS (.m3u8)"),
         ("FILE", "Test file / simulated feed"),
         ("OTHER", "Other / direct URL"),
     ]
@@ -90,7 +91,7 @@ class SiteCctvCamera(models.Model):
     # --- source resolution ------------------------------------------------
     def build_source(self) -> str:
         """Return the feed URL the engine should open, or '' when incomplete."""
-        if self.source_type in ("FILE", "OTHER") or self.url.strip():
+        if self.source_type in ("FILE", "OTHER", "HLS") or self.url.strip():
             return self.url.strip()
         host = (self.host or "").strip()
         if not host:

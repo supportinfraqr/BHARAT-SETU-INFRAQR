@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 
-export function CopyButton({ value, className = "" }: { value: string; className?: string }) {
+export function CopyButton({ value, className = "", tone = "light" }: { value: string; className?: string; tone?: "light" | "dark" }) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy(e: React.MouseEvent) {
@@ -31,9 +31,11 @@ export function CopyButton({ value, className = "" }: { value: string; className
       type="button"
       onClick={handleCopy}
       title={copied ? "Copied!" : `Copy ${value}`}
-      className={`inline-flex items-center gap-1 text-[11px] font-medium text-bss-text-muted hover:text-bss-interactive-blue hover:bg-bss-blue-tint border border-bss-border hover:border-bss-interactive-blue rounded-md px-1.5 py-0.5 transition-colors cursor-pointer ${className}`}
+      className={`inline-flex items-center gap-1 text-[11px] font-medium rounded-md px-1.5 py-0.5 transition-colors cursor-pointer ${tone === "dark"
+        ? "text-white/80 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20"
+        : "text-bss-text-muted hover:text-bss-interactive-blue hover:bg-bss-blue-tint border border-bss-border hover:border-bss-interactive-blue"} ${className}`}
     >
-      {copied ? <Check size={12} className="text-bss-green" /> : <Copy size={12} />}
+      {copied ? <Check size={12} className={tone === "dark" ? "text-[#7FD49B]" : "text-bss-green"} /> : <Copy size={12} />}
       <span>{copied ? "Copied" : "Copy"}</span>
     </button>
   );

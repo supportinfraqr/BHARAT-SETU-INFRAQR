@@ -358,8 +358,12 @@ def deepseek_audit(run, client: DeepSeekClient, log=print):
         err = (f"{crit} ({rs[0].spec.cid}…{' worker group ' + str(g['n']) if g else ''}): " + "; ".join(errs)) if errs and lost else None
         return got, lost, err
 
+    total_jobs = len(jobs)
+    completed = 0
     with ThreadPoolExecutor(max_workers=client.cfg["max_parallel"]) as ex:
         for got, lost, err in ex.map(work, jobs):
+            completed += 1
+            log(f"  audit progress: {completed}/{total_jobs}")
             for cid, row in got.items():
                 answers[cid].append(row)
             for cid in lost:

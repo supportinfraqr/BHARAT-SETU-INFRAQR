@@ -495,27 +495,26 @@ def _employer_gate_passes(user):
     rows = [_employer_gate_pass_row(g) for g in WorkerGatePass.objects.filter(
         site__employer=user).select_related("worker", "site").order_by("-created_at")[:100]]
     seen = {(row["workerId"], row["type"]) for row in rows}
+    seen_workers = {row["workerId"] for row in rows}
     bindings = (WorkerContractorBinding.objects
                 .filter(site__employer=user, binding_status="ACCEPTED")
                 .select_related("worker", "site", "contractor"))
     for b in bindings:
         meta = _gate_pass_worker_meta(b.worker)
+        if meta["workerId"] in seen_workers:
+            continue  # already has an explicit pass
         gp_type = _auto_gate_pass_type(b.worker)
-        if not gp_type:
-            continue
-        label = _GP_TYPE_LABEL.get(gp_type, gp_type)
+        label = _GP_TYPE_LABEL.get(gp_type, gp_type) if gp_type else "Not eligible"
         if (meta["workerId"], label) in seen:
             continue
-        start = b.accepted_at or b.created_at
-        days = 365 if gp_type == "PGP" else 7
         # Validity: permanent mirrors the BSS ID card; temporary runs 7 days.
-        issue_date, valid_till = _auto_gate_pass_dates(b.worker, gp_type)
+        issue_date, valid_till = (_auto_gate_pass_dates(b.worker, gp_type) if gp_type else (None, None))
         blocked = _is_gate_pass_blocked(b.worker, user)
         cp = getattr(b.contractor, "contractor_profile", None)
         rows.append({
             "id": f"auto-{b.id}",
             "auto": True,
-            "number": _auto_gate_pass_no(b.worker, gp_type),
+            "number": _auto_gate_pass_no(b.worker, gp_type) if gp_type else "",
             **meta,
             "contractor": _d(cp.contractor_name if cp else b.contractor.username),
             "site": b.site.site_name if b.site else "",
@@ -525,10 +524,12 @@ def _employer_gate_passes(user):
             "requestedBy": "",
             "approvedBy": "",
             "approvedAt": "",
-            "validFrom": _dts(issue_date),
-            "validTo": _dts(valid_till),
-            "status": "Blocked" if blocked else "Approved",
+            "validFrom": _dts(issue_date) if issue_date else "",
+            "validTo": _dts(valid_till) if valid_till else "",
+            "status": "Blocked" if blocked else ("Not eligible" if not gp_type else "Approved"),
             "blocked": blocked,
+            "eligible": bool(gp_type),
+            "missing": [] if gp_type else _gate_pass_missing(b.worker),
             "dispatched": False,
             "dispatchedAt": "",
             "eligibility": _gate_pass_eligibility(b.worker),
@@ -794,7 +795,7 @@ def build_employer_portal(user):
         "gatePasses": _employer_gate_passes(user),
         "submissions": _employer_submissions(user),
         "complianceReports": _employer_compliance_reports(user),
-        "canAccessAdmin": False,
+        "canAccessAdmin": True,
         "users": _employer_users(user),
         "permissionRoles": _employer_permission_roles(),
         "auditLogs": _employer_audit_logs(user),

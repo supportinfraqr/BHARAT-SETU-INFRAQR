@@ -70,6 +70,14 @@ class AuditJob(models.Model):
     evidence_json = models.CharField(max_length=500, blank=True)
     summary = models.JSONField(default=dict, blank=True)
     token_usage = models.JSONField(default=dict, blank=True)
+    progress = models.JSONField(default=dict, blank=True)
+    artifacts = models.JSONField(default=list, blank=True)
+    last_heartbeat = models.DateTimeField(null=True, blank=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    max_attempts = models.PositiveSmallIntegerField(default=3)
+    cancel_requested = models.BooleanField(default=False)
+    trigger_type = models.CharField(max_length=20, default="manual")
+    notified_at = models.DateTimeField(null=True, blank=True)
     agent_version = models.CharField(max_length=40, blank=True)
     provider = models.CharField(max_length=40, blank=True)
     model = models.CharField(max_length=120, blank=True)
@@ -93,3 +101,20 @@ class AuditJob(models.Model):
 
     def __str__(self):
         return f"{self.id} {self.contractor_id} {self.month} {self.year}"
+
+
+class AuditJobEvent(models.Model):
+    """Append-only progress/log event for the audit runner stream."""
+
+    job = models.ForeignKey(AuditJob, on_delete=models.CASCADE, related_name="events")
+    type = models.CharField(max_length=30)
+    payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "audit_job_event"
+        ordering = ["id"]
+        indexes = [models.Index(fields=["job", "id"], name="idx_audit_event_job")]
+
+    def __str__(self):
+        return f"{self.job_id} {self.type}"

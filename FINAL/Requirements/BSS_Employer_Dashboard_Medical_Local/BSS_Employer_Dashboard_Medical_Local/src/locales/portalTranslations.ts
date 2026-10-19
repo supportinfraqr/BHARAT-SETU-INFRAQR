@@ -1,0 +1,42 @@
+const en = {
+  'common.working':'Working…', 'portal.worker':'Worker Portal', 'portal.contractor':'Contractor Portal', 'portal.employer':'Employer Portal',
+  'nav.primary':'Primary navigation', 'nav.mobile':'Mobile navigation', 'nav.menu':'Open navigation menu',
+  'nav.dashboard':'Dashboard', 'nav.rozgar':'Rozgar Setu', 'nav.work':'Work', 'nav.records':'My Records',
+  'nav.skills':'Upskill', 'nav.attendance':'Attendance', 'nav.leave':'Leave', 'nav.earnings':'Wage History',
+  'nav.holidays':'Holiday Calendar', 'nav.profile':'Profile', 'nav.compliance':'Compliance', 'nav.documents':'Documents',
+  'nav.benefits':'Retirement Benefits', 'nav.grievances':'Grievances', 'nav.qrIdentity':'My ID',
+  'nav.idCard':'Identity Card', 'nav.orderCard':'Order Physical Card', 'nav.bindingRequests':'Binding Requests',
+  'nav.scanQr':'Scan QR', 'nav.settings':'Profile Settings', 'nav.master':'Master Data', 'nav.gatePass':'Gate Pass',
+  'nav.workerMaster':'Worker Master', 'nav.submissions':'Compliance Submissions', 'nav.reports':'Reports', 'nav.workerBenefits':'Worker Benefits', 'nav.salaries':'Salary & Wages',
+  'nav.complianceReport':'Compliance Report', 'nav.qrSystem':'QR System', 'nav.myWorkers':'My Workers', 'nav.myEmployers':'My Employers',
+  'nav.payroll':'Payroll', 'nav.operations':'Operations', 'nav.grievanceCentre':'Grievances',
+  'nav.bindingRequestsCentre':'Binding Requests',
+  'nav.workforce':'Workforce', 'nav.contractors':'Contractors', 'nav.workers':'Workers', 'nav.sites':'Sites',
+  'nav.governance':'Governance', 'nav.approvals':'Approvals',
+  'nav.mySites':'My Sites', 'nav.siteOverview':'Site Overview', 'nav.contractorCompliance':'Contractor Compliance',
+  'nav.complianceSubmission':'Compliance Submission', 'nav.myContractors':'My Contractors',
+  'nav.qrMySites':'My Sites (QR)', 'nav.administration':'Administration', 'nav.adminContractors':'Contractor Management',
+  'nav.userManagement':'User Management', 'nav.permissions':'Permissions', 'nav.siteManagement':'Site Management',
+  'nav.workerDocuments':'Worker Compliance Documents', 'nav.auditLog':'Audit Log', 'nav.transport':'Transport Management', 'nav.ecswBindings':'Binding & Consent', 'nav.labourCompliance':'Labour Law Compliance',
+};
+
+const hi = { ...en, 'common.working':'कार्य जारी…', 'portal.worker':'श्रमिक पोर्टल', 'portal.contractor':'ठेकेदार पोर्टल', 'portal.employer':'नियोक्ता पोर्टल', 'nav.primary':'मुख्य नेविगेशन', 'nav.mobile':'मोबाइल नेविगेशन', 'nav.menu':'नेविगेशन मेनू खोलें', 'nav.dashboard':'डैशबोर्ड', 'nav.rozgar':'रोज़गार सेतु', 'nav.work':'कार्य', 'nav.records':'मेरे रिकॉर्ड', 'nav.skills':'कौशल विकास', 'nav.attendance':'उपस्थिति', 'nav.leave':'छुट्टी', 'nav.earnings':'मज़दूरी इतिहास', 'nav.holidays':'अवकाश कैलेंडर', 'nav.profile':'प्रोफ़ाइल', 'nav.compliance':'अनुपालन', 'nav.documents':'दस्तावेज़', 'nav.benefits':'सेवानिवृत्ति लाभ', 'nav.grievances':'शिकायतें', 'nav.qrIdentity':'मेरी आईडी', 'nav.idCard':'पहचान पत्र', 'nav.orderCard':'भौतिक कार्ड मंगाएँ', 'nav.bindingRequests':'बाइंडिंग अनुरोध', 'nav.scanQr':'क्यूआर स्कैन करें', 'nav.settings':'प्रोफ़ाइल सेटिंग', 'nav.master':'मास्टर डेटा', 'nav.gatePass':'गेट पास', 'nav.workerMaster':'श्रमिक मास्टर', 'nav.submissions':'अनुपालन प्रस्तुतियाँ', 'nav.reports':'रिपोर्ट', 'nav.complianceReport':'अनुपालन रिपोर्ट', 'nav.qrSystem':'क्यूआर प्रणाली', 'nav.myWorkers':'मेरे श्रमिक', 'nav.myEmployers':'मेरे नियोक्ता', 'nav.workforce':'कार्यबल', 'nav.contractors':'ठेकेदार', 'nav.workers':'श्रमिक', 'nav.sites':'कार्यस्थल', 'nav.governance':'शासन', 'nav.approvals':'अनुमोदन' };
+
+export const portalTranslations: Record<string, Record<string, string>> = {
+  en: en,
+  hi: hi,
+  bn:{'portal.worker':'কর্মী পোর্টাল','portal.contractor':'ঠিকাদার পোর্টাল','nav.dashboard':'ড্যাশবোর্ড','nav.work':'কাজ','nav.records':'আমার রেকর্ড','nav.attendance':'উপস্থিতি','nav.leave':'ছুটি','nav.profile':'প্রোফাইল','nav.documents':'নথিপত্র','nav.reports':'রিপোর্ট'},
+  te:{'portal.worker':'కార్మిక పోర్టల్','portal.contractor':'కాంట్రాక్టర్ పోర్టల్','nav.dashboard':'డాష్‌బోర్డ్','nav.work':'పని','nav.records':'నా రికార్డులు','nav.attendance':'హాజరు','nav.leave':'సెలవు','nav.profile':'ప్రొఫైల్','nav.documents':'పత్రాలు','nav.reports':'నివేదికలు'},
+  mr:{'portal.worker':'कामगार पोर्टल','portal.contractor':'कंत्राटदार पोर्टल','nav.dashboard':'डॅशबोर्ड','nav.work':'काम','nav.records':'माझे रेकॉर्ड','nav.attendance':'उपस्थिती','nav.leave':'रजा','nav.profile':'प्रोफाइल','nav.documents':'कागदपत्रे','nav.reports':'अहवाल'},
+  ta:{'portal.worker':'தொழிலாளர் தளம்','portal.contractor':'ஒப்பந்ததாரர் தளம்','nav.dashboard':'முகப்புப் பலகை','nav.work':'வேலை','nav.records':'என் பதிவுகள்','nav.attendance':'வருகை','nav.leave':'விடுப்பு','nav.profile':'சுயவிவரம்','nav.documents':'ஆவணங்கள்','nav.reports':'அறிக்கைகள்'},
+  ur:{'portal.worker':'ورکر پورٹل','portal.contractor':'ٹھیکیدار پورٹل','nav.dashboard':'ڈیش بورڈ','nav.work':'کام','nav.records':'میرے ریکارڈ','nav.attendance':'حاضری','nav.leave':'چھٹی','nav.profile':'پروفائل','nav.documents':'دستاویزات','nav.reports':'رپورٹس'},
+  gu:{'portal.worker':'કામદાર પોર્ટલ','portal.contractor':'કોન્ટ્રાક્ટર પોર્ટલ','nav.dashboard':'ડેશબોર્ડ','nav.work':'કામ','nav.records':'મારા રેકોર્ડ','nav.attendance':'હાજરી','nav.leave':'રજા','nav.profile':'પ્રોફાઇલ','nav.documents':'દસ્તાવેજો','nav.reports':'અહેવાલો'},
+  kn:{'portal.worker':'ಕಾರ್ಮಿಕ ಪೋರ್ಟಲ್','portal.contractor':'ಗುತ್ತಿಗೆದಾರ ಪೋರ್ಟಲ್','nav.dashboard':'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್','nav.work':'ಕೆಲಸ','nav.records':'ನನ್ನ ದಾಖಲೆಗಳು','nav.attendance':'ಹಾಜರಾತಿ','nav.leave':'ರಜೆ','nav.profile':'ಪ್ರೊಫೈಲ್','nav.documents':'ದಾಖಲೆಗಳು','nav.reports':'ವರದಿಗಳು'},
+  or:{'portal.worker':'ଶ୍ରମିକ ପୋର୍ଟାଲ୍','portal.contractor':'ଠିକାଦାର ପୋର୍ଟାଲ୍','nav.dashboard':'ଡ୍ୟାସବୋର୍ଡ','nav.work':'କାମ','nav.records':'ମୋ ରେକର୍ଡ','nav.attendance':'ଉପସ୍ଥାନ','nav.leave':'ଛୁଟି','nav.profile':'ପ୍ରୋଫାଇଲ୍','nav.documents':'କାଗଜପତ୍ର','nav.reports':'ରିପୋର୍ଟ'},
+  ml:{'portal.worker':'തൊഴിലാളി പോർട്ടൽ','portal.contractor':'കരാറുകാരൻ പോർട്ടൽ','nav.dashboard':'ഡാഷ്ബോർഡ്','nav.work':'ജോലി','nav.records':'എന്റെ രേഖകൾ','nav.attendance':'ഹാജർ','nav.leave':'അവധി','nav.profile':'പ്രൊഫൈൽ','nav.documents':'രേഖകൾ','nav.reports':'റിപ്പോർട്ടുകൾ'},
+  pa:{'portal.worker':'ਵਰਕਰ ਪੋਰਟਲ','portal.contractor':'ਠੇਕੇਦਾਰ ਪੋਰਟਲ','nav.dashboard':'ਡੈਸ਼ਬੋਰਡ','nav.work':'ਕੰਮ','nav.records':'ਮੇਰੇ ਰਿਕਾਰਡ','nav.attendance':'ਹਾਜ਼ਰੀ','nav.leave':'ਛੁੱਟੀ','nav.profile':'ਪ੍ਰੋਫਾਈਲ','nav.documents':'ਦਸਤਾਵੇਜ਼','nav.reports':'ਰਿਪੋਰਟਾਂ'},
+  as:{'portal.worker':'শ্ৰমিক প’ৰ্টেল','portal.contractor':'ঠিকাদাৰ প’ৰ্টেল','nav.dashboard':'ডেশ্বব’ৰ্ড','nav.work':'কাম','nav.records':'মোৰ ৰেকৰ্ড','nav.attendance':'উপস্থিতি','nav.leave':'ছুটী','nav.profile':'প্ৰফাইল','nav.documents':'নথিপত্ৰ','nav.reports':'প্ৰতিবেদন'},
+  mai:{'portal.worker':'श्रमिक पोर्टल','portal.contractor':'ठेकेदार पोर्टल','nav.dashboard':'डैशबोर्ड','nav.work':'काज','nav.records':'हमर अभिलेख','nav.attendance':'उपस्थिति','nav.leave':'छुट्टी','nav.profile':'प्रोफाइल','nav.documents':'दस्तावेज','nav.reports':'प्रतिवेदन'},
+  sat:{'portal.worker':'ᱠᱟᱹᱢᱤᱭᱟᱹ ᱯᱚᱨᱴᱟᱞ','portal.contractor':'ᱴᱷᱤᱠᱟᱫᱟᱨ ᱯᱚᱨᱴᱟᱞ','nav.dashboard':'ᱰᱮᱥᱵᱚᱨᱰ','nav.work':'ᱠᱟᱹᱢᱤ','nav.records':'ᱤᱧᱟᱹᱜ ᱨᱮᱠᱚᱨᱰ','nav.profile':'ᱯᱨᱚᱯᱷᱟᱭᱤᱞ','nav.documents':'ᱫᱚᱞᱤᱞ'},
+  ks:{'portal.worker':'مٔزدور پورٹل','portal.contractor':'ٹھیکیدار پورٹل','nav.dashboard':'ڈیش بورڈ','nav.work':'کٲم','nav.records':'مےٚ ریکارڈ','nav.attendance':'حاضری','nav.leave':'رُخصتی','nav.profile':'پروفائل','nav.documents':'دستاویزات','nav.reports':'رپورٹہٕ'},
+};

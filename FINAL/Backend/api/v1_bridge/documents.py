@@ -154,6 +154,14 @@ def worker_document_detail(request, document_id):
         doc.delete()
         return Response({"success": True, "deleted": True}, status=status.HTTP_200_OK)
     if not doc.file:
+        # Legacy private-root file (contractor upload before unification).
+        from django.conf import settings
+        root = os.path.abspath(getattr(settings, "BSS_PRIVATE_MEDIA_DIR", ""))
+        path = os.path.abspath(os.path.join(root, doc.file_path or ""))
+        if root and doc.file_path and path.startswith(root + os.sep) and os.path.exists(path):
+            return FileResponse(open(path, "rb"), as_attachment=False,
+                                filename=doc.file_name or os.path.basename(path),
+                                content_type=doc.mime_type or "application/octet-stream")
         return Response({"error": "No file stored for this document."},
                         status=status.HTTP_404_NOT_FOUND)
     try:

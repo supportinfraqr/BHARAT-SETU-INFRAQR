@@ -42,7 +42,28 @@ def contractor_portal(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def employer_portal(request):
-    return Response(payloads.build_employer_portal(request.user), status=status.HTTP_200_OK)
+    data = payloads.build_employer_portal(request.user)
+    perms = _staff_permissions(request)
+    data["isStaff"] = perms is not None
+    data["staffPermissions"] = sorted(perms) if perms is not None else []
+    actor = getattr(request, "actor", None)
+    if actor is not None:
+        data["staffProfile"] = {
+            "id": actor.id,
+            "name": actor.full_name or actor.username,
+            "permissions": sorted(perms or []),
+        }
+    if perms is not None:
+        # Staff only see the workspaces they were granted.
+        if "gate_pass" not in perms:
+            data["gatePasses"] = []
+        if "compliance" not in perms:
+            data["submissions"] = []
+        data["users"] = []
+        data["permissionRoles"] = []
+        data["auditLogs"] = []
+        data["canAccessAdmin"] = False
+    return Response(data, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
@@ -207,13 +228,22 @@ def notifications(request, role_path):
 def mutate_portal(request, role_path, resource):
     user = request.user
     body = request.data or {}
+    perms = _staff_permissions(request)
+    if perms is not None:
+        allowed = (resource == "notifications"
+                   or (resource == "gate-passes" and "gate_pass" in perms)
+                   or (resource == "submissions" and request.method == "PATCH"
+                       and "compliance" in perms))
+        if not allowed:
+            return Response({"error": "You do not have permission for this action."},
+                            status=status.HTTP_403_FORBIDDEN)
     try:
         result = _persist_mutation(user, role_path, resource, request.method, body)
     except PortalMutationError as exc:
         return Response({"error": exc.message}, status=exc.status_code)
 
     # Append-only audit trail for every successful portal mutation.
-    log_audit(user, {"POST": "CREATE", "PATCH": "UPDATE", "DELETE": "DELETE"}.get(
+    log_audit(getattr(request, "actor", user), {"POST": "CREATE", "PATCH": "UPDATE", "DELETE": "DELETE"}.get(
         request.method, "UPDATE"), resource,
         result if isinstance(result, (str, int)) else "",
         after={"summary": f"{request.method} {resource}"})

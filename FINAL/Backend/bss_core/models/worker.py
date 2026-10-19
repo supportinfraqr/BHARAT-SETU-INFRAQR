@@ -143,7 +143,7 @@ class WorkerSocialSecurity(models.Model):
 class WorkerWelfareSafety(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="welfare_safety")
     ppe_required = models.BooleanField(null=True, blank=True)
-    types_of_ppe_given = models.CharField(max_length=120, blank=True)
+    types_of_ppe_given = models.CharField(max_length=500, blank=True)
     safety_training_completed = models.BooleanField(null=True, blank=True)
     site_induction_status = models.CharField(max_length=40, blank=True)
     insurance_status = models.CharField(max_length=40, blank=True)

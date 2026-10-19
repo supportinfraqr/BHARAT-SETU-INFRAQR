@@ -1,7 +1,7 @@
-import WorkerComplianceChecklistsPage from '@/components/employer/ComplianceChecklistsPage';
+import MedicalSafetyWorkspace from '@/components/employer/MedicalSafetyWorkspace';
 import { requireSession } from '@/server/session';
 
 export default async function EmployerWorkerComplianceChecklistsPage() {
   await requireSession('Employer');
-  return <WorkerComplianceChecklistsPage/>;
+  return <MedicalSafetyWorkspace />;
 }

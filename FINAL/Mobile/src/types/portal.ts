@@ -7,6 +7,10 @@ export type PortalSession = {
   role: PortalRole;
   sessionId: string;
   accessToken?: string;
+  /** Employer-staff sessions: the employer they act for + their permissions. */
+  employerId?: number | string;
+  staffId?: number | string;
+  permissions?: string[];
   issuedAt: number;
   expiresAt: number;
 };
@@ -132,6 +136,18 @@ export type WorkerRecord = {
   };
   gatePasses?: Array<{ id:number | string; type:string; number:string; site:string; validFrom:string; validTo:string; status:string; requestedAt:string; requestedBy?:string; approvedBy?:string; approvedAt?:string; blocked?:boolean; branding?: { companyName?: string; logoUrl?: string; header?: string } }>;
   complianceRecords?: Array<{ date:string; record:string; detail:string; ref:string; result:string }>;
+  healthSafety?: {
+    medicalExams: Array<{ date:string; fitness:string; nextDue:string; formType:string; remarks:string }>;
+    kitItems: Array<{ key:string; name:string; issueDate:string; condition:string }>;
+    trainings: Array<{ key:string; name:string; date:string; trainer:string; result:string; validUntil:string; mandatory:boolean }>;
+    induction: { na:boolean; date:string; trainer:string; validUntil:string } | null;
+    certificate: { certNo:string; issuedAt:string } | null;
+    siteId: number | null;
+    employer: string; employerBssId: string;
+    contractor: string; contractorBssId: string;
+    site: string; state: string;
+    eligibility: { temporaryEligible?: boolean; permanentEligible?: boolean; medical?: string; healthSafety?: string; compliance?: string };
+  };
   other?: {
     registrationSource?: string; registeredBy?: string; registrationDate?: string;
     consentDate?: string; consentRegistration?: boolean; consentVerification?: boolean;
@@ -487,11 +503,14 @@ export type EmployerGatePass = {
   contractor: string;
   site: string;
   siteId: string;
-  type: 'Permanent' | 'Temporary';
+  type: 'Permanent' | 'Temporary' | 'Not eligible';
   requestedAt: string;
   validFrom: string;
   validTo: string;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Blocked' | 'Expired' | 'Revoked';
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Blocked' | 'Expired' | 'Revoked' | 'Not eligible';
+  eligible?: boolean;
+  /** Category items still missing when no pass is eligible. */
+  missing?: string[];
   contact?: string;
   skill?: string;
   requestedBy?: string;
@@ -713,6 +732,10 @@ export type EmployerPortalData = {
   submissions: EmployerSubmission[];
   complianceReports: EmployerComplianceReport[];
   canAccessAdmin: boolean;
+  /** True when the signed-in user is an employer-created staff sub-account. */
+  isStaff?: boolean;
+  staffPermissions?: string[];
+  staffProfile?: { id: number; name: string; permissions: string[] };
   users: EmployerUser[];
   permissionRoles: EmployerPermissionRole[];
   auditLogs: EmployerAudit[];

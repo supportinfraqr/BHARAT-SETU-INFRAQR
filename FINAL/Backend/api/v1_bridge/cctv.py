@@ -73,7 +73,7 @@ def _apply_camera_payload(camera, body):
     camera.label = text("label", camera.label)
     camera.area = text("area", camera.area)
     source_type = str(body.get("sourceType") or camera.source_type or "RTSP").strip().upper()
-    if source_type not in ("RTSP", "HTTP", "FILE", "OTHER"):
+    if source_type not in ("RTSP", "HTTP", "HLS", "FILE", "OTHER"):
         source_type = "RTSP"
     camera.source_type = source_type
     camera.host = text("host", camera.host)
@@ -109,7 +109,7 @@ def _validate_camera(camera):
         return "Give the camera a name."
     if camera.source_type in ("RTSP", "HTTP") and not camera.host:
         return "Enter the camera IP address / host."
-    if camera.source_type in ("FILE", "OTHER") and not camera.url:
+    if camera.source_type in ("FILE", "OTHER", "HLS") and not camera.url:
         return "Enter the stream/test URL."
     return ""
 

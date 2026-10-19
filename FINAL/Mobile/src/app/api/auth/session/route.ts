@@ -22,7 +22,7 @@ const roleRedirects: Record<PortalRole, string> = {
 export async function GET() {
   const session = await getSession();
   return session
-    ? NextResponse.json({ authenticated:true, role:session.role, subject:session.subject, expiresAt:session.expiresAt })
+    ? NextResponse.json({ authenticated:true, role:session.role, subject:session.subject, expiresAt:session.expiresAt, permissions:session.permissions ?? [] })
     : NextResponse.json({ authenticated:false }, { status:401 });
 }
 
@@ -45,7 +45,16 @@ export async function POST(request: Request) {
     assertRateLimit(`login:${selectedRole}:${body.identifier.trim().toLowerCase()}`, 10, 10 * 60_000);
     const result = await authenticate({ role:selectedRole, method:body.method as LoginInput['method'], identifier:body.identifier, credential:body.credential });
     const session = await createSession(result);
-    return NextResponse.json({ authenticated:true, role:session.role, redirectTo:roleRedirects[session.role] });
+    let redirectTo = roleRedirects[session.role];
+    if (session.staffId && Array.isArray(session.permissions)) {
+      const perms = session.permissions;
+      if (perms.includes('medical')) redirectTo = '/employer/worker-compliance-checklists?tab=medical';
+      else if (perms.includes('safety')) redirectTo = '/employer/worker-compliance-checklists?tab=safety';
+      else if (perms.includes('gate_pass')) redirectTo = '/employer/gate-pass';
+      else if (perms.includes('compliance')) redirectTo = '/employer/compliance-submission';
+      else redirectTo = '/employer/no-workspace';
+    }
+    return NextResponse.json({ authenticated:true, role:session.role, redirectTo, permissions:session.permissions ?? [] });
   } catch (error) { return apiError(error, 'Authentication service is unavailable.'); }
 }
 

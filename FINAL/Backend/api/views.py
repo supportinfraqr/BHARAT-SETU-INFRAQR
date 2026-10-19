@@ -837,11 +837,18 @@ def _apply_digilocker_documents(user, items):
         elif kind == "uan":
             if social is None:
                 social, _ = WorkerSocialSecurity.objects.get_or_create(user=user)
-            if social and not social.epfo_uan:
-                uan = _first_12_digit(uri, name)
-                if uan:
+            uan = _first_12_digit(uri, name)
+            if social is not None:
+                changed = []
+                if uan and not social.epfo_uan:
                     social.epfo_uan = uan
-                    social.save(update_fields=["epfo_uan", "updated_at"])
+                    changed.append("epfo_uan")
+                if uan and not social.uan_verified:
+                    social.uan_verified = True
+                    changed.append("uan_verified")
+                if changed:
+                    changed.append("updated_at")
+                    social.save(update_fields=changed)
     if identity_dirty and identity:
         identity.save()
 

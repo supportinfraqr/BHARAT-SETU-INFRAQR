@@ -6,9 +6,17 @@ import { Download, FileSpreadsheet, FileText, Loader2, RefreshCw, Save, ShieldCh
 type JobRow = {
   id: string; contractor: string; site: string; period: string; version: number;
   status: string; error?: string; workerCount: number; summary?: { statusCounts?: Record<string, number>; reportNo?: string };
-  hasHtml: boolean; hasPdf: boolean; hasXlsx: boolean; hasJson: boolean;
+  hasHtml: boolean; hasPdf: boolean; hasXlsx: boolean; hasJson: boolean; hasEvidence?: boolean;
+  progress?: { stage?: string; percent?: number; message?: string; elapsedSeconds?: number; stalled?: boolean };
+  artifacts?: Array<{ name: string; path: string; size: number; adminOnly: boolean }>;
 };
 type ScheduleRow = { contractorId: number; contractor: string; siteId: number; site: string; runsPerMonth: number; isActive: boolean };
+
+function formatSize(value: number) {
+  if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+  if (value >= 1024) return `${Math.round(value / 1024)} KB`;
+  return `${value} B`;
+}
 
 const tone: Record<string, string> = {
   READY: 'bg-emerald-50 text-emerald-700 border-emerald-200', FAILED: 'bg-rose-50 text-rose-700 border-rose-200',
@@ -41,6 +49,12 @@ export default function AdminMonthlyAudit() {
   }, []);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    if (!jobs.some(job => ['PENDING', 'BUILDING', 'RUNNING'].includes(job.status))) return;
+    const timer = window.setTimeout(() => { void load(); }, 15000);
+    return () => window.clearTimeout(timer);
+  }, [jobs, load]);
 
   async function save(row: ScheduleRow) {
     const key = `${row.contractorId}-${row.siteId}`;
@@ -101,14 +115,17 @@ export default function AdminMonthlyAudit() {
                 <td className="px-5 py-3 font-semibold text-bss-text-primary">{job.period} <span className="ml-1 text-[10px] font-normal text-bss-text-muted">v{job.version}</span></td>
                 <td className="px-5 py-3 text-bss-text-secondary">{job.contractor}</td>
                 <td className="px-5 py-3 text-bss-text-secondary">{job.site}</td>
-                <td className="px-5 py-3"><span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold ${tone[job.status] || 'border-bss-border bg-bss-bg text-bss-text-muted'}`}>{job.status}</span></td>
+                <td className="px-5 py-3"><span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold ${tone[job.status] || 'border-bss-border bg-bss-bg text-bss-text-muted'}`}>{job.status}</span>{['PENDING', 'BUILDING', 'RUNNING'].includes(job.status) && <p className="mt-1 text-[10px] text-bss-text-muted">{job.progress?.message || 'Working…'} · {Math.round(Number(job.progress?.percent || 0))}%</p>}</td>
                 <td className="px-5 py-3 text-bss-text-secondary">{job.workerCount}</td>
                 <td className="px-5 py-3"><div className="flex flex-wrap gap-2">
                   {job.hasHtml && <a href={fileUrl(job.id, 'html')} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] font-semibold text-bss-interactive-blue hover:underline"><FileText size={12}/>View</a>}
                   {job.hasPdf && <a href={fileUrl(job.id, 'pdf')} className="inline-flex items-center gap-1 text-[11px] font-semibold text-bss-text-secondary hover:underline"><Download size={12}/>PDF</a>}
                   {job.hasXlsx && <a href={fileUrl(job.id, 'xlsx')} className="inline-flex items-center gap-1 text-[11px] font-semibold text-bss-text-secondary hover:underline"><FileSpreadsheet size={12}/>Excel</a>}
                   {job.hasJson && <a href={fileUrl(job.id, 'json')} className="inline-flex items-center gap-1 text-[11px] font-semibold text-bss-text-secondary hover:underline"><FileText size={12}/>JSON</a>}
-                </div></td>
+                  {job.hasEvidence && <a href={fileUrl(job.id, 'evidence')} className="inline-flex items-center gap-1 text-[11px] font-semibold text-bss-text-secondary hover:underline"><FileText size={12}/>Evidence</a>}
+                </div>
+                {(job.artifacts?.length || 0) > 0 && <details className="mt-2"><summary className="cursor-pointer text-[10px] font-bold text-bss-text-muted">All files ({job.artifacts?.length})</summary><div className="mt-1 flex max-w-[360px] flex-wrap gap-1">{job.artifacts?.map(file => <a key={file.path} href={`/api/audit-jobs/${job.id}/artifact?path=${encodeURIComponent(file.path)}`} target={file.name.endsWith('.html') ? '_blank' : undefined} rel="noopener noreferrer" className="rounded border border-bss-border bg-white px-1.5 py-0.5 text-[9px] font-semibold text-bss-text-secondary hover:bg-bss-bg">{file.name}{file.adminOnly ? ' · admin' : ''} · {formatSize(file.size)}</a>)}</div></details>}
+                </td>
               </tr>)}
               {!jobs.length && <tr><td colSpan={6} className="px-5 py-10 text-center text-bss-text-muted">No audits yet.</td></tr>}
             </tbody>

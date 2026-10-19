@@ -1141,3 +1141,16 @@ a.bg-bss-navy { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.
   user-select: none;
   color: rgba(30, 58, 138, 0.09);
 }
+
+/* ── Full-bleed pages (e.g. Verification Desk) ──────────────
+   When a page contains .bssDesk, strip the shell's container
+   padding and max-width so the page can fill the viewport.   */
+.bss-app-main:has(.bssDesk) {
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}

@@ -1,0 +1,762 @@
+/* =========================================================
+   BSS Verification Desk — Premium Design System
+   =========================================================
+   ESCAPE THE CONTRACTOR SHELL CONTAINER:
+   ContractorShell renders children inside a <main> with
+   max-w-[1200px] mx-auto py-6 px-4 md:px-8.
+   We break out of that box so the desk fills the viewport.
+   ========================================================= */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+
+
+/* ── Design tokens ───────────────────────────────────────── */
+.bssDesk {
+  --navy:       #073B67;
+  --navy-deep:  #022B5E;
+  --navy-mid:   #0A4C85;
+  --saffron:    #F47A32;
+  --saffron-lt: #FEF3EA;
+  --green:      #16A34A;
+  --green-lt:   #F0FDF4;
+  --green-ring: #BBF7D0;
+  --red:        #DC2626;
+  --red-lt:     #FEF2F2;
+  --red-ring:   #FECACA;
+  --amber:      #D97706;
+  --amber-lt:   #FFFBEB;
+  --amber-ring: #FDE68A;
+  --ink:        #0F172A;
+  --ink-2:      #334155;
+  --muted:      #64748B;
+  --muted-lt:   #94A3B8;
+  --line:       #E2E8F0;
+  --line-lt:    #F1F5F9;
+  --bg:         #F0F4F8;
+  --card:       #FFFFFF;
+  --radius:     14px;
+  --radius-sm:  9px;
+  --shadow-sm:  0 1px 3px rgba(7,59,103,.06), 0 1px 2px rgba(7,59,103,.04);
+  --shadow:     0 1px 3px rgba(7,59,103,.06), 0 4px 16px rgba(7,59,103,.08);
+  --shadow-lg:  0 4px 24px rgba(7,59,103,.14), 0 1px 4px rgba(7,59,103,.06);
+
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  /* Fill the viewport below the shell header */
+  height: calc(100dvh - 3.5rem);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.bssDesk * { box-sizing: border-box; }
+.bssDesk [hidden] { display: none !important; }
+.bssDesk button, .bssDesk input, .bssDesk select, .bssDesk textarea { font: inherit; color: inherit; }
+.bssDesk button { cursor: pointer; border: none; background: none; }
+.bssDesk button:disabled { cursor: not-allowed; opacity: .5; }
+
+/* ── Desk layout ─────────────────────────────────────────── */
+.bssDesk .desk {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 0;
+}
+
+/* ── Left sidebar ────────────────────────────────────────── */
+.bssDesk .declared {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--card);
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ── Panels (sidebar sections) ───────────────────────────── */
+.bssDesk .panel {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line-lt);
+}
+
+.bssDesk .panel h2 {
+  margin: 0 0 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bssDesk .panel h2::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 12px;
+  border-radius: 99px;
+  background: var(--navy);
+  flex: none;
+}
+
+/* ── Form fields ─────────────────────────────────────────── */
+.bssDesk label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: .02em;
+}
+
+.bssDesk input,
+.bssDesk select,
+.bssDesk textarea {
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 7px 9px;
+  background: var(--card);
+  font-weight: 500;
+  font-size: 12.5px;
+  color: var(--ink);
+  width: 100%;
+  min-width: 0;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.bssDesk input:focus,
+.bssDesk select:focus,
+.bssDesk textarea:focus {
+  outline: none;
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(7,59,103,.12);
+}
+
+.bssDesk input[readonly] {
+  background: var(--line-lt);
+  color: var(--ink-2);
+  cursor: default;
+  border-color: transparent;
+}
+
+.bssDesk input[readonly]:focus {
+  box-shadow: none;
+  border-color: var(--line);
+}
+
+.bssDesk label > input,
+.bssDesk label > select,
+.bssDesk label > .inline {
+  display: flex;
+  margin-top: 4px;
+}
+
+.bssDesk .inline { gap: 5px; align-items: stretch; }
+.bssDesk .inline input:nth-child(2) { flex: none; min-width: 0; }
+.bssDesk .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bssDesk .f { margin-bottom: 6px; }
+
+/* Worker card inside sidebar */
+.bssDesk .worker-card {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+  border-radius: 12px;
+  padding: 14px;
+  color: #fff;
+  margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.bssDesk .worker-card::after {
+  content: '';
+  position: absolute;
+  right: -20px; top: -20px;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.06);
+}
+.bssDesk .worker-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.bssDesk .worker-card-id {
+  font-family: ui-monospace, monospace;
+  font-size: 10.5px;
+  color: rgba(255,255,255,.65);
+  margin-bottom: 8px;
+}
+.bssDesk .worker-card-tags {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.bssDesk .worker-card-tag {
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(255,255,255,.14);
+  padding: 2px 8px;
+  border-radius: 99px;
+  color: rgba(255,255,255,.9);
+}
+
+/* Progress bar */
+.bssDesk .progress-bar-track {
+  height: 5px;
+  background: var(--line-lt);
+  border-radius: 99px;
+  margin: 8px 0 10px;
+  overflow: hidden;
+}
+.bssDesk .progress-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--navy) 0%, #3B82F6 100%);
+  transition: width .4s cubic-bezier(.4,0,.2,1);
+}
+.bssDesk .progress-bar-fill[data-done="true"] {
+  background: linear-gradient(90deg, var(--green) 0%, #4ADE80 100%);
+}
+
+/* Doc status rows in sidebar */
+.bssDesk .doc-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--line-lt);
+  font-size: 12px;
+}
+.bssDesk .doc-status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex: none;
+  transition: background .3s;
+}
+.bssDesk .doc-status-dot[data-v="true"] { background: var(--green); box-shadow: 0 0 0 3px var(--green-ring); }
+.bssDesk .doc-status-dot[data-v="false"] { background: var(--line); }
+.bssDesk .doc-status-name { flex: 1; color: var(--ink-2); }
+.bssDesk .doc-status-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 99px;
+}
+.bssDesk .doc-status-badge[data-v="true"] { background: var(--green-lt); color: var(--green); }
+.bssDesk .doc-status-badge[data-v="false"] { background: var(--line-lt); color: var(--muted-lt); }
+
+/* ── Consent / toast banners ─────────────────────────────── */
+.bssDesk .consent {
+  margin: 0;
+  color: #78481A;
+  background: #FFFBEB;
+  border: 1px solid var(--amber-ring);
+  border-radius: 10px;
+  padding: 9px 11px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.bssDesk .alert-ok {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  background: var(--green-lt);
+  border: 1px solid var(--green-ring);
+  color: #166534;
+  border-radius: 10px;
+  padding: 9px 11px;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.bssDesk .alert-err {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  background: var(--red-lt);
+  border: 1px solid var(--red-ring);
+  color: var(--red);
+  border-radius: 10px;
+  padding: 9px 11px;
+  font-size: 11.5px;
+}
+
+/* ── Audit trail ─────────────────────────────────────────── */
+.bssDesk .audit-list {
+  margin: 0; padding: 0;
+  list-style: none;
+  font-size: 11px;
+  color: var(--ink-2);
+  max-height: 180px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.bssDesk .audit-list li {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--line-lt);
+  border: 1px solid transparent;
+  line-height: 1.4;
+}
+.bssDesk .audit-list li:first-child {
+  background: #EFF6FF;
+  border-color: #DBEAFE;
+  color: #1E40AF;
+}
+
+/* ── Chip buttons ────────────────────────────────────────── */
+.bssDesk .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all .15s;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.bssDesk .chip:hover:not(:disabled) {
+  border-color: var(--navy);
+  color: var(--navy);
+  background: #F0F6FF;
+}
+.bssDesk .chip.open {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+.bssDesk .chip.open:hover:not(:disabled) {
+  background: var(--navy-deep);
+  border-color: var(--navy-deep);
+}
+.bssDesk .chip.ok {
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green);
+}
+.bssDesk .chip.ok:hover:not(:disabled) {
+  background: #15803D;
+  border-color: #15803D;
+}
+.bssDesk .chip.bad {
+  background: var(--card);
+  color: var(--red);
+  border-color: var(--red-ring);
+}
+.bssDesk .chip.bad:hover:not(:disabled) {
+  background: var(--red-lt);
+  border-color: var(--red);
+}
+
+/* ── Main tiles grid ─────────────────────────────────────── */
+.bssDesk .tiles {
+  min-height: 0;
+  overflow: auto;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 12px;
+  align-content: start;
+  background: var(--bg);
+}
+
+/* ── Individual tile ─────────────────────────────────────── */
+.bssDesk .tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1.5px solid var(--line);
+  border-top: 3px solid var(--accent, var(--navy));
+  overflow: hidden;
+  transition: box-shadow .2s, transform .2s;
+}
+
+.bssDesk .tile:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+}
+
+.bssDesk .tile[data-state="verified"] {
+  border-color: var(--green-ring);
+  border-top-color: var(--green);
+  box-shadow: 0 0 0 0 transparent, var(--shadow);
+}
+
+.bssDesk .tile[data-state="verified"]:hover {
+  box-shadow: 0 4px 24px rgba(22,163,74,.12), var(--shadow);
+}
+
+/* ── Tile header ─────────────────────────────────────────── */
+.bssDesk .t-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px 8px;
+  flex: none;
+  border-bottom: 1px solid var(--line-lt);
+}
+
+.bssDesk .t-icon {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: color-mix(in srgb, var(--accent, var(--navy)) 12%, white);
+  color: var(--accent, var(--navy));
+  font-weight: 800;
+  font-size: 9px;
+  letter-spacing: .04em;
+  font-family: ui-monospace, monospace;
+}
+
+.bssDesk .t-title { min-width: 0; flex: 1; }
+.bssDesk .t-title h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bssDesk .t-source {
+  font-size: 10px;
+  color: var(--muted-lt);
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Status badge */
+.bssDesk .status {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex: none;
+  border: 1px solid transparent;
+  letter-spacing: .02em;
+}
+.bssDesk .status[data-state="pending"] {
+  background: var(--line-lt);
+  color: var(--muted);
+  border-color: var(--line);
+}
+.bssDesk .status[data-state="verified"] {
+  background: var(--green-lt);
+  color: var(--green);
+  border-color: var(--green-ring);
+}
+
+/* ── Captured value ──────────────────────────────────────── */
+.bssDesk .t-num {
+  padding: 7px 12px 6px;
+  flex: none;
+  background: var(--line-lt);
+  border-bottom: 1px solid var(--line-lt);
+}
+.bssDesk .t-value {
+  width: 100%;
+  text-align: left;
+  border: 1.5px solid transparent;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  padding: 3px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+  transition: all .15s;
+  cursor: default;
+}
+.bssDesk .t-value:not(:empty):hover {
+  border-color: var(--line);
+  background: var(--card);
+  cursor: pointer;
+}
+.bssDesk .t-value:empty { color: var(--muted-lt); }
+
+/* ── Steps list ──────────────────────────────────────────── */
+.bssDesk .t-steps {
+  flex: 0 0 auto;
+  margin: 8px 12px;
+  padding: 8px 10px 8px 26px;
+  background: #F8FAFC;
+  border: 1px solid var(--line-lt);
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.bssDesk .t-steps li + li { margin-top: 3px; }
+
+/* ── Action buttons ──────────────────────────────────────── */
+.bssDesk .t-actions {
+  flex: none;
+  display: flex;
+  gap: 7px;
+  padding: 0 12px 10px;
+}
+
+.bssDesk .act {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  padding: 7px 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all .15s;
+}
+.bssDesk .act:hover:not(:disabled) {
+  border-color: var(--navy);
+  color: var(--navy);
+  background: #F5F8FF;
+}
+.bssDesk .act.open {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+.bssDesk .act.open:hover:not(:disabled) {
+  background: var(--navy-deep);
+  border-color: var(--navy-deep);
+}
+.bssDesk .act.main {
+  background: linear-gradient(135deg, #F47A32 0%, #E25C18 100%);
+  color: #fff;
+  border-color: #E25C18;
+}
+.bssDesk .act.main:hover:not(:disabled) {
+  background: linear-gradient(135deg, #E25C18 0%, #C94A0A 100%);
+}
+.bssDesk .act:disabled { opacity: .4; pointer-events: none; }
+
+/* ── Panel: inline form expanded inside tile ─────────────── */
+.bssDesk .tile-panel {
+  padding: 10px 12px 12px;
+  display: grid;
+  gap: 7px;
+  background: #F8FAFC;
+  border-top: 1px solid var(--line-lt);
+  border-bottom: 1px solid var(--line-lt);
+  max-height: 56vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.bssDesk .tile-panel label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.bssDesk .tile-panel input {
+  font-size: 12.5px;
+  margin-top: 3px;
+}
+
+/* ── Record table ────────────────────────────────────────── */
+.bssDesk .t-record {
+  padding: 0 12px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.bssDesk .rec-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted-lt);
+  padding: 6px 0 4px;
+  border-bottom: 1px solid var(--line-lt);
+}
+
+.bssDesk .rec-rows { padding-bottom: 4px; }
+
+.bssDesk .rec-row {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) 36px 20px;
+  align-items: center;
+  gap: 4px;
+  padding: 3.5px 0;
+  border-bottom: 1px dashed var(--line-lt);
+}
+
+.bssDesk .rec-row .rl {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.bssDesk .rec-row input {
+  padding: 3px 7px;
+  font-size: 11.5px;
+  border-color: transparent;
+  background: var(--line-lt);
+  border-radius: 5px;
+  color: var(--ink-2);
+  font-family: inherit;
+}
+
+/* Source tag */
+.bssDesk .src {
+  font-size: 8px;
+  font-weight: 800;
+  text-align: center;
+  border-radius: 5px;
+  padding: 2px 1px;
+  letter-spacing: .02em;
+  color: var(--muted);
+  overflow: hidden;
+}
+.bssDesk .src[data-s="ekyc"]    { background: #DCFCE7; color: var(--green); }
+.bssDesk .src[data-s="pdf"],
+.bssDesk .src[data-s="capture"] { background: #DBEAFE; color: #1D4ED8; }
+.bssDesk .src[data-s="penny"]   { background: #FEF3C7; color: var(--amber); }
+.bssDesk .src[data-s="upload"]  { background: #FEF3C7; color: var(--amber); }
+.bssDesk .src[data-s="manual"]  { background: var(--line-lt); color: var(--muted); }
+
+/* Result badge */
+.bssDesk .res {
+  display: inline-grid;
+  place-items: center;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--line);
+  transition: background .2s;
+}
+.bssDesk .res[data-r="pass"]    { background: var(--green); }
+.bssDesk .res[data-r="fail"]    { background: var(--red); }
+.bssDesk .res[data-r="review"]  { background: var(--saffron); }
+.bssDesk .res[data-r="missing"] { background: #DDE1E8; color: var(--muted-lt); }
+.bssDesk .res[data-r="na"]      { background: transparent; }
+
+/* ── Tile footer ─────────────────────────────────────────── */
+.bssDesk .t-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px 10px;
+  border-top: 1px solid var(--line-lt);
+}
+
+.bssDesk .blockers {
+  flex: 1;
+  min-width: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--amber);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bssDesk .tile[data-state="verified"] .blockers { color: var(--green); }
+
+/* ── Busy overlay ────────────────────────────────────────── */
+.bssDesk .tile.busy::after {
+  content: 'Processing…';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,.88);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--navy);
+  backdrop-filter: blur(2px);
+}
+
+/* ── Empty state ─────────────────────────────────────────── */
+.bssDesk .empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 24px;
+  color: var(--muted-lt);
+  text-align: center;
+}
+.bssDesk .empty-state svg {
+  opacity: .35;
+}
+.bssDesk .empty-state h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.bssDesk .empty-state p {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+/* ── Animations ──────────────────────────────────────────── */
+@keyframes bssDeskPulse { 50% { opacity: .3; } }
+@keyframes bssDeskSpin  { to  { transform: rotate(360deg); } }
+
+.bssDesk .animate-spin { animation: bssDeskSpin 1s linear infinite; }
+.bssDesk .animate-pulse { animation: bssDeskPulse 1.4s ease-in-out infinite; }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 1280px) {
+  .bssDesk .desk { grid-template-columns: 280px minmax(0, 1fr); }
+  .bssDesk .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 860px), (max-height: 640px) {
+  .bssDesk { height: auto; display: block; overflow: auto; }
+  .bssDesk .desk { display: block; }
+  .bssDesk .declared { overflow: visible; margin-bottom: 10px; }
+  .bssDesk .tiles { display: flex; flex-direction: column; overflow: visible; }
+  .bssDesk .tile { min-height: 320px; }
+}
+
+@media (max-width: 560px) {
+  .bssDesk .row2 { grid-template-columns: 1fr; }
+}
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+.bssDesk *::-webkit-scrollbar { width: 5px; height: 5px; }
+.bssDesk *::-webkit-scrollbar-track { background: transparent; }
+.bssDesk *::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
+.bssDesk *::-webkit-scrollbar-thumb:hover { background: var(--muted-lt); }

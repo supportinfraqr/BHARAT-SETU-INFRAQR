@@ -350,3 +350,7 @@ BSS_AUDIT_JOBS_DIR = os.environ.get("BSS_AUDIT_JOBS_DIR", str(BASE_DIR / "audit_
 BSS_AUDIT_AGENT_DIR = os.environ.get("BSS_AUDIT_AGENT_DIR", str(BASE_DIR / "audit_agent"))
 
 BSS_AUDIT_HANDOFF_KEY = os.environ.get("BSS_AUDIT_HANDOFF_KEY", "")
+
+BSS_PUBLIC_BASE_URL = os.environ.get("BSS_PUBLIC_BASE_URL", "https://login.bharatshramsetu.com")
+
+BSS_AUDIT_STALE_SECONDS = int(os.environ.get("BSS_AUDIT_STALE_SECONDS", "300"))

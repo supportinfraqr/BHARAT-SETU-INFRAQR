@@ -1051,7 +1051,7 @@ def _worker_documents_display(user):
                 "date": _dts(d.uploaded_at) if d.uploaded_at else None,
                 "expiry": _dts(d.expiry_date) if d.expiry_date else None,
                 "fileName": _d(d.file_name),
-                "downloadUrl": f"/api/worker/documents/{d.id}/file" if d.file else "",
+                "downloadUrl": f"/api/worker/documents/{d.id}/file" if (d.file or d.file_path) else "",
                 "locked": bool(d.auto_generated),
                 "source": _doc_source_label(_d(m.code), bool(d.auto_generated)),
                 "ocrFailed": bool(getattr(d, "ocr_failed", False)),
@@ -1088,7 +1088,7 @@ def _worker_documents_display(user):
             "date": _dts(d.uploaded_at) if d.uploaded_at else None,
             "expiry": _dts(d.expiry_date) if d.expiry_date else None,
             "fileName": _d(d.file_name),
-            "downloadUrl": f"/api/worker/documents/{d.id}/file" if d.file else "",
+            "downloadUrl": f"/api/worker/documents/{d.id}/file" if (d.file or d.file_path) else "",
             "locked": bool(d.auto_generated),
             "source": _doc_source_label(_d(d.document.code if d.document else ""), bool(d.auto_generated)),
         })
@@ -1133,7 +1133,7 @@ def _worker_issued_letters(user):
             "code": _d(d.document.code if d.document else ""),
             "date": _dts(d.uploaded_at),
             "fileName": _d(d.file_name),
-            "downloadUrl": f"/api/worker/documents/{d.id}/file" if d.file else "",
+            "downloadUrl": f"/api/worker/documents/{d.id}/file" if (d.file or d.file_path) else "",
             "bindingId": binding_id,
             "current": bool(binding_id and active_binding and binding_id == active_binding),
         })
@@ -1427,6 +1427,83 @@ def _worker_geography():
     return dict(GEOGRAPHY)
 
 
+def _worker_health_safety(user):
+    """Medical examinations + PPE kit + safety trainings + issued safety
+    certificate — the records the employer's Medical/Safety officers captured."""
+    from bss_core.models import (MedicalExam, SafetyCertificate, SafetyRecord,
+                                 WorkerContractorBinding)
+    from ..v1_bridge.medical import (KIT_LABELS, TRAIN_LABELS,
+                                     MANDATORY_TRAINING_KEYS as MANDATORY_TRAIN_KEYS)
+
+    binding = (WorkerContractorBinding.objects
+               .filter(worker=user, binding_status="ACCEPTED")
+               .select_related("site__employer", "contractor").first())
+    site_id = binding.site_id if binding else None
+    site = binding.site if binding else None
+    employer = site.employer if site else None
+    contractor = binding.contractor if binding else None
+    from bss_core.models import EmployerProfile
+    ep = EmployerProfile.objects.filter(user=employer).first() if employer else None
+    cp = getattr(contractor, "contractor_profile", None) if contractor else None
+    employer_bss = (_d(ep.employer_code) if ep and ep.employer_code
+                    else (_bss_employer_code(employer.id) if employer else ""))
+    contractor_bss = (cp.contractor_code if cp and cp.contractor_code
+                      else (_bss_contractor_code(contractor.id) if contractor else ""))
+    contractor_name = (_d(cp.contractor_name) if cp and cp.contractor_name
+                       else (contractor.username if contractor else ""))
+
+    exams = [{
+        "date": _dts(e.exam_date) if e.exam_date else "",
+        "fitness": _d(e.overall), "nextDue": _dts(e.next_due) if e.next_due else "",
+        "formType": e.form_type, "remarks": _d(e.remarks),
+    } for e in MedicalExam.objects.filter(worker=user).order_by("-recorded_at")[:20]]
+
+    kit, trainings = [], []
+    rec = SafetyRecord.objects.filter(worker=user, site_id=site_id).first()
+    if rec:
+        for k, v in (rec.kit_items or {}).items():
+            v = v or {}
+            if v.get("na") or not v.get("issued"):
+                continue
+            kit.append({"key": k, "name": (v.get("name") if v.get("custom") else KIT_LABELS.get(k, k)),
+                        "issueDate": _dts(v.get("issueDate")) if v.get("issueDate") else "",
+                        "condition": _d(v.get("condition"))})
+        for k, v in (rec.trainings or {}).items():
+            if k == "induction" or (v or {}).get("na") or not (v or {}).get("completed"):
+                continue
+            trainings.append({"key": k, "name": TRAIN_LABELS.get(k, k),
+                              "date": _dts(v.get("date")) if v.get("date") else "",
+                              "trainer": _d(v.get("trainer")), "result": _d(v.get("score")),
+                              "validUntil": _dts(v.get("validUntil")) if v.get("validUntil") else "",
+                              "mandatory": k in MANDATORY_TRAIN_KEYS})
+
+    cert = SafetyCertificate.objects.filter(worker=user, site_id=site_id).first()
+    ind = (rec.trainings or {}).get("induction") if rec else None
+    induction = None
+    if ind and ind.get("na"):
+        induction = {"na": True, "date": "", "trainer": "", "validUntil": ""}
+    elif ind and ind.get("completed"):
+        induction = {"na": False,
+                     "date": _dts(ind.get("date")) if ind.get("date") else "",
+                     "trainer": _d(ind.get("trainer")),
+                     "validUntil": _dts(ind.get("validUntil")) if ind.get("validUntil") else ""}
+    return {
+        "medicalExams": exams,
+        "kitItems": kit,
+        "trainings": trainings,
+        "induction": induction,
+        "certificate": ({"certNo": cert.cert_no, "issuedAt": _dts(cert.issued_at)} if cert else None),
+        "siteId": site_id,
+        "employer": _org_name(employer) if employer else "",
+        "employerBssId": _d(employer_bss),
+        "contractor": contractor_name,
+        "contractorBssId": _d(contractor_bss),
+        "site": _d(site.site_name) if site else "",
+        "state": _d(site.state) if site else "",
+        "eligibility": _gate_pass_eligibility(user),
+    }
+
+
 def build_worker_portal(user):
     identity = _get_identity(user)
     other = WorkerOther.objects.filter(user=user).first()
@@ -1435,6 +1512,7 @@ def build_worker_portal(user):
             "identity": _worker_identity_section(identity),
             "employment": _worker_employment_section(user, identity),
             "compliance": _worker_compliance_section(user),
+            "healthSafety": _worker_health_safety(user),
             "gatePasses": _worker_gate_passes(user),
             "complianceRecords": _worker_compliance_records(user),
             "skills": _worker_skills_section(user),

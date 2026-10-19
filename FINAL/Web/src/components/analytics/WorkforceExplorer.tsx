@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, FileDown, Loader2, Printer, RefreshCw, Search } from 'lucide-react';
-import { BarChart, Donut, HBar } from '@/components/government/Charts';
+import { ChevronLeft, ChevronRight, Download, FileDown, Loader2, Printer, RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react';
+import { BarChart, Donut, HBar, BSS } from '@/components/charts';
 import { exportRowsToXlsx } from '@/lib/exportXlsx';
 
 type Row = {
@@ -100,38 +100,67 @@ export default function WorkforceExplorer({ endpoint, showState = true, title = 
   };
 
   const sel = (k: keyof typeof emptyFilters, label: string, opts: Facet[] | undefined) => (
-    <label className="text-[11px] font-semibold text-bss-text-secondary">{label}
+    <label className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted">{label}
       <select value={filters[k]} onChange={e => setFilters(s => ({ ...s, [k]: e.target.value }))}
-        className="mt-1 block h-9 w-full min-w-[130px] border border-bss-border rounded-lg px-2 text-sm bg-white text-bss-text-primary focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/30">
+        className={`mt-1 block h-9 w-full min-w-[130px] border rounded-xl px-2.5 text-xs font-semibold bg-white text-[#01183A] focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/15 ${filters[k] ? 'border-[#1E3A8A]' : 'border-[#DBE3EF]'}`}>
         <option value="">All</option>
         {(opts ?? []).map(o => <option key={o.value} value={o.value}>{o.label}{o.count != null ? ` (${o.count})` : ''}</option>)}
       </select>
     </label>
   );
 
+  const FILTER_LABEL: Record<keyof typeof emptyFilters, string> = { state: 'State', gender: 'Gender', category: 'Category', occupation: 'Occupation', employer: 'Employer', contractor: 'Contractor', q: 'Search' };
+  const FACET_KEY: Partial<Record<keyof typeof emptyFilters, keyof Payload['facets']>> = { state: 'states', gender: 'genders', category: 'categories', occupation: 'occupations', employer: 'employers', contractor: 'contractors' };
+  const appliedList = (Object.entries(applied) as Array<[keyof typeof emptyFilters, string]>).filter(([, v]) => v);
+  const labelFor = (k: keyof typeof emptyFilters, v: string) => {
+    const fk = FACET_KEY[k];
+    return (fk && f?.[fk]?.find(o => o.value === v)?.label) || v;
+  };
+  const dropApplied = (k: keyof typeof emptyFilters) => {
+    setFilters(s => ({ ...s, [k]: '' }));
+    setApplied(s => ({ ...s, [k]: '' }));
+    setPage(1);
+  };
+  const dirty = JSON.stringify(filters) !== JSON.stringify(applied);
+
+  const chart = (title: string, body: React.ReactNode, accent: string = BSS.blue) => (
+    <div className="min-w-0 rounded-3xl bg-white border border-[#DBE3EF] p-4 hover:shadow-md transition-shadow">
+      <h3 className="text-xs font-extrabold text-[#01183A] mb-3 flex items-center gap-2"><span className="w-1 h-4 rounded-full" style={{ background: accent }} />{title}</h3>
+      {body}
+    </div>
+  );
+
   return <div className="space-y-4">
     {/* Filter bar (server-side: fetch only on Apply) */}
-    <div className="bss-card p-4 space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-bss-text-primary">{title}</h2>
-        {data && <span className="text-[11px] text-bss-text-muted">{data.total.toLocaleString('en-IN')} workers match</span>}
+    <div className="rounded-3xl bg-white border border-[#DBE3EF] overflow-hidden">
+      <div className="px-4 py-3 bg-[#01183A] text-white flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-extrabold flex items-center gap-2"><span className="w-7 h-7 rounded-full bg-[#E45D24] grid place-items-center"><SlidersHorizontal size={13} /></span>{title}</h2>
+        {data && <span className="text-[11px] font-semibold bg-white/10 border border-white/15 rounded-full px-2.5 py-1">{data.total.toLocaleString('en-IN')} workers match</span>}
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
-        {showState && sel('state', 'State', f?.states)}
-        {sel('gender', 'Gender', f?.genders)}
-        {sel('category', 'Category', f?.categories)}
-        {sel('occupation', 'Occupation', f?.occupations)}
-        {sel('employer', 'Employer', f?.employers)}
-        {sel('contractor', 'Contractor', f?.contractors)}
-      </div>
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="relative flex-1 min-w-[200px] text-[11px] font-semibold text-bss-text-secondary">Search
-          <span className="block relative mt-1"><Search size={14} className="absolute left-2.5 top-2.5 text-bss-text-muted" />
-          <input value={filters.q} onChange={e => setFilters(s => ({ ...s, q: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter') apply(); }} placeholder="Name or BSS ID" className="w-full h-9 rounded-lg border border-bss-border pl-8 pr-3 text-sm bg-white" /></span>
-        </label>
-        <button type="button" onClick={apply} className="h-9 px-4 rounded-lg bg-bss-navy text-white text-xs font-bold hover:bg-bss-deep-navy transition-colors">Apply filters</button>
-        <button type="button" onClick={reset} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-semibold text-bss-text-secondary hover:bg-bss-bg">Reset</button>
-        <button type="button" onClick={() => load()} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-bss-bg"><RefreshCw size={13} className={loading ? 'animate-spin' : ''} />Refresh</button>
+      <div className="p-4 space-y-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
+          {showState && sel('state', 'State', f?.states)}
+          {sel('gender', 'Gender', f?.genders)}
+          {sel('category', 'Category', f?.categories)}
+          {sel('occupation', 'Occupation', f?.occupations)}
+          {sel('employer', 'Employer', f?.employers)}
+          {sel('contractor', 'Contractor', f?.contractors)}
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="relative flex-1 min-w-[200px] text-[10px] font-bold uppercase tracking-wider text-bss-text-muted">Search
+            <span className="block relative mt-1"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-bss-text-muted" />
+            <input value={filters.q} onChange={e => setFilters(s => ({ ...s, q: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter') apply(); }} placeholder="Name or BSS ID" className="w-full h-9 rounded-full border border-[#DBE3EF] pl-8 pr-3 text-xs font-normal normal-case tracking-normal text-[#01183A] bg-white focus:outline-none focus:border-[#1E3A8A] focus:ring-2 focus:ring-[#1E3A8A]/15" /></span>
+          </label>
+          <button type="button" onClick={apply} className={`h-9 px-5 rounded-full text-white text-xs font-bold transition-colors inline-flex items-center gap-1.5 ${dirty ? 'bg-[#E45D24] hover:bg-[#C94D18] shadow-[0_6px_14px_-6px_#E45D24]' : 'bg-[#01183A] hover:bg-[#022B5E]'}`}>Apply filters{dirty && <span className="w-1.5 h-1.5 rounded-full bg-white" />}</button>
+          <button type="button" onClick={reset} className="h-9 px-4 rounded-full border border-[#DBE3EF] text-xs font-semibold text-bss-text-secondary hover:bg-[#F2F6FC]">Reset</button>
+          <button type="button" onClick={() => load()} className="h-9 px-4 rounded-full border border-[#DBE3EF] text-xs font-semibold text-[#01183A] inline-flex items-center gap-1.5 hover:bg-[#F2F6FC]"><RefreshCw size={13} className={loading ? 'animate-spin' : ''} />Refresh</button>
+        </div>
+        {appliedList.length > 0 && <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
+          <span className="font-semibold text-bss-text-muted">Applied:</span>
+          {appliedList.map(([k, v]) => <button key={k} type="button" onClick={() => dropApplied(k)} className="h-7 pl-2.5 pr-1.5 rounded-full bg-[#EEF2FB] text-[#1E3A8A] font-semibold inline-flex items-center gap-1 hover:bg-[#DBE3EF]" title="Remove filter">
+            <span className="text-bss-text-muted font-normal">{FILTER_LABEL[k]}:</span>{labelFor(k, v)}<X size={12} />
+          </button>)}
+        </div>}
       </div>
     </div>
 
@@ -139,74 +168,93 @@ export default function WorkforceExplorer({ endpoint, showState = true, title = 
 
     {/* Plots (from server aggregates) */}
     {data && <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-4">
-      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">By state</h3><HBar data={data.summary.byState} color="#1E3A8A" /></div>
-      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">By site</h3><HBar data={data.summary.bySite} color="#0F62A8" /></div>
-      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">By employer</h3><HBar data={data.summary.byEmployer} color="#14843C" /></div>
-      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">By contractor</h3><HBar data={data.summary.byContractor} color="#E45D24" /></div>
-      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">By gender</h3><Donut slices={data.summary.byGender.map((s, i) => ({ ...s, color: ['#1E3A8A', '#14843C', '#E45D24', '#7C3AED'][i % 4] }))} /></div>
-      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">Attendance status</h3><Donut slices={data.summary.attendance.map((s, i) => ({ ...s, color: ['#14843C', '#E45D24', '#DC2626', '#1E3A8A'][i % 4] }))} /></div>
-      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">By category</h3><HBar data={data.summary.byCategory} color="#7C3AED" /></div>
-      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">By occupation</h3><HBar data={data.summary.byOccupation} color="#0F62A8" /></div>
-      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">Gate passes by status</h3><BarChart data={data.summary.gatePasses} color="#14843C" /></div>
-      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">Gate scans (allow / deny)</h3>{data.summary.scans.length ? <Donut slices={data.summary.scans.map((s, i) => ({ ...s, color: ['#14843C', '#DC2626', '#E45D24', '#1E3A8A'][i % 4] }))} /> : <p className="text-xs text-bss-text-muted">No gate scans.</p>}</div>
-      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">Worker activity</h3><HBar data={data.summary.activities.worker} color="#1E3A8A" /></div>
-      <div className="bss-card p-4"><h3 className="text-xs font-semibold text-bss-text-secondary mb-3">Contractor activity</h3><HBar data={data.summary.activities.contractor} color="#E45D24" /></div>
+      {chart('By state', <HBar data={data.summary.byState} color={BSS.deep} />)}
+      {chart('By site', <HBar data={data.summary.bySite} color={BSS.blue} />)}
+      {chart('By employer', <HBar data={data.summary.byEmployer} color={BSS.green} />, BSS.green)}
+      {chart('By contractor', <HBar data={data.summary.byContractor} color={BSS.orange} />, BSS.orange)}
+      {chart('By gender', <Donut slices={data.summary.byGender.map((s, i) => ({ ...s, color: [BSS.blue, BSS.orange, BSS.green, BSS.sky][i % 4] }))} />, BSS.orange)}
+      {chart('Attendance status', <Donut slices={data.summary.attendance.map((s, i) => ({ ...s, color: [BSS.green, BSS.orange, BSS.red, BSS.blue][i % 4] }))} />, BSS.green)}
+      {chart('By category', <HBar data={data.summary.byCategory} color={BSS.sky} />)}
+      {chart('By occupation', <HBar data={data.summary.byOccupation} color={BSS.blue} />)}
+      {chart('Gate passes by status', <BarChart data={data.summary.gatePasses} color={BSS.green} />, BSS.green)}
+      {chart('Gate scans (allow / deny)', data.summary.scans.length ? <Donut slices={data.summary.scans.map((s, i) => ({ ...s, color: [BSS.green, BSS.red, BSS.orange, BSS.blue][i % 4] }))} /> : <p className="text-xs text-bss-text-muted">No gate scans.</p>, BSS.red)}
+      {chart('Worker activity', <HBar data={data.summary.activities.worker} color={BSS.blue} />)}
+      {chart('Contractor activity', <HBar data={data.summary.activities.contractor} color={BSS.orange} />, BSS.orange)}
     </div>}
 
     {/* Table + exports */}
-    <div className="bss-card overflow-hidden">
-      <div className="p-3 border-b border-bss-border flex flex-wrap items-center justify-between gap-2">
-        <span className="text-xs text-bss-text-muted">{loading ? 'Loading…' : data ? `Showing ${data.workers.length} of ${data.total.toLocaleString('en-IN')} — page ${data.page} / ${totalPages}` : ''}</span>
-        <div className="flex items-center gap-2">
+    <div className="rounded-3xl bg-white border border-[#DBE3EF] overflow-hidden">
+      <div className="p-3 sm:px-4 border-b border-[#DBE3EF] flex flex-wrap items-center justify-between gap-2">
+        <span className="text-xs text-bss-text-muted">{loading ? 'Loading…' : data ? <>Showing <strong className="text-[#01183A]">{data.workers.length}</strong> of <strong className="text-[#01183A]">{data.total.toLocaleString('en-IN')}</strong> — page {data.page} / {totalPages}</> : ''}</span>
+        <div className="flex flex-wrap items-center gap-2">
           {loading && <Loader2 size={14} className="animate-spin text-bss-text-muted" />}
-          <button type="button" onClick={exportXlsx} className="h-8 px-3 rounded-lg border border-bss-border text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-bss-bg"><FileDown size={13} />Export page (XLSX)</button>
-          <button type="button" onClick={exportCsv} className="h-8 px-3 rounded-lg border border-bss-border text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-bss-bg"><Download size={13} />Export all (CSV)</button>
-          <button type="button" onClick={() => window.print()} className="h-8 px-3 rounded-lg border border-bss-border text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-bss-bg"><Printer size={13} />Print / PDF</button>
+          <button type="button" onClick={exportXlsx} className="h-8 px-3.5 rounded-full border border-[#DBE3EF] text-xs font-semibold text-[#01183A] inline-flex items-center gap-1.5 hover:border-[#14843C] hover:text-[#14843C]"><FileDown size={13} />Export page (XLSX)</button>
+          <button type="button" onClick={exportCsv} className="h-8 px-3.5 rounded-full border border-[#DBE3EF] text-xs font-semibold text-[#01183A] inline-flex items-center gap-1.5 hover:border-[#1E3A8A] hover:text-[#1E3A8A]"><Download size={13} />Export all (CSV)</button>
+          <button type="button" onClick={() => window.print()} className="h-8 px-3.5 rounded-full bg-[#01183A] text-white text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-[#022B5E]"><Printer size={13} />Print / PDF</button>
         </div>
       </div>
-      <div className="overflow-x-auto">
+      {/* Phones: one card per worker */}
+      <ul className={`md:hidden divide-y divide-[#DBE3EF] transition-opacity ${loading ? 'opacity-50' : ''}`}>
+        {data?.workers.map(r => <li key={String(r.id)} className="px-4 py-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0"><span className="block text-sm font-semibold text-[#01183A] truncate">{r.name}</span><span className="block text-[10px] font-mono text-bss-text-muted">{r.bssId}</span></div>
+            <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${r.attendance === 'PRESENT' ? 'bg-bss-soft-green text-bss-green' : r.attendance === 'ABSENT' ? 'bg-bss-soft-orange text-bss-error' : 'bg-bss-soft-orange text-bss-orange'}`}>{r.attendance}</span>
+          </div>
+          <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+            <div className="min-w-0"><dt className="text-bss-text-muted inline">Site </dt><dd className="inline text-bss-text-secondary">{r.site || '—'}</dd></div>
+            <div className="min-w-0"><dt className="text-bss-text-muted inline">State </dt><dd className="inline text-bss-text-secondary">{r.state || '—'}</dd></div>
+            <div className="min-w-0 col-span-2 truncate"><dt className="text-bss-text-muted inline">Contractor </dt><dd className="inline text-bss-text-secondary">{r.contractor || '—'}</dd></div>
+            <div className="min-w-0 truncate"><dt className="text-bss-text-muted inline">Role </dt><dd className="inline text-bss-text-secondary">{[r.occupation, r.category].filter(Boolean).join(' · ') || '—'}</dd></div>
+            <div className="text-right"><dd className="inline font-semibold text-[#01183A] tabular-nums">{r.wage ? money(r.wage) : '—'}</dd></div>
+          </dl>
+        </li>)}
+        {data && data.workers.length === 0 && <li className="py-10 text-center text-xs text-bss-text-muted">No workers match these filters.</li>}
+      </ul>
+      <div className="hidden md:block overflow-x-auto max-h-[640px] overflow-y-auto">
         <table className="w-full min-w-[900px] text-xs">
-          <thead className="bg-bss-bg text-[10px] uppercase tracking-wide text-bss-text-muted">
+          <thead className="bg-[#F2F6FC] text-[10px] uppercase tracking-wider text-bss-text-muted sticky top-0 z-10">
             <tr>
-              <th className="text-left px-3 py-2 font-semibold">Worker</th>
-              <th className="text-left px-2 py-2 font-semibold">State / Site</th>
-              <th className="text-left px-2 py-2 font-semibold">Employer</th>
-              <th className="text-left px-2 py-2 font-semibold">Contractor</th>
-              <th className="px-2 py-2 font-semibold text-center">Gender</th>
-              <th className="text-left px-2 py-2 font-semibold">Category</th>
-              <th className="text-left px-2 py-2 font-semibold">Occupation</th>
-              <th className="px-2 py-2 font-semibold text-center">Attendance</th>
-              <th className="px-2 py-2 font-semibold text-right">Wage</th>
+              <th className="text-left px-3 py-2.5 font-bold">Worker</th>
+              <th className="text-left px-2 py-2.5 font-bold">State / Site</th>
+              <th className="text-left px-2 py-2.5 font-bold">Employer</th>
+              <th className="text-left px-2 py-2.5 font-bold">Contractor</th>
+              <th className="px-2 py-2.5 font-bold text-center">Gender</th>
+              <th className="text-left px-2 py-2.5 font-bold">Category</th>
+              <th className="text-left px-2 py-2.5 font-bold">Occupation</th>
+              <th className="px-2 py-2.5 font-bold text-center">Attendance</th>
+              <th className="px-3 py-2.5 font-bold text-right">Wage</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-bss-border">
+          <tbody className={`divide-y divide-[#DBE3EF] transition-opacity ${loading ? 'opacity-50' : ''}`}>
             {data?.workers.map(r => (
-              <tr key={String(r.id)} className="hover:bg-bss-bg/60">
-                <td className="px-3 py-2"><span className="block font-semibold text-bss-text-primary truncate max-w-[150px]">{r.name}</span><span className="block text-[10px] font-mono text-bss-text-muted">{r.bssId}</span></td>
-                <td className="px-2 py-2 text-bss-text-secondary"><span className="block">{r.state || '—'}</span><span className="block text-[10px] text-bss-text-muted truncate max-w-[120px]">{r.site}</span></td>
-                <td className="px-2 py-2 text-bss-text-secondary truncate max-w-[150px]">{r.employer || '—'}</td>
-                <td className="px-2 py-2 text-bss-text-secondary truncate max-w-[150px]">{r.contractor || '—'}</td>
-                <td className="px-2 py-2 text-center text-bss-text-secondary">{r.gender || '—'}</td>
-                <td className="px-2 py-2 text-bss-text-secondary truncate max-w-[110px]">{r.category || '—'}</td>
-                <td className="px-2 py-2 text-bss-text-secondary truncate max-w-[120px]">{r.occupation || '—'}</td>
-                <td className="px-2 py-2 text-center"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.attendance === 'PRESENT' ? 'bg-bss-soft-green text-bss-green' : r.attendance === 'ABSENT' ? 'bg-bss-soft-orange text-bss-error' : 'bg-bss-soft-orange text-bss-orange'}`}>{r.attendance}</span></td>
-                <td className="px-2 py-2 text-right text-bss-text-secondary whitespace-nowrap">{r.wage ? money(r.wage) : '—'}</td>
+              <tr key={String(r.id)} className="hover:bg-[#F2F6FC]/70 transition-colors">
+                <td className="px-3 py-2.5"><span className="block font-semibold text-[#01183A] truncate max-w-[150px]">{r.name}</span><span className="block text-[10px] font-mono text-bss-text-muted">{r.bssId}</span></td>
+                <td className="px-2 py-2.5 text-bss-text-secondary"><span className="block">{r.state || '—'}</span><span className="block text-[10px] text-bss-text-muted truncate max-w-[120px]">{r.site}</span></td>
+                <td className="px-2 py-2.5 text-bss-text-secondary truncate max-w-[150px]">{r.employer || '—'}</td>
+                <td className="px-2 py-2.5 text-bss-text-secondary truncate max-w-[150px]">{r.contractor || '—'}</td>
+                <td className="px-2 py-2.5 text-center text-bss-text-secondary">{r.gender || '—'}</td>
+                <td className="px-2 py-2.5 text-bss-text-secondary truncate max-w-[110px]">{r.category || '—'}</td>
+                <td className="px-2 py-2.5 text-bss-text-secondary truncate max-w-[120px]">{r.occupation || '—'}</td>
+                <td className="px-2 py-2.5 text-center"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.attendance === 'PRESENT' ? 'bg-bss-soft-green text-bss-green' : r.attendance === 'ABSENT' ? 'bg-bss-soft-orange text-bss-error' : 'bg-bss-soft-orange text-bss-orange'}`}>{r.attendance}</span></td>
+                <td className="px-3 py-2.5 text-right text-[#01183A] font-semibold whitespace-nowrap tabular-nums">{r.wage ? money(r.wage) : '—'}</td>
               </tr>
             ))}
             {data && data.workers.length === 0 && <tr><td colSpan={9} className="py-10 text-center text-bss-text-muted">No workers match these filters.</td></tr>}
           </tbody>
         </table>
       </div>
-      <div className="p-3 border-t border-bss-border flex items-center justify-between gap-2 text-xs text-bss-text-muted">
+      <div className="p-3 sm:px-4 border-t border-[#DBE3EF] bg-[#F2F6FC]/50 flex flex-wrap items-center justify-between gap-2 text-xs text-bss-text-muted">
         <label className="flex items-center gap-2">Rows per page
-          <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }} className="h-8 border border-bss-border rounded-lg px-2 bg-white">
+          <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }} className="h-8 border border-[#DBE3EF] rounded-full px-2.5 bg-white text-[#01183A] font-semibold">
             {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
           </select>
         </label>
-        <div className="flex items-center gap-2">
-          <button type="button" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="h-8 px-2 rounded-lg border border-bss-border disabled:opacity-40 hover:bg-bss-bg inline-flex items-center gap-1"><ChevronLeft size={13} />Prev</button>
-          <span>Page {data?.page ?? 1} / {totalPages}</span>
-          <button type="button" disabled={(data?.page ?? 1) >= totalPages} onClick={() => setPage(p => p + 1)} className="h-8 px-2 rounded-lg border border-bss-border disabled:opacity-40 hover:bg-bss-bg inline-flex items-center gap-1">Next<ChevronRight size={13} /></button>
+        <div className="flex items-center gap-1.5">
+          <button type="button" disabled={page <= 1} onClick={() => setPage(1)} className="hidden sm:inline-block h-8 px-2.5 rounded-full border border-[#DBE3EF] bg-white disabled:opacity-40 hover:border-[#1E3A8A]/40">First</button>
+          <button type="button" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="h-8 px-2.5 rounded-full border border-[#DBE3EF] bg-white disabled:opacity-40 hover:border-[#1E3A8A]/40 inline-flex items-center gap-1"><ChevronLeft size={13} />Prev</button>
+          <span className="px-2">Page <strong className="text-[#01183A]">{data?.page ?? 1}</strong> / {totalPages}</span>
+          <button type="button" disabled={(data?.page ?? 1) >= totalPages} onClick={() => setPage(p => p + 1)} className="h-8 px-2.5 rounded-full border border-[#DBE3EF] bg-white disabled:opacity-40 hover:border-[#1E3A8A]/40 inline-flex items-center gap-1">Next<ChevronRight size={13} /></button>
+          <button type="button" disabled={(data?.page ?? 1) >= totalPages} onClick={() => setPage(totalPages)} className="hidden sm:inline-block h-8 px-2.5 rounded-full border border-[#DBE3EF] bg-white disabled:opacity-40 hover:border-[#1E3A8A]/40">Last</button>
         </div>
       </div>
     </div>
