@@ -116,7 +116,7 @@ def record_ip_mismatch(camera, observed_ip, when=None):
 def check_no_data_alerts(now=None):
     now = now or timezone.now()
     opened = 0
-    for camera in (EdgeCamera.objects.select_related("device", "device__employer", "device__site")
+    for camera in (EdgeCamera.objects.select_related("device", "device__employer", "site")
                    .filter(last_mode="SENDING")):
         if not schedule_active(camera, now):
             resolve_camera_alerts(camera, ["NO_DATA", "IP_MISMATCH"])

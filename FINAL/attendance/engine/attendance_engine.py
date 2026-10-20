@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Local attendance client engine.
 
-Runs on the site laptop. Captures RTSP feeds, serves a local MJPEG grid, and
-only extracts/sends face embeddings when a camera is switched to Send Data.
-No video, images or names leave this machine.
+Runs on the site laptop. Each camera worker authenticates with its own BSS
+camera token; the device token is used only for activation and camera claims.
+No video, images or RTSP credentials leave this machine.
 """
 import argparse
 import hashlib
@@ -16,7 +16,7 @@ import sys
 import threading
 import time
 import uuid
-from datetime import datetime, time as dt_time, timedelta
+from datetime import datetime, time as dt_time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, unquote
@@ -111,6 +111,13 @@ def _fingerprint():
 
 
 class BssError(Exception):
+    def __init__(self, message, status_code=0, body=None):
+        super().__init__(message)
+        self.status_code = status_code
+        self.body = body or {}
+
+
+class TakeoverRequired(Exception):
     pass
 
 
@@ -124,16 +131,17 @@ class Store:
 
     def _load(self):
         try:
-            return json.loads(self.path.read_text(encoding="utf-8"))
+            data = json.loads(self.path.read_text(encoding="utf-8"))
         except Exception:
-            return {
-                "baseUrl": DEFAULT_BSS,
-                "fingerprint": _fingerprint(),
-                "token": "",
-                "deviceId": "",
-                "site": {},
-                "cameras": {},
-            }
+            data = {}
+        data.setdefault("baseUrl", DEFAULT_BSS)
+        data.setdefault("fingerprint", _fingerprint())
+        data.setdefault("token", "")
+        data.setdefault("deviceId", "")
+        data.setdefault("site", {})
+        data.setdefault("cameras", {})
+        data.setdefault("outbox", [])
+        return data
 
     def save(self):
         with self.lock:
@@ -141,19 +149,16 @@ class Store:
             tmp.write_text(json.dumps(self.data, indent=2), encoding="utf-8")
             tmp.replace(self.path)
 
-    def camera(self, label):
-        return self.data.setdefault("cameras", {}).setdefault(label, {
-            "label": label, "rtsp": "", "mode": "LIVE",
-        })
-
 
 class CameraWorker:
-    def __init__(self, engine, label):
+    def __init__(self, engine, camera_id, label):
         self.engine = engine
+        self.camera_id = int(camera_id)
         self.label = label
         self.lock = threading.Lock()
         self.mode = "LIVE"
         self.rtsp = ""
+        self.camera_token = ""
         self.status = "NO_RTSP"
         self.fps = 0.0
         self._frame = None
@@ -164,17 +169,18 @@ class CameraWorker:
         self._ai_thread = None
         self._last_sent = 0.0
         self._last_embedding = None
-        self._last_faces = 0
 
     def snapshot(self):
         with self.lock:
             return {
+                "cameraId": self.camera_id,
                 "label": self.label,
                 "rtspConfigured": bool(self.rtsp),
                 "mode": self.mode,
                 "status": self.status,
                 "fps": round(self.fps, 1),
-                "lastEventAt": _iso(self.engine.last_event_at.get(self.label)),
+                "tokenConfigured": bool(self.camera_token),
+                "lastEventAt": _iso(self.engine.last_event_at.get(self.camera_id)),
             }
 
     def set_rtsp(self, rtsp):
@@ -183,7 +189,7 @@ class CameraWorker:
             raise ValueError("Only RTSP URLs are supported.")
         self.stop()
         self.rtsp = rtsp
-        self.engine.store.camera(self.label)["rtsp"] = rtsp
+        self.engine.local_camera(self.camera_id)["rtsp"] = rtsp
         self.engine.store.save()
         if rtsp:
             self.start()
@@ -196,7 +202,7 @@ class CameraWorker:
             raise ValueError("Mode must be LIVE or SENDING.")
         with self.lock:
             self.mode = mode
-        self.engine.store.camera(self.label)["mode"] = mode
+        self.engine.local_camera(self.camera_id)["mode"] = mode
         self.engine.store.save()
         if mode == "SENDING":
             self._ensure_ai()
@@ -284,20 +290,20 @@ class CameraWorker:
 
     def _ai_loop(self):
         while self._running or self.mode == "SENDING":
-            if self.mode != "SENDING":
+            if self.mode != "SENDING" or not self.camera_token:
                 time.sleep(1)
                 continue
             frame = self.frame()
             if frame is None:
                 time.sleep(1)
                 continue
-            if not self.engine.send_allowed(self.label):
+            if not self.engine.send_allowed(self):
                 time.sleep(2)
                 continue
             try:
                 event = self._recognise(frame)
                 if event:
-                    self.engine.send_event(self.label, event[0], event[1])
+                    self.engine.send_event(self, event[0], event[1])
             except Exception as exc:  # noqa: BLE001
                 LOG.exception("Face processing failed for %s: %s", self.label, exc)
             time.sleep(1.5)
@@ -322,7 +328,6 @@ class CameraWorker:
         if embedding.size != 512 or float(np.linalg.norm(embedding)) <= 0:
             return None
         with self.lock:
-            self._last_faces = len(reps)
             previous = self._last_embedding
             self._last_embedding = embedding
         if previous is not None and previous.size == embedding.size:
@@ -348,35 +353,49 @@ class Engine:
         self.last_heartbeat = None
         self.last_event_at = {}
         self.outbox = list(self.store.data.get("outbox") or [])
-        self.face_ready = False
-        self.face_error = ""
         self._stop = threading.Event()
-        self._load_local_cameras()
+        self._load_cameras()
         self._heartbeat_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
         self._heartbeat_thread.start()
 
-    def _load_local_cameras(self):
-        for label, camera in (self.store.data.get("cameras") or {}).items():
-            worker = CameraWorker(self, label)
+    def _load_cameras(self):
+        for key, camera in (self.store.data.get("cameras") or {}).items():
+            try:
+                cid = int(camera.get("cameraId") or key)
+            except (TypeError, ValueError):
+                continue
+            worker = CameraWorker(self, cid, str(camera.get("label") or f"Camera {cid}"))
             worker.rtsp = str(camera.get("rtsp") or "")
             worker.mode = str(camera.get("mode") or "LIVE").upper()
+            worker.camera_token = str(camera.get("cameraToken") or "")
             if worker.mode not in ("LIVE", "SENDING"):
                 worker.mode = "LIVE"
-            self.workers[label] = worker
+            self.workers[cid] = worker
             if worker.rtsp:
                 worker.start()
-            if worker.mode == "SENDING":
+            if worker.mode == "SENDING" and worker.camera_token:
                 worker._ensure_ai()
+
+    def local_camera(self, camera_id):
+        key = str(camera_id)
+        data = self.store.data.setdefault("cameras", {}).setdefault(key, {})
+        data["cameraId"] = int(camera_id)
+        return data
 
     def _headers(self):
         return {"X-Edge-Token": self.token, "Content-Type": "application/json"}
 
-    def bss_call(self, method, path, payload=None, timeout=20):
-        if not self.token:
-            raise BssError("Client is not activated.")
+    def _camera_headers(self, worker):
+        return {"X-Camera-Token": worker.camera_token, "Content-Type": "application/json"}
+
+    def bss_call(self, method, path, payload=None, timeout=20, camera_token=None):
+        if camera_token is None and not self.token:
+            raise BssError("Client is not activated.", 401)
+        headers = ({"X-Camera-Token": camera_token, "Content-Type": "application/json"}
+                   if camera_token else self._headers())
         url = f"{self.bss}{path}"
         try:
-            response = requests.request(method, url, headers=self._headers(), json=payload, timeout=timeout)
+            response = requests.request(method, url, headers=headers, json=payload, timeout=timeout)
         except requests.RequestException as exc:
             raise BssError(f"BSS is unreachable: {exc}") from exc
         try:
@@ -384,7 +403,8 @@ class Engine:
         except ValueError:
             body = {}
         if not response.ok:
-            raise BssError(body.get("error") or f"BSS returned {response.status_code}.")
+            raise BssError(body.get("error") or f"BSS returned {response.status_code}.",
+                           response.status_code, body)
         return body
 
     def request_otp(self, phone):
@@ -395,17 +415,26 @@ class Engine:
             raise BssError(f"BSS is unreachable: {exc}") from exc
         body = response.json() if response.content else {}
         if not response.ok:
-            raise BssError(body.get("error") or "Could not send OTP.")
+            raise BssError(body.get("error") or "Could not send OTP.", response.status_code, body)
         return body
 
-    def activate(self, phone, otp, site_code, device_name):
-        url = f"{self.bss}/v1/edge/activate/verify"
+    def verify_otp(self, phone, otp):
+        url = f"{self.bss}/v1/edge/activate/verify-otp"
+        try:
+            response = requests.post(url, json={"phone": phone, "otp": otp}, timeout=20)
+        except requests.RequestException as exc:
+            raise BssError(f"BSS is unreachable: {exc}") from exc
+        body = response.json() if response.content else {}
+        if not response.ok:
+            raise BssError(body.get("error") or "OTP verification failed.", response.status_code, body)
+        return body.get("data") or {}
+
+    def activate(self, activation_token, site_id, device_name):
+        url = f"{self.bss}/v1/edge/activate/complete"
         payload = {
-            "phone": phone, "otp": otp, "siteCode": site_code,
+            "activationToken": activation_token, "siteId": site_id,
             "deviceFingerprint": self.store.data.get("fingerprint"),
-            "deviceName": device_name or platform.node(),
-            "version": "1.0.0",
-            "cameras": [{"label": label} for label in self.workers],
+            "deviceName": device_name or platform.node(), "version": "1.1.0",
         }
         try:
             response = requests.post(url, json=payload, timeout=30)
@@ -413,15 +442,13 @@ class Engine:
             raise BssError(f"BSS is unreachable: {exc}") from exc
         body = response.json() if response.content else {}
         if not response.ok:
-            raise BssError(body.get("error") or "Activation failed.")
+            raise BssError(body.get("error") or "Activation failed.", response.status_code, body)
         data = body.get("data") or {}
         with self.lock:
             self.token = data.get("token") or ""
             self.device_id = data.get("deviceId") or ""
             self.site = data.get("site") or {}
-            self.store.data.update({
-                "token": self.token, "deviceId": self.device_id, "site": self.site,
-            })
+            self.store.data.update({"token": self.token, "deviceId": self.device_id, "site": self.site})
             self.store.save()
         self.refresh_config()
         return self.status()
@@ -431,38 +458,45 @@ class Engine:
         data = body.get("data") or {}
         device = data.get("device") or {}
         with self.lock:
-            self.site = {
-                "id": device.get("siteId"), "code": device.get("siteCode"),
-                "name": device.get("siteName"),
-            }
+            self.site = {"id": device.get("siteId"), "code": device.get("siteCode"), "name": device.get("siteName")}
             self.store.data["site"] = self.site
+            incoming = {}
             for camera in device.get("cameras") or []:
-                self.bss_cameras[camera.get("label")] = camera
-                worker = self.workers.get(camera.get("label"))
+                try:
+                    cid = int(camera.get("id"))
+                except (TypeError, ValueError):
+                    continue
+                incoming[cid] = camera
+                self.bss_cameras[cid] = camera
+                local = self.local_camera(cid)
+                local["label"] = camera.get("label") or f"Camera {cid}"
+                worker = self.workers.get(cid)
                 if worker is None:
-                    worker = CameraWorker(self, camera.get("label"))
-                    self.workers[worker.label] = worker
-                    local = self.store.camera(worker.label)
-                    worker.rtsp = str(local.get("rtsp") or "")
-                    worker.mode = str(local.get("mode") or "LIVE").upper()
-                    if worker.rtsp:
-                        worker.start()
-                if worker.mode == "SENDING" and camera.get("allowedIp"):
+                    worker = CameraWorker(self, cid, local["label"])
+                    self.workers[cid] = worker
+                worker.label = local["label"]
+                worker.rtsp = str(local.get("rtsp") or "")
+                worker.mode = str(local.get("mode") or "LIVE").upper()
+                worker.camera_token = str(local.get("cameraToken") or "")
+                if worker.rtsp and not worker._running:
+                    worker.start()
+                if worker.mode == "SENDING" and worker.camera_token:
                     worker._ensure_ai()
+            for cid in list(self.workers):
+                if cid not in incoming:
+                    self.workers.pop(cid).stop()
+                    self.bss_cameras.pop(cid, None)
             self.store.save()
         return self.status()
 
-    def send_allowed(self, label):
-        camera = self.bss_cameras.get(label)
-        if not camera:
-            return False
-        if not camera.get("allowedIp"):
-            return False
-        return schedule_active(camera)
+    def send_allowed(self, worker):
+        camera = self.bss_cameras.get(worker.camera_id) or {}
+        return bool(camera.get("allowedIp") and camera.get("claimedByThisDevice")
+                    and schedule_active(camera) and worker.camera_token)
 
-    def send_event(self, label, embedding, when):
+    def send_event(self, worker, embedding, when):
         event = {
-            "eventId": str(uuid.uuid4()), "cameraLabel": label,
+            "eventId": str(uuid.uuid4()), "cameraId": worker.camera_id,
             "occurredAt": when.isoformat(), "type": "FACE",
             "embedding": embedding, "modelVersion": MODEL_VERSION,
         }
@@ -476,108 +510,173 @@ class Engine:
     def flush_outbox(self):
         with self.lock:
             pending = list(self.outbox)
-        if not pending or not self.token:
+        if not pending:
             return
-        for start in range(0, len(pending), 100):
-            batch = pending[start:start + 100]
+        by_camera = {}
+        for event in pending:
+            by_camera.setdefault(str(event.get("cameraId")), []).append(event)
+        for camera_key, events in by_camera.items():
             try:
-                body = self.bss_call("POST", "/v1/edge/events", {"events": batch})
-            except BssError as exc:
-                LOG.warning("Event send failed: %s", exc)
-                return
-            results = ((body.get("data") or {}).get("results") or [])
-            handled = {str(r.get("eventId")) for r in results if r.get("eventId")}
-            labels = {str(e.get("eventId")): e.get("cameraLabel") for e in batch}
-            with self.lock:
-                self.outbox = [e for e in self.outbox if e.get("eventId") not in handled]
-                self.store.data["outbox"] = self.outbox
-                for result in results:
-                    if result.get("status") in ("ACCEPTED", "UNKNOWN"):
-                        label = labels.get(str(result.get("eventId")))
-                        if label:
-                            self.last_event_at[label] = _now()
-                self.store.save()
+                cid = int(camera_key)
+            except (TypeError, ValueError):
+                continue
+            worker = self.workers.get(cid)
+            if worker is None or not worker.camera_token:
+                continue
+            for start in range(0, len(events), 100):
+                batch = events[start:start + 100]
+                try:
+                    body = self.bss_call("POST", "/v1/edge/events", {"events": batch},
+                                         camera_token=worker.camera_token)
+                except BssError as exc:
+                    if exc.status_code == 401:
+                        worker.camera_token = ""
+                        self.local_camera(cid)["cameraToken"] = ""
+                        self.store.save()
+                    LOG.warning("Event send failed for camera %s: %s", cid, exc)
+                    continue
+                results = ((body.get("data") or {}).get("results") or [])
+                handled = {str(r.get("eventId")) for r in results if r.get("eventId")}
+                with self.lock:
+                    self.outbox = [e for e in self.outbox if e.get("eventId") not in handled]
+                    self.store.data["outbox"] = self.outbox
+                    for result in results:
+                        if result.get("status") in ("ACCEPTED", "UNKNOWN"):
+                            self.last_event_at[cid] = _now()
+                    self.store.save()
 
-    def set_mode(self, label, mode):
-        worker = self.workers.get(label)
+    def set_mode(self, camera_id, mode):
+        worker = self.workers.get(camera_id)
+        camera = self.bss_cameras.get(camera_id) or {}
         if worker is None:
             raise ValueError("Camera not found.")
         mode = str(mode or "").upper()
         if mode == "SENDING":
-            camera = self.bss_cameras.get(label)
-            if not camera:
-                raise ValueError("The client has not synced this camera with BSS yet.")
             if not camera.get("allowedIp"):
-                raise ValueError("Set the allowed IP for this camera in BSS first.")
+                raise ValueError("The employer has not set the allowed IP yet.")
+            if not camera.get("claimedByThisDevice"):
+                raise ValueError("Claim this camera first.")
+            if not worker.camera_token:
+                raise ValueError("Camera token is missing. Claim the camera again.")
             if not schedule_active(camera):
                 raise ValueError("This camera is outside its capture window.")
         worker.set_mode(mode)
-        self.store.save()
         return self.status()
 
-    def add_camera(self, label, rtsp):
+    def add_camera(self, label, channel=None, rtsp=""):
         label = str(label or "").strip()[:120]
         if not label:
             raise ValueError("Camera label is required.")
-        worker = self.workers.get(label)
+        body = self.bss_call("POST", "/v1/edge/cameras",
+                             {"label": label, "channel": channel or None})
+        camera = body.get("data") or {}
+        try:
+            cid = int(camera.get("id"))
+        except (TypeError, ValueError):
+            raise ValueError("BSS did not return a camera id.")
+        local = self.local_camera(cid)
+        local.update({"label": label, "mode": "LIVE", "cameraToken": ""})
+        if rtsp:
+            local["rtsp"] = rtsp
+        self.store.save()
+        self.refresh_config()
+        if rtsp:
+            worker = self.workers.get(cid)
+            if worker:
+                worker.set_rtsp(rtsp)
+        return self.status()
+
+    def set_rtsp(self, camera_id, rtsp):
+        worker = self.workers.get(camera_id)
         if worker is None:
-            worker = CameraWorker(self, label)
-            self.workers[label] = worker
+            raise ValueError("Camera not found.")
         worker.set_rtsp(rtsp)
         self.store.save()
         return self.status()
 
-    def remove_camera(self, label):
-        worker = self.workers.pop(label, None)
-        if worker:
-            worker.stop()
-        self.store.data.get("cameras", {}).pop(label, None)
+    def claim(self, camera_id, otp=None):
+        body = self.bss_call("POST", f"/v1/edge/cameras/{camera_id}/claim",
+                             {"otp": otp} if otp else {})
+        data = body.get("data") or {}
+        token = data.get("cameraToken") or ""
+        if not token:
+            raise ValueError("BSS did not issue a camera token.")
+        local = self.local_camera(camera_id)
+        local["cameraToken"] = token
+        local["mode"] = "LIVE"
         self.store.save()
+        self.refresh_config()
         return self.status()
+
+    def takeover_otp(self, camera_id):
+        return self.bss_call("POST", f"/v1/edge/cameras/{camera_id}/takeover-otp", {})
+
+    def test_rtsp(self, rtsp):
+        rtsp = str(rtsp or "").strip()
+        if not rtsp.lower().startswith(("rtsp://", "rtsps://")):
+            raise ValueError("Only RTSP URLs are supported.")
+        cap = cv2.VideoCapture(rtsp, cv2.CAP_FFMPEG)
+        try:
+            if not cap.isOpened():
+                return {"ok": False, "error": "Could not open the RTSP stream."}
+            ok, frame = cap.read()
+            if not ok or frame is None:
+                return {"ok": False, "error": "Connected, but no video frame was received."}
+            height, width = frame.shape[:2]
+            return {"ok": True, "width": width, "height": height}
+        finally:
+            cap.release()
 
     def _heartbeat_loop(self):
         while not self._stop.is_set():
             try:
-                if self.token:
-                    cameras = []
-                    for label, worker in list(self.workers.items()):
-                        bss_cam = self.bss_cameras.get(label) or {}
-                        mode = worker.mode
-                        if mode == "SENDING" and not schedule_active(bss_cam):
-                            mode = "SCHEDULED_OFF"
-                        cameras.append({
-                            "label": label, "mode": mode,
+                for worker in list(self.workers.values()):
+                    if not worker.camera_token:
+                        continue
+                    try:
+                        self.bss_call("POST", "/v1/edge/heartbeat", {
+                            "version": "1.1.0", "mode": worker.mode,
                             "status": worker.status, "fps": round(worker.fps, 1),
-                        })
-                    body = self.bss_call("POST", "/v1/edge/heartbeat", {
-                        "version": "1.0.0", "cameras": cameras,
-                    }, timeout=15)
-                    self.last_heartbeat = _now()
-                    self.flush_outbox()
-            except BssError as exc:
-                LOG.warning("Heartbeat failed: %s", exc)
+                        }, timeout=10, camera_token=worker.camera_token)
+                        self.last_heartbeat = _now()
+                    except BssError as exc:
+                        if exc.status_code == 401:
+                            worker.camera_token = ""
+                            self.local_camera(worker.camera_id)["cameraToken"] = ""
+                            worker.status = "AUTH_FAILED"
+                            self.store.save()
+                        LOG.warning("Heartbeat failed for camera %s: %s", worker.camera_id, exc)
+                self.flush_outbox()
             except Exception as exc:  # noqa: BLE001
-                LOG.exception("Heartbeat error: %s", exc)
+                LOG.exception("Heartbeat loop error: %s", exc)
             self._stop.wait(20)
 
     def status(self):
         cameras = []
-        for label, worker in sorted(self.workers.items()):
-            bss_cam = self.bss_cameras.get(label) or {}
-            allowed = schedule_active(bss_cam) if bss_cam else False
+        for cid, worker in sorted(self.workers.items()):
+            bss = self.bss_cameras.get(cid) or {}
+            allowed = schedule_active(bss) if bss else False
             reason = ""
-            if not bss_cam:
+            if not bss:
                 reason = "Waiting for BSS sync"
-            elif not bss_cam.get("allowedIp"):
+            elif not bss.get("allowedIp"):
                 reason = "Allowed IP not set in BSS"
+            elif not bss.get("claimedByThisDevice"):
+                reason = "Claim this camera"
+            elif not worker.camera_token:
+                reason = "Camera token missing — claim again"
             elif not allowed:
                 reason = "Outside capture window"
             cameras.append({
                 **worker.snapshot(),
-                "allowedIp": bss_cam.get("allowedIp") or "",
-                "scheduleEnabled": bool(bss_cam.get("scheduleEnabled")),
-                "schedule": schedule_text(bss_cam) if bss_cam else "Not synced",
-                "sendAllowed": bool(bss_cam.get("allowedIp")) and allowed,
+                "allowedIp": bss.get("allowedIp") or "",
+                "scheduleEnabled": bool(bss.get("scheduleEnabled")),
+                "schedule": schedule_text(bss) if bss else "Not synced",
+                "claimStatus": bss.get("claimStatus") or "UNCLAIMED",
+                "claimedByDeviceName": bss.get("claimedByDeviceName") or "",
+                "claimedByThisDevice": bool(bss.get("claimedByThisDevice")),
+                "canClaim": bool(bss.get("allowedIp")) and not bss.get("claimedByThisDevice"),
+                "sendAllowed": bool(bss.get("allowedIp") and bss.get("claimedByThisDevice") and allowed and worker.camera_token),
                 "sendBlockedReason": reason,
             })
         return {
@@ -635,8 +734,11 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/health":
             return self._json({"ok": True})
         if path.startswith("/stream/"):
-            label = unquote(path[len("/stream/"):])
-            worker = ENGINE.workers.get(label)
+            try:
+                cid = int(unquote(path[len("/stream/"):]))
+            except ValueError:
+                return self._json({"error": "Camera not found."}, 404)
+            worker = ENGINE.workers.get(cid)
             if worker is None:
                 return self._json({"error": "Camera not found."}, 404)
             self.send_response(200)
@@ -661,24 +763,47 @@ class Handler(BaseHTTPRequestHandler):
         body = self._body()
         try:
             if path == "/api/activate/request-otp":
-                result = ENGINE.request_otp(body.get("phone"))
-                return self._json({"data": result})
-            if path == "/api/activate/verify":
-                result = ENGINE.activate(
-                    body.get("phone"), body.get("otp"), body.get("siteCode"), body.get("deviceName"))
-                return self._json({"data": result})
+                return self._json({"data": ENGINE.request_otp(body.get("phone"))})
+            if path == "/api/activate/verify-otp":
+                return self._json({"data": ENGINE.verify_otp(body.get("phone"), body.get("otp"))})
+            if path == "/api/activate/complete":
+                return self._json({"data": ENGINE.activate(
+                    body.get("activationToken"), body.get("siteId"), body.get("deviceName"))})
             if path == "/api/config/refresh":
                 return self._json({"data": ENGINE.refresh_config()})
             if path == "/api/cameras":
-                return self._json({"data": ENGINE.add_camera(body.get("label"), body.get("rtsp"))})
-            if path.startswith("/api/cameras/") and path.endswith("/mode"):
-                label = unquote(path[len("/api/cameras/"):-len("/mode")])
-                return self._json({"data": ENGINE.set_mode(label, body.get("mode"))})
+                return self._json({"data": ENGINE.add_camera(body.get("label"), body.get("channel"), body.get("rtsp"))})
+            if path.startswith("/api/cameras/"):
+                parts = path[len("/api/cameras/"):].split("/")
+                try:
+                    cid = int(parts[0])
+                except (IndexError, ValueError):
+                    return self._json({"error": "Camera not found."}, 404)
+                action = parts[1] if len(parts) > 1 else ""
+                if action == "rtsp":
+                    return self._json({"data": ENGINE.set_rtsp(cid, body.get("rtsp"))})
+                if action == "mode":
+                    return self._json({"data": ENGINE.set_mode(cid, body.get("mode"))})
+                if action == "claim":
+                    try:
+                        return self._json({"data": ENGINE.claim(cid, body.get("otp"))})
+                    except BssError as exc:
+                        if exc.status_code == 409 and exc.body.get("takeoverRequired"):
+                            return self._json({"error": str(exc), "takeoverRequired": True}, 409)
+                        raise
+                if action == "takeover-otp":
+                    return self._json({"data": ENGINE.takeover_otp(cid)})
+                if action == "test":
+                    return self._json({"data": ENGINE.test_rtsp(body.get("rtsp"))})
             if path == "/api/logout":
                 ENGINE.token = ""
                 ENGINE.device_id = ""
                 ENGINE.outbox = []
+                for worker in ENGINE.workers.values():
+                    worker.camera_token = ""
                 ENGINE.store.data.update({"token": "", "deviceId": "", "site": {}, "outbox": []})
+                for local in ENGINE.store.data.get("cameras", {}).values():
+                    local["cameraToken"] = ""
                 ENGINE.store.save()
                 return self._json({"data": ENGINE.status()})
             return self._json({"error": "Not found."}, 404)
@@ -691,8 +816,16 @@ class Handler(BaseHTTPRequestHandler):
     def do_DELETE(self):
         path = urlparse(self.path).path
         if path.startswith("/api/cameras/"):
-            label = unquote(path[len("/api/cameras/"):])
-            return self._json({"data": ENGINE.remove_camera(label)})
+            try:
+                cid = int(unquote(path[len("/api/cameras/"):]))
+            except ValueError:
+                return self._json({"error": "Camera not found."}, 404)
+            worker = ENGINE.workers.pop(cid, None)
+            if worker:
+                worker.stop()
+            ENGINE.store.data.get("cameras", {}).pop(str(cid), None)
+            ENGINE.store.save()
+            return self._json({"data": ENGINE.status()})
         return self._json({"error": "Not found."}, 404)
 
 
@@ -705,7 +838,6 @@ def _sha256(path):
 
 
 def _install_weights(home):
-    """Copy bundled ArcFace/RetinaFace weights into DeepFace's home on first run."""
     target = Path(home) / ".deepface" / "weights"
     target.mkdir(parents=True, exist_ok=True)
     candidates = [
@@ -717,8 +849,7 @@ def _install_weights(home):
         if (source / "arcface_weights.h5").exists() and (source / "retinaface.h5").exists():
             expected = {"arcface_weights.h5": ARCFACE_SHA, "retinaface.h5": RETINAFACE_SHA}
             for name, digest in expected.items():
-                actual = _sha256(source / name)
-                if actual != digest:
+                if _sha256(source / name) != digest:
                     raise SystemExit(f"Model weight checksum mismatch: {name}")
             for name in expected:
                 destination = target / name

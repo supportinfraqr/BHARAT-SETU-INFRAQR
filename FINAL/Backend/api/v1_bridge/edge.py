@@ -18,6 +18,7 @@ from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import numpy as np
+from django.core import signing
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -73,8 +74,39 @@ class EdgeTokenAuthentication(BaseAuthentication):
         return (device.employer, None)
 
 
+class EdgeCameraAuthentication(BaseAuthentication):
+    """Authenticate one camera worker using its independent X-Camera-Token."""
+
+    def authenticate_header(self, request):
+        return "CameraToken"
+
+    def authenticate(self, request):
+        raw = str(request.META.get("HTTP_X_CAMERA_TOKEN") or "").strip()
+        if not raw:
+            return None
+        digest = hashlib.sha256(raw.encode()).hexdigest()
+        camera = (EdgeCamera.objects.filter(token_hash=digest, is_claimed=True,
+                                            device__is_active=True)
+                  .select_related("device", "device__employer", "site").first())
+        if camera is None or camera.device is None:
+            raise AuthenticationFailed("Invalid or revoked camera token.")
+        request._request.edge_camera = camera
+        request._request.edge_device = camera.device
+        request._request.edge_ip = _source_ip(request)
+        return (camera.device.employer, None)
+
+
 def _edge_device(request):
     return getattr(request._request, "edge_device", None)
+
+
+def _edge_camera(request):
+    return getattr(request._request, "edge_camera", None)
+
+
+def _new_camera_token():
+    raw = secrets.token_urlsafe(32)
+    return raw, hashlib.sha256(raw.encode()).hexdigest(), raw[:10]
 
 
 def _source_ip(request):
@@ -111,10 +143,10 @@ def _owner_for_phone(phone):
     return cred.user
 
 
-def _verify_edge_otp(phone, value):
+def _verify_edge_otp(phone, value, purpose="EDGE_ACTIVATION"):
     value = str(value or "").strip()
     universal = _otp_universal()
-    otp = (SmsOtp.objects.filter(mobile=phone, purpose="EDGE_ACTIVATION")
+    otp = (SmsOtp.objects.filter(mobile=phone, purpose=purpose)
            .order_by("-created_at").first())
     if universal and value == universal:
         if otp is not None and not otp.verified:
@@ -132,9 +164,15 @@ def _verify_edge_otp(phone, value):
     return True
 
 
-def _camera_payload(camera):
+def _camera_payload(camera, device=None):
+    claimed_by_this = bool(device and camera.device_id == device.id)
+    claimed_by_other = bool(camera.device_id and not claimed_by_this)
+    status = ("CLAIMED_BY_DEVICE" if claimed_by_this
+              else "CLAIMED_BY_OTHER" if claimed_by_other
+              else "UNCLAIMED")
     return {
         "id": camera.id,
+        "siteId": camera.site_id,
         "label": camera.label,
         "channel": camera.channel,
         "allowedIp": camera.allowed_ip or "",
@@ -146,11 +184,17 @@ def _camera_payload(camera):
         "lastSeenAt": camera.last_seen_at.isoformat() if camera.last_seen_at else None,
         "lastSeenIp": camera.last_seen_ip or "",
         "lastEventAt": camera.last_event_at.isoformat() if camera.last_event_at else None,
+        "isClaimed": bool(camera.is_claimed),
+        "claimStatus": status,
+        "claimedByThisDevice": claimed_by_this,
+        "claimedByOtherDevice": claimed_by_other,
+        "claimedAt": camera.claimed_at.isoformat() if camera.claimed_at else None,
+        "hasToken": bool(camera.token_hash),
     }
 
 
 def _device_payload(device):
-    cameras = list(device.cameras.order_by("id"))
+    cameras = list(device.site.attendance_cameras.order_by("id"))
     return {
         "deviceId": str(device.id),
         "name": device.name,
@@ -162,7 +206,7 @@ def _device_payload(device):
         "lastSeenAt": device.last_seen_at.isoformat() if device.last_seen_at else None,
         "lastSeenIp": device.last_seen_ip or "",
         "cameraLimit": int(getattr(device.site, "max_cctv_cameras", 5) or 5),
-        "cameras": [_camera_payload(c) for c in cameras],
+        "cameras": [_camera_payload(c, device) for c in cameras],
     }
 
 
@@ -173,14 +217,17 @@ def _camera_limit(site):
         return 5
 
 
-def _create_camera(device, label, channel=None):
-    existing = EdgeCamera.objects.filter(device=device, label=label).first()
+def _create_camera(site, label, channel=None, device=None):
+    existing = EdgeCamera.objects.filter(site=site, label__iexact=label).first()
     if existing is not None:
+        if existing.device_id is None and device is not None:
+            existing.device = device
+            existing.save(update_fields=["device", "updated_at"])
         return existing
-    if EdgeCamera.objects.filter(device=device).count() >= _camera_limit(device.site):
+    if EdgeCamera.objects.filter(site=site).count() >= _camera_limit(site):
         return None
     return EdgeCamera.objects.create(
-        device=device, label=label,
+        site=site, device=device, label=label,
         channel=int(channel) if str(channel or "").isdigit() else None,
     )
 
@@ -328,6 +375,35 @@ def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id)
     return attendance
 
 
+def _employer_sites(owner):
+    return [
+        {"id": site.id, "code": getattr(site, "site_code", ""), "name": site.site_name}
+        for site in Site.objects.filter(employer=owner).order_by("site_name")
+    ]
+
+
+def _create_edge_device(owner, phone, site, fingerprint, name, version, ip):
+    if EdgeDevice.objects.filter(device_fingerprint=fingerprint).exclude(site=site).exists():
+        raise ValueError("This device is already activated for another site.")
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    with transaction.atomic():
+        device, _ = EdgeDevice.objects.update_or_create(
+            site=site, device_fingerprint=fingerprint,
+            defaults={
+                "employer": owner,
+                "name": name[:120],
+                "activation_phone": phone,
+                "token_hash": token_hash,
+                "version": version[:40],
+                "is_active": True,
+                "last_seen_at": timezone.now(),
+                "last_seen_ip": ip or None,
+            },
+        )
+    return device, raw_token
+
+
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -351,7 +427,77 @@ def edge_activate_request_otp(request):
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+def edge_activate_verify_otp(request):
+    """Verify the owner OTP and return a short-lived token plus the site list."""
+    body = request.data if isinstance(request.data, dict) else {}
+    phone = _normalize_mobile(body.get("phone") or body.get("mobile"))
+    otp = str(body.get("otp") or "").strip()
+    if not phone or not otp:
+        return Response({"error": "Phone and OTP are required."}, status=status.HTTP_400_BAD_REQUEST)
+    owner = _owner_for_phone(phone)
+    if owner is None:
+        return Response({"error": "No active employer-owner account is registered with this mobile."},
+                        status=status.HTTP_404_NOT_FOUND)
+    if not _verify_edge_otp(phone, otp):
+        return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_401_UNAUTHORIZED)
+    sites = _employer_sites(owner)
+    if not sites:
+        return Response({"error": "This employer has no sites."}, status=status.HTTP_404_NOT_FOUND)
+    activation_token = signing.dumps({"phone": phone, "owner": owner.id},
+                                     salt="bss-edge-activation", compress=True)
+    return Response({"data": {"activationToken": activation_token, "sites": sites}},
+                    status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def edge_activate_complete(request):
+    """Complete activation for the site selected from the OTP-verified list."""
+    body = request.data if isinstance(request.data, dict) else {}
+    activation_token = str(body.get("activationToken") or "").strip()
+    site_ref = str(body.get("siteId") or body.get("siteCode") or "").strip()
+    fingerprint = str(body.get("deviceFingerprint") or body.get("fingerprint") or "").strip()[:128]
+    if not activation_token or not site_ref or not fingerprint:
+        return Response({"error": "activationToken, site and device fingerprint are required."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    try:
+        payload = signing.loads(activation_token, salt="bss-edge-activation", max_age=900)
+    except signing.BadSignature:
+        return Response({"error": "Activation expired. Request a new OTP."},
+                        status=status.HTTP_401_UNAUTHORIZED)
+    phone = _normalize_mobile(payload.get("phone"))
+    owner = _owner_for_phone(phone)
+    if owner is None or owner.id != payload.get("owner"):
+        return Response({"error": "Employer account is no longer active."},
+                        status=status.HTTP_401_UNAUTHORIZED)
+    site = Site.objects.filter(pk=site_ref, employer=owner).first() if site_ref.isdigit() else None
+    if site is None:
+        site = Site.objects.filter(site_code__iexact=site_ref, employer=owner).first()
+    if site is None:
+        return Response({"error": "That site does not belong to this employer."},
+                        status=status.HTTP_404_NOT_FOUND)
+    try:
+        device, raw_token = _create_edge_device(
+            owner, phone, site, fingerprint,
+            str(body.get("deviceName") or body.get("name") or "")[:120],
+            str(body.get("version") or "")[:40], _source_ip(request),
+        )
+    except ValueError as exc:
+        return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
+    return Response({"data": {
+        "deviceId": str(device.id),
+        "token": raw_token,
+        "site": {"id": site.id, "code": getattr(site, "site_code", ""), "name": site.site_name},
+        "cameras": [_camera_payload(c, device) for c in site.attendance_cameras.order_by("id")],
+    }}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def edge_activate_verify(request):
+    """Legacy site-code activation path retained for older clients."""
     body = request.data if isinstance(request.data, dict) else {}
     phone = _normalize_mobile(body.get("phone") or body.get("mobile"))
     otp = str(body.get("otp") or "").strip()
@@ -373,48 +519,21 @@ def edge_activate_verify(request):
     if site is None:
         return Response({"error": "That site does not belong to this employer."},
                         status=status.HTTP_404_NOT_FOUND)
-    if (EdgeDevice.objects.filter(device_fingerprint=fingerprint)
-            .exclude(site=site).exists()):
-        return Response({"error": "This device is already activated for another site."},
-                        status=status.HTTP_409_CONFLICT)
-    raw_token = secrets.token_urlsafe(32)
-    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
-    with transaction.atomic():
-        device, _ = EdgeDevice.objects.update_or_create(
-            site=site, device_fingerprint=fingerprint,
-            defaults={
-                "employer": owner,
-                "name": str(body.get("deviceName") or body.get("name") or "")[:120],
-                "activation_phone": phone,
-                "token_hash": token_hash,
-                "version": str(body.get("version") or "")[:40],
-                "is_active": True,
-                "last_seen_at": timezone.now(),
-                "last_seen_ip": _source_ip(request),
-            },
+    try:
+        device, raw_token = _create_edge_device(
+            owner, phone, site, fingerprint,
+            str(body.get("deviceName") or body.get("name") or "")[:120],
+            str(body.get("version") or "")[:40], _source_ip(request),
         )
-        cameras = body.get("cameras")
-        if isinstance(cameras, list):
-            for entry in cameras:
-                if isinstance(entry, str):
-                    label, channel = entry.strip(), None
-                elif isinstance(entry, dict):
-                    label = str(entry.get("label") or entry.get("name") or "").strip()
-                    channel = entry.get("channel")
-                else:
-                    continue
-                if not label:
-                    continue
-                camera = _create_camera(device, label[:120], channel)
-                if camera is not None and camera.channel is None and str(channel or "").isdigit():
-                    camera.channel = int(channel)
-                    camera.save(update_fields=["channel", "updated_at"])
+    except ValueError as exc:
+        return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
     return Response({"data": {
         "deviceId": str(device.id),
         "token": raw_token,
         "site": {"id": site.id, "code": getattr(site, "site_code", ""), "name": site.site_name},
-        "cameras": [_camera_payload(c) for c in device.cameras.order_by("id")],
+        "cameras": [_camera_payload(c, device) for c in site.attendance_cameras.order_by("id")],
     }}, status=status.HTTP_200_OK)
+
 
 
 def _config_for(device):
@@ -442,12 +561,13 @@ def edge_config(request):
 
 
 @api_view(["POST"])
-@authentication_classes([EdgeTokenAuthentication])
+@authentication_classes([EdgeCameraAuthentication])
 @permission_classes([IsAuthenticated])
 def edge_heartbeat(request):
-    device = _edge_device(request)
-    if device is None:
-        return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
+    camera = _edge_camera(request)
+    if camera is None or camera.device is None:
+        return Response({"error": "Invalid camera."}, status=status.HTTP_401_UNAUTHORIZED)
+    device = camera.device
     body = request.data if isinstance(request.data, dict) else {}
     ip = _source_ip(request)
     now = timezone.now()
@@ -455,32 +575,22 @@ def edge_heartbeat(request):
     device.last_seen_ip = ip or None
     device.version = str(body.get("version") or device.version or "")[:40]
     device.save(update_fields=["last_seen_at", "last_seen_ip", "version", "updated_at"])
-    cameras = body.get("cameras")
-    if isinstance(cameras, list):
-        for entry in cameras:
-            if not isinstance(entry, dict):
-                continue
-            label = str(entry.get("label") or entry.get("name") or "").strip()
-            if not label:
-                continue
-            camera = _create_camera(device, label[:120], entry.get("channel"))
-            if camera is None:
-                continue
-            mode = str(entry.get("mode") or "").upper()
-            if mode in dict(EdgeCamera.MODE):
-                camera.last_mode = mode
-            camera.last_status = str(entry.get("status") or entry.get("health") or "")[:40]
-            camera.last_seen_at = now
-            camera.last_seen_ip = ip or None
-            camera.save(update_fields=["last_mode", "last_status", "last_seen_at", "last_seen_ip", "updated_at"])
-            if camera.last_mode == "SENDING" and _schedule_active(camera, now):
-                if camera.allowed_ip and ip and ip != str(camera.allowed_ip):
-                    record_ip_mismatch(camera, ip, now)
-                elif camera.allowed_ip:
-                    resolve_camera_alerts(camera, ["IP_MISMATCH", "NO_DATA"])
-            else:
-                resolve_camera_alerts(camera, ["IP_MISMATCH", "NO_DATA"])
-    return Response({"data": {"ok": True, "serverTime": now.isoformat()}}, status=status.HTTP_200_OK)
+    mode = str(body.get("mode") or "").upper()
+    if mode in dict(EdgeCamera.MODE):
+        camera.last_mode = mode
+    camera.last_status = str(body.get("status") or body.get("health") or "")[:40]
+    camera.last_seen_at = now
+    camera.last_seen_ip = ip or None
+    camera.save(update_fields=["last_mode", "last_status", "last_seen_at", "last_seen_ip", "updated_at"])
+    if camera.last_mode == "SENDING" and _schedule_active(camera, now):
+        if camera.allowed_ip and ip and ip != str(camera.allowed_ip):
+            record_ip_mismatch(camera, ip, now)
+        elif camera.allowed_ip:
+            resolve_camera_alerts(camera, ["IP_MISMATCH", "NO_DATA"])
+    else:
+        resolve_camera_alerts(camera, ["IP_MISMATCH", "NO_DATA"])
+    return Response({"data": {"ok": True, "cameraId": camera.id, "serverTime": now.isoformat()}},
+                    status=status.HTTP_200_OK)
 
 
 def _event_error(event_id, code, message):
@@ -488,12 +598,13 @@ def _event_error(event_id, code, message):
 
 
 @api_view(["POST"])
-@authentication_classes([EdgeTokenAuthentication])
+@authentication_classes([EdgeCameraAuthentication])
 @permission_classes([IsAuthenticated])
 def edge_events(request):
-    device = _edge_device(request)
-    if device is None:
-        return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
+    camera = _edge_camera(request)
+    if camera is None or camera.device is None:
+        return Response({"error": "Invalid camera."}, status=status.HTTP_401_UNAUTHORIZED)
+    device = camera.device
     body = request.data if isinstance(request.data, dict) else {}
     events = body.get("events")
     if not isinstance(events, list) or not events:
@@ -501,6 +612,9 @@ def edge_events(request):
     if len(events) > 100:
         return Response({"error": "Send at most 100 events per batch."}, status=status.HTTP_400_BAD_REQUEST)
     ip = _source_ip(request)
+    if not camera.allowed_ip:
+        return Response({"error": "Set the allowed IP for this camera in BSS."},
+                        status=status.HTTP_400_BAD_REQUEST)
     results = []
     for raw in events:
         if not isinstance(raw, dict):
@@ -509,17 +623,13 @@ def edge_events(request):
         if not event_id:
             results.append(_event_error("", "invalid_event", "eventId is required."))
             continue
-        camera_label = str(raw.get("cameraLabel") or raw.get("camera") or "").strip()
-        camera = EdgeCamera.objects.filter(device=device, label__iexact=camera_label).first()
-        if camera is None:
-            results.append(_event_error(event_id, "unknown_camera", "Camera is not registered on this device."))
+        supplied_camera = raw.get("cameraId") or raw.get("camera_id")
+        if supplied_camera not in (None, "") and str(supplied_camera) != str(camera.id):
+            results.append(_event_error(event_id, "camera_mismatch", "Event camera does not match the camera token."))
             continue
         occurred_at = _parse_dt(raw.get("occurredAt") or raw.get("occurred_at"))
         if occurred_at is None:
             results.append(_event_error(event_id, "invalid_time", "occurredAt is invalid."))
-            continue
-        if not camera.allowed_ip:
-            results.append(_event_error(event_id, "ip_not_configured", "Set the allowed IP for this camera in BSS."))
             continue
         if not _schedule_active(camera, occurred_at):
             results.append(_event_error(event_id, "outside_schedule", "This camera is outside its capture window."))
@@ -556,7 +666,7 @@ def edge_events(request):
                 results.append(_event_error(event_id, "invalid_embedding", "Face embedding is invalid."))
                 continue
             vector = vector / norm
-            worker_id, distance, reason = _match_worker(vector, device.site, model_version)
+            worker_id, distance, reason = _match_worker(vector, camera.site, model_version)
             if worker_id is not None:
                 worker = User.objects.filter(pk=worker_id, role="worker").first()
         elif method == "QR":
@@ -571,12 +681,12 @@ def edge_events(request):
         status_value = "UNKNOWN"
         confidence = None
         if worker is not None and WorkerContractorBinding.objects.filter(
-                worker=worker, site=device.site, binding_status="ACCEPTED").exists():
+                worker=worker, site=camera.site, binding_status="ACCEPTED").exists():
             if method == "QR":
                 distance = 0.0
             if distance is not None:
                 confidence = round(max(0.0, min(1.0, 1.0 - float(distance))) * 100, 2)
-                attendance = _mark_edge_attendance(worker, device.site, camera, occurred_at,
+                attendance = _mark_edge_attendance(worker, camera.site, camera, occurred_at,
                                                    distance, event_id)
                 status_value = "ACCEPTED"
         blob = None
@@ -585,11 +695,12 @@ def edge_events(request):
         try:
             EdgeEvent.objects.create(
                 device=device, camera=camera, event_id=event_id, worker=worker,
-                site=device.site, occurred_at=occurred_at, capture_method=method,
+                site=camera.site, occurred_at=occurred_at, capture_method=method,
                 status=status_value, confidence=confidence, match_distance=distance,
                 model_name=EDGE_FACE_MODEL_NAME if method == "FACE" else "QR",
                 model_version=model_version, embedding=blob,
-                details={"reason": reason, "ip": ip}, attendance=attendance,
+                details={"reason": reason, "ip": ip, "cameraToken": camera.token_prefix},
+                attendance=attendance,
             )
         except Exception:
             results.append({"eventId": event_id, "status": "DUPLICATE", "code": "duplicate"})
@@ -602,6 +713,124 @@ def edge_events(request):
                         "matched": worker is not None, "confidence": confidence,
                         "reason": reason})
     return Response({"data": {"results": results}}, status=status.HTTP_200_OK)
+
+
+
+@api_view(["POST"])
+@authentication_classes([EdgeTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def edge_camera_create(request):
+    """Client creates a pending camera for its activated site."""
+    device = _edge_device(request)
+    if device is None:
+        return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
+    body = request.data if isinstance(request.data, dict) else {}
+    label = str(body.get("label") or body.get("name") or "").strip()[:120]
+    if not label:
+        return Response({"error": "Camera label is required."}, status=status.HTTP_400_BAD_REQUEST)
+    if EdgeCamera.objects.filter(site=device.site, label__iexact=label).exists():
+        return Response({"error": "A camera with this label already exists."}, status=status.HTTP_409_CONFLICT)
+    limit = _camera_limit(device.site)
+    if EdgeCamera.objects.filter(site=device.site).count() >= limit:
+        return Response({"error": f"Camera limit reached for this site ({limit})."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    channel = body.get("channel")
+    camera = EdgeCamera.objects.create(
+        site=device.site, device=device, label=label,
+        channel=int(channel) if str(channel or "").isdigit() else None,
+    )
+    return Response({"data": _camera_payload(camera, device)}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+@authentication_classes([EdgeTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def edge_camera_claim(request, camera_id):
+    """Claim a camera token. A camera already owned by another device needs OTP."""
+    device = _edge_device(request)
+    if device is None:
+        return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
+    camera = (EdgeCamera.objects.filter(pk=camera_id, site=device.site)
+              .select_related("device", "site").first())
+    if camera is None:
+        return Response({"error": "Camera not found for this site."}, status=status.HTTP_404_NOT_FOUND)
+    if not camera.allowed_ip:
+        return Response({"error": "The employer must set the allowed IP before this camera can be claimed."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    body = request.data if isinstance(request.data, dict) else {}
+    old_device_id = camera.device_id
+    if old_device_id and old_device_id != device.id:
+        otp = str(body.get("otp") or "").strip()
+        if not otp:
+            return Response({"error": "This camera is claimed by another device. Verify OTP to take it over.",
+                             "takeoverRequired": True}, status=status.HTTP_409_CONFLICT)
+        phone = device.activation_phone or ""
+        if not phone or not _verify_edge_otp(phone, otp, purpose="EDGE_TAKEOVER"):
+            return Response({"error": "Invalid or expired takeover OTP."},
+                            status=status.HTTP_401_UNAUTHORIZED)
+    raw_token, token_hash, token_prefix = _new_camera_token()
+    now = timezone.now()
+    with transaction.atomic():
+        camera.device = device
+        camera.is_claimed = True
+        camera.claimed_at = now
+        camera.token_hash = token_hash
+        camera.token_prefix = token_prefix
+        camera.last_mode = "OFFLINE"
+        camera.last_status = "Claimed"
+        camera.save(update_fields=["device", "is_claimed", "claimed_at", "token_hash",
+                                   "token_prefix", "last_mode", "last_status", "updated_at"])
+    return Response({"data": {
+        "cameraId": camera.id,
+        "cameraToken": raw_token,
+        "camera": _camera_payload(camera, device),
+        "takeover": bool(old_device_id and old_device_id != device.id),
+    }}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([EdgeTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def edge_camera_takeover_otp(request, camera_id):
+    """Send the employer-owner OTP required to take over a claimed camera."""
+    device = _edge_device(request)
+    if device is None:
+        return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
+    camera = EdgeCamera.objects.filter(pk=camera_id, site=device.site).first()
+    if camera is None:
+        return Response({"error": "Camera not found for this site."}, status=status.HTTP_404_NOT_FOUND)
+    if not camera.device_id or camera.device_id == device.id:
+        return Response({"error": "This camera is not claimed by another device."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    phone = device.activation_phone or ""
+    if not phone:
+        return Response({"error": "No employer-owner phone is linked to this device."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if not _otp_send_allowed("edge_takeover", phone):
+        return Response({"error": "Too many OTP requests. Please try again later."},
+                        status=status.HTTP_429_TOO_MANY_REQUESTS)
+    _issue_otp(phone, purpose="EDGE_TAKEOVER", ttl_minutes=10)
+    return Response({"otpSent": True, "expiresIn": 600}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([EdgeTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def edge_camera_rotate(request, camera_id):
+    """Rotate the token for a camera owned by this device."""
+    device = _edge_device(request)
+    if device is None:
+        return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
+    camera = EdgeCamera.objects.filter(pk=camera_id, site=device.site, device=device).first()
+    if camera is None or not camera.is_claimed:
+        return Response({"error": "Camera is not claimed by this device."}, status=status.HTTP_404_NOT_FOUND)
+    raw_token, token_hash, token_prefix = _new_camera_token()
+    camera.token_hash = token_hash
+    camera.token_prefix = token_prefix
+    camera.claimed_at = timezone.now()
+    camera.save(update_fields=["token_hash", "token_prefix", "claimed_at", "updated_at"])
+    return Response({"data": {"cameraId": camera.id, "cameraToken": raw_token}},
+                    status=status.HTTP_200_OK)
 
 
 def _require_owner(request):
@@ -655,24 +884,67 @@ def employer_edge_devices(request):
     return Response({"data": [_device_payload(d) for d in devices]}, status=status.HTTP_200_OK)
 
 
+def _employer_camera_payload(camera):
+    payload = _camera_payload(camera, None)
+    device = camera.device
+    payload["claimStatus"] = "CLAIMED" if camera.is_claimed else "UNCLAIMED"
+    payload["claimedByThisDevice"] = False
+    payload["claimedByOtherDevice"] = False
+    payload["claimedByDeviceId"] = str(device.id) if device else ""
+    payload["claimedByDeviceName"] = device.name if device else ""
+    return payload
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def employer_attendance_cameras(request):
+    """Employer site-wise attendance cameras, including sites with no device."""
+    _require_owner(request)
+    sites = (Site.objects.filter(employer=request.user)
+             .prefetch_related("attendance_cameras", "edge_devices").order_by("site_name"))
+    rows = []
+    for site in sites:
+        cameras = list(site.attendance_cameras.order_by("id"))
+        devices = list(site.edge_devices.order_by("-created_at"))
+        rows.append({
+            "siteId": site.id,
+            "siteName": site.site_name,
+            "siteCode": getattr(site, "site_code", ""),
+            "cameraLimit": int(getattr(site, "max_cctv_cameras", 5) or 5),
+            "cameraCount": len(cameras),
+            "cameras": [_employer_camera_payload(c) for c in cameras],
+            "devices": [{
+                "deviceId": str(d.id), "name": d.name, "active": d.is_active,
+                "lastSeenAt": d.last_seen_at.isoformat() if d.last_seen_at else None,
+                "lastSeenIp": d.last_seen_ip or "",
+                "version": d.version,
+            } for d in devices],
+        })
+    return Response({"data": rows}, status=status.HTTP_200_OK)
+
+
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
-def employer_edge_camera_create(request, device_id):
-    """Employer pre-registers a camera label/IP/window before the client reports it."""
+def employer_attendance_camera_create(request):
+    """Employer creates a site camera before or after client activation."""
     _require_owner(request)
-    device = (EdgeDevice.objects.filter(pk=device_id, employer=request.user)
-              .select_related("site").first())
-    if device is None:
-        return Response({"error": "Device not found."}, status=status.HTTP_404_NOT_FOUND)
     body = request.data if isinstance(request.data, dict) else {}
+    try:
+        site_id = int(body.get("siteId") or body.get("site_id"))
+    except (TypeError, ValueError):
+        return Response({"error": "Select a site."}, status=status.HTTP_400_BAD_REQUEST)
+    site = Site.objects.filter(pk=site_id, employer=request.user).first()
+    if site is None:
+        return Response({"error": "Site not found."}, status=status.HTTP_404_NOT_FOUND)
     label = str(body.get("label") or body.get("name") or "").strip()[:120]
     if not label:
         return Response({"error": "Camera label is required."}, status=status.HTTP_400_BAD_REQUEST)
-    if EdgeCamera.objects.filter(device=device, label__iexact=label).exists():
+    if EdgeCamera.objects.filter(site=site, label__iexact=label).exists():
         return Response({"error": "A camera with this label already exists."}, status=status.HTTP_409_CONFLICT)
-    limit = _camera_limit(device.site)
-    if EdgeCamera.objects.filter(device=device).count() >= limit:
+    limit = _camera_limit(site)
+    if EdgeCamera.objects.filter(site=site).count() >= limit:
         return Response({"error": f"Camera limit reached for this site ({limit}). Ask BSS admin to raise it."},
                         status=status.HTTP_400_BAD_REQUEST)
     allowed_ip, ip_error = _public_ipv4(body.get("allowedIp") or body.get("allowed_ip"))
@@ -688,23 +960,22 @@ def employer_edge_camera_create(request, device_id):
         return Response({"error": window_error}, status=status.HTTP_400_BAD_REQUEST)
     channel = body.get("channel")
     camera = EdgeCamera.objects.create(
-        device=device, label=label,
+        site=site, label=label,
         channel=int(channel) if str(channel or "").isdigit() else None,
         allowed_ip=allowed_ip, timezone=zone,
         schedule_enabled=bool(body.get("scheduleEnabled") or body.get("schedule_enabled")),
         capture_windows=windows,
     )
-    return Response({"data": _camera_payload(camera)}, status=status.HTTP_201_CREATED)
+    return Response({"data": _employer_camera_payload(camera)}, status=status.HTTP_201_CREATED)
 
 
 @api_view(["PATCH"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
-def employer_edge_camera_detail(request, device_id, camera_id):
+def employer_attendance_camera_detail(request, camera_id):
     _require_owner(request)
-    camera = (EdgeCamera.objects.filter(pk=camera_id, device_id=device_id,
-                                        device__employer=request.user)
-              .select_related("device", "device__site").first())
+    camera = (EdgeCamera.objects.filter(pk=camera_id, site__employer=request.user)
+              .select_related("site", "device").first())
     if camera is None:
         return Response({"error": "Camera not found."}, status=status.HTTP_404_NOT_FOUND)
     body = request.data if isinstance(request.data, dict) else {}
@@ -713,16 +984,10 @@ def employer_edge_camera_detail(request, device_id, camera_id):
         if not raw:
             camera.allowed_ip = None
         else:
-            try:
-                parsed_ip = ipaddress.ip_address(raw)
-            except ValueError:
-                return Response({"error": "Enter a valid IP address."}, status=status.HTTP_400_BAD_REQUEST)
-            if parsed_ip.version != 4:
-                return Response({"error": "Only IPv4 addresses are supported."}, status=status.HTTP_400_BAD_REQUEST)
-            if not parsed_ip.is_global:
-                return Response({"error": "Use the camera network's public static IPv4 address, not a LAN address."},
-                                status=status.HTTP_400_BAD_REQUEST)
-            camera.allowed_ip = str(parsed_ip)
+            parsed, error = _public_ipv4(raw)
+            if error:
+                return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            camera.allowed_ip = parsed
     if body.get("timezone") is not None:
         zone = str(body.get("timezone") or "").strip()[:64] or "Asia/Kolkata"
         try:
@@ -738,7 +1003,7 @@ def employer_edge_camera_detail(request, device_id, camera_id):
             return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
         camera.capture_windows = windows
     camera.save()
-    return Response({"data": _camera_payload(camera)}, status=status.HTTP_200_OK)
+    return Response({"data": _employer_camera_payload(camera)}, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
@@ -752,19 +1017,29 @@ def employer_edge_device_revoke(request, device_id):
     device.is_active = False
     device.token_hash = ""
     device.save(update_fields=["is_active", "token_hash", "updated_at"])
-    device.cameras.update(last_mode="OFFLINE")
+    device.cameras.update(token_hash="", token_prefix="", is_claimed=False,
+                          claimed_at=None, device=None, last_mode="OFFLINE",
+                          last_status="Device revoked")
     return Response({"data": {"deviceId": str(device.id), "active": False}}, status=status.HTTP_200_OK)
 
 
 __all__ = [
     "EdgeTokenAuthentication",
+    "EdgeCameraAuthentication",
     "edge_activate_request_otp",
+    "edge_activate_verify_otp",
+    "edge_activate_complete",
     "edge_activate_verify",
     "edge_config",
+    "edge_camera_create",
+    "edge_camera_claim",
+    "edge_camera_takeover_otp",
+    "edge_camera_rotate",
     "edge_heartbeat",
     "edge_events",
     "employer_edge_devices",
-    "employer_edge_camera_create",
-    "employer_edge_camera_detail",
+    "employer_attendance_cameras",
+    "employer_attendance_camera_create",
+    "employer_attendance_camera_detail",
     "employer_edge_device_revoke",
 ]

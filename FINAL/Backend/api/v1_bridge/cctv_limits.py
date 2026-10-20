@@ -30,7 +30,7 @@ def admin_sites_cctv(request):
             "code": site.site_code,
             "employer": getattr(site.employer, "username", "") if site.employer_id else "",
             "maxCameras": int(getattr(site, "max_cctv_cameras", 5) or 5),
-            "cameraCount": EdgeCamera.objects.filter(device__site=site).count(),
+            "cameraCount": EdgeCamera.objects.filter(site=site).count(),
         })
     return Response({"rows": rows}, status=status.HTTP_200_OK)
 
@@ -62,5 +62,5 @@ def admin_site_camera_limit(request, site_id):
         "siteId": site.id,
         "siteName": site.site_name,
         "maxCameras": int(getattr(site, "max_cctv_cameras", 5) or 5),
-        "cameraCount": EdgeCamera.objects.filter(device__site=site).count(),
+        "cameraCount": EdgeCamera.objects.filter(site=site).count(),
     }}, status=status.HTTP_200_OK)

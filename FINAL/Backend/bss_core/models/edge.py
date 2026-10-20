@@ -47,7 +47,12 @@ class EdgeDevice(models.Model):
 
 
 class EdgeCamera(models.Model):
-    """A camera on an edge device with its own IP allowlist and capture windows."""
+    """A site camera with its own IP allowlist, schedule and authentication token.
+
+    Cameras exist at site level so the employer can configure them before the
+    site laptop is activated. A camera can be claimed by only one active edge
+    device at a time.
+    """
 
     MODE = [
         ("LIVE", "Live"),
@@ -56,13 +61,19 @@ class EdgeCamera(models.Model):
         ("OFFLINE", "Offline"),
     ]
 
-    device = models.ForeignKey(EdgeDevice, on_delete=models.CASCADE, related_name="cameras")
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="attendance_cameras")
+    device = models.ForeignKey(EdgeDevice, on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name="cameras")
     label = models.CharField(max_length=120)
     channel = models.PositiveSmallIntegerField(null=True, blank=True)
     allowed_ip = models.GenericIPAddressField(null=True, blank=True)
     timezone = models.CharField(max_length=64, default="Asia/Kolkata")
     schedule_enabled = models.BooleanField(default=False)
     capture_windows = models.JSONField(default=list, blank=True)
+    token_hash = models.CharField(max_length=64, db_index=True, blank=True)
+    token_prefix = models.CharField(max_length=16, blank=True)
+    is_claimed = models.BooleanField(default=False)
+    claimed_at = models.DateTimeField(null=True, blank=True)
     last_mode = models.CharField(max_length=20, choices=MODE, default="OFFLINE")
     last_status = models.CharField(max_length=40, blank=True)
     last_seen_at = models.DateTimeField(null=True, blank=True)
@@ -73,15 +84,17 @@ class EdgeCamera(models.Model):
 
     class Meta:
         db_table = "edge_camera"
-        constraints = [models.UniqueConstraint(fields=["device", "label"],
-                                               name="uq_edge_camera_device_label")]
+        constraints = [models.UniqueConstraint(fields=["site", "label"],
+                                               name="uq_edge_camera_site_label")]
         indexes = [
+            models.Index(fields=["site"], name="idx_edge_camera_site"),
             models.Index(fields=["device"], name="idx_edge_camera_device"),
+            models.Index(fields=["token_hash"], name="idx_edge_camera_token"),
             models.Index(fields=["allowed_ip"], name="idx_edge_camera_allowed_ip"),
         ]
 
     def __str__(self):
-        return f"{self.device_id}:{self.label}"
+        return f"{self.site_id}:{self.label}"
 
 
 class EdgeEvent(models.Model):
