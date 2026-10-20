@@ -51,7 +51,10 @@ jobs:
 
       - name: Build Python sidecar
         working-directory: FINAL/attendance
-        run: python build_engine.py
+        run: |
+          python build_engine.py
+          rm -rf build-work build-dist build-spec
+          python -m pip cache purge || true
 
       - name: Sign Windows sidecar
         if: runner.os == 'Windows'
@@ -73,7 +76,7 @@ jobs:
           if [ "${{ runner.os }}" = "Windows" ]; then
             npm run build -- --bundles nsis,msi
           else
-            npm run build -- --bundles appimage,deb
+            npm run build -- --bundles appimage
           fi
 
       - name: Sign Windows installers
