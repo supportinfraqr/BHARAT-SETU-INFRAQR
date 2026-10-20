@@ -54,8 +54,13 @@ _DOC_LABEL = {"AADHAR": "Aadhaar", "PAN": "PAN", "UAN": "UAN", "ESIC": "ESIC", "
 
 
 def _same_person_name(a, b):
+    def squashed(value):
+        return re.sub(r"[^A-Z0-9]+", "", str(value or "").upper())
     def words(value):
         return [w for w in re.split(r"[^A-Z0-9]+", str(value or "").upper()) if len(w) >= 2]
+    # OCR often joins the last two words ("Syed Yasserali" for "Syed Yasser Ali").
+    if squashed(a) and squashed(a) == squashed(b):
+        return True
     aw, bw = words(a), words(b)
     if not aw or not bw:
         return False
@@ -437,15 +442,21 @@ def contractor_worker_pan(request, bss_id):
     if not ident.aadhaar or not ident.name:
         return Response({"error": "Complete Aadhaar verification first so we can match the PAN holder name."},
                         status=status.HTTP_400_BAD_REQUEST)
-    text, error = _validate_doc_upload(upload, "PAN", expected_number=pan, expected_name=ident.name)
+    text, error = _validate_doc_upload(upload, "PAN", expected_number=pan)
     if error:
         return Response({"error": error}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
     from .. import ocr_client
     pan_fields = ocr_client.extract_fields("pan", text)
     holder = str(pan_fields.get("name") or "").strip()
-    if holder and not _same_person_name(ident.name, holder):
-        return Response({"error": "PAN holder name does not match the Aadhaar name."},
-                        status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    if holder:
+        if not _same_person_name(ident.name, holder):
+            return Response({"error": f'PAN holder name "{holder}" does not match Aadhaar name "{ident.name}".'},
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    else:
+        ok, message = ocr_client.verify_document_text("pan", text, expected_name=ident.name)
+        if not ok:
+            return Response({"error": f'Could not match the PAN holder name to Aadhaar name "{ident.name}". Upload a PAN showing the same name.'},
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
     ident.pan = pan
     ident.pan_verified = True
     ident.pan_holder_name = holder or name

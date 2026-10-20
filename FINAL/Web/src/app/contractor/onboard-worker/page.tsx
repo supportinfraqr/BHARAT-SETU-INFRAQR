@@ -107,6 +107,7 @@ export default function OnboardWorkerPage() {
   const [loadId, setLoadId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [panelError, setPanelError] = useState('');
   const [notice, setNotice] = useState('');
   const [audit, setAudit] = useState<string[]>([]);
 
@@ -125,10 +126,15 @@ export default function OnboardWorkerPage() {
   const bssId = worker?.bssId ?? '';
   const post = (path: string, body: unknown) => jsonPost(`/api/contractor/onboard-worker/${bssId}/${path}`, body);
 
-  async function run(fn: () => Promise<void>) {
+  async function run(fn: () => Promise<void>, inline = false) {
     setBusy(true); setError('');
+    if (inline) setPanelError('');
     try { await fn(); }
-    catch (e) { setError(e instanceof Error ? e.message : 'The action failed.'); }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'The action failed.';
+      setError(message);
+      if (inline) setPanelError(message);
+    }
     finally { setBusy(false); }
   }
 
@@ -145,6 +151,7 @@ export default function OnboardWorkerPage() {
 
   function startPanel(doc: DocId, mode: 'integrate' | 'upload') {
     setPanel({ doc, mode });
+    setPanelError('');
     if (mode === 'upload') setFields(Object.fromEntries(FIELD_KEYS[doc].map(k => [k, ''])));
   }
 
@@ -170,7 +177,7 @@ export default function OnboardWorkerPage() {
       setPhotoPreview(String(j.photo || ''));
       setCardPreview(String(j.card || ''));
       log(`OCR read the ${doc} document (${Object.keys(extracted).length} field(s))`);
-    });
+    }, true);
   }
 
   function submitExtract(doc: DocId) {
@@ -203,7 +210,7 @@ export default function OnboardWorkerPage() {
       log(`${doc} finalised${doc === 'aadhaar' ? ' (card + photo stored)' : ''}`);
       flash(`${doc === 'dl' ? 'Driving Licence' : doc.toUpperCase()} finalised.`);
       setPanel(null); setFields({}); setPhotoPreview(''); setCardPreview(''); setPendingFile(null);
-    });
+    }, true);
   }
 
   function verifyBank() {
@@ -440,6 +447,11 @@ export default function OnboardWorkerPage() {
 
                     {panel?.mode === 'upload' && (
                       <>
+                        {panelError && (
+                          <p role="alert" style={{ margin: 0, padding: '8px 10px', borderRadius: 7, background: '#FDF0EA', color: 'var(--red)', fontSize: 11.5, fontWeight: 600 }}>
+                            ⚠ {panelError}
+                          </p>
+                        )}
                         <label className="chip" style={{ justifySelf: 'start', cursor: 'pointer' }}>
                           📎 Choose {def.title} (image / PDF)
                           <input type="file" accept="image/*,application/pdf" hidden onChange={e => onUpload(def.id, e)} />
