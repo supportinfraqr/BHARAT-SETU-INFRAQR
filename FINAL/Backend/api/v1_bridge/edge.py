@@ -161,8 +161,28 @@ def _device_payload(device):
         "active": device.is_active,
         "lastSeenAt": device.last_seen_at.isoformat() if device.last_seen_at else None,
         "lastSeenIp": device.last_seen_ip or "",
+        "cameraLimit": int(getattr(device.site, "max_cctv_cameras", 5) or 5),
         "cameras": [_camera_payload(c) for c in cameras],
     }
+
+
+def _camera_limit(site):
+    try:
+        return max(1, min(int(getattr(site, "max_cctv_cameras", 5) or 5), 50))
+    except (TypeError, ValueError):
+        return 5
+
+
+def _create_camera(device, label, channel=None):
+    existing = EdgeCamera.objects.filter(device=device, label=label).first()
+    if existing is not None:
+        return existing
+    if EdgeCamera.objects.filter(device=device).count() >= _camera_limit(device.site):
+        return None
+    return EdgeCamera.objects.create(
+        device=device, label=label,
+        channel=int(channel) if str(channel or "").isdigit() else None,
+    )
 
 
 def _parse_dt(value):
@@ -385,11 +405,8 @@ def edge_activate_verify(request):
                     continue
                 if not label:
                     continue
-                camera, _ = EdgeCamera.objects.get_or_create(
-                    device=device, label=label[:120],
-                    defaults={"channel": int(channel) if str(channel or "").isdigit() else None},
-                )
-                if camera.channel is None and str(channel or "").isdigit():
+                camera = _create_camera(device, label[:120], channel)
+                if camera is not None and camera.channel is None and str(channel or "").isdigit():
                     camera.channel = int(channel)
                     camera.save(update_fields=["channel", "updated_at"])
     return Response({"data": {
@@ -446,10 +463,9 @@ def edge_heartbeat(request):
             label = str(entry.get("label") or entry.get("name") or "").strip()
             if not label:
                 continue
-            camera, _ = EdgeCamera.objects.get_or_create(
-                device=device, label=label[:120],
-                defaults={"channel": entry.get("channel") if str(entry.get("channel") or "").isdigit() else None},
-            )
+            camera = _create_camera(device, label[:120], entry.get("channel"))
+            if camera is None:
+                continue
             mode = str(entry.get("mode") or "").upper()
             if mode in dict(EdgeCamera.MODE):
                 camera.last_mode = mode

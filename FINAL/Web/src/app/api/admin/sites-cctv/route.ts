@@ -14,5 +14,5 @@ export async function GET() {
     const config = getRuntimeConfig();
     const result = await upstreamRequest<{ rows?: unknown[] }>(config.apiBaseUrl, '/v1/admin/sites-cctv', session);
     return NextResponse.json({ rows: result?.rows ?? [] }, { headers: noStore });
-  } catch (error) { return apiError(error, 'Site CCTV settings could not be loaded.'); }
+  } catch (error) { return apiError(error, 'Attendance camera limits could not be loaded.'); }
 }

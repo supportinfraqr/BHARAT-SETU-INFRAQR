@@ -24,7 +24,6 @@ const workforceGroup = { key:'nav.workforce', icon:Network, items:[
 const sitesGroup = { key:'nav.sites', icon:LayoutDashboard, items:[
   ['nav.mySites','/employer/sites'],
   ['nav.siteOverview','/employer/site-overview'],
-  ['CCTV Setup','/employer/cctv-setup'],
   ['Attendance Cameras','/employer/edge-devices'],
 ] };
 const complianceGroup = { key:'nav.compliance', icon:ClipboardCheck, items:[

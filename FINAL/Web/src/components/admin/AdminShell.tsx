@@ -46,7 +46,7 @@ const auditOpsGroup = { key: 'Audit & Reports', icon: BookOpenCheck, items: [
   ['Courses & Skills', '/admin/courses'],
   ['Activity Report', '/admin/activity'],
   ['AI Audit Settings', '/admin/audit-settings'],
-  ['Site CCTV Controls', '/admin/cctv'],
+  ['Attendance Camera Limits', '/admin/cctv'],
   ['Translation', '/admin/translation-settings'],
 ] as const };
 

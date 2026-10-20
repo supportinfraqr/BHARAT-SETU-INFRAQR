@@ -100,7 +100,6 @@ from .learning import (
 from .submissions import SubmissionEvidence, WorkerFacePhoto
 from .aadhaar import AadhaarChallenge
 from .digilocker import DigiLockerProfile, DigiLockerDocument, DigiLockerSession
-from .cctv import SiteCctvCamera, encrypt_cctv_password, decrypt_cctv_password
 from .ai import AiProviderCredential, AI_PROVIDERS
 from .translation import TranslationSetting
 from .entitylocker import EntityLockerAuth
@@ -190,7 +189,6 @@ __all__ = [
     "BssStaffProfile", "EmployerStaffMember",
     "Site", "SiteDocument", "SiteGate", "SiteLicense", "SiteOrder",
     "SiteBocwRegistration", "SiteClraRegistration",
-    "SiteCctvCamera", "encrypt_cctv_password", "decrypt_cctv_password",
     "AiProviderCredential", "AI_PROVIDERS", "TranslationSetting",
     "WorkerContractorBinding", "ContractorEmployerBinding", "ContractorSiteAllotment", "ContractorJob", "RozgarRequest",
     "ConsentChallenge", "SmsOtp",

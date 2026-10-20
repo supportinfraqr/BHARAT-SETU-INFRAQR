@@ -86,7 +86,7 @@ export default function EmployerAttendancePage() {
       <h1 className="text-2xl font-bold mt-1 flex items-center gap-2"><Camera size={22} /> Attendance</h1>
       <p className="text-sm text-bss-text-muted mt-1">
         View your workers&apos; attendance month-wise and per site — every source (QR, RFID, CCTV, Self GPS, uploaded
-        sheet) with full detail — CCTV attendance control is on the CCTV Setup page.
+        sheet) with full detail — camera attendance is managed from Attendance Cameras, with Live/Send Data selected on the client.
       </p>
     </header>
 

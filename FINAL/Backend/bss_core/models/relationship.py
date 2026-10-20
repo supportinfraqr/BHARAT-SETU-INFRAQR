@@ -63,12 +63,9 @@ class Site(models.Model):
     attendance_device_count = models.SmallIntegerField(default=0)
     attendance_coverage = models.CharField(max_length=40, blank=True)
     attendance_daily_sync = models.BooleanField(default=False)
-    # Max CCTV cameras the employer may configure for this site. Defaults to 5;
-    # a BSS admin can raise it per site.
+    # Max attendance cameras the employer may register for this site. Defaults
+    # to 5; a BSS admin can raise/lower it per site.
     max_cctv_cameras = models.PositiveSmallIntegerField(default=5)
-    # Whether the employer may view the live CCTV feed (frames) for this site.
-    # OFF by default — privacy; a BSS admin can allow it per site.
-    allow_cctv_feed_view = models.BooleanField(default=False)
     billing_contractor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                                            related_name="billing_sites",
                                            limit_choices_to={"role": "contractor"})

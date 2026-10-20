@@ -12,12 +12,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     assertTrustedMutation(request);
     const session = await requireApiSession('BSS Admin');
-    assertRateLimit(`admin-site-cctv:${session.sessionId}`, 60, 60_000);
+    assertRateLimit(`admin-site-camera-limit:${session.sessionId}`, 60, 60_000);
     const { id } = await params;
     const body = await readJsonObject(request, 8_000);
     const config = getRuntimeConfig();
     const result = await upstreamRequest(config.apiBaseUrl, `/v1/admin/sites/${encodeURIComponent(id)}/camera-limit`, session,
       { method: 'POST', body: JSON.stringify(body) });
     return NextResponse.json(result, { headers: noStore });
-  } catch (error) { return apiError(error, 'Site CCTV settings could not be saved.'); }
+  } catch (error) { return apiError(error, 'Attendance camera limit could not be saved.'); }
 }

@@ -27,6 +27,7 @@ type DeviceRow = {
   active: boolean;
   lastSeenAt: string | null;
   lastSeenIp: string;
+  cameraLimit: number;
   cameras: CameraRow[];
 };
 
@@ -252,7 +253,7 @@ export default function EdgeDevicesPage() {
                 <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${device.active ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-bss-error'}`}>{device.active ? 'Active' : 'Revoked'}</span>
               </div>
               <p className="text-sm text-bss-text-muted mt-0.5">{device.siteName}{device.siteCode ? ` · ${device.siteCode}` : ''}</p>
-              <p className="text-[11px] text-bss-text-muted mt-1">Device last seen {when(device.lastSeenAt)} · {device.lastSeenIp || 'IP unknown'}</p>
+              <p className="text-[11px] text-bss-text-muted mt-1">Device last seen {when(device.lastSeenAt)} · {device.lastSeenIp || 'IP unknown'} · Cameras {device.cameras.length}{device.cameraLimit ? ` / ${device.cameraLimit}` : ''}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {device.siteCode && (
