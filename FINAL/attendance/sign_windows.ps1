@@ -38,3 +38,4 @@ foreach ($file in $files) {
 }
 
 Remove-Item $pfxPath -Force
+exit 0
