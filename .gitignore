@@ -34,3 +34,7 @@ backups/
 # Private local archives and live-credential probes (never commit)
 private_archives/
 FINAL/Requirements/Sandbox_DigiLocker_Test.sh
+
+# Attendance client binaries (served by nginx from the main server)
+FINAL/deploy-prod/downloads/
+FINAL/deploy-staging/downloads/

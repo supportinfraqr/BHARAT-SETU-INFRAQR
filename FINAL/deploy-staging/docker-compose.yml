@@ -213,7 +213,7 @@ services:
       BSS_SMTP_TIMEOUT: ${BSS_SMTP_TIMEOUT:-20}
       BSS_MAIL_FROM: "${BSS_MAIL_FROM:-Bharat Shram Setu <no-reply@bharatshramsetu.com>}"
       BSS_PUBLIC_BASE_URL: https://bharat-shram-setu-staging.bharatshramsetu.com
-    command: ["sh", "-c", "while true; do python manage.py check_edge_alerts; sleep 60; done"]
+    entrypoint: ["sh", "-c", "while true; do python manage.py check_edge_alerts; sleep 60; done"]
     mem_limit: 512m
 
   nginx:
