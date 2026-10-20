@@ -168,6 +168,91 @@ function CameraCard({ device, camera, onSaved }: {
   );
 }
 
+function AddCameraForm({ device, onSaved }: {
+  device: DeviceRow;
+  onSaved: (message: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [label, setLabel] = useState('');
+  const [channel, setChannel] = useState('');
+  const [allowedIp, setAllowedIp] = useState('');
+  const [timezone, setTimezone] = useState('Asia/Kolkata');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const atLimit = device.cameras.length >= device.cameraLimit;
+
+  const submit = async () => {
+    setBusy(true); setError('');
+    try {
+      const response = await fetch(`/api/employer/edge-devices/${device.deviceId}/cameras`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label, channel: channel || undefined, allowedIp, timezone }),
+      });
+      const body = await response.json().catch(() => ({})) as { data?: CameraRow; error?: string };
+      if (!response.ok || !body.data) throw new Error(body.error ?? 'Could not add this camera.');
+      onSaved(`${label} added. Use the same camera label in the client app.`);
+      setLabel(''); setChannel(''); setAllowedIp(''); setTimezone('Asia/Kolkata'); setOpen(false);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not add this camera.');
+    } finally { setBusy(false); }
+  };
+
+  const input = 'w-full h-10 rounded-lg border border-bss-border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200';
+  const fieldLabel = 'text-[11px] font-bold uppercase tracking-wider text-bss-text-muted mb-1 block';
+
+  if (atLimit) {
+    return (
+      <div className="bss-card rounded-2xl p-4 text-sm text-bss-text-muted flex items-center gap-2">
+        <ShieldCheck size={16} /> Camera limit reached for this site ({device.cameras.length} / {device.cameraLimit}). Ask BSS admin to raise it.
+      </div>
+    );
+  }
+
+  if (!open) {
+    return (
+      <div className="bss-card rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-bss-text-primary">Add a site camera</p>
+          <p className="text-[11px] text-bss-text-muted mt-0.5">Pre-register the camera label, public IP and timezone. Use the same label in the client app.</p>
+        </div>
+        <button type="button" onClick={() => setOpen(true)} disabled={!device.active}
+          className="h-9 px-3 rounded-lg bg-[#01183A] text-white text-xs font-semibold flex items-center gap-1.5 hover:bg-black disabled:opacity-50 self-start">
+          <Plus size={14} /> Add camera
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <section className="bss-card rounded-2xl overflow-hidden">
+      <div className="px-4 py-3 border-b border-bss-border flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-bold text-bss-text-primary">Add camera to {device.siteName}</h3>
+          <p className="text-[11px] text-bss-text-muted mt-0.5">The client must use the same label. RTSP stays on the client.</p>
+        </div>
+        <button type="button" onClick={() => { setOpen(false); setError(''); }} className="w-8 h-8 grid place-items-center rounded-full hover:bg-bss-bg"><X size={16} /></button>
+      </div>
+      <div className="p-4 space-y-3">
+        {error && <p className="text-sm text-bss-error bg-bss-soft-orange border border-bss-border rounded-lg p-3">{error}</p>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div><label className={fieldLabel}>Camera label *</label><input value={label} onChange={e => setLabel(e.target.value)} placeholder="Main Gate" className={input} /></div>
+          <div><label className={fieldLabel}>Channel</label><input value={channel} onChange={e => setChannel(e.target.value.replace(/\D/g, ''))} placeholder="1" className={input} /></div>
+          <div><label className={fieldLabel}>Allowed public IPv4</label><input value={allowedIp} onChange={e => setAllowedIp(e.target.value)} placeholder="203.0.113.10" className={input} /></div>
+          <div><label className={fieldLabel}>Timezone</label><input value={timezone} onChange={e => setTimezone(e.target.value)} placeholder="Asia/Kolkata" className={input} /></div>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] text-bss-text-muted">You can add the capture window after creating the camera.</p>
+          <button type="button" onClick={() => void submit()} disabled={busy || !label.trim()}
+            className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black disabled:opacity-50">
+            {busy ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} Add camera
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function EdgeDevicesPage() {
   const [devices, setDevices] = useState<DeviceRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -269,6 +354,7 @@ export default function EdgeDevicesPage() {
               )}
             </div>
           </div>
+          <AddCameraForm device={device} onSaved={message => { setNotice(message); void load(); }} />
           {device.cameras.length === 0 ? (
             <div className="bss-card rounded-2xl p-5 text-sm text-bss-text-muted flex items-center gap-2"><Clock3 size={16} /> Waiting for the client to report its cameras.</div>
           ) : (

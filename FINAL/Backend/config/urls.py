@@ -123,6 +123,7 @@ _v1_patterns = _v1(
     ("admin/sites/<int:site_id>/camera-limit", v1_bridge.admin_site_camera_limit, "v1_admin_site_camera_limit"),
     ("admin/sites-cctv", v1_bridge.admin_sites_cctv, "v1_admin_sites_cctv"),
     ("employer/edge-devices", v1_bridge.employer_edge_devices, "v1_employer_edge_devices"),
+    ("employer/edge-devices/<uuid:device_id>/cameras", v1_bridge.employer_edge_camera_create, "v1_employer_edge_camera_create"),
     ("employer/edge-devices/<uuid:device_id>/cameras/<int:camera_id>", v1_bridge.employer_edge_camera_detail, "v1_employer_edge_camera_detail"),
     ("employer/edge-devices/<uuid:device_id>/revoke", v1_bridge.employer_edge_device_revoke, "v1_employer_edge_device_revoke"),
     ("employer/staff", v1_bridge.employer_staff, "v1_employer_staff"),

@@ -609,6 +609,21 @@ def _require_owner(request):
         raise PermissionDenied("Only the employer can manage edge devices.")
 
 
+def _public_ipv4(raw):
+    raw = str(raw or "").strip()
+    if not raw:
+        return None, ""
+    try:
+        parsed = ipaddress.ip_address(raw)
+    except ValueError:
+        return None, "Enter a valid IP address."
+    if parsed.version != 4:
+        return None, "Only IPv4 addresses are supported."
+    if not parsed.is_global:
+        return None, "Use the camera network's public static IPv4 address, not a LAN address."
+    return str(parsed), ""
+
+
 def _validate_windows(value):
     if value is None:
         return [], ""
@@ -638,6 +653,48 @@ def employer_edge_devices(request):
     devices = (EdgeDevice.objects.filter(employer=request.user)
                .select_related("site").prefetch_related("cameras").order_by("-created_at"))
     return Response({"data": [_device_payload(d) for d in devices]}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def employer_edge_camera_create(request, device_id):
+    """Employer pre-registers a camera label/IP/window before the client reports it."""
+    _require_owner(request)
+    device = (EdgeDevice.objects.filter(pk=device_id, employer=request.user)
+              .select_related("site").first())
+    if device is None:
+        return Response({"error": "Device not found."}, status=status.HTTP_404_NOT_FOUND)
+    body = request.data if isinstance(request.data, dict) else {}
+    label = str(body.get("label") or body.get("name") or "").strip()[:120]
+    if not label:
+        return Response({"error": "Camera label is required."}, status=status.HTTP_400_BAD_REQUEST)
+    if EdgeCamera.objects.filter(device=device, label__iexact=label).exists():
+        return Response({"error": "A camera with this label already exists."}, status=status.HTTP_409_CONFLICT)
+    limit = _camera_limit(device.site)
+    if EdgeCamera.objects.filter(device=device).count() >= limit:
+        return Response({"error": f"Camera limit reached for this site ({limit}). Ask BSS admin to raise it."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    allowed_ip, ip_error = _public_ipv4(body.get("allowedIp") or body.get("allowed_ip"))
+    if ip_error:
+        return Response({"error": ip_error}, status=status.HTTP_400_BAD_REQUEST)
+    zone = str(body.get("timezone") or "Asia/Kolkata").strip()[:64] or "Asia/Kolkata"
+    try:
+        ZoneInfo(zone)
+    except ZoneInfoNotFoundError:
+        return Response({"error": "Invalid timezone."}, status=status.HTTP_400_BAD_REQUEST)
+    windows, window_error = _validate_windows(body.get("windows") or body.get("capture_windows") or [])
+    if window_error:
+        return Response({"error": window_error}, status=status.HTTP_400_BAD_REQUEST)
+    channel = body.get("channel")
+    camera = EdgeCamera.objects.create(
+        device=device, label=label,
+        channel=int(channel) if str(channel or "").isdigit() else None,
+        allowed_ip=allowed_ip, timezone=zone,
+        schedule_enabled=bool(body.get("scheduleEnabled") or body.get("schedule_enabled")),
+        capture_windows=windows,
+    )
+    return Response({"data": _camera_payload(camera)}, status=status.HTTP_201_CREATED)
 
 
 @api_view(["PATCH"])
@@ -707,6 +764,7 @@ __all__ = [
     "edge_heartbeat",
     "edge_events",
     "employer_edge_devices",
+    "employer_edge_camera_create",
     "employer_edge_camera_detail",
     "employer_edge_device_revoke",
 ]
