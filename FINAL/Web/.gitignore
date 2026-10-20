@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Attendance client binaries (served from the main server, not committed)
+public/downloads/attendance/

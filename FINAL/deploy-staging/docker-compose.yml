@@ -126,6 +126,9 @@ services:
       BSS_SESSION_SECRET: ${BSS_SESSION_SECRET:-bss-staging-session-secret-please-change-32chars}
       BSS_API_TIMEOUT_MS: "15000"
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-AIzaSyCqfNilx-gBvPdG0pVwJGm9heWjkZKPKfA}
+      BSS_ATTENDANCE_WINDOWS_URL: ${BSS_ATTENDANCE_WINDOWS_URL:-https://login.bharatshramsetu.com/downloads/attendance/BSS-Attendance-Windows-Setup.exe}
+      BSS_ATTENDANCE_LINUX_URL: ${BSS_ATTENDANCE_LINUX_URL:-https://login.bharatshramsetu.com/downloads/attendance/BSS-Attendance-Linux.AppImage}
+      BSS_ATTENDANCE_VERSION: ${BSS_ATTENDANCE_VERSION:-1.0.0}
 
   audit-runner:
     build:
@@ -155,6 +158,63 @@ services:
       - no-new-privileges:true
     mem_limit: 6g
     cpus: "3.0"
+
+  face-embedding:
+    profiles: ["face-embedding"]
+    build:
+      context: ../attendance/face_embedding
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      BSS_PG_DB: bss_final
+      BSS_PG_USER: bss
+      BSS_PG_PASSWORD: ${BSS_PG_PASSWORD:?BSS_PG_PASSWORD is required in deploy/.env}
+      BSS_PG_HOST: db
+      BSS_PG_PORT: "5432"
+      BSS_MEDIA_ROOT: /data/media
+      DEEPFACE_HOME: /root
+    volumes:
+      - media_data:/data/media:ro
+    command: ["python", "embed_worker.py", "--watch", "--limit", "50"]
+    mem_limit: 4g
+
+  edge-alerts:
+    build:
+      context: ../Backend
+      dockerfile: ../deploy-staging/backend/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      BSS_DEBUG: "False"
+      BSS_PG_DB: bss_final
+      BSS_PG_USER: bss
+      BSS_PG_PASSWORD: ${BSS_PG_PASSWORD:?BSS_PG_PASSWORD is required in deploy/.env}
+      BSS_PG_HOST: db
+      BSS_PG_PORT: "5432"
+      BSS_REDIS_URL: redis://redis:6379/0
+      BSS_MEDIA_ROOT: /data/media
+      BSS_TIME_ZONE: Asia/Kolkata
+      BSS_SMTP_HOST: ${BSS_SMTP_HOST:-}
+      BSS_SMTP_PORT: ${BSS_SMTP_PORT:-587}
+      BSS_SMTP_USER: ${BSS_SMTP_USER:-}
+      BSS_SMTP_PASSWORD: ${BSS_SMTP_PASSWORD:-}
+      BSS_SMTP_USE_TLS: ${BSS_SMTP_USE_TLS:-1}
+      BSS_SMTP_USE_SSL: ${BSS_SMTP_USE_SSL:-0}
+      BSS_SMTP_TIMEOUT: ${BSS_SMTP_TIMEOUT:-20}
+      BSS_MAIL_FROM: "${BSS_MAIL_FROM:-Bharat Shram Setu <no-reply@bharatshramsetu.com>}"
+      BSS_PUBLIC_BASE_URL: https://bharat-shram-setu-staging.bharatshramsetu.com
+    command: ["sh", "-c", "while true; do python manage.py check_edge_alerts; sleep 60; done"]
+    mem_limit: 512m
 
   nginx:
     image: nginx:1.27-alpine

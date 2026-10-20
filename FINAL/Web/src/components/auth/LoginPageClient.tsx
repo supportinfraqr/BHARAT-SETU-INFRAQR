@@ -511,6 +511,9 @@ export default function OriginalLoginPage() {
           
           {/* RIGHT SIDE: Support & Copyright */}
           <div className="flex flex-wrap justify-center items-center gap-4 mt-2 md:mt-0 text-[11px]">
+            <a href="/download/attendance" className="inline-flex items-center gap-1.5 text-gray-600 hover:text-[#01183A] font-semibold">
+              <Monitor className="h-3.5 w-3.5 text-[#1E3A8A]" /> Download attendance client
+            </a>
             <button className="cursor-pointer flex items-center gap-1.5 bg-[#F5F5F7] hover:bg-[#e4ffd4] hover:text-green-800 hover:border-green-300 text-gray-600 px-3.5 py-1 rounded-full font-bold transition-all border border-gray-200 shadow-sm active:scale-95 group">
               <img src="/bss-brand/whatsapp.svg" alt="WhatsApp" className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
               Support

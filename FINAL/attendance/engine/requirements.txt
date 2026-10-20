@@ -1,0 +1,9 @@
+# Exact ground-truth stack (same as the BSS face-embedding worker).
+deepface==0.0.101
+tensorflow==2.21.0
+tf-keras==2.21.0
+keras==3.12.4
+retina-face==0.0.18
+opencv-python==4.14.0.94
+numpy==2.2.6
+requests==2.32.5

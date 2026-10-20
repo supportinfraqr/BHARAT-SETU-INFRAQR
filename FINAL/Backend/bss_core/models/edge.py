@@ -1,0 +1,195 @@
+"""Client-side attendance devices, camera schedules and inbound edge events.
+
+The camera/face pipeline runs on the client. BSS only receives heartbeats,
+face embeddings and QR events; no video or images are stored here.
+"""
+
+import uuid
+
+from django.db import models
+from django.utils import timezone
+
+from .auth import User
+from .relationship import Site
+from .submissions import WorkerFacePhoto
+
+
+class EdgeDevice(models.Model):
+    """One activated client installation for a single employer site."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    employer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="edge_devices",
+                                 limit_choices_to={"role": "employer"})
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="edge_devices")
+    name = models.CharField(max_length=120, blank=True)
+    activation_phone = models.CharField(max_length=20, blank=True)
+    device_fingerprint = models.CharField(max_length=128)
+    token_hash = models.CharField(max_length=64, db_index=True, blank=True)
+    version = models.CharField(max_length=40, blank=True)
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+    last_seen_ip = models.GenericIPAddressField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "edge_device"
+        constraints = [models.UniqueConstraint(fields=["site", "device_fingerprint"],
+                                               name="uq_edge_device_site_fingerprint")]
+        indexes = [
+            models.Index(fields=["employer"], name="idx_edge_device_employer"),
+            models.Index(fields=["site"], name="idx_edge_device_site"),
+            models.Index(fields=["token_hash"], name="idx_edge_device_token"),
+        ]
+
+    def __str__(self):
+        return f"{self.site_id}:{self.device_fingerprint[:12]}"
+
+
+class EdgeCamera(models.Model):
+    """A camera on an edge device with its own IP allowlist and capture windows."""
+
+    MODE = [
+        ("LIVE", "Live"),
+        ("SENDING", "Sending data"),
+        ("SCHEDULED_OFF", "Scheduled off"),
+        ("OFFLINE", "Offline"),
+    ]
+
+    device = models.ForeignKey(EdgeDevice, on_delete=models.CASCADE, related_name="cameras")
+    label = models.CharField(max_length=120)
+    channel = models.PositiveSmallIntegerField(null=True, blank=True)
+    allowed_ip = models.GenericIPAddressField(null=True, blank=True)
+    timezone = models.CharField(max_length=64, default="Asia/Kolkata")
+    schedule_enabled = models.BooleanField(default=False)
+    capture_windows = models.JSONField(default=list, blank=True)
+    last_mode = models.CharField(max_length=20, choices=MODE, default="OFFLINE")
+    last_status = models.CharField(max_length=40, blank=True)
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+    last_seen_ip = models.GenericIPAddressField(null=True, blank=True)
+    last_event_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "edge_camera"
+        constraints = [models.UniqueConstraint(fields=["device", "label"],
+                                               name="uq_edge_camera_device_label")]
+        indexes = [
+            models.Index(fields=["device"], name="idx_edge_camera_device"),
+            models.Index(fields=["allowed_ip"], name="idx_edge_camera_allowed_ip"),
+        ]
+
+    def __str__(self):
+        return f"{self.device_id}:{self.label}"
+
+
+class EdgeEvent(models.Model):
+    """Idempotent inbound event from an edge device (embedding / QR only)."""
+
+    STATUS = [
+        ("ACCEPTED", "Accepted"),
+        ("UNKNOWN", "Unknown worker"),
+        ("REJECTED", "Rejected"),
+        ("DUPLICATE", "Duplicate"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    device = models.ForeignKey(EdgeDevice, on_delete=models.CASCADE, related_name="events")
+    camera = models.ForeignKey(EdgeCamera, on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name="events")
+    event_id = models.CharField(max_length=80)
+    worker = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name="edge_events")
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="edge_events")
+    occurred_at = models.DateTimeField()
+    capture_method = models.CharField(max_length=20, default="FACE")
+    status = models.CharField(max_length=20, choices=STATUS, default="UNKNOWN")
+    confidence = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    match_distance = models.DecimalField(max_digits=8, decimal_places=6, null=True, blank=True)
+    model_name = models.CharField(max_length=40, blank=True)
+    model_version = models.CharField(max_length=80, blank=True)
+    embedding = models.BinaryField(null=True, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+    attendance = models.ForeignKey("bss_core.Attendance", on_delete=models.SET_NULL,
+                                   null=True, blank=True, related_name="edge_events")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "edge_event"
+        constraints = [models.UniqueConstraint(fields=["device", "event_id"],
+                                               name="uq_edge_event_device_event")]
+        indexes = [
+            models.Index(fields=["site", "occurred_at"], name="idx_edge_event_site_time"),
+            models.Index(fields=["camera", "occurred_at"], name="idx_edge_event_camera_time"),
+            models.Index(fields=["status"], name="idx_edge_event_status"),
+        ]
+
+    def __str__(self):
+        return f"{self.device_id}:{self.event_id}"
+
+
+class WorkerFaceEmbedding(models.Model):
+    """One face embedding generated from a stored worker enrolment photo."""
+
+    worker = models.ForeignKey(User, on_delete=models.CASCADE, related_name="face_embeddings")
+    photo = models.ForeignKey(WorkerFacePhoto, on_delete=models.CASCADE, related_name="embeddings")
+    model_name = models.CharField(max_length=40, default="ArcFace")
+    model_version = models.CharField(max_length=80, blank=True)
+    detector_backend = models.CharField(max_length=40, default="retinaface")
+    embedding = models.BinaryField()
+    dim = models.PositiveSmallIntegerField(default=512)
+    weights_sha = models.CharField(max_length=64, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "worker_face_embedding"
+        constraints = [models.UniqueConstraint(fields=["photo", "model_name", "model_version"],
+                                               name="uq_worker_face_embedding_photo_model")]
+        indexes = [
+            models.Index(fields=["worker"], name="idx_worker_face_emb_worker"),
+            models.Index(fields=["model_name", "model_version"], name="idx_worker_face_emb_model"),
+        ]
+
+    def __str__(self):
+        return f"{self.worker_id}:{self.model_name}"
+
+
+class EdgeAlert(models.Model):
+    """One open alert per camera and kind (no-data / IP mismatch)."""
+
+    KIND = [
+        ("NO_DATA", "No data"),
+        ("IP_MISMATCH", "IP mismatch"),
+    ]
+    STATUS = [
+        ("OPEN", "Open"),
+        ("RESOLVED", "Resolved"),
+    ]
+
+    device = models.ForeignKey(EdgeDevice, on_delete=models.CASCADE, related_name="alerts")
+    camera = models.ForeignKey(EdgeCamera, on_delete=models.CASCADE, related_name="alerts")
+    kind = models.CharField(max_length=20, choices=KIND)
+    status = models.CharField(max_length=12, choices=STATUS, default="OPEN")
+    allowed_ip = models.GenericIPAddressField(null=True, blank=True)
+    last_observed_ip = models.GenericIPAddressField(null=True, blank=True)
+    count = models.PositiveIntegerField(default=0)
+    first_seen_at = models.DateTimeField(default=timezone.now)
+    last_seen_at = models.DateTimeField(default=timezone.now)
+    notified_at = models.DateTimeField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "edge_alert"
+        constraints = [models.UniqueConstraint(
+            fields=["camera"], condition=models.Q(status="OPEN"),
+            name="uq_edge_alert_open_camera")]
+        indexes = [
+            models.Index(fields=["status", "kind"], name="idx_edge_alert_status_kind"),
+            models.Index(fields=["device"], name="idx_edge_alert_device"),
+        ]
+
+    def __str__(self):
+        return f"{self.camera_id}:{self.kind}:{self.status}"

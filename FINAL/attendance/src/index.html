@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BSS Attendance</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">BSS</div>
+      <div>
+        <h1>Attendance Client</h1>
+        <p>Local camera monitoring · no video leaves this device</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span id="conn" class="pill muted">Connecting…</span>
+      <button id="refreshBtn" class="btn ghost" type="button">Refresh</button>
+      <button id="logoutBtn" class="btn ghost hidden" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <main id="app" class="wrap">
+    <section class="card activation">
+      <h2>Activate this device</h2>
+      <p class="muted">Use the employer owner's mobile number. The activation is permanent until revoked in BSS.</p>
+      <div class="grid two">
+        <label>Employer mobile
+          <input id="phone" inputmode="numeric" placeholder="10-digit mobile" />
+        </label>
+        <label>Site code
+          <input id="siteCode" placeholder="Site code from BSS" />
+        </label>
+      </div>
+      <div class="grid two">
+        <label>Device name
+          <input id="deviceName" placeholder="Reception laptop" />
+        </label>
+        <label>OTP
+          <input id="otp" inputmode="numeric" placeholder="6-digit OTP" />
+        </label>
+      </div>
+      <div class="row">
+        <button id="otpBtn" class="btn" type="button">Send OTP</button>
+        <button id="activateBtn" class="btn primary" type="button">Activate</button>
+      </div>
+      <p id="activationMsg" class="msg"></p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

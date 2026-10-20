@@ -84,6 +84,7 @@ from .operations import (
     ContactMessage,
 )
 from .audit import AuditSchedule, AuditJob, AuditJobEvent
+from .edge import EdgeDevice, EdgeCamera, EdgeEvent, EdgeAlert, WorkerFaceEmbedding
 
 from .learning import (
     LearningConfig,
@@ -226,4 +227,5 @@ __all__ = [
     "MedicalFormTemplate", "MedicalFormDispatch", "MedicalFormDispatchSite", "MedicalExam", "SafetyRecord", "SafetyCertificate",
     "EmployerMedicalFormAdoption", "ContactMessage",
     "AuditSchedule", "AuditJob", "AuditJobEvent",
+    "EdgeDevice", "EdgeCamera", "EdgeEvent", "EdgeAlert", "WorkerFaceEmbedding",
 ]

@@ -47,3 +47,4 @@ from .medical import *  # noqa: F401,F403
 from .employer_staff import *  # noqa: F401,F403
 from .contact import *  # noqa: F401,F403
 from .audit_jobs import *  # noqa: F401,F403
+from .edge import *  # noqa: F401,F403
