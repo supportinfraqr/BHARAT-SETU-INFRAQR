@@ -4,6 +4,7 @@ let state = null;
 let timer = null;
 let activationToken = '';
 let pendingSiteId = '';
+let engineAttempts = 0;
 
 async function api(path, options = {}) {
   const response = await fetch(`${BASE}${path}`, { headers: { 'Content-Type': 'application/json' }, ...options });
@@ -226,12 +227,23 @@ function render() {
 async function refresh() {
   try {
     state = await api('/api/status');
+    engineAttempts = 0;
     render();
     startPolling();
   } catch {
+    engineAttempts += 1;
     const conn = qs('conn');
-    conn.textContent = 'Engine offline';
-    conn.className = 'pill bad';
+    conn.textContent = 'Starting local engine…';
+    conn.className = 'pill warn';
+    const app = qs('app');
+    if (app && (!state || !state.activated)) {
+      app.innerHTML = `<section class="card activation">
+        <h2>Starting local attendance engine…</h2>
+        <p class="muted">The app is starting its local camera engine. This can take a few seconds on first launch.</p>
+        <p id="startupMsg" class="msg ${engineAttempts >= 8 ? 'error' : ''}">${engineAttempts >= 8 ? 'The local engine did not start. Close and reopen the app. If it still fails, contact BSS support.' : 'Please wait…'}</p>
+      </section>`;
+    }
+    setTimeout(refresh, 2000);
   }
 }
 

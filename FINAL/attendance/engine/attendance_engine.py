@@ -434,7 +434,7 @@ class Engine:
         payload = {
             "activationToken": activation_token, "siteId": site_id,
             "deviceFingerprint": self.store.data.get("fingerprint"),
-            "deviceName": device_name or platform.node(), "version": "1.1.0",
+            "deviceName": device_name or platform.node(), "version": "1.1.1",
         }
         try:
             response = requests.post(url, json=payload, timeout=30)
@@ -635,7 +635,7 @@ class Engine:
                         continue
                     try:
                         self.bss_call("POST", "/v1/edge/heartbeat", {
-                            "version": "1.1.0", "mode": worker.mode,
+                            "version": "1.1.1", "mode": worker.mode,
                             "status": worker.status, "fps": round(worker.fps, 1),
                         }, timeout=10, camera_token=worker.camera_token)
                         self.last_heartbeat = _now()
