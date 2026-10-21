@@ -214,11 +214,7 @@ PORTAL_ROLE = {
 }
 _MPIN_RE = re.compile(r"^\d{4,6}$")
 _AADHAAR_RE = re.compile(r"^\d{12}$")
-_REGISTRATION = {
-    "worker": {"password": "Bss@Worker123"},
-    "contractor": {"password": "Bss@Contractor123"},
-    "employer": {"password": "Bss@Employer123"},
-}
+_REGISTRATION = {"worker": {}, "contractor": {}, "employer": {}}
 _PROFILE_DATE_FIELDS = {
     "incorporation_date", "agm_date", "balance_sheet_date",
     "licence_valid_from", "licence_valid_to", "consent_date", "verification_date",
@@ -677,28 +673,24 @@ def _deliver_otp_async(otp_pk, mobile, otp_value, ttl_minutes):
 
 
 def _universal_otp():
-    """A fixed OTP accepted in *addition* to the real delivered OTP, on any
-    server. Defaults to ``123456`` (demo convenience); set ``BSS_UNIVERSAL_OTP``
-    to another value, or to an empty string to disable."""
-    if "BSS_UNIVERSAL_OTP" in os.environ:
-        return os.environ["BSS_UNIVERSAL_OTP"].strip()
-    return "123456"
+    """Optional fixed OTP for controlled demos. Never enabled unless
+    BSS_UNIVERSAL_OTP is explicitly set; it still requires a real requested
+    OTP challenge for that mobile."""
+    return os.environ.get("BSS_UNIVERSAL_OTP", "").strip()
 
 
 def _verify_login_otp(contact, credential):
     value = str(credential or "").strip()
-    # Universal OTP: always accepted, even if no OTP row exists yet (the real
-    # OTP path below still works unchanged).
-    universal = _universal_otp()
-    if universal and value == universal:
-        latest = SmsOtp.objects.filter(mobile=contact, purpose="LOGIN").order_by("-created_at").first()
-        if latest is not None and not latest.verified:
-            latest.verified = True
-            latest.save(update_fields=["verified"])
-        return True
     otp = SmsOtp.objects.filter(mobile=contact, purpose="LOGIN").order_by("-created_at").first()
     if otp is None:
         return False
+    if otp.is_expired or otp.attempts >= otp.max_attempts:
+        return False
+    universal = _universal_otp()
+    if universal and value == universal:
+        otp.verified = True
+        otp.save(update_fields=["verified"])
+        return True
     if otp.is_expired or otp.attempts >= otp.max_attempts:
         return False
     if not check_password(str(credential), otp.otp_hash):

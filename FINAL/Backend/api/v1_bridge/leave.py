@@ -157,6 +157,25 @@ def _handle_leave_apply(user, body):
         raise PortalMutationError("Enter a valid leave date range.", 400)
     days = (to_date - from_date).days + 1
 
+    # No overlapping live leave request for the same worker.
+    if LeaveRequest.objects.filter(
+            worker=user, status__in=("PENDING", "APPROVED"),
+            from_date__lte=to_date, to_date__gte=from_date).exists():
+        raise PortalMutationError("You already have a leave request covering these dates.", 400)
+
+    # Enforce the site's leave entitlement (opening balance + annual entitlement
+    # minus live requests for this leave type and year).
+    used = sum(
+        row.days for row in LeaveRequest.objects.filter(
+            worker=user, leave_type=leave_type, site=binding.site,
+            status__in=("PENDING", "APPROVED"), from_date__year=from_date.year)
+    )
+    available = int(policy.opening_balance or 0) + int(policy.annual_entitlement or 0) - used
+    if days > available:
+        raise PortalMutationError(
+            f"Insufficient {leave_type.name} balance: requested {days} day(s), available {max(0, available)}.",
+            400)
+
     # Leave cannot be taken on a Public Holiday or a weekly off day.
     weekly = {c for c in (binding.site.weekly_off_days or "").split(",") if c}
     day_codes = ("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")

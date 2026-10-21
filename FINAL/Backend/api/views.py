@@ -101,10 +101,12 @@ class RegisterViewSet(viewsets.GenericViewSet):
     serializer_class = RegisterSerializer
 
     def create(self, request):
-        ser = self.get_serializer(data=request.data)
-        ser.is_valid(raise_exception=True)
-        user = ser.save()
-        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+        # Legacy registration is deliberately closed. Account creation must go
+        # through /v1/auth/register/<role> with mobile OTP verification.
+        return Response(
+            {"detail": "Legacy registration is disabled. Use /v1/auth/register/<role>."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):

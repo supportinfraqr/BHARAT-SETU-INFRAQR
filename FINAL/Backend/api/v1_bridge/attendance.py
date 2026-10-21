@@ -4,6 +4,7 @@ existing ``Attendance`` table marked as ``capture_method="SHEET"``.
 """
 
 import io
+import math
 import re
 from datetime import date, timedelta
 
@@ -789,10 +790,23 @@ def worker_mark_attendance_site(request):
     except (TypeError, ValueError):
         return Response({"error": "Location is required to mark attendance."},
                         status=status.HTTP_400_BAD_REQUEST)
+    if not math.isfinite(lat) or not math.isfinite(lng) or not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
+        return Response({"error": "Enter valid latitude and longitude."},
+                        status=status.HTTP_400_BAD_REQUEST)
     try:
         accuracy = float(body.get("accuracy")) if body.get("accuracy") is not None else None
     except (TypeError, ValueError):
         accuracy = None
+    if accuracy is not None and not math.isfinite(accuracy):
+        return Response({"error": "Enter a valid GPS accuracy."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # One IN + one OUT per day. After the final checkout, further scans are rejected.
+    from bss_core.models import Attendance
+    today_row = (Attendance.objects.filter(worker=request.user, attendance_date=timezone.localdate())
+                 .order_by("id").first())
+    if today_row is not None and str(today_row.last_punch_type or "").upper() == "OUT":
+        return Response({"error": "Attendance already checked out for today."},
+                        status=status.HTTP_400_BAD_REQUEST)
     # Reverse-geocoded address resolved client-side (best-effort; optional).
     address = str(body.get("address") or "").strip()[:255]
 
@@ -808,8 +822,11 @@ def worker_mark_attendance_site(request):
         clubbed = distance <= radius + tolerance
         geofence_ok = bool(within or clubbed)
         if not (within or clubbed):
-            remarks = (f"Self attendance flagged outside geo-fence "
-                       f"({distance - radius:.0f} m beyond the {radius:.0f} m radius)")
+            return Response({
+                "error": "You are outside the site geo-fence; attendance was not recorded.",
+                "distanceM": round(distance, 1), "radiusM": radius,
+                "outsideM": round(max(0.0, distance - radius), 1),
+            }, status=status.HTTP_400_BAD_REQUEST)
         elif not within:
             remarks = (f"Self attendance within GPS tolerance "
                        f"({distance:.0f} m vs {radius:.0f} m radius)")

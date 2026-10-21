@@ -296,6 +296,23 @@ def _handle_salaries(user, body):
         start, end = _period_range(row.get("period"))
         gross = payloads._num(row.get("gross")) or 0
         deductions = payloads._num(row.get("deductions")) or 0
+        if gross <= 0:
+            raise PortalMutationError("Gross wage must be greater than zero.", 400)
+        if deductions < 0:
+            raise PortalMutationError("Deductions cannot be negative.", 400)
+        if deductions > gross:
+            raise PortalMutationError("Deductions cannot exceed gross wage.", 400)
+        from bss_core.models import MinimumWage
+        state = str(getattr(binding.site, "state", "") or "").strip()
+        minimum = (MinimumWage.objects.filter(state__iexact=state, is_active=True)
+                   .order_by("-effective_from", "-id").first()) if state else None
+        if minimum is not None:
+            floor = minimum.total_wage
+            if floor is None:
+                floor = (minimum.basic_wage or 0) + (minimum.vda or 0)
+            if floor is not None and gross < floor:
+                raise PortalMutationError(
+                    f"Gross wage ₹{gross} is below the minimum wage ₹{floor} for {state}.", 400)
         existing = WorkerWages.objects.filter(
             worker=identity.user, period_start=start, period_end=end).first()
         if existing is not None:

@@ -54,6 +54,8 @@ def _grievance_apply_action(user, grievance, action, data, attachment=None):
     elif action == "resolve":
         if user.role == "worker":
             raise PortalMutationError("Only the contractor or principal employer can mark a grievance resolved.", 403)
+        if grievance.status == "CLOSED":
+            raise PortalMutationError("A closed grievance cannot be changed; reopen it first.", 409)
         grievance.status = "RESOLVED"
         grievance.resolved_at = now
         grievance.resolution_confirmed = False

@@ -257,7 +257,7 @@ def _contractor_workers(user):
             "skills": "",
             "photoUrl": _d(wi.photo if wi else ""),
             "eligibility": _gate_pass_eligibility(b.worker),
-            "aadhaar": _d(wi.aadhaar if wi else ""),
+            "aadhaar": (f"XXXX-XXXX-{str(wi.aadhaar)[-4:]}" if wi and wi.aadhaar else ""),
             "dob": _dts(wi.date_of_birth) if wi and wi.date_of_birth else "",
             "fatherName": _d(wi.father_name if wi else ""),
             "bloodGroup": _d(wi.blood_group if wi else ""),

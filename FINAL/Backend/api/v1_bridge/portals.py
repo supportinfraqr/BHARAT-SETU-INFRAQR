@@ -70,6 +70,8 @@ def employer_portal(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def government_portal(request):
+    if request.user.role not in ("government", "bss_admin", "bss_staff"):
+        return Response({"error": "Government portal access only."}, status=status.HTTP_403_FORBIDDEN)
     return Response(payloads.build_government_portal(), status=status.HTTP_200_OK)
 
 
@@ -77,6 +79,8 @@ def government_portal(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_operations(request):
+    if request.user.role not in ("bss_admin", "bss_staff"):
+        return Response({"error": "BSS admin only."}, status=status.HTTP_403_FORBIDDEN)
     return Response(payloads.build_operations("BSS Admin"), status=status.HTTP_200_OK)
 
 
@@ -84,6 +88,8 @@ def admin_operations(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def bss_staff_operations(request):
+    if request.user.role not in ("bss_staff", "bss_admin"):
+        return Response({"error": "BSS staff only."}, status=status.HTTP_403_FORBIDDEN)
     return Response(payloads.build_operations("BSS Staff"), status=status.HTTP_200_OK)
 
 
@@ -149,6 +155,8 @@ def _operations_action(user, body):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_actions(request):
+    if request.user.role not in ("bss_admin", "bss_staff"):
+        return Response({"error": "BSS admin only."}, status=status.HTTP_403_FORBIDDEN)
     result = _operations_action(request.user, request.data or {})
     return Response({"success": True, **result,
                      "completedAt": payloads._dts(timezone.now())},
@@ -159,6 +167,8 @@ def admin_actions(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def bss_staff_actions(request):
+    if request.user.role not in ("bss_staff", "bss_admin"):
+        return Response({"error": "BSS staff only."}, status=status.HTTP_403_FORBIDDEN)
     result = _operations_action(request.user, request.data or {})
     return Response({"success": True, **result,
                      "completedAt": payloads._dts(timezone.now())},
@@ -228,6 +238,19 @@ def notifications(request, role_path):
 def mutate_portal(request, role_path, resource):
     user = request.user
     body = request.data or {}
+    # The URL role must match the authenticated role. This prevents a worker
+    # from using /v1/contractor/* (or another portal's mutation surface).
+    allowed_roles = {
+        "worker": {"worker"},
+        "contractor": {"contractor"},
+        "employer": {"employer", "employer_staff"},
+        "admin": {"bss_admin", "bss_staff"},
+        "bss-staff": {"bss_staff", "bss_admin"},
+        "government": {"government"},
+    }
+    if role_path in allowed_roles and user.role not in allowed_roles[role_path]:
+        return Response({"error": "This resource is not available for your role."},
+                        status=status.HTTP_403_FORBIDDEN)
     perms = _staff_permissions(request)
     if perms is not None:
         allowed = (resource == "notifications"

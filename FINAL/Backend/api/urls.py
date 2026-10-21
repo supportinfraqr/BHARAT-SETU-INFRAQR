@@ -96,4 +96,4 @@ router.register(r"payroll/ffs", views.FfsConfigViewSet, basename="payroll-ffs")
 router.register(r"payroll/portal", views.StaffPortalConfigViewSet, basename="payroll-portal")
 router.register(r"payroll/periods", views.PayrollPeriodViewSet, basename="payroll-periods")
 
-urlpatterns = router.urls
+urlpatterns = []  # Legacy /api surface retired; use /v1/.

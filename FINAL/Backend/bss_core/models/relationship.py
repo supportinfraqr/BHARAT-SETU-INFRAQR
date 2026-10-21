@@ -581,6 +581,13 @@ class WorkerContractorBinding(models.Model):
                 condition=models.Q(binding_status__in=["PENDING", "ACCEPTED"]),
                 name="uq_binding_ecsw_active",
             ),
+            # DB-level one-live-binding-per-worker rule. This closes the
+            # concurrent-request race that application checks alone cannot.
+            models.UniqueConstraint(
+                fields=["worker"],
+                condition=models.Q(binding_status__in=["PENDING", "ACCEPTED"]),
+                name="uq_binding_worker_live",
+            ),
         ]
         indexes = [
             models.Index(fields=["contractor"], name="idx_binding_contractor"),

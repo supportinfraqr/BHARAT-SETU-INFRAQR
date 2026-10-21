@@ -321,11 +321,6 @@ def _grievance_context(g):
     binding = (WorkerContractorBinding.objects
                .filter(worker=g.worker, binding_status="ACCEPTED")
                .select_related("contractor", "site", "site__employer").first())
-    if binding is None:
-        binding = (WorkerContractorBinding.objects
-                   .filter(worker=g.worker)
-                   .select_related("contractor", "site", "site__employer")
-                   .order_by("-created_at").first())
     if binding is not None:
         contractor = contractor or binding.contractor
         employer = employer or (binding.site.employer if binding.site else None)

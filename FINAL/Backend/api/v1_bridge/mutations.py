@@ -431,7 +431,7 @@ def _persist_mutation(user, role_path, resource, method, body):
                 privacy[k] = bool(body.get(k))
         p.privacy_prefs = privacy
         if body.get("bindingEnabled") is not None:
-            p.binding_enabled = bool(body.get("bindingEnabled"))
+            p.binding_enabled = str(body.get("bindingEnabled")).strip().lower() in ("1", "true", "yes", "on")
         comm = dict(p.communication_prefs or {})
         if body.get("preferredChannel") is not None:
             comm["preferredChannel"] = str(body.get("preferredChannel"))
@@ -565,6 +565,20 @@ def _persist_mutation(user, role_path, resource, method, body):
         return _handle_bank_verify(user, body)
     if resource == "courses" and role_path == "worker" and method in ("POST", "PATCH"):
         return _handle_course_action(user, body)
+    if resource == "sites":
+        raise PortalMutationError("Sites can only be managed by an employer.", 403)
+    known = {
+        "advances", "applications", "approvals", "attendance", "availability",
+        "bank-verify", "benefits", "compliances", "courses", "default-site",
+        "documents", "gate-passes", "gratuity", "grievances", "job-postings",
+        "leave", "licences", "notifications", "profile", "restricted-holiday",
+        "salaries", "settings", "site-calendar", "sites", "submissions",
+        "worker-compliance", "worker-cost-sheet", "worker-site", "workers",
+    }
+    if resource not in known:
+        raise PortalMutationError("Unknown resource.", 404)
+    if resource == "job-postings":
+        raise PortalMutationError("Only contractors can manage job postings.", 403)
     return int(uuid.uuid4().int % 10**10)
 
 

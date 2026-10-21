@@ -54,6 +54,16 @@ def _open_global_backoff(seconds=None):
     return wait
 
 
+def _aadhaar_format_ok(value):
+    """Local Aadhaar prefix + Verhoeff check before any OTP/API spend."""
+    digits = _sanitize_aadhaar(value)
+    if not digits or digits[0] in "01":
+        return False
+    # Reuse the single Verhoeff implementation used by assisted onboarding.
+    from .worker_onboarding import _aadhaar_checksum_ok
+    return _aadhaar_checksum_ok(digits)
+
+
 def _sanitize_aadhaar(value):
     if value is None:
         return None
@@ -538,6 +548,9 @@ def aadhaar_otp(request):
     if not aadhaar:
         return Response({"error": "Enter a valid 12-digit Aadhaar number"},
                         status=status.HTTP_400_BAD_REQUEST)
+    if not _aadhaar_format_ok(aadhaar):
+        return Response({"error": "Enter a valid Aadhaar number (checksum failed)."},
+                        status=status.HTTP_400_BAD_REQUEST)
     return _send_otp(aadhaar, consent=bool((request.data or {}).get("consent", True)))
 
 
@@ -612,7 +625,7 @@ def aadhaar_verify(request):
     if cred is None:
         username = f"worker_aadhaar_{aadhaar}"
         with transaction.atomic():
-            user = User.objects.create_user(username=username, password="Bss@Worker123",
+            user = User.objects.create_user(username=username, password=None,
                                             role="worker", account_active=True,
                                             is_verified=True, is_active=True)
             photo_url = _save_aadhaar_photo(aadhaar, data.get("photo"))

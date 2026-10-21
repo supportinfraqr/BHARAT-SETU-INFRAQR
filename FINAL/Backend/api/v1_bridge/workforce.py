@@ -270,6 +270,8 @@ def _csv_block(bindings):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def government_workforce(request):
+    if request.user.role not in ("government", "bss_admin", "bss_staff"):
+        return Response({"error": "Government workforce access only."}, status=status.HTTP_403_FORBIDDEN)
     return workforce_explorer(request, employer=None)
 
 

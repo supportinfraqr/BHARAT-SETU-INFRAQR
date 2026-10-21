@@ -48,8 +48,23 @@ def login(request):
         return Response({"error": "Staff accounts sign in with their MPIN only."},
                         status=status.HTTP_403_FORBIDDEN)
 
+    # MPIN is a short numeric secret: throttle failed guesses per identifier+IP.
+    mpin_key = ""
+    mpin_failures = 0
+    if method == "mpin":
+        forwarded = str(request.META.get("HTTP_X_REAL_IP") or "").split(",")[0].strip()
+        client_ip = forwarded or str(request.META.get("REMOTE_ADDR") or "")
+        mpin_key = f"login:mpin:{identifier}:{client_ip}"
+        mpin_failures = int(cache.get(mpin_key) or 0)
+        if mpin_failures >= 5:
+            return Response({"error": "Too many incorrect MPIN attempts. Try again after 15 minutes."},
+                            status=status.HTTP_429_TOO_MANY_REQUESTS)
     if not _verify_credential(user, method, credential):
+        if method == "mpin" and mpin_key:
+            cache.set(mpin_key, mpin_failures + 1, 900)
         return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+    if method == "mpin" and mpin_key:
+        cache.delete(mpin_key)
     if not user.is_active:
         return Response({"error": "Account is disabled"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -90,8 +105,8 @@ def otp_challenge(request):
                 {"error": f"This mobile is already registered as a {label} account. Please log in instead."},
                 status=status.HTTP_409_CONFLICT)
         mobile = _normalize_mobile(identifier)
-        if not mobile:
-            return Response({"error": "Enter a valid 10-digit mobile number to register."},
+        if not mobile or not re.fullmatch(r"[6-9]\d{9}", mobile):
+            return Response({"error": "Enter a valid 10-digit Indian mobile number to register."},
                             status=status.HTTP_400_BAD_REQUEST)
     else:
         if user is None:
@@ -315,18 +330,23 @@ def _register_account(request, role):
     if role not in _REGISTRATION:
         return Response({"error": "unsupported role"}, status=status.HTTP_400_BAD_REQUEST)
     contact = (body.get("contact") or "").strip()
-    accepted = body.get("acceptedTerms", False)
-    if not accepted:
+    if not _accepted_terms(body):
         return Response({"error": "terms must be accepted"}, status=status.HTTP_400_BAD_REQUEST)
     if not contact:
         return Response({"error": "contact is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Canonical phone so formatting variants (+91…, 0…, spaces) cannot create a
-    # second account for the same number.
-    mobile = _normalize_mobile(contact) or contact
+    # Registration identity is an Indian mobile number for every self-service
+    # role. Do not fall back to arbitrary strings/email addresses.
+    mobile = _normalize_mobile(contact)
+    if not mobile or not re.fullmatch(r"[6-9]\d{9}", mobile):
+        return Response({"error": "Enter a valid 10-digit Indian mobile number."},
+                        status=status.HTTP_400_BAD_REQUEST)
 
-    otp_value = body.get("otp")
-    if otp_value and not _verify_login_otp(mobile, otp_value):
+    otp_value = str(body.get("otp") or "").strip()
+    if not otp_value:
+        return Response({"error": "OTP is required to register."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if not _verify_login_otp(mobile, otp_value):
         return Response({"error": "invalid or expired OTP"}, status=status.HTTP_401_UNAUTHORIZED)
 
     existing = _find_user(mobile)
@@ -342,8 +362,10 @@ def _register_account(request, role):
 
     with transaction.atomic():
         user = User.objects.create_user(
-            username=identifier, password=_REGISTRATION[role]["password"],
+            username=identifier, password=None,
             role=role, account_active=(role == "worker"), is_verified=True, is_active=True)
+        user.set_unusable_password()
+        user.save(update_fields=["password"])
         if role == "worker":
             identity = WorkerIdentity.objects.create(
                 user=user, bss_worker_id=bss_ids.new_bss_worker_id(),

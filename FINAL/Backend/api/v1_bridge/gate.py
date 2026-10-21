@@ -70,6 +70,9 @@ def gate_scan(request):
 
     if gp is None:
         return Response({"error": f"Invalid gate pass number '{raw_input}'. No registered gate pass found in the system."}, status=status.HTTP_404_NOT_FOUND)
+    if request.user.role == "worker":
+        return Response({"error": "Gate scanning is performed by security or the employer, not the worker."},
+                        status=status.HTTP_403_FORBIDDEN)
     elif gp.status == "REVOKED":
         reason = "This gate pass has been revoked."
     elif gp.status == "EXPIRED" or (gp.end_date and gp.end_date < today):

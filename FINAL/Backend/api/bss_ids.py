@@ -23,6 +23,7 @@ they look identical to other chars on scanned cards / readable codes.
 """
 
 import re
+import secrets
 
 from django.db import transaction
 
@@ -90,9 +91,15 @@ def _identifier_taken(candidate, *, exclude_ids=()):
 
 
 def _allocate(prefix, *, exclude_ids=()):
-    """Return a globally-unique masked BSS identifier for the given role prefix."""
+    """Return a globally-unique random BSS identifier for the given role prefix.
+
+    The role prefix and 11-character unambiguous suffix format stay unchanged;
+    only the suffix is now cryptographically random, so IDs cannot be enumerated
+    from a database sequence. The uniqueness check is repeated on collision.
+    """
     for _ in range(50):
-        candidate = f"{prefix}{_mask(_next_seq())}"
+        suffix = "".join(secrets.choice(ID_ALPHABET) for _ in range(ID_SUFFIX_LENGTH))
+        candidate = f"{prefix}{suffix}"
         if not _identifier_taken(candidate, exclude_ids=exclude_ids):
             return candidate
     raise RuntimeError("Unable to allocate a unique BSS identifier.")

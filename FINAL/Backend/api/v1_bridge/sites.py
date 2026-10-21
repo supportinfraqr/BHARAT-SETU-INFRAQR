@@ -4,6 +4,9 @@
 from .common import *  # noqa: F401,F403
 from .bindings import *  # noqa: F401,F403
 
+from decimal import Decimal, InvalidOperation
+from django.db import IntegrityError
+
 
 def _handle_job_posting(user, body, method):
     """Contractor job posting -> ContractorJob (Rozgar Setu job management)."""
@@ -371,14 +374,14 @@ def _handle_site(user, body, method):
     site = None
     site_id = body.get("id")
     if site_id:
+        # PATCH/POST with an id may only update a site owned by this employer.
+        # Never turn an unknown/foreign id into a new site.
         site = Site.objects.filter(pk=site_id, employer=user).first()
-    created = site is None
-    old_head = None
-    if not created:
-        old_head = ("Central" if getattr(site, "jurisdiction", "state") == "central"
-                    else (site.state or "").strip())
-
-    if site is None:
+        if site is None:
+            raise PortalMutationError("Site not found.", 404)
+        created = False
+    else:
+        created = True
         code = str(body.get("site_code") or body.get("code") or "").strip().upper()
         # Guarantee a unique code in the SITE-XXXXXXXX house format. If the
         # supplied code is missing or already taken, generate a fresh one so a
@@ -386,6 +389,10 @@ def _handle_site(user, body, method):
         if not code or Site.objects.filter(site_code=code).exists():
             code = _new_unique_site_code()
         site = Site(employer=user, site_code=code)
+    old_head = None
+    if not created:
+        old_head = ("Central" if getattr(site, "jurisdiction", "state") == "central"
+                    else (site.state or "").strip())
 
     # camelCase aliases the current form uses.
     if body.get("name") is not None:
@@ -404,7 +411,27 @@ def _handle_site(user, body, method):
     if body.get("endDate") is not None:
         site.expected_end_date = _parse_date(body.get("endDate"))
 
+    if created and not (str(site.site_name or "").strip()
+                        and str(site.state or "").strip()
+                        and str(site.location or "").strip()):
+        raise PortalMutationError("Site name, state and location are required.", 400)
+
+    # Coordinates feed geofencing; reject impossible values before PostgreSQL.
+    for field, low, high in (("latitude", Decimal("-90"), Decimal("90")),
+                             ("longitude", Decimal("-180"), Decimal("180"))):
+        raw_coord = body.get(field)
+        if raw_coord in (None, ""):
+            continue
+        try:
+            coord = Decimal(str(raw_coord))
+        except (InvalidOperation, TypeError, ValueError):
+            raise PortalMutationError(f"{field.title()} must be a valid number.", 400)
+        if coord < low or coord > high:
+            raise PortalMutationError(f"{field.title()} is outside the valid range.", 400)
+
     for field in _SITE_EDITABLE_FIELDS:
+        if field == "site_code":
+            continue
         if field in body and body.get(field) is not None:
             model_field = Site._meta.get_field(field)
             coerced = _coerce_site_value(model_field, body.get(field))
@@ -427,7 +454,10 @@ def _handle_site(user, body, method):
     if "experienceLetterTemplateId" in body:
         site.experience_letter_template_id = _tid(body.get("experienceLetterTemplateId"))
 
-    site.save()
+    try:
+        site.save()
+    except IntegrityError:
+        raise PortalMutationError("That site code is already in use.", 409)
     # On create, pin the site's head letter templates (if the admin has any).
     if created:
         _auto_assign_letter_templates(site)
@@ -855,6 +885,8 @@ def _handle_gate_pass(user, body):
         today = timezone.localdate()
         updated = []
         for gp in WorkerGatePass.objects.filter(pk__in=ids, site__employer=user):
+            if gp.status == "REVOKED":
+                raise PortalMutationError("A revoked gate pass can never be approved again.", 409)
             if decision in ("approved", "approve"):
                 gp.status = "ACTIVE"
                 gp.start_date = today

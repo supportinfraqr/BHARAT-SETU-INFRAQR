@@ -5,9 +5,7 @@ Idempotent — safe to re-run. Usage:
     python manage.py seed_demo_accounts
 
 Passwords:
-    workers     -> Bss@Worker123
-    contractors -> Bss@Contractor123
-    employers   -> Bss@Employer123
+    Demo passwords are limited to the seeded demo accounts below.
 
 BSS IDs are random alphanumeric: BSS-W / BSS-C / BSS-E + 10 chars. Codes are
 assigned only when an account is first created (or its code is blank), so
@@ -348,7 +346,12 @@ def _get_or_create_user(username, password, role):
     )
     user.role = role
     user.is_active = True
-    user.set_password(password)
+    # Only this seed path sets demo passwords. Self-registration and
+    # Aadhaar/onboarding-created accounts always start with unusable passwords.
+    if password:
+        user.set_password(password)
+    else:
+        user.set_unusable_password()
     user.save()
     return user
 

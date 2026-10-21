@@ -109,19 +109,21 @@ def _require_contractor(user):
         raise PortalMutationError("Only contractors can onboard workers.", 403)
 
 
-def _contractor_worker(user, bss_id):
+def _contractor_worker(user, bss_id, require_accepted=False):
     """Resolve the target worker (WorkerIdentity) the contractor may act on.
 
     The contractor must hold a live (PENDING or ACCEPTED) binding to the worker;
-    otherwise the request is rejected. Raises PortalMutationError.
+    otherwise the request is rejected. Profile edits pass require_accepted=True
+    so a pending request cannot expose/edit the worker's full profile.
     """
     bss_id = str(bss_id or "").strip().upper()
     ident = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
     if ident is None:
         raise PortalMutationError("No worker found for that BSS ID.", 404)
+    statuses = ("ACCEPTED",) if require_accepted else ("PENDING", "ACCEPTED")
     binding = (WorkerContractorBinding.objects
                .filter(worker=ident.user, contractor=user,
-                       binding_status__in=("PENDING", "ACCEPTED"))
+                       binding_status__in=statuses)
                .first())
     if binding is None:
         raise PortalMutationError("This worker is not associated with your account.", 403)
@@ -307,7 +309,7 @@ def contractor_create_worker(request):
         username = f"worker_assisted_{mobile or aadhaar or uuid.uuid4().hex[:8]}"
         if User.objects.filter(username=username).exists():
             username = f"{username}_{uuid.uuid4().hex[:4]}"
-        worker = User.objects.create_user(username=username, password="Bss@Worker123",
+        worker = User.objects.create_user(username=username, password=None,
                                           role="worker", account_active=True,
                                           is_verified=True, is_active=True)
         ident = WorkerIdentity.objects.create(
@@ -353,7 +355,7 @@ def contractor_worker_profile(request, bss_id):
     """Persist the worker's declared/contact + address fields (contractor entry)."""
     try:
         _require_contractor(request.user)
-        ident = _contractor_worker(request.user, bss_id)
+        ident = _contractor_worker(request.user, bss_id, require_accepted=True)
     except PortalMutationError as exc:
         return Response({"error": exc.message}, status=exc.status_code)
 

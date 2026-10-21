@@ -4,6 +4,8 @@
 from .common import *  # noqa: F401,F403
 from .aadhaar import *  # noqa: F401,F403
 
+from django.db import IntegrityError
+
 
 def _contractor_site_ids(user):
     """Sites a contractor may use: only sites APPROVED on an ACCEPTED
@@ -95,6 +97,9 @@ def _resolve_successor(employer, leaving_binding, successor_binding_id=None,
         chosen = candidates.filter(contractor_id=contractor_id).first()
         if chosen is not None:
             return chosen
+        # Match production behaviour: the employer-selected successor is
+        # enrolled immediately for the transfer. This does not require a
+        # separate successor consent.
         successor_user = User.objects.filter(pk=contractor_id, role="contractor").first()
         if successor_user is not None:
             return _ensure_ce_binding(employer, successor_user)
@@ -206,6 +211,11 @@ def _shift_workers_to_successor(old_contractor, successor, site_ids, employer=No
     return moved, skipped
 
 
+def _contractor_approved(user):
+    profile = getattr(user, "contractor_profile", None)
+    return bool(profile and str(profile.approval_status or "").upper() == "APPROVED")
+
+
 def _binding_enabled(user):
     p = UserPreference.objects.filter(user=user).first()
     return bool(p.binding_enabled) if p else True
@@ -244,9 +254,13 @@ def _request_worker_binding(worker, contractor, site, **defaults):
         if other is not None:
             raise PortalMutationError(
                 "This worker already has an active binding at another site. Unbind it before binding to a different site.", 409)
-        binding = WorkerContractorBinding.objects.create(
-            worker=worker, contractor=contractor, site=site,
-            binding_status="PENDING", **defaults)
+        try:
+            binding = WorkerContractorBinding.objects.create(
+                worker=worker, contractor=contractor, site=site,
+                binding_status="PENDING", **defaults)
+        except IntegrityError:
+            raise PortalMutationError(
+                "This worker already has a live binding. Unbind it before creating another.", 409)
     return binding
 
 
@@ -254,6 +268,9 @@ def _worker_requests_contractor(worker_user, contractor_user):
     """Worker-initiated worker<->contractor binding. The worker never picks a
     site — the request always targets the contractor's default (or first) site.
     Blocked entirely when the contractor has no site allotted."""
+    if not _contractor_approved(contractor_user):
+        return Response({"error": "The contractor account is pending BSS approval."},
+                        status=status.HTTP_403_FORBIDDEN)
     if not _binding_enabled(worker_user) or not _binding_enabled(contractor_user):
         return Response({"error": "Binding is disabled in one party's settings."},
                         status=status.HTTP_403_FORBIDDEN)
@@ -280,6 +297,10 @@ def _worker_requests_contractor(worker_user, contractor_user):
                       "Unbind the current binding before requesting another.")},
             status=status.HTTP_409_CONFLICT)
     binding = _request_worker_binding(worker_user, contractor_user, site, initiated_by="worker")
+    if binding.binding_status == "ACCEPTED":
+        # Idempotent rescan: never downgrade an active binding to PENDING.
+        return Response({"data": payloads._binding_row(binding), "alreadyBound": True},
+                        status=status.HTTP_200_OK)
     binding.binding_status = "PENDING"
     binding.consent_worker = True
     binding.consent_contractor = False
@@ -296,6 +317,7 @@ def _worker_requests_contractor(worker_user, contractor_user):
     return Response({"data": payloads._binding_row(binding)}, status=status.HTTP_201_CREATED)
 
 
+@transaction.atomic
 def _contractor_binds_worker(contractor_user, worker_user, site=None, data=None):
     """Contractor-initiated worker<->contractor binding.
 
@@ -315,13 +337,15 @@ def _contractor_binds_worker(contractor_user, worker_user, site=None, data=None)
         raise PortalMutationError("The selected worker credential is not valid.", 400)
     if worker_user.id == contractor_user.id:
         raise PortalMutationError("You cannot bind your own account.", 400)
+    if not _contractor_approved(contractor_user):
+        raise PortalMutationError("The contractor account is pending BSS approval.", 403)
 
     # Resolve the site: the explicitly requested one (restricted to sites the
     # contractor can legitimately use), else the contractor's default site, else
     # any bound or approved-allotted site.
     allowed_ids = _contractor_site_ids(contractor_user)
     if site is not None and site.id not in allowed_ids:
-        site = None
+        raise PortalMutationError("That site is not allotted to this contractor.", 403)
     cp = getattr(contractor_user, "contractor_profile", None)
     if site is None and cp and cp.default_site_id and cp.default_site_id in allowed_ids:
         site = cp.default_site
@@ -480,6 +504,23 @@ def _apply_binding_terms(binding, data):
         binding.computed_ctc = None
         binding.cost_breakdown = {}
         binding.offered_wage = amount
+        from bss_core.models import MinimumWage
+        state = str(getattr(binding.site, "state", "") or "").strip()
+        minimum = None
+        if state:
+            minimum = (MinimumWage.objects.filter(state__iexact=state, is_active=True)
+                       .order_by("-effective_from", "-id").first())
+        if minimum is not None:
+            floor = minimum.total_wage
+            if floor is None:
+                floor = (minimum.basic_wage or 0) + (minimum.vda or 0)
+            if floor is not None and amount < floor:
+                raise PortalMutationError(
+                    f"Offered wage ₹{amount} is below the minimum wage ₹{floor} for {state}.", 400)
+        else:
+            binding.cost_breakdown = {
+                "wageWarning": "No matching minimum-wage master; wage accepted with warning."
+            }
     return binding
 
 
@@ -540,11 +581,18 @@ def _sync_employment_from_binding(binding):
 
 
 def _unlink_employment_from_binding(binding):
-    """Reverse the auto-link when a binding is cancelled (unbound)."""
+    """Reverse the auto-link and revoke site access when a binding ends."""
     if binding is None:
         return
+    from bss_core.models import WorkerGatePass
+
     WorkerEmployment.objects.filter(user=binding.worker, assignment=binding).update(
         assignment=None, status="Inactive", designation="", department="", shift="", doj=None)
+    now = timezone.now()
+    WorkerGatePass.objects.filter(
+        worker=binding.worker, site=binding.site, status__in=("PENDING", "ACTIVE")
+    ).update(status="REVOKED", renewal_blocked=True, revoked_at=now,
+             revoked_reason="Worker binding ended")
 
 
 def _issue_binding_letter(binding, letter_type):
@@ -605,6 +653,9 @@ def worker_bindings(request):
     if not _binding_enabled(user):
         return Response({"error": "Enable binding in your settings before sending binding requests."},
                         status=status.HTTP_403_FORBIDDEN)
+    if not _contractor_approved(user):
+        return Response({"error": "Your contractor account is pending BSS approval."},
+                        status=status.HTTP_403_FORBIDDEN)
     worker = User.objects.filter(pk=request.data.get("worker")).first()
     site = Site.objects.filter(pk=request.data.get("site")).first()
     if not worker or worker.role != "worker" or not site:
@@ -620,17 +671,22 @@ def worker_bindings(request):
     if not _binding_enabled(worker):
         return Response({"error": "This worker has disabled binding requests in their settings."},
                         status=status.HTTP_403_FORBIDDEN)
-    b = _active_worker_binding(worker, user, site)
-    if b is not None and b.binding_status == "ACCEPTED":
-        return Response({"error": "Already bound to this worker at this site."},
-                        status=status.HTTP_400_BAD_REQUEST)
-    b = _request_worker_binding(worker, user, site, initiated_by="contractor")
-    b.binding_status = "PENDING"
-    b.consent_worker = False
-    b.consent_contractor = False
-    _apply_binding_terms(b, request.data)
-    b.save()
-    return Response({"data": payloads._binding_row(b)}, status=status.HTTP_201_CREATED)
+    try:
+        with transaction.atomic():
+            b = _active_worker_binding(worker, user, site)
+            if b is not None and b.binding_status == "ACCEPTED":
+                return Response({"data": payloads._binding_row(b), "alreadyBound": True},
+                                status=status.HTTP_200_OK)
+            b = _request_worker_binding(worker, user, site, initiated_by="contractor")
+            b.binding_status = "PENDING"
+            b.consent_worker = False
+            b.consent_contractor = False
+            _apply_binding_terms(b, request.data)
+            _require_binding_terms(b)
+            b.save()
+        return Response({"data": payloads._binding_row(b)}, status=status.HTTP_201_CREATED)
+    except PortalMutationError as exc:
+        return Response({"error": exc.message}, status=exc.status_code)
 
 
 @api_view(["POST"])
@@ -693,6 +749,21 @@ def binding_consent(request, binding_id):
     action = str(request.data.get("action") or "bind").lower()
     stage = str(request.data.get("stage") or "APP").upper()
     method = "app"
+
+    # Lifecycle guards: terminal rows cannot be re-bound; only PENDING can be
+    # declined; only ACCEPTED can be unbound. Duplicate consent on ACCEPTED is
+    # idempotent and never downgrades the state.
+    if action == "bind" and b.binding_status in ("CANCELLED", "REJECTED", "EXPIRED", "TRANSFERRED"):
+        return Response({"error": "This binding is no longer open."}, status=status.HTTP_400_BAD_REQUEST)
+    if action == "bind" and b.binding_status == "ACCEPTED":
+        return Response({"data": payloads._binding_row(b), "alreadyAccepted": True},
+                        status=status.HTTP_200_OK)
+    if action == "decline" and b.binding_status != "PENDING":
+        return Response({"error": "Only a pending binding can be declined."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if action in ("unbind", "decline-unbind") and b.binding_status != "ACCEPTED":
+        return Response({"error": "Only an accepted binding can be unbound."},
+                        status=status.HTTP_400_BAD_REQUEST)
     if stage == "OTP":
         if side != "worker":
             return Response({"error": "Only the worker can consent by OTP."},
@@ -711,6 +782,7 @@ def binding_consent(request, binding_id):
         b.rejected_by = side
         b.rejected_at = timezone.now()
         b.save(update_fields=["binding_status", "rejected_by", "rejected_at"])
+        _unlink_employment_from_binding(b)
         # Notify the counterparty about the rejection
         other_user = b.contractor if side == "worker" else b.worker
         actor_name = payloads._notification_actor_name(user)
@@ -821,8 +893,11 @@ def binding_consent(request, binding_id):
             # The contractor records the offered terms (cost sheet or monthly
             # wage) when they approve a worker-initiated binding; these feed the
             # appointment letter issued on acceptance.
-            _apply_binding_terms(b, request.data)
-            _require_binding_terms(b)
+            try:
+                _apply_binding_terms(b, request.data)
+                _require_binding_terms(b)
+            except PortalMutationError as exc:
+                return Response({"error": exc.message}, status=exc.status_code)
         b.consent_method = method
         if b.consent_worker and b.consent_contractor:
             b.binding_status = "ACCEPTED"
@@ -877,6 +952,9 @@ def binding_scan(request):
     """
     user = request.user
     body = request.data or {}
+    if user.role == "contractor" and not _contractor_approved(user):
+        return Response({"error": "Your contractor account is pending BSS approval."},
+                        status=status.HTTP_403_FORBIDDEN)
     # Per-user scan throttle (QR binding is a high-abuse surface).
     if not _rate_limit(f"binding-scan:{user.id}", 20, 60):
         return Response({"error": "Too many scan requests. Please wait a moment and try again."},
@@ -1044,8 +1122,17 @@ def employer_binding_action(request, binding_id):
     if b is None:
         return Response({"error": "Binding not found."}, status=status.HTTP_404_NOT_FOUND)
     action = str(request.data.get("action") or "").lower()
+    if action in ("approve-binding", "approve-site", "allot") and not _contractor_approved(b.contractor):
+        return Response({"error": "The contractor account is pending BSS approval."},
+                        status=status.HTTP_403_FORBIDDEN)
 
     if action == "approve-binding":
+        if b.binding_status not in ("PENDING", "ACCEPTED"):
+            return Response({"error": "This engagement is no longer open."},
+                            status=status.HTTP_409_CONFLICT)
+        if b.binding_status == "ACCEPTED":
+            return Response({"data": payloads._ce_binding_row(b), "alreadyAccepted": True},
+                            status=status.HTTP_200_OK)
         if user.role == "employer":
             b.consent_employer = True
         else:
@@ -1225,6 +1312,10 @@ def employer_binding_action(request, binding_id):
         a = ContractorSiteAllotment.objects.filter(binding=b, site_id=site_id).first()
         if a is None:
             return Response({"error": "Site allotment not found."}, status=status.HTTP_404_NOT_FOUND)
+        at_risk = _workers_at_risk(b.contractor, [site_id])
+        if at_risk:
+            return Response({"error": f"This contractor still has {len(at_risk)} worker(s) at this site. Release or move them first."},
+                            status=status.HTTP_400_BAD_REQUEST)
         a.status = "REJECTED"
         a.save()
         other_user = b.contractor if user == b.employer else b.employer
