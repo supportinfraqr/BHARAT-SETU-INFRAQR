@@ -71,7 +71,7 @@ export default function AttendanceDownloadPage() {
         <section className="mt-10 rounded-2xl border border-[#DBE4F0] bg-white p-6">
           <h2 className="text-base font-bold text-[#01183A]">Before you start</h2>
           <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-[#475569]">
-            <div className="flex gap-3"><ShieldCheck size={18} className="mt-0.5 shrink-0 text-[#0F7B4F]" /><p><strong className="text-[#0F172A]">Activation is required.</strong><br />Use the employer-owner mobile number, the OTP, and the site code from the employer portal.</p></div>
+            <div className="flex gap-3"><ShieldCheck size={18} className="mt-0.5 shrink-0 text-[#0F7B4F]" /><p><strong className="text-[#0F172A]">Activation is required.</strong><br />Use the employer-owner mobile number and OTP, then select the site from the list.</p></div>
             <div className="flex gap-3"><Wifi size={18} className="mt-0.5 shrink-0 text-[#1D4ED8]" /><p><strong className="text-[#0F172A]">Local RTSP only.</strong><br />Enter the RTSP URL of each camera on the site laptop. It is never sent to BSS.</p></div>
             <div className="flex gap-3"><CheckCircle2 size={18} className="mt-0.5 shrink-0 text-[#0F7B4F]" /><p><strong className="text-[#0F172A]">Two modes per camera.</strong><br />Live only shows local video. Send data enables face embeddings for attendance.</p></div>
             <div className="flex gap-3"><ShieldCheck size={18} className="mt-0.5 shrink-0 text-[#A15C00]" /><p><strong className="text-[#0F172A]">Set the camera IP in BSS.</strong><br />The employer must allowlist the camera&apos;s public static IPv4 and configure its capture window.</p></div>
