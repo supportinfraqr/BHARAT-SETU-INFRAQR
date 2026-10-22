@@ -72,6 +72,9 @@ jobs:
       - name: Build Tauri bundle
         working-directory: FINAL/attendance
         shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.BSS_TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.BSS_TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           if [ "${{ runner.os }}" = "Windows" ]; then
             npm run build -- --bundles nsis,msi
@@ -90,6 +93,20 @@ jobs:
           ./sign_windows.ps1 -Pattern "src-tauri/target/release/bundle/nsis/*.exe"
           ./sign_windows.ps1 -Pattern "src-tauri/target/release/bundle/msi/*.msi"
 
+      - name: Re-sign Windows updater artifact
+        if: runner.os == 'Windows'
+        working-directory: FINAL/attendance
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.BSS_TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.BSS_TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          Get-ChildItem "src-tauri/target/release/bundle/nsis/*.exe" | ForEach-Object {
+            npx tauri signer sign -k $env:TAURI_SIGNING_PRIVATE_KEY -p $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD --app-version $version $_.FullName
+            if ($LASTEXITCODE -ne 0) { throw "Updater signing failed: $($_.FullName)" }
+          }
+
       - name: Collect artifacts
         working-directory: FINAL/attendance
         shell: bash
@@ -97,9 +114,12 @@ jobs:
           mkdir -p executable/${{ matrix.artifact }}
           if [ "${{ runner.os }}" = "Windows" ]; then
             cp src-tauri/target/release/bundle/nsis/*.exe executable/${{ matrix.artifact }}/ || true
+            cp src-tauri/target/release/bundle/nsis/*.exe.sig executable/${{ matrix.artifact }}/ || true
             cp src-tauri/target/release/bundle/msi/*.msi executable/${{ matrix.artifact }}/ || true
+            cp src-tauri/target/release/bundle/msi/*.msi.sig executable/${{ matrix.artifact }}/ || true
           else
             cp src-tauri/target/release/bundle/appimage/*.AppImage executable/${{ matrix.artifact }}/ || true
+            cp src-tauri/target/release/bundle/appimage/*.AppImage.sig executable/${{ matrix.artifact }}/ || true
             cp src-tauri/target/release/bundle/deb/*.deb executable/${{ matrix.artifact }}/ || true
           fi
           ls -lh executable/${{ matrix.artifact }}
@@ -108,4 +128,81 @@ jobs:
         with:
           name: bss-attendance-${{ matrix.artifact }}
           path: FINAL/attendance/executable/${{ matrix.artifact }}/*
+          if-no-files-found: error
+
+  manifest:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bss-attendance-windows
+          path: download/windows
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bss-attendance-linux
+          path: download/linux
+
+      - name: Build update manifest
+        working-directory: FINAL/attendance
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import datetime
+          import json
+          import shutil
+          from pathlib import Path
+
+          root = Path('download')
+          out = Path('updates')
+          out.mkdir(parents=True, exist_ok=True)
+          version = json.loads(Path('package.json').read_text(encoding='utf-8'))['version']
+          base = 'https://login.bharatshramsetu.com/downloads/attendance/updates'
+
+          win_exe = next(p for p in (root / 'windows').glob('*.exe') if not p.name.endswith('.sig'))
+          win_sig = Path(str(win_exe) + '.sig')
+          linux_app = next((root / 'linux').glob('*.AppImage'))
+          linux_sig = Path(str(linux_app) + '.sig')
+          if not win_sig.exists() or not linux_sig.exists():
+              raise SystemExit('Missing updater signature file')
+
+          win_name = f'BSS-Attendance-{version}-Windows-Setup.exe'
+          linux_name = f'BSS-Attendance-{version}-Linux.AppImage'
+          shutil.copy2(win_exe, out / win_name)
+          shutil.copy2(win_sig, out / f'{win_name}.sig')
+          shutil.copy2(linux_app, out / linux_name)
+          shutil.copy2(linux_sig, out / f'{linux_name}.sig')
+          for name in ('*.msi', '*.msi.sig', '*.deb'):
+              for path in (root / 'windows').glob(name):
+                  shutil.copy2(path, out / path.name)
+              for path in (root / 'linux').glob(name):
+                  shutil.copy2(path, out / path.name)
+
+          manifest = {
+              'version': version,
+              'notes': f'BSS Attendance {version}',
+              'pub_date': datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00', 'Z'),
+              'platforms': {
+                  'windows-x86_64': {
+                      'signature': win_sig.read_text(encoding='utf-8').strip(),
+                      'url': f'{base}/{win_name}',
+                  },
+                  'linux-x86_64': {
+                      'signature': linux_sig.read_text(encoding='utf-8').strip(),
+                      'url': f'{base}/{linux_name}',
+                  },
+              },
+          }
+          (out / 'latest.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
+          for path in sorted(out.iterdir()):
+              print(path.name, path.stat().st_size)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bss-attendance-updates
+          path: FINAL/attendance/updates/*
           if-no-files-found: error

@@ -15,12 +15,15 @@ from .submissions import WorkerFacePhoto
 
 
 class EdgeDevice(models.Model):
-    """One activated client installation for a single employer site."""
+    """One activated client installation for an employer.
+
+    The device can run cameras across every site of its employer. A camera is
+    still owned by exactly one device at a time.
+    """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     employer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="edge_devices",
                                  limit_choices_to={"role": "employer"})
-    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="edge_devices")
     name = models.CharField(max_length=120, blank=True)
     activation_phone = models.CharField(max_length=20, blank=True)
     device_fingerprint = models.CharField(max_length=128)
@@ -34,16 +37,15 @@ class EdgeDevice(models.Model):
 
     class Meta:
         db_table = "edge_device"
-        constraints = [models.UniqueConstraint(fields=["site", "device_fingerprint"],
-                                               name="uq_edge_device_site_fingerprint")]
+        constraints = [models.UniqueConstraint(fields=["employer", "device_fingerprint"],
+                                               name="uq_edge_device_employer_fingerprint")]
         indexes = [
             models.Index(fields=["employer"], name="idx_edge_device_employer"),
-            models.Index(fields=["site"], name="idx_edge_device_site"),
             models.Index(fields=["token_hash"], name="idx_edge_device_token"),
         ]
 
     def __str__(self):
-        return f"{self.site_id}:{self.device_fingerprint[:12]}"
+        return f"{self.employer_id}:{self.device_fingerprint[:12]}"
 
 
 class EdgeCamera(models.Model):

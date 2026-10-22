@@ -66,7 +66,7 @@ class EdgeTokenAuthentication(BaseAuthentication):
             return None
         digest = hashlib.sha256(raw.encode()).hexdigest()
         device = (EdgeDevice.objects.filter(token_hash=digest, is_active=True)
-                  .select_related("employer", "site").first())
+                  .select_related("employer").first())
         if device is None:
             raise AuthenticationFailed("Invalid or revoked edge token.")
         request._request.edge_device = device
@@ -194,19 +194,29 @@ def _camera_payload(camera, device=None):
 
 
 def _device_payload(device):
-    cameras = list(device.site.attendance_cameras.order_by("id"))
+    sites = []
+    camera_count = 0
+    for site in (Site.objects.filter(employer_id=device.employer_id)
+                 .prefetch_related("attendance_cameras").order_by("site_name")):
+        cameras = list(site.attendance_cameras.order_by("id"))
+        camera_count += len(cameras)
+        sites.append({
+            "id": site.id,
+            "bssId": site.bss_site_id,
+            "name": site.site_name,
+            "cameraLimit": int(getattr(site, "max_cctv_cameras", 5) or 5),
+            "cameras": [_camera_payload(c, device) for c in cameras],
+        })
     return {
         "deviceId": str(device.id),
         "name": device.name,
-        "siteId": device.site_id,
-        "siteBssId": getattr(device.site, "bss_site_id", ""),
-        "siteName": device.site.site_name if device.site else "",
+        "employerName": _employer_name(device.employer) if device.employer_id else "",
         "version": device.version,
         "active": device.is_active,
         "lastSeenAt": device.last_seen_at.isoformat() if device.last_seen_at else None,
         "lastSeenIp": device.last_seen_ip or "",
-        "cameraLimit": int(getattr(device.site, "max_cctv_cameras", 5) or 5),
-        "cameras": [_camera_payload(c, device) for c in cameras],
+        "cameraCount": camera_count,
+        "sites": sites,
     }
 
 
@@ -375,6 +385,11 @@ def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id)
     return attendance
 
 
+def _employer_name(user):
+    profile = getattr(user, "employer_profile", None)
+    return str(getattr(profile, "employer_name", "") or getattr(user, "username", "") or "")
+
+
 def _employer_sites(owner):
     return [
         {"id": site.id, "bssId": site.bss_site_id, "name": site.site_name}
@@ -382,14 +397,15 @@ def _employer_sites(owner):
     ]
 
 
-def _create_edge_device(owner, phone, site, fingerprint, name, version, ip):
-    if EdgeDevice.objects.filter(device_fingerprint=fingerprint).exclude(site=site).exists():
-        raise ValueError("This device is already activated for another site.")
+def _create_edge_device(owner, phone, fingerprint, name, version, ip):
+    existing = EdgeDevice.objects.filter(device_fingerprint=fingerprint).first()
+    if existing is not None and existing.employer_id != owner.id:
+        raise ValueError("This device is already activated for another employer.")
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
     with transaction.atomic():
         device, _ = EdgeDevice.objects.update_or_create(
-            site=site, device_fingerprint=fingerprint,
+            employer=owner, device_fingerprint=fingerprint,
             defaults={
                 "employer": owner,
                 "name": name[:120],
@@ -441,8 +457,6 @@ def edge_activate_verify_otp(request):
     if not _verify_edge_otp(phone, otp):
         return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_401_UNAUTHORIZED)
     sites = _employer_sites(owner)
-    if not sites:
-        return Response({"error": "This employer has no sites."}, status=status.HTTP_404_NOT_FOUND)
     activation_token = signing.dumps({"phone": phone, "owner": owner.id},
                                      salt="bss-edge-activation", compress=True)
     return Response({"data": {"activationToken": activation_token, "sites": sites}},
@@ -453,13 +467,12 @@ def edge_activate_verify_otp(request):
 @authentication_classes([])
 @permission_classes([AllowAny])
 def edge_activate_complete(request):
-    """Complete activation for the site selected from the OTP-verified list."""
+    """Complete activation with the OTP token, device fingerprint and device name."""
     body = request.data if isinstance(request.data, dict) else {}
     activation_token = str(body.get("activationToken") or "").strip()
-    site_ref = str(body.get("siteId") or body.get("siteBssId") or "").strip()
     fingerprint = str(body.get("deviceFingerprint") or body.get("fingerprint") or "").strip()[:128]
-    if not activation_token or not site_ref or not fingerprint:
-        return Response({"error": "activationToken, site and device fingerprint are required."},
+    if not activation_token or not fingerprint:
+        return Response({"error": "activationToken and device fingerprint are required."},
                         status=status.HTTP_400_BAD_REQUEST)
     try:
         payload = signing.loads(activation_token, salt="bss-edge-activation", max_age=900)
@@ -471,15 +484,9 @@ def edge_activate_complete(request):
     if owner is None or owner.id != payload.get("owner"):
         return Response({"error": "Employer account is no longer active."},
                         status=status.HTTP_401_UNAUTHORIZED)
-    site = Site.objects.filter(pk=site_ref, employer=owner).first() if site_ref.isdigit() else None
-    if site is None:
-        site = Site.objects.filter(bss_site_id__iexact=site_ref, employer=owner).first()
-    if site is None:
-        return Response({"error": "That site does not belong to this employer."},
-                        status=status.HTTP_404_NOT_FOUND)
     try:
         device, raw_token = _create_edge_device(
-            owner, phone, site, fingerprint,
+            owner, phone, fingerprint,
             str(body.get("deviceName") or body.get("name") or "")[:120],
             str(body.get("version") or "")[:40], _source_ip(request),
         )
@@ -488,8 +495,8 @@ def edge_activate_complete(request):
     return Response({"data": {
         "deviceId": str(device.id),
         "token": raw_token,
-        "site": {"id": site.id, "bssId": site.bss_site_id, "name": site.site_name},
-        "cameras": [_camera_payload(c, device) for c in site.attendance_cameras.order_by("id")],
+        "deviceName": device.name,
+        "employerName": _employer_name(owner),
     }}, status=status.HTTP_200_OK)
 
 
@@ -497,43 +504,11 @@ def edge_activate_complete(request):
 @authentication_classes([])
 @permission_classes([AllowAny])
 def edge_activate_verify(request):
-    """Legacy site-code activation path retained for older clients."""
-    body = request.data if isinstance(request.data, dict) else {}
-    phone = _normalize_mobile(body.get("phone") or body.get("mobile"))
-    otp = str(body.get("otp") or "").strip()
-    fingerprint = str(body.get("deviceFingerprint") or body.get("fingerprint") or "").strip()[:128]
-    site_ref = str(body.get("siteBssId") or body.get("siteId") or body.get("site") or "").strip()
-    if not phone or not otp or not fingerprint or not site_ref:
-        return Response({"error": "Phone, OTP, device fingerprint and site are required."},
-                        status=status.HTTP_400_BAD_REQUEST)
-    owner = _owner_for_phone(phone)
-    if owner is None:
-        return Response({"error": "No active employer-owner account is registered with this mobile."},
-                        status=status.HTTP_404_NOT_FOUND)
-    if not _verify_edge_otp(phone, otp):
-        return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_401_UNAUTHORIZED)
-    site_q = Q(bss_site_id__iexact=site_ref) | Q(site_name__iexact=site_ref)
-    if site_ref.isdigit():
-        site_q |= Q(pk=int(site_ref))
-    site = Site.objects.filter(site_q, employer=owner).first()
-    if site is None:
-        return Response({"error": "That site does not belong to this employer."},
-                        status=status.HTTP_404_NOT_FOUND)
-    try:
-        device, raw_token = _create_edge_device(
-            owner, phone, site, fingerprint,
-            str(body.get("deviceName") or body.get("name") or "")[:120],
-            str(body.get("version") or "")[:40], _source_ip(request),
-        )
-    except ValueError as exc:
-        return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
-    return Response({"data": {
-        "deviceId": str(device.id),
-        "token": raw_token,
-        "site": {"id": site.id, "bssId": site.bss_site_id, "name": site.site_name},
-        "cameras": [_camera_payload(c, device) for c in site.attendance_cameras.order_by("id")],
-    }}, status=status.HTTP_200_OK)
-
+    """Legacy site-bound activation is retired; 1.2.0+ uses /activate/complete."""
+    return Response(
+        {"error": "This activation flow is retired. Please install the latest BSS Attendance client."},
+        status=status.HTTP_410_GONE,
+    )
 
 
 def _config_for(device):
@@ -728,15 +703,25 @@ def edge_camera_create(request):
     label = str(body.get("label") or body.get("name") or "").strip()[:120]
     if not label:
         return Response({"error": "Camera label is required."}, status=status.HTTP_400_BAD_REQUEST)
-    if EdgeCamera.objects.filter(site=device.site, label__iexact=label).exists():
+    site_ref = str(body.get("siteBssId") or body.get("siteId") or "").strip()
+    if not site_ref:
+        return Response({"error": "Select a site for this camera."}, status=status.HTTP_400_BAD_REQUEST)
+    site = (Site.objects.filter(pk=site_ref, employer_id=device.employer_id).first()
+            if site_ref.isdigit() else None)
+    if site is None:
+        site = Site.objects.filter(bss_site_id__iexact=site_ref, employer_id=device.employer_id).first()
+    if site is None:
+        return Response({"error": "That site does not belong to this employer."},
+                        status=status.HTTP_404_NOT_FOUND)
+    if EdgeCamera.objects.filter(site=site, label__iexact=label).exists():
         return Response({"error": "A camera with this label already exists."}, status=status.HTTP_409_CONFLICT)
-    limit = _camera_limit(device.site)
-    if EdgeCamera.objects.filter(site=device.site).count() >= limit:
+    limit = _camera_limit(site)
+    if EdgeCamera.objects.filter(site=site).count() >= limit:
         return Response({"error": f"Camera limit reached for this site ({limit})."},
                         status=status.HTTP_400_BAD_REQUEST)
     channel = body.get("channel")
     camera = EdgeCamera.objects.create(
-        site=device.site, device=device, label=label,
+        site=site, device=None, label=label,
         channel=int(channel) if str(channel or "").isdigit() else None,
     )
     return Response({"data": _camera_payload(camera, device)}, status=status.HTTP_201_CREATED)
@@ -750,10 +735,10 @@ def edge_camera_claim(request, camera_id):
     device = _edge_device(request)
     if device is None:
         return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
-    camera = (EdgeCamera.objects.filter(pk=camera_id, site=device.site)
+    camera = (EdgeCamera.objects.filter(pk=camera_id, site__employer_id=device.employer_id)
               .select_related("device", "site").first())
     if camera is None:
-        return Response({"error": "Camera not found for this site."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "Camera not found for this employer."}, status=status.HTTP_404_NOT_FOUND)
     if not camera.allowed_ip:
         return Response({"error": "The employer must set the allowed IP before this camera can be claimed."},
                         status=status.HTTP_400_BAD_REQUEST)
@@ -796,9 +781,9 @@ def edge_camera_takeover_otp(request, camera_id):
     device = _edge_device(request)
     if device is None:
         return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
-    camera = EdgeCamera.objects.filter(pk=camera_id, site=device.site).first()
+    camera = EdgeCamera.objects.filter(pk=camera_id, site__employer_id=device.employer_id).first()
     if camera is None:
-        return Response({"error": "Camera not found for this site."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "Camera not found for this employer."}, status=status.HTTP_404_NOT_FOUND)
     if not camera.device_id or camera.device_id == device.id:
         return Response({"error": "This camera is not claimed by another device."},
                         status=status.HTTP_400_BAD_REQUEST)
@@ -821,7 +806,7 @@ def edge_camera_rotate(request, camera_id):
     device = _edge_device(request)
     if device is None:
         return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
-    camera = EdgeCamera.objects.filter(pk=camera_id, site=device.site, device=device).first()
+    camera = EdgeCamera.objects.filter(pk=camera_id, site__employer_id=device.employer_id, device=device).first()
     if camera is None or not camera.is_claimed:
         return Response({"error": "Camera is not claimed by this device."}, status=status.HTTP_404_NOT_FOUND)
     raw_token, token_hash, token_prefix = _new_camera_token()
@@ -880,7 +865,7 @@ def _validate_windows(value):
 def employer_edge_devices(request):
     _require_owner(request)
     devices = (EdgeDevice.objects.filter(employer=request.user)
-               .select_related("site").prefetch_related("cameras").order_by("-created_at"))
+               .prefetch_related("cameras").order_by("-created_at"))
     return Response({"data": [_device_payload(d) for d in devices]}, status=status.HTTP_200_OK)
 
 
@@ -902,11 +887,15 @@ def employer_attendance_cameras(request):
     """Employer site-wise attendance cameras, including sites with no device."""
     _require_owner(request)
     sites = (Site.objects.filter(employer=request.user)
-             .prefetch_related("attendance_cameras", "edge_devices").order_by("site_name"))
+             .prefetch_related("attendance_cameras").order_by("site_name"))
     rows = []
     for site in sites:
-        cameras = list(site.attendance_cameras.order_by("id"))
-        devices = list(site.edge_devices.order_by("-created_at"))
+        cameras = list(site.attendance_cameras.select_related("device").order_by("id"))
+        device_map = {}
+        for camera in cameras:
+            if camera.device_id and camera.device and camera.device_id not in device_map:
+                device_map[camera.device_id] = camera.device
+        devices = sorted(device_map.values(), key=lambda d: d.created_at, reverse=True)
         rows.append({
             "siteId": site.id,
             "siteName": site.site_name,

@@ -13,14 +13,14 @@ const LINUX_DEFAULT = '/downloads/attendance/BSS-Attendance-Linux.AppImage';
 export default function AttendanceDownloadPage() {
   const windowsUrl = process.env.BSS_ATTENDANCE_WINDOWS_URL || WINDOWS_DEFAULT;
   const linuxUrl = process.env.BSS_ATTENDANCE_LINUX_URL || LINUX_DEFAULT;
-  const version = process.env.BSS_ATTENDANCE_VERSION || '1.1.1';
+  const version = process.env.BSS_ATTENDANCE_VERSION || '1.2.0';
 
   return (
     <main className="min-h-screen bg-[#F5F8FC] text-[#0F172A]">
       <header className="border-b border-[#DBE4F0] bg-white">
         <div className="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-xl bg-[#01183A] text-white grid place-items-center text-xs font-extrabold tracking-wide">BSS</span>
+            <img src="/bss-original-logo.png" alt="Bharat Shram Setu" className="w-10 h-10 rounded-xl bg-white object-contain p-0.5" />
             <span>
               <span className="block text-sm font-bold text-[#01183A]">Bharat Shram Setu</span>
               <span className="block text-[11px] text-[#64748B]">Attendance client download</span>

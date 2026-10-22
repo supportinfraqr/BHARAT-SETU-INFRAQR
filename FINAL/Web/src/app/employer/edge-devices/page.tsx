@@ -31,6 +31,11 @@ type DeviceBrief = {
   lastSeenIp: string;
   version: string;
 };
+type DeviceRow = DeviceBrief & {
+  employerName: string;
+  cameraCount: number;
+  sites: Array<{ id: number; bssId: string; name: string }>;
+};
 type SiteRow = {
   siteId: number;
   siteName: string;
@@ -251,6 +256,7 @@ function AddCameraForm({ site, onSaved }: { site: SiteRow; onSaved: (message: st
 
 export default function EdgeDevicesPage() {
   const [sites, setSites] = useState<SiteRow[]>([]);
+  const [devices, setDevices] = useState<DeviceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -259,10 +265,16 @@ export default function EdgeDevicesPage() {
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const response = await fetch('/api/employer/attendance-cameras', { cache: 'no-store' });
-      const body = await response.json().catch(() => ({})) as { data?: SiteRow[]; error?: string };
-      if (!response.ok || !body.data) throw new Error(body.error ?? 'Could not load attendance cameras.');
-      setSites(body.data);
+      const [cameraResponse, deviceResponse] = await Promise.all([
+        fetch('/api/employer/attendance-cameras', { cache: 'no-store' }),
+        fetch('/api/employer/edge-devices', { cache: 'no-store' }),
+      ]);
+      const cameraBody = await cameraResponse.json().catch(() => ({})) as { data?: SiteRow[]; error?: string };
+      const deviceBody = await deviceResponse.json().catch(() => ({})) as { data?: DeviceRow[]; error?: string };
+      if (!cameraResponse.ok || !cameraBody.data) throw new Error(cameraBody.error ?? 'Could not load attendance cameras.');
+      if (!deviceResponse.ok || !deviceBody.data) throw new Error(deviceBody.error ?? 'Could not load activated clients.');
+      setSites(cameraBody.data);
+      setDevices(deviceBody.data);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not load attendance cameras.');
     } finally { setLoading(false); }
@@ -312,6 +324,35 @@ export default function EdgeDevicesPage() {
       {error && <p className="text-sm text-bss-error bg-bss-soft-orange border border-bss-border rounded-lg p-3">{error}</p>}
       {loading && sites.length === 0 && <div className="bss-card rounded-2xl p-8 text-center text-sm text-bss-text-muted"><Loader2 size={18} className="animate-spin inline mr-2" /> Loading sites…</div>}
       {!loading && sites.length === 0 && <div className="bss-card rounded-2xl p-6 text-sm text-bss-text-muted">No sites are available for this employer.</div>}
+
+      <section className="bss-card rounded-2xl p-5 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-bss-text-muted">Activated clients</p>
+            <h2 className="text-base font-bold text-bss-text-primary mt-1">Attendance devices</h2>
+            <p className="text-[11px] text-bss-text-muted mt-0.5">One client can run cameras across multiple sites.</p>
+          </div>
+          <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-bss-bg text-bss-text-muted">{devices.length} client{devices.length === 1 ? '' : 's'}</span>
+        </div>
+        {devices.length === 0 ? (
+          <p className="text-sm text-bss-text-muted">No client activated yet. Install the attendance client and activate it with the employer mobile.</p>
+        ) : (
+          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {devices.map(device => (
+              <div key={device.deviceId} className="rounded-xl border border-bss-border p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-bss-text-primary flex items-center gap-2"><Wifi size={14} /> {device.name || 'Attendance client'}</p>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${device.active ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-bss-error'}`}>{device.active ? 'Active' : 'Revoked'}</span>
+                </div>
+                <p className="text-[11px] text-bss-text-muted">Last seen {when(device.lastSeenAt)} · IP {device.lastSeenIp || 'unknown'}</p>
+                <p className="text-[11px] text-bss-text-muted">Version {device.version || '—'} · {device.cameraCount} camera{device.cameraCount === 1 ? '' : 's'}</p>
+                <p className="text-[11px] text-bss-text-muted">{device.sites.length ? device.sites.map(site => site.name).join(', ') : 'No sites yet'}</p>
+                {device.active && <button type="button" onClick={() => void revoke(device)} disabled={revoking === device.deviceId} className="h-8 px-3 rounded-lg border border-bss-border text-xs font-bold text-bss-error hover:bg-bss-bg disabled:opacity-50">{revoking === device.deviceId ? 'Revoking…' : 'Revoke client'}</button>}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {sites.map(site => (
         <section key={site.siteId} className="space-y-4">

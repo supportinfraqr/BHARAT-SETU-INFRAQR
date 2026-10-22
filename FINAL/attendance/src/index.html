@@ -3,24 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BSS Attendance</title>
+  <title>Bharat Shram Setu · Attendance Client</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="mark">BSS</div>
-      <div>
-        <h1>Attendance Client</h1>
-        <p>Local camera monitoring · no video leaves this device</p>
+      <img class="brand-logo" src="bss-original-logo.png" alt="Bharat Shram Setu" />
+      <div class="brand-copy">
+        <h1><span class="brand-bharat">Bharat</span><span class="brand-shram"> Shram</span><span class="brand-setu"> Setu</span></h1>
+        <p><strong>Attendance Client</strong> · Local camera monitoring · no video leaves this device</p>
       </div>
     </div>
     <div class="top-actions">
-      <span id="conn" class="pill muted">Connecting…</span>
+      <span id="conn" class="pill muted">Connecting to BSS…</span>
+      <button id="updateBtn" class="btn ghost" type="button">Check for updates</button>
       <button id="refreshBtn" class="btn ghost" type="button">Refresh</button>
       <button id="logoutBtn" class="btn ghost hidden" type="button">Sign out</button>
     </div>
   </header>
+
+  <div id="updateBanner" class="update-banner hidden" role="status" aria-live="polite"></div>
 
   <main id="app" class="wrap">
     <section class="card activation">

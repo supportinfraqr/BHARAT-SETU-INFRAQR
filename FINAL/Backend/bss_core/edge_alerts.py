@@ -25,7 +25,7 @@ def _employer_email(device):
 
 
 def _title_body(alert):
-    site = alert.device.site.site_name if alert.device.site_id else ""
+    site = alert.camera.site.site_name if alert.camera.site_id else ""
     prefix = f"{site} · {alert.camera.label}" if site else alert.camera.label
     if alert.kind == "NO_DATA":
         last = alert.last_seen_at.isoformat() if alert.last_seen_at else "never"
