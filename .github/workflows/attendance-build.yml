@@ -61,8 +61,8 @@ jobs:
         working-directory: FINAL/attendance
         shell: pwsh
         env:
-          WIN_CERT_PFX_BASE64: ${{ secrets.WIN_CERT_PFX_BASE64 }}
-          WIN_CERT_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+          BSS_WINDOWS_SIGNING_PFX_BASE64: ${{ secrets.BSS_WINDOWS_SIGNING_PFX_BASE64 }}
+          BSS_WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.BSS_WINDOWS_SIGNING_PFX_PASSWORD }}
         run: ./sign_windows.ps1 -Pattern "src-tauri/binaries/attendance-engine-*.exe"
 
       - name: Install Tauri CLI
@@ -84,8 +84,8 @@ jobs:
         working-directory: FINAL/attendance
         shell: pwsh
         env:
-          WIN_CERT_PFX_BASE64: ${{ secrets.WIN_CERT_PFX_BASE64 }}
-          WIN_CERT_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+          BSS_WINDOWS_SIGNING_PFX_BASE64: ${{ secrets.BSS_WINDOWS_SIGNING_PFX_BASE64 }}
+          BSS_WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.BSS_WINDOWS_SIGNING_PFX_PASSWORD }}
         run: |
           ./sign_windows.ps1 -Pattern "src-tauri/target/release/bundle/nsis/*.exe"
           ./sign_windows.ps1 -Pattern "src-tauri/target/release/bundle/msi/*.msi"
