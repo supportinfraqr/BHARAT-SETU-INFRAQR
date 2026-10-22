@@ -458,7 +458,7 @@ class Engine:
         data = body.get("data") or {}
         device = data.get("device") or {}
         with self.lock:
-            self.site = {"id": device.get("siteId"), "code": device.get("siteCode"), "name": device.get("siteName")}
+            self.site = {"id": device.get("siteId"), "bssId": device.get("siteBssId"), "name": device.get("siteName")}
             self.store.data["site"] = self.site
             incoming = {}
             for camera in device.get("cameras") or []:

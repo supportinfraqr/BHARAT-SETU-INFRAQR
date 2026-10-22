@@ -27,7 +27,7 @@ def admin_sites_cctv(request):
         rows.append({
             "id": site.id,
             "name": site.site_name,
-            "code": site.site_code,
+            "bssId": site.bss_site_id,
             "employer": getattr(site.employer, "username", "") if site.employer_id else "",
             "maxCameras": int(getattr(site, "max_cctv_cameras", 5) or 5),
             "cameraCount": EdgeCamera.objects.filter(site=site).count(),

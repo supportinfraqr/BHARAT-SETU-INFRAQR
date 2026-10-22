@@ -76,14 +76,14 @@ function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: num
   ctx.closePath();
 }
 
-export function createSiteQrPayload(siteToken: string, siteCode = "", bssId = "") {
-  return JSON.stringify({ v: 1, type: "BSS_SITE", siteToken, siteCode, bssId, issuer: "Bharat Shram Setu" });
+export function createSiteQrPayload(siteToken: string, bssId = "") {
+  return JSON.stringify({ v: 1, type: "BSS_SITE", siteToken, bssId, issuer: "Bharat Shram Setu" });
 }
 
 /** Composite the site QR with the white tile + BSS logo, so the SAME image is
  *  used for display and download (the download now carries the logo too). */
-async function renderSiteQr(siteToken: string, siteCode: string, bssId: string): Promise<string> {
-  const qrDataUrl = await QRCode.toDataURL(createSiteQrPayload(siteToken, siteCode, bssId), {
+async function renderSiteQr(siteToken: string, bssId: string): Promise<string> {
+  const qrDataUrl = await QRCode.toDataURL(createSiteQrPayload(siteToken, bssId), {
     errorCorrectionLevel: "H",
     margin: 4,
     width: SITE_QR_SIZE,
@@ -117,43 +117,43 @@ async function renderSiteQr(siteToken: string, siteCode: string, bssId: string):
   return canvas.toDataURL("image/png");
 }
 
-export function SiteQr({ siteToken, siteCode = "", bssId = "", className = "w-full h-full" }: { siteToken: string; siteCode?: string; bssId?: string; className?: string }) {
+export function SiteQr({ siteToken, bssId = "", className = "w-full h-full" }: { siteToken: string; bssId?: string; className?: string }) {
   const [src, setSrc] = useState("");
   useEffect(() => {
     let active = true;
     if (!siteToken) return;
-    renderSiteQr(siteToken, siteCode, bssId).then(url => { if (active) setSrc(url); });
+    renderSiteQr(siteToken, bssId).then(url => { if (active) setSrc(url); });
     return () => { active = false; };
-  }, [siteToken, siteCode, bssId]);
-  return src ? <img src={src} alt={`Scannable site QR for ${siteCode || siteToken}`} className={className} /> : <div className={`${className} animate-pulse bg-gray-200`} aria-label="Generating QR code" />;
+  }, [siteToken, bssId]);
+  return src ? <img src={src} alt={`Scannable site QR for ${bssId || siteToken}`} className={className} /> : <div className={`${className} animate-pulse bg-gray-200`} aria-label="Generating QR code" />;
 }
 
 /** Large, downloadable site QR block (used on the sites list + site detail). */
-export function SiteQrPanel({ siteToken, siteCode = "", bssId = "", name, className = "" }: { siteToken: string; siteCode?: string; bssId?: string; name?: string; className?: string }) {
+export function SiteQrPanel({ siteToken, bssId = "", name, className = "" }: { siteToken: string; bssId?: string; name?: string; className?: string }) {
   const [src, setSrc] = useState("");
   useEffect(() => {
     let active = true;
     if (!siteToken) return;
-    renderSiteQr(siteToken, siteCode, bssId).then(url => { if (active) setSrc(url); });
+    renderSiteQr(siteToken, bssId).then(url => { if (active) setSrc(url); });
     return () => { active = false; };
-  }, [siteToken, siteCode, bssId]);
+  }, [siteToken, bssId]);
   const download = () => {
     if (!src) return;
     const a = document.createElement("a");
     a.href = src;
-    a.download = `BSS-Site-QR-${bssId || siteCode || siteToken}.png`;
+    a.download = `BSS-Site-QR-${bssId || siteToken}.png`;
     a.rel = "noopener";
     document.body.appendChild(a); a.click(); a.remove();
   };
   return <div className={`flex flex-col sm:flex-row items-center gap-5 ${className}`}>
     <div className="relative w-52 h-52 bg-white p-3 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-center flex-shrink-0">
-      {src ? <img src={src} alt={`Site QR ${siteCode}`} className="w-full h-full" /> : <div className="w-full h-full animate-pulse bg-gray-200 rounded-xl" aria-label="Generating QR code" />}
+      {src ? <img src={src} alt={`Site QR ${bssId}`} className="w-full h-full" /> : <div className="w-full h-full animate-pulse bg-gray-200 rounded-xl" aria-label="Generating QR code" />}
     </div>
     <div className="text-center sm:text-left min-w-0">
       <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gray-400">Site QR — scan to request binding</p>
       {name && <h2 className="text-lg font-bold text-[#062D4F] mt-1 break-words">{name}</h2>}
       {bssId && <p className="font-mono text-sm text-[#073B67] mt-1 break-all">{bssId}</p>}
-      <p className="font-mono text-xs text-gray-400 mt-0.5 break-all">{siteCode}</p>
+      <p className="font-mono text-xs text-gray-400 mt-0.5 break-all">{bssId}</p>
       <p className="text-xs text-gray-500 mt-3">Contractors scan this to request a binding for this site. The employer approves the binding and the site allotment.</p>
       <button type="button" onClick={download} disabled={!src} className="mt-4 inline-flex items-center gap-2 bg-[#073B67] hover:bg-[#062D4F] disabled:opacity-60 disabled:cursor-wait text-white px-4 py-2.5 rounded-[12px] font-bold text-sm shadow-sm transition-all">
         <Download size={16} /> {src ? "Download QR" : "Preparing QR…"}

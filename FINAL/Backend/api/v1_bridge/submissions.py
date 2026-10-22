@@ -549,7 +549,7 @@ def contractor_compliance_batches(request):
     plans, failures = [], []
     for label, group_rows in sorted(groups.items()):
         site = (Site.objects.filter(id__in=site_ids, site_name=label).first()
-                or Site.objects.filter(id__in=site_ids, site_code=label).first())
+                or Site.objects.filter(id__in=site_ids, site_bss_id=label).first())
         if site is None:
             failures.append(f"Site \u201c{label or '(blank)'}\u201d is not one of your allotted sites.")
             continue
@@ -637,7 +637,7 @@ def contractor_compliance_batches(request):
         data = clra.build_workbook(
             group_rows, contractor=payloads._party_name(user),
             employer=(payloads._party_name(site.employer) if site.employer_id else ""),
-            site=site.site_name, site_code=site.site_code, state=state,
+            site=site.site_name, site_bss_id=site.bss_site_id, state=state,
             financial_year=fy, month=month, year=year, registers=registers,
             generated_on=str(generated_on), templates=templates,
             signature=signature_img,
@@ -661,7 +661,7 @@ def contractor_compliance_batches(request):
         )
         stamp = f"{year or generated_on.year}-{month or generated_on.strftime('%b')}".replace(" ", "")
         batch.generated_file.save(
-            f"clra-{stamp}-{site.site_code or 'site'}.xlsx", ContentFile(data), save=False)
+            f"clra-{stamp}-{site.bss_site_id or 'site'}.xlsx", ContentFile(data), save=False)
         master.seek(0)
         batch.master_file.save(os.path.basename(master.name or "master.xlsx"), master, save=False)
         if signature is not None:
@@ -679,7 +679,7 @@ def contractor_compliance_batches(request):
             old.save(update_fields=fields)
         created.append(payloads._contractor_compliance_batch_row(batch))
         _schedule_register_audits(
-            batch.id, templates, group_rows, site.site_name, site.site_code, state,
+            batch.id, templates, group_rows, site.site_name, site.bss_site_id, state,
             month, year, fy, payloads._party_name(user),
             (payloads._org_name(site.employer) if site.employer_id else ""),
             str(generated_on))
@@ -905,7 +905,7 @@ def contractor_clra_validate(request):
     # Site-code validation: every Site value in the master file must reference a
     # site allotted to the contractor. Generation reads the sites from the sheet
     # (no site is selected at generation time), so this is what catches a master
-    # built for a wrong / foreign site code.
+    # built for a wrong / foreign BSS site ID.
     labels = [str(r.get("site") or r.get("location") or "").strip() for r in rows]
     distinct_labels = sorted({label for label in labels if label})
     if not distinct_labels:
@@ -914,7 +914,7 @@ def contractor_clra_validate(request):
     else:
         allotted = set()
         for s in Site.objects.filter(id__in=site_ids):
-            for key in (str(s.site_name or "").strip(), str(s.site_code or "").strip()):
+            for key in (str(s.site_name or "").strip(), str(s.bss_site_id or "").strip()):
                 if key:
                     allotted.add(key.casefold())
         foreign = [lbl for lbl in distinct_labels if lbl.casefold() not in allotted]
@@ -968,7 +968,7 @@ def contractor_clra_validate(request):
     # (not just any registered worker, and not at a different site).
     label_site = {}
     for s in Site.objects.filter(id__in=site_ids):
-        for key in (str(s.site_name or "").strip(), str(s.site_code or "").strip()):
+        for key in (str(s.site_name or "").strip(), str(s.bss_site_id or "").strip()):
             if key:
                 label_site[key.casefold()] = s
     by_site: dict = {}
@@ -984,7 +984,7 @@ def contractor_clra_validate(request):
         if unlinked:
             report["errors"].append({"row": 0, "field": "bssId",
                                      "message": f"{len(unlinked)} worker BSS ID(s) are not linked to you at "
-                                                f"{s.site_name or s.site_code} (e.g., {', '.join(unlinked[:5])})."})
+                                                f"{s.site_name or s.bss_site_id} (e.g., {', '.join(unlinked[:5])})."})
 
     return Response({"data": report}, status=status.HTTP_200_OK)
 
@@ -1015,7 +1015,7 @@ def _batch_rows(batch):
     if site is None:
         return rows
     labels = {str(site.site_name or "").strip().casefold(),
-              str(site.site_code or "").strip().casefold()} - {""}
+              str(site.bss_site_id or "").strip().casefold()} - {""}
     if not labels:
         return rows
 
@@ -1067,7 +1067,7 @@ def _html_to_text(html):
     return _re.sub(r"[ \t]+", " ", text).strip()
 
 
-def _run_register_audits(batch_id, templates, rows, site_name, site_code, state,
+def _run_register_audits(batch_id, templates, rows, site_name, site_bss_id, state,
                          month, year, financial_year, contractor, employer, generated_on):
     """Background: AI-audit each generated register and store the result on the
     batch (best effort — never raises into the request that spawned it)."""
@@ -1090,7 +1090,7 @@ def _run_register_audits(batch_id, templates, rows, site_name, site_code, state,
             try:
                 html = clra.render_register_html(
                     template, rows, contractor=contractor, employer=employer,
-                    site=site_name, site_code=site_code, state=state, month=month,
+                    site=site_name, site_bss_id=site_bss_id, state=state, month=month,
                     year=year, financial_year=financial_year, generated_on=generated_on,
                     **_letterhead_ctx(batch.contractor, batch.site, rows))
                 audit = ai_audit._run_ai_audit(
@@ -1165,7 +1165,7 @@ def compliance_batch_summary(request, batch_id):
     return Response({"data": {
         "id": str(batch.id), "state": batch.state, "month": batch.month,
         "year": batch.year, "site": batch.site.site_name if batch.site else "",
-        "siteCode": batch.site.site_code if batch.site else "",
+        "siteBssId": batch.site.bss_site_id if batch.site else "",
         "employees": len(rows), "locations": len(locations), "sites": sites,
     }}, status=status.HTTP_200_OK)
 
@@ -1202,7 +1202,7 @@ def compliance_batch_site_documents(request, batch_id):
     site = None
     if site_name:
         site = (Site.objects.filter(site_name__iexact=site_name).first()
-                or Site.objects.filter(site_code__iexact=site_name).first())
+                or Site.objects.filter(site_bss_id__iexact=site_name).first())
     if site is None:
         site = batch.site
     state = (site.state if site and site.state else batch.state)
@@ -1303,7 +1303,7 @@ def compliance_batch_site_documents(request, batch_id):
     for t in templates:
         t["audit"] = audits.get(str(t["id"]))
     return Response({"data": {
-        "site": site.site_name if site else site_name, "siteCode": site.site_code if site else "",
+        "site": site.site_name if site else site_name, "siteBssId": site.bss_site_id if site else "",
         "state": state, "documents": documents, "templates": templates,
         "mappedForms": sorted(mapped_forms), "strength": state_strength(state),
     }}, status=status.HTTP_200_OK)
@@ -1336,7 +1336,7 @@ def contractor_site_documents(request):
         site = Site.objects.filter(id__in=site_ids).order_by("id").first()
     if site is None or not site.state:
         return Response({"data": {"site": site.site_name if site else "",
-                                  "siteCode": site.site_code if site else "",
+                                  "siteBssId": site.bss_site_id if site else "",
                                   "state": site.state if site else "", "documents": []}},
                         status=status.HTTP_200_OK)
     state, employer = site.state, site.employer
@@ -1375,7 +1375,7 @@ def contractor_site_documents(request):
         # Only the ad-hoc form names above are "additional forms". The statutory
         # matrix (FORM II, FORM VII, …) is the register side — generated or not —
         # and must never be listed here, or registers appear twice on the page.
-    return Response({"data": {"site": site.site_name, "siteCode": site.site_code or "",
+    return Response({"data": {"site": site.site_name, "siteBssId": site.bss_site_id or "",
                               "state": state, "documents": documents}},
                     status=status.HTTP_200_OK)
 
@@ -1413,7 +1413,7 @@ def compliance_batch_run_audits(request, batch_id):
     employer_name = payloads._org_name(batch.site.employer) if (batch.site and batch.site.employer) else ""
     _schedule_register_audits(
         batch.id, templates, rows, batch.site.site_name if batch.site else "",
-        batch.site.site_code if batch.site else "", state, batch.month, batch.year,
+        batch.site.bss_site_id if batch.site else "", state, batch.month, batch.year,
         batch.financial_year, payloads._party_name(batch.contractor), employer_name,
         payloads._dts(timezone.now())[:10])
     return Response({"data": {"status": "scheduled"}}, status=status.HTTP_202_ACCEPTED)
@@ -1478,7 +1478,7 @@ def compliance_batch_register(request, batch_id, template_id):
         contractor=payloads._party_name(batch.contractor),
         employer=employer_name,
         site=(batch.site.site_name if batch.site else ""),
-        site_code=(batch.site.site_code if batch.site else ""),
+        site_bss_id=(batch.site.bss_site_id if batch.site else ""),
         state=batch.state, month=batch.month, year=batch.year,
         financial_year=batch.financial_year, generated_on=payloads._dts(timezone.now())[:10],
         signature_data_uri=_signature_data_uri(_batch_signature(batch)),
@@ -1514,7 +1514,7 @@ def compliance_batch_register_export(request, batch_id, template_id):
     context = clra.backend_context(
         contractor=payloads._party_name(batch.contractor), employer=employer_name,
         site=(batch.site.site_name if batch.site else ""),
-        site_code=(batch.site.site_code if batch.site else ""), state=batch.state,
+        site_bss_id=(batch.site.bss_site_id if batch.site else ""), state=batch.state,
         month=batch.month, year=batch.year, financial_year=batch.financial_year,
         record_count=len(rows), generated_on=payloads._dts(timezone.now())[:10],
         **_letterhead_ctx(batch.contractor, batch.site, rows))
@@ -1561,7 +1561,7 @@ def compliance_batch_register_pdf(request, batch_id, template_id):
         contractor=payloads._party_name(batch.contractor),
         employer=employer_name,
         site=(batch.site.site_name if batch.site else ""),
-        site_code=(batch.site.site_code if batch.site else ""),
+        site_bss_id=(batch.site.bss_site_id if batch.site else ""),
         state=batch.state, month=batch.month, year=batch.year,
         financial_year=batch.financial_year, generated_on=payloads._dts(timezone.now())[:10],
         signature_data_uri=_signature_data_uri(_batch_signature(batch)),

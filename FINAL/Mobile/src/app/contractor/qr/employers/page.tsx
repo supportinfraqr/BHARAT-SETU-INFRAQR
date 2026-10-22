@@ -25,7 +25,7 @@ export default function MyEmployersPage() {
       const site = contractor.sites.find(s => s.id === siteId);
       replaceContractor({
         ...contractor,
-        defaultSite: site ? { id: site.id, name: site.name, code: site.code } : null,
+        defaultSite: site ? { id: site.id, name: site.name, bssId: site.bssId } : null,
       });
       setNotice(site ? `Default site set to ${site.name}.` : 'Default site cleared.');
     } catch (reason) {
@@ -46,7 +46,7 @@ export default function MyEmployersPage() {
         ? <div className="space-y-1">{r.siteDetails.map(s => (
             <div key={s.id} className="text-[12px] leading-snug">
               <span className="font-semibold text-bss-text-primary">{s.name}</span>
-              {s.code && <span className="font-mono text-[10px] text-bss-text-muted"> · {s.code}</span>}
+              {s.bssId && <span className="font-mono text-[10px] text-bss-text-muted"> · {s.bssId}</span>}
               {s.location && <span className="text-bss-text-muted"> · {s.location}{s.state ? `, ${s.state}` : ''}</span>}
             </div>
           ))}</div>
@@ -73,7 +73,7 @@ export default function MyEmployersPage() {
       >
         {!contractor.sites.length && <option value="">No sites allotted</option>}
         {contractor.sites.map(s => (
-          <option key={s.id} value={s.id}>{s.name}{s.code ? ` (${s.code})` : ''}{s.employer ? ` — ${s.employer}` : ''}</option>
+          <option key={s.id} value={s.id}>{s.name}{s.bssId ? ` (${s.bssId})` : ''}{s.employer ? ` — ${s.employer}` : ''}</option>
         ))}
       </select>
       {!contractor.sites.length && <p className="mt-2 text-xs text-bss-orange bg-bss-soft-orange border border-bss-border rounded-lg px-3 py-2">No sites are allotted to you yet — ask a principal employer to allot a site.</p>}

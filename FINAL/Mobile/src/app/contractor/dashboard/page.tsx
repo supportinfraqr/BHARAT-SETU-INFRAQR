@@ -228,7 +228,7 @@ export default function ContractorDashboardPage() {
                     <tr key={site.id} className="hover:bg-bss-bg">
                       <td className="px-5 py-3">
                         <p className="font-semibold text-bss-text-primary">{site.name}</p>
-                        <p className="text-[11px] font-mono text-bss-text-muted mt-0.5">{site.code}</p>
+                        <p className="text-[11px] font-mono text-bss-text-muted mt-0.5">{site.bssId}</p>
                       </td>
                       <td className="px-5 py-3 text-bss-text-secondary"><span className="inline-flex items-center gap-1 text-xs"><MapPin size={12}/>{site.location}</span></td>
                       <td className="px-5 py-3 text-bss-text-secondary">{site.employer}</td>

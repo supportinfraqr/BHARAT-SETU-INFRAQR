@@ -459,7 +459,7 @@ def _persist_mutation(user, role_path, resource, method, body):
             if site is None and row.get("site"):
                 site_label = str(row.get("site")).strip()
                 site = (Site.objects.filter(site_name=site_label).first()
-                        or Site.objects.filter(site_code=site_label).first())
+                        or Site.objects.filter(bss_site_id=site_label).first())
             # Workers are only ever created by the worker themselves. The
             # contractor can only bind an existing BSS worker by their BSS ID —
             # never create an account.

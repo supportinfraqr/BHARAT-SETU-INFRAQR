@@ -170,7 +170,7 @@ def _auto_form_html(title, form_code, state, template_type, fields, columns):
     <div><span>Act / Rules:</span><strong>{{{{ACT}}}}</strong></div>
     <div><span>Contractor:</span><strong>{{{{CONTRACTOR_NAME}}}}</strong></div>
     <div><span>Employer:</span><strong>{{{{EMPLOYER_NAME}}}}</strong></div>
-    <div><span>Site:</span><strong>{{{{SITE_NAME}}}} ({{{{SITE_CODE}}}})</strong></div>
+    <div><span>Site:</span><strong>{{{{SITE_NAME}}}} ({{{{SITE_BSS_ID}}}})</strong></div>
     <div><span>Wage period:</span><strong>{{{{MONTH}}}} {{{{YEAR}}}}</strong></div>
     <div><span>Records:</span><strong>{{{{RECORD_COUNT}}}}</strong></div>
   </div>
@@ -602,7 +602,7 @@ def contractor_register_templates(request):
             "total": len(base),
         }
         sites_payload.append({
-            "siteId": site.id, "siteName": site.site_name, "siteCode": site.site_code,
+            "siteId": site.id, "siteName": site.site_name, "siteBssId": site.bss_site_id,
             "state": site.state, "gated": gated,
             "adoptedCount": len([t for t in base if t.id in effective]),
             "total": len(base),

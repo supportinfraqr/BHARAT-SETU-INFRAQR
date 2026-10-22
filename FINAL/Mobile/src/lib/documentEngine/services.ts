@@ -98,7 +98,7 @@ const DEFAULT_SECTIONS = (type: DocumentType): TemplateSection[] => {
       wrap(2, { type: 'paragraph', title: 'Pass reference', content: 'Generated: {{document.generatedAt}}', fields: ['document.generatedAt'], align: 'center', spacing: 'tight' }),
       wrap(3, { type: 'photo', title: 'Worker photo', content: '{{worker.photo}}', fields: ['worker.photo'], editable: false, locked: true }),
       wrap(4, { type: 'paragraph', title: 'Identity fields', content: 'Name: {{worker.fullName}}\nBSS Worker ID: {{worker.bssId}}\nDesignation: {{employment.designation}}\nDOB: {{worker.dob}}\nBlood Group: {{worker.bloodGroup}}\nEmergency Contact: {{worker.emergencyContact}}', fields: ['worker.fullName', 'worker.bssId', 'employment.designation', 'worker.dob', 'worker.bloodGroup', 'worker.emergencyContact'] }),
-      wrap(5, { type: 'paragraph', title: 'Org & validity', content: 'Employer: {{employer.legalName}}\nContractor: {{contractor.legalName}}\nSite: {{site.name}} ({{site.code}}), {{site.address}}\nIssue Date: {{document.issueDate}}\nValid Up To: {{document.validTo}}', fields: ['employer.legalName', 'contractor.legalName', 'site.name', 'site.code', 'site.address', 'document.issueDate', 'document.validTo'] }),
+      wrap(5, { type: 'paragraph', title: 'Org & validity', content: 'Employer: {{employer.legalName}}\nContractor: {{contractor.legalName}}\nSite: {{site.name}} ({{site.bssId}}), {{site.address}}\nIssue Date: {{document.issueDate}}\nValid Up To: {{document.validTo}}', fields: ['employer.legalName', 'contractor.legalName', 'site.name', 'site.bssId', 'site.address', 'document.issueDate', 'document.validTo'] }),
       wrap(6, { type: 'paragraph', title: 'Verification QR', content: '{{document.qr}}', fields: ['document.qr'], editable: false, locked: true, align: 'center' }),
       wrap(7, { type: 'paragraph', title: 'Disclaimer & helpline', content: 'This pass is non-transferable and must be produced on demand. In an emergency call the site safety helpline. Any misuse will lead to withdrawal of site access.', fields: [] }),
       wrap(8, { type: 'signature', title: 'Signatures', content: 'Signatures:', fields: [], editable: false }),
@@ -110,7 +110,7 @@ const DEFAULT_SECTIONS = (type: DocumentType): TemplateSection[] => {
     wrap(1, { type: 'heading', title: 'Card title', content: 'TEMPORARY GATE PASS', align: 'center' }),
     wrap(2, { type: 'paragraph', title: 'Pass reference', content: 'Generated: {{document.generatedAt}}', fields: ['document.generatedAt'], align: 'center', spacing: 'tight' }),
     wrap(3, { type: 'photo', title: 'Worker photo', content: '{{worker.photo}}', fields: ['worker.photo'], editable: false, locked: true }),
-    wrap(4, { type: 'paragraph', title: 'Addressee', content: 'To,\nThe Chief Security Officer,\n{{site.name}} ({{site.code}})\n{{site.address}}', fields: ['site.name', 'site.code', 'site.address'] }),
+    wrap(4, { type: 'paragraph', title: 'Addressee', content: 'To,\nThe Chief Security Officer,\n{{site.name}} ({{site.bssId}})\n{{site.address}}', fields: ['site.name', 'site.bssId', 'site.address'] }),
     wrap(5, { type: 'paragraph', title: 'Subject', content: 'Subject: Temporary site access for {{worker.fullName}} — {{employment.designation}}', fields: ['worker.fullName', 'employment.designation'] }),
     wrap(6, { type: 'paragraph', title: 'Permit statement', content: 'Sir/Madam,\nPlease permit {{worker.fullName}} (BSS ID {{worker.bssId}}), engaged by {{contractor.legalName}} on behalf of {{employer.legalName}}, to enter {{site.name}} for {{document.days}} day(s), with effect from {{document.validFrom}} to {{document.validTo}}.', fields: ['worker.fullName', 'worker.bssId', 'contractor.legalName', 'employer.legalName', 'site.name', 'document.days', 'document.validFrom', 'document.validTo'] }),
     wrap(7, { type: 'table', title: 'Worker details', content: 'Worker details:', fields: [], tableColumns: [{ key: 'worker.fullName', header: 'Name' }, { key: 'worker.bssId', header: 'BSS Worker ID' }, { key: 'employment.designation', header: 'Designation' }, { key: 'worker.dob', header: 'DOB' }, { key: 'worker.bloodGroup', header: 'Blood Group' }, { key: 'worker.emergencyContact', header: 'Emergency Contact' }] }),
@@ -451,7 +451,7 @@ export function renderNumbering(pattern: string, values: Record<string, string>,
     sequence: String(sequence).padStart(4, '0'),
     // 11-char sequence so BSS-A/R/P/T numbering matches the entity ids.
     bssSeq: String(sequence).padStart(11, '0'),
-    siteCode: (values['site.code'] ?? 'SITE').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 12) || 'SITE',
+    siteBssId: (values['site.bssId'] ?? 'SITE').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 12) || 'SITE',
   };
   return pattern.replace(TOKEN_PATTERN, (_match, key: string) => map[key] ?? '');
 }

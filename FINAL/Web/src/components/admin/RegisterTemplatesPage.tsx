@@ -72,7 +72,7 @@ const FIELD_KEYS = [
   'if_mother_dies_child_survive_beneift', 'Deduction_Incentive', 'Holiday_List', 'Holiday_Day', 'Holiday_Date',
   'Earned_Statutory_Bonus', 'Earned_Medical', 'Name_of_Employer', 'SiteCode', 'ComplianceCategory', 'Years', 'Insurance_No', 'Payment_Date'
 ];
-const BACKEND_FIELD_KEYS = ['contractor', 'employer', 'site', 'siteCode', 'state', 'month', 'year', 'financialYear', 'recordCount', 'generatedOn'];
+const BACKEND_FIELD_KEYS = ['contractor', 'employer', 'site', 'siteBssId', 'state', 'month', 'year', 'financialYear', 'recordCount', 'generatedOn'];
 
 const FREQUENCY_CHOICES = ['Monthly', 'Quarterly', 'Half Yearly', 'Yearly'];
 
@@ -138,7 +138,7 @@ function blankDraft(): BuilderDraft {
 const DOC_STARTER = [
   '<h1>{{TITLE}}</h1>',
   '<div class="sub">{{FORM_CODE}} &middot; {{STATE}}</div>',
-  '<p>Contractor: {{CONTRACTOR_NAME}} &nbsp;&middot;&nbsp; Site: {{SITE_NAME}} ({{SITE_CODE}})</p>',
+  '<p>Contractor: {{CONTRACTOR_NAME}} &nbsp;&middot;&nbsp; Site: {{SITE_NAME}} ({{SITE_BSS_ID}})</p>',
   '<p>Wage period: {{MONTH}} {{YEAR}}</p>',
   '<p><br></p>',
   '<p style="display:flex;justify-content:space-between"><span>Authorised Signatory: ____________________</span><span>Date: ____________________</span></p>',
@@ -352,7 +352,7 @@ const getCurrentTime = () => {
 
 const SAMPLE_TOKENS: Record<string, string> = {
   CONTRACTOR_NAME: 'Contractor Pvt Ltd', EMPLOYER_NAME: 'Principal Employer Ltd',
-  SITE_NAME: 'Gurgaon Site', SITE_CODE: 'HR001', ACT: 'CLRA Act, 1970',
+  SITE_NAME: 'Gurgaon Site', SITE_BSS_ID: 'HR001', ACT: 'CLRA Act, 1970',
   MONTH: 'August', YEAR: '2026', FINANCIAL_YEAR: '2026-27',
   GENERATED_ON: getTodayFormatted(),
   TODAY_DATE: getTodayFormatted(),
@@ -392,14 +392,14 @@ const SAMPLE_TOKENS: Record<string, string> = {
   'employer.name': 'Principal Employer Ltd', 'employer.cin': 'L12345DL2010PLC200000',
   'employer.pan': 'AAACE5432G', 'employer.gstin': '07AAACE5432G1Z8',
   'employer.address': 'Cyber City, Tower B, Floor 10, Gurgaon',
-  'site.name': 'Gurgaon Industrial Site', 'site.code': 'HR001',
+  'site.name': 'Gurgaon Industrial Site', 'site.bssId': 'HR001',
   'site.address': 'Sector 37, Industrial Estate, Gurgaon', 'site.state': 'Haryana',
   'site.manager': 'Amit Verma',
 };
 
 const SYS_SAMPLE: Record<string, string> = {
   contractor: 'Contractor Pvt Ltd', employer: 'Principal Employer Ltd', site: 'Gurgaon Site',
-  siteCode: 'HR001', state: 'Haryana', month: 'August', year: '2026',
+  siteBssId: 'HR001', state: 'Haryana', month: 'August', year: '2026',
   financialYear: '2026-27', recordCount: '3',
   generatedOn: getTodayFormatted(),
   todayDate: getTodayFormatted(),
@@ -854,7 +854,7 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
   const tokens = [
     '{{TITLE}}', '{{FORM_CODE}}', '{{STATE}}',
     '{{TODAY_DATE}}', '{{TODAY}}', '{{CURRENT_DATE}}', '{{DATE}}', '{{TIME}}',
-    '{{CONTRACTOR_NAME}}', '{{EMPLOYER_NAME}}', '{{SITE_NAME}}', '{{SITE_CODE}}',
+    '{{CONTRACTOR_NAME}}', '{{EMPLOYER_NAME}}', '{{SITE_NAME}}', '{{SITE_BSS_ID}}',
     '{{MONTH}}', '{{YEAR}}', '{{FINANCIAL_YEAR}}', '{{GENERATED_ON}}', '{{RECORD_COUNT}}'
   ];
 
@@ -885,7 +885,7 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
     { value: '{{master_col_bss.employer_cin}}', label: '{{master_col_bss.employer_cin}} · Employer Corporate CIN', category: 'master_entity' },
 
     { value: '{{master_col_bss.site_name}}', label: '{{master_col_bss.site_name}} · Work Site Name', category: 'master_entity' },
-    { value: '{{master_col_bss.site_code}}', label: '{{master_col_bss.site_code}} · Work Site Code', category: 'master_entity' },
+    { value: '{{master_col_bss.bss_site_id}}', label: '{{master_col_bss.bss_site_id}} · Work BSS Site ID', category: 'master_entity' },
     { value: '{{master_col_bss.site_address}}', label: '{{master_col_bss.site_address}} · Work Site Address', category: 'master_entity' },
     { value: '{{master_col_bss.site_state}}', label: '{{master_col_bss.site_state}} · Work Site State', category: 'master_entity' },
 

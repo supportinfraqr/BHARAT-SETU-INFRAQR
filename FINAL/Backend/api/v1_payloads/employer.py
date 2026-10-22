@@ -186,7 +186,7 @@ def _employer_sites(user):
             comp_site_ok = comp_site.filter(status__in=["SUBMITTED", "COMPLETED"]).count()
             site_compliance = int(round(comp_site_ok * 100.0 / comp_site_total))
         rows.append({
-            "id": str(s.id), "code": _d(s.site_code), "name": _d(s.site_name),
+            "id": str(s.id), "name": _d(s.site_name),
             "location": _d(s.location) or _d(s.city),
             "state": _d(s.state),
             "maxCctvCameras": int(getattr(s, "max_cctv_cameras", 5) or 5),
@@ -323,7 +323,7 @@ def _employer_workers(user):
             "contractorEmail": _d(getattr(cp, "email", "")) if cp else "",
             "siteId": str(b.site_id), "site": b.site.site_name if b.site else "",
             "siteColour": _d(getattr(b.site, "assign_color", "") or "") if b.site else "",
-            "siteCode": _d(getattr(b.site, "site_code", "") or "") if b.site else "",
+            "siteBssId": _d(getattr(b.site, "bss_site_id", "") or "") if b.site else "",
             "siteAddress": _d(getattr(b.site, "location", "") or "") if b.site else "",
             "employer": _org_name(b.site.employer) if b.site else "",
             "designation": _d(b.designation) or ((_d(wemp.designation) if wemp else "") or ""),
@@ -417,7 +417,7 @@ def _employer_approvals(user):
             "allotments": [{
                 "siteId": a.site_id,
                 "site": a.site.site_name if a.site else "",
-                "siteCode": a.site.site_code if a.site else "",
+                "siteBssId": a.site.bss_site_id if a.site else "",
                 "status": {"PENDING": "Pending", "APPROVED": "Approved",
                            "REJECTED": "Rejected", "RELEASED": "Released"}.get(str(a.status).upper(), "Pending"),
                 "source": _d(a.source),
@@ -781,7 +781,7 @@ def build_employer_portal(user):
         # The first owned site is the implicit default when none was chosen.
         first = Site.objects.filter(employer=user).order_by("id").first()
         if first is not None:
-            default_site = {"id": str(first.id), "name": _d(first.site_name), "code": _d(first.site_code)}
+            default_site = {"id": str(first.id), "name": _d(first.site_name), "bssId": _d(first.bss_site_id)}
     return {
         "identity": _employer_identity(user),
         "stats": _employer_stats(user),

@@ -211,7 +211,7 @@ def _worker_details(wi, user):
             "employer": employer_name,
             "employerBssId": employer_code,
             "site": _d(site.site_name) if site else "",
-            "siteCode": _d(site.site_code) if site else "",
+            "siteBssId": _d(site.bss_site_id) if site else "",
             "designation": _d((emp.designation if emp else "") or (binding.designation if binding else "")),
             "department": _d((emp.department if emp else "") or (binding.department if binding else "")),
             "shift": _d((emp.shift if emp else "") or (binding.shift if binding else "")),

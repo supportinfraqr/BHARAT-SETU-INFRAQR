@@ -285,7 +285,7 @@ def structure_batch(batch):
                     issues.append(_issue(f"{role}_mobile", "error", f"{mobile} is a {live.role}, not a {etype.lower()}."))
                 else:
                     issues.append(_issue(f"{role}_mobile", "error", f"No {etype.lower()} found for mobile {mobile} (in this submission or BSS)."))
-        plan["site"] = {"name": data.get("site_name", ""), "code": data.get("site_code", "")}
+        plan["site"] = {"name": data.get("site_name", ""), "bssId": data.get("bss_site_id", "")}
         plan["designation"] = data.get("designation", "")
         rec.clean_data = {**data, "plan": plan}
         rec.issues = issues

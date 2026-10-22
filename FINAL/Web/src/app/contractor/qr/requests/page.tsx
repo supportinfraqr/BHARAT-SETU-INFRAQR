@@ -396,7 +396,7 @@ export default function ContractorBindingRequestsPage() {
       rows={(sitesFor?.allotments ?? []).map(a => ({
         siteId: a.siteId,
         name: a.site,
-        code: a.siteCode,
+        bssId: a.siteBssId,
         status: a.status,
         source: a.source,
         canApprove: a.status === 'Pending' && a.source === 'employer_allot',

@@ -53,7 +53,7 @@ export default function EmployerSitesPage() {
       <div className="flex items-center gap-2"><Star size={16} className="text-[#E45D24]"/><h2 className="font-semibold text-sm">Default site for contractor allotments</h2></div>
       <p className="text-xs text-bss-text-muted mt-1 mb-3">Pre-selected when you allot sites to a contractor. You can still change it per allotment.</p>
       <select value={employer.defaultSite?.id ?? (employer.sites[0]?.id ?? '')} onChange={e => void setDefaultSite(e.target.value)} disabled={defaultBusy || !employer.sites.length} className="w-full sm:w-96 h-10 rounded-lg border border-bss-border px-3 text-sm bg-white disabled:opacity-60">
-        {employer.sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` (${s.code})` : ''}</option>)}
+        {employer.sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.bssId ? ` (${s.bssId})` : ''}</option>)}
       </select>
       {!employer.sites.length && <p className="mt-2 text-xs text-bss-text-muted">Add a site first — the first site becomes the default automatically.</p>}
       {defaultNotice && <p role="status" className="mt-2 text-xs text-bss-green bg-bss-soft-green border border-bss-border rounded-lg px-3 py-2">{defaultNotice}</p>}
@@ -64,7 +64,7 @@ export default function EmployerSitesPage() {
       {employer.sites.map(site => {
         const isDefault = String(employer.defaultSite?.id) === String(site.id);
         return <article key={site.id} className={`bg-white border rounded-2xl overflow-hidden ${isDefault ? 'border-[#E45D24] ring-1 ring-[#E45D24]/20' : 'border-bss-border'}`}>
-        <div className="p-5 border-b border-bss-border"><div className="flex items-start justify-between gap-3"><span className="w-10 h-10 rounded-xl bg-bss-blue-tint text-bss-interactive-blue grid place-items-center"><Building2 size={19}/></span><div className="flex items-center gap-1.5">{isDefault && <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#E45D24] bg-bss-soft-orange px-2 py-1 rounded"><Star size={11}/>Default</span>}<span className={`text-[10px] font-bold px-2 py-1 rounded ${site.status === 'Active' ? 'bg-bss-soft-green text-bss-green' : site.status === 'Planned' ? 'bg-bss-blue-tint text-bss-interactive-blue' : 'bg-bss-bg text-bss-text-secondary'}`}>{site.status}</span></div></div><h2 className="font-semibold text-bss-text-primary mt-4">{site.name}</h2><p className="font-mono text-[11px] text-bss-text-muted mt-1">{site.bssId ? `${site.bssId} · ` : ''}{site.code}</p><p className="text-xs text-bss-text-muted flex items-center gap-1 mt-3"><MapPin size={12}/>{site.location}, {site.state}</p></div>
+        <div className="p-5 border-b border-bss-border"><div className="flex items-start justify-between gap-3"><span className="w-10 h-10 rounded-xl bg-bss-blue-tint text-bss-interactive-blue grid place-items-center"><Building2 size={19}/></span><div className="flex items-center gap-1.5">{isDefault && <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#E45D24] bg-bss-soft-orange px-2 py-1 rounded"><Star size={11}/>Default</span>}<span className={`text-[10px] font-bold px-2 py-1 rounded ${site.status === 'Active' ? 'bg-bss-soft-green text-bss-green' : site.status === 'Planned' ? 'bg-bss-blue-tint text-bss-interactive-blue' : 'bg-bss-bg text-bss-text-secondary'}`}>{site.status}</span></div></div><h2 className="font-semibold text-bss-text-primary mt-4">{site.name}</h2><p className="font-mono text-[11px] text-bss-text-muted mt-1">{site.bssId}</p><p className="text-xs text-bss-text-muted flex items-center gap-1 mt-3"><MapPin size={12}/>{site.location}, {site.state}</p></div>
         <div className="grid grid-cols-3 divide-x divide-bss-border border-b border-bss-border"><SmallMetric icon={Users} value={site.workers} label="Workers"/><SmallMetric icon={Building2} value={site.contractorIds.length} label="Contractors"/><SmallMetric icon={ShieldCheck} value={`${site.compliance}%`} label="Compliance"/></div>
         <div className="p-4 text-[11px] text-bss-text-muted flex items-center gap-2"><CalendarDays size={13}/><span>{formatDate(site.startDate)}</span><span>to</span><span>{formatDate(site.endDate)}</span></div>
         <div className="grid grid-cols-3 divide-x divide-bss-border border-t border-bss-border">
@@ -76,7 +76,7 @@ export default function EmployerSitesPage() {
       })}
     </section>
 
-    {open && <SiteCreateForm busy={busy} error={error} onSubmit={submit} onClose={() => setOpen(false)} existingCodes={employer.sites.map(s => s.code)} />}
+    {open && <SiteCreateForm busy={busy} error={error} onSubmit={submit} onClose={() => setOpen(false)} />}
 
     {qrSite && (
       <div className="fixed inset-0 z-[90] bg-black/55 backdrop-blur-sm grid place-items-center p-4" role="dialog" aria-modal="true" aria-label="Site QR">
@@ -86,7 +86,7 @@ export default function EmployerSitesPage() {
             <button onClick={() => setQrSite(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-full text-bss-text-muted hover:bg-bss-bg"><X size={16}/></button>
           </header>
           <div className="p-5">
-            {qrSite.qrToken ? <SiteQrPanel siteToken={qrSite.qrToken} siteCode={qrSite.code} bssId={qrSite.bssId} name={qrSite.name}/> : <p className="text-sm text-bss-text-muted">No QR token for this site yet.</p>}
+            {qrSite.qrToken ? <SiteQrPanel siteToken={qrSite.qrToken} bssId={qrSite.bssId} name={qrSite.name}/> : <p className="text-sm text-bss-text-muted">No QR token for this site yet.</p>}
           </div>
         </div>
       </div>

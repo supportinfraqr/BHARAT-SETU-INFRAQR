@@ -44,7 +44,7 @@ export default function IdentityCardPage() {
   // neutral band when the site has no colour set.
   const siteColour = (worker.employment.siteDetails?.colour || '').trim() || '#E45D24';
   const employerName = worker.employment.employer || '—';
-  const siteCode = worker.employment.siteDetails?.code || '—';
+  const siteBssId = worker.employment.siteDetails?.bssId || '—';
 
   const gatePasses = worker.gatePasses ?? [];
   const issuedPass = gatePasses[0];
@@ -55,7 +55,7 @@ export default function IdentityCardPage() {
     const view: PortalView = {
       owner,
       workers: [workerLike],
-      sites: [{ name: employment.site, code: employment.siteDetails?.code, address: employment.siteDetails?.location }],
+      sites: [{ name: employment.site, bssId: employment.siteDetails?.bssId, address: employment.siteDetails?.location }],
       contractors: [{ name: employment.contractor, bssId: employment.contractorDetails?.code ?? '', address: employment.contractorDetails?.address }],
       employers: [{ name: employment.employer, bssId: employment.employerDetails?.code ?? '', address: employment.employerDetails?.address }],
     };
@@ -292,7 +292,7 @@ export default function IdentityCardPage() {
               <div className="text-white text-center pt-3 px-4 pb-0 relative z-10" style={{ background: siteColour }}>
                 <div className="mb-1.5">
                   <div className="text-[13px] font-extrabold leading-tight tracking-tight">{employerName}</div>
-                  <div className="text-[9px] font-mono font-bold text-white/90 tracking-[0.08em] mt-0.5">{siteCode}</div>
+                  <div className="text-[9px] font-mono font-bold text-white/90 tracking-[0.08em] mt-0.5">{siteBssId}</div>
                 </div>
 
                 {/* 3-Color Line */}
@@ -420,7 +420,7 @@ export default function IdentityCardPage() {
                   <div className="text-[10.5px] font-extrabold text-bss-text-primary">{worker.employment.site || '—'}</div>
                   <div className="flex justify-between items-center text-bss-text-secondary text-[8.5px] mt-0.5">
                     <span>{worker.employment.siteDetails?.location || '—'}</span>
-                    <span>Site ID: <b className="text-bss-text-primary">{worker.employment.siteDetails?.code || '—'}</b></span>
+                    <span>BSS Site ID: <b className="text-bss-text-primary">{worker.employment.siteDetails?.bssId || '—'}</b></span>
                   </div>
                 </div>
 

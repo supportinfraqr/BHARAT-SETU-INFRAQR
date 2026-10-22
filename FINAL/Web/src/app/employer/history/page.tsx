@@ -10,7 +10,7 @@ type WorkerRow = {
   worker: string; workerBssId: string;
   contractor: string; contractorCode: string;
   employer: string; employerCode: string;
-  site: string; siteId: string;
+  site: string; siteBssId: string;
   designation: string; department: string; shift: string; wage: number;
   startDate: string; endDate: string; durationDays: number; durationLabel: string;
   status: string; current: boolean;
@@ -132,7 +132,7 @@ export default function EmployerHistoryPage() {
                       <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-[12px]">
                         <div><p className="text-bss-text-muted">Worker BSS ID</p><p className="font-mono font-semibold text-bss-text-primary">{h.workerBssId || '—'}</p></div>
                         <div><p className="text-bss-text-muted">Contractor BSS ID</p><p className="font-mono font-semibold text-bss-text-primary">{h.contractorCode || '—'}</p></div>
-                        <div><p className="text-bss-text-muted">Site ID</p><p className="font-mono font-semibold text-bss-text-primary">{h.siteId || '—'}</p></div>
+                        <div><p className="text-bss-text-muted">BSS Site ID</p><p className="font-mono font-semibold text-bss-text-primary">{h.siteBssId || '—'}</p></div>
                         <div><p className="text-bss-text-muted">Duration</p><p className="font-semibold text-bss-text-primary">{h.durationLabel || '—'}</p></div>
                         <div><p className="text-bss-text-muted">Designation</p><p className="font-semibold text-bss-text-primary">{h.designation || '—'}</p></div>
                         <div><p className="text-bss-text-muted">Department</p><p className="font-semibold text-bss-text-primary">{h.department || '—'}</p></div>

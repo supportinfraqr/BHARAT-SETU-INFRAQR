@@ -8,7 +8,7 @@ export type SitePermissionStatus = "Approved" | "Pending" | "Rejected" | "Releas
 export type SitePermissionRow = {
   siteId: number;
   name: string;
-  code: string;
+  bssId: string;
   status: SitePermissionStatus;
   source?: string;
   isDefault?: boolean;
@@ -32,7 +32,7 @@ export type SitePermissionRow = {
 };
 
 /** A site the employer can still propose to the contractor in this binding. */
-export type ProposeableSite = { siteId: number; name: string; code: string };
+export type ProposeableSite = { siteId: number; name: string; bssId: string };
 
 const STATUS_STYLE: Record<SitePermissionStatus, string> = {
   Approved: "bg-green-50 text-green-700 ring-green-100",
@@ -113,7 +113,7 @@ export default function SitePermissionsDialog({
   const visibleRows = rows.filter(row => {
     if (statusFilter !== "all" && row.status !== statusFilter) return false;
     if (!siteQ) return true;
-    return `${row.name} ${row.code} ${sourceLabel(row.source)}`.toLowerCase().includes(siteQ);
+    return `${row.name} ${row.bssId} ${sourceLabel(row.source)}`.toLowerCase().includes(siteQ);
   });
   const statusCount = (status: SitePermissionStatus | "all") =>
     status === "all" ? rows.length : rows.filter(r => r.status === status).length;
@@ -183,7 +183,7 @@ export default function SitePermissionsDialog({
                     >
                       <span className="min-w-0">
                         <span className="block text-sm font-medium text-gray-800 truncate">{site.name}</span>
-                        {site.code && <span className="block text-[10px] text-gray-400 font-mono truncate">{site.code}</span>}
+                        {site.bssId && <span className="block text-[10px] text-gray-400 font-mono truncate">{site.bssId}</span>}
                       </span>
                       <span className={`w-5 h-5 rounded-md border grid place-items-center flex-shrink-0 ${on ? "bg-[#073B67] border-[#073B67] text-white" : "border-gray-300"}`}>{on && <Check size={13} />}</span>
                     </button>
@@ -210,7 +210,7 @@ export default function SitePermissionsDialog({
                 <input
                   value={siteQuery}
                   onChange={e => setSiteQuery(e.target.value)}
-                  placeholder="Search site name or code…"
+                  placeholder="Search site name or BSS ID…"
                   className="h-9 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#073B67]/20"
                 />
               </div>
@@ -247,7 +247,7 @@ export default function SitePermissionsDialog({
                           {row.isDefault && <span className="text-[10px] font-bold text-[#F47A32]">Default</span>}
                         </p>
                         <p className="text-[11px] text-gray-400 font-mono truncate">
-                          {row.code}{sourceLabel(row.source) ? ` · ${sourceLabel(row.source)}` : ""}
+                          {row.bssId}{sourceLabel(row.source) ? ` · ${sourceLabel(row.source)}` : ""}
                         </p>
                       </div>
                     </div>

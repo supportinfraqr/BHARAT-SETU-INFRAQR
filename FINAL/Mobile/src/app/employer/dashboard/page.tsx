@@ -428,7 +428,7 @@ function SitesSection({ sites, workersBySite }: { sites: EmployerSite[]; workers
   const visible = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const list = sites.filter(s => (status === 'all' || s.status === status)
-      && (!needle || `${s.name} ${s.location} ${s.state} ${s.code}`.toLowerCase().includes(needle)));
+      && (!needle || `${s.name} ${s.location} ${s.state} ${s.bssId}`.toLowerCase().includes(needle)));
     const workers = (s: EmployerSite) => (workersBySite.get(s.id) ?? []).length || s.workers || 0;
     return [...list].sort((a, b) => sortBy === 'compliance'
       ? siteCompliance(a, workersBySite.get(a.id) ?? []) - siteCompliance(b, workersBySite.get(b.id) ?? [])
@@ -608,7 +608,7 @@ function SiteWorkforceCard({ site, workers }: { site: EmployerSite; workers: Emp
           <p className="text-[11px] text-bss-text-muted mt-1 flex items-center gap-1 truncate">
             <MapPin size={12} className="shrink-0 text-[#E45D24]"/>{site.location}, {site.state}
           </p>
-          <span className="inline-block mt-2 text-[10px] font-mono bg-[#F2F6FC] text-bss-text-secondary rounded-md px-1.5 py-0.5 border border-[#DBE3EF]">{site.code}</span>
+          <span className="inline-block mt-2 text-[10px] font-mono bg-[#F2F6FC] text-bss-text-secondary rounded-md px-1.5 py-0.5 border border-[#DBE3EF]">{site.bssId}</span>
         </div>
 
         <div className="relative shrink-0 w-16 h-16">

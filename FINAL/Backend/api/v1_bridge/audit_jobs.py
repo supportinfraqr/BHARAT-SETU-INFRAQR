@@ -528,9 +528,9 @@ def _build_job_folder(job, period, batches, evidence):
         except OSError:
             pass
 
-    site_code = _safe(getattr(job.site, "site_code", "") or job.site.site_name, 40)
+    site_bss_id = _safe(getattr(job.site, "bss_site_id", "") or job.site.site_name, 40)
     for b in batches:
-        bdir = registers / f"{site_code}_{b.id}"
+        bdir = registers / f"{site_bss_id}_{b.id}"
         bdir.mkdir(parents=True, exist_ok=True)
         for field_name, label in (("master_file", "master"), ("generated_file", "generated_register"),
                                   ("signature_file", "signature")):
@@ -557,7 +557,7 @@ def _build_job_folder(job, period, batches, evidence):
         "contractor": {"id": job.contractor_id, "name": payloads._d(payloads._party_name(job.contractor)),
                        "code": payloads._d(getattr(getattr(job.contractor, "contractor_profile", None), "contractor_code", ""))},
         "site": {"id": job.site_id, "name": payloads._d(job.site.site_name),
-                 "code": payloads._d(getattr(job.site, "site_code", "")), "state": payloads._d(getattr(job.site, "state", ""))},
+                 "bssId": payloads._d(getattr(job.site, "bss_site_id", "")), "state": payloads._d(getattr(job.site, "state", ""))},
         "workers": workers,
     }, indent=2, default=str), encoding="utf-8")
 

@@ -163,7 +163,7 @@ export async function buildGatePassHtml(
     employer: merged['employer.legalName'] || '',
     contractor: merged['contractor.legalName'] || '',
     site: merged['site.name'] || '',
-    siteCode: merged['site.code'] || '',
+    siteBssId: merged['site.bssId'] || '',
     siteAddress: merged['site.address'] || '',
     issueDate: merged['document.issueDate'] || dmy(issue),
     validTo: merged['document.validTo'] || dmy(validTo),

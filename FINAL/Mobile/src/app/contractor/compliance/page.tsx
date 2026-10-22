@@ -93,7 +93,7 @@ export default function ContractorCompliancePage() {
   // Per-site adoption for *every* site the contractor has (the state fetch above
   // is scoped to the active state). Adoption is per site, so the jurisdiction
   // banner must reflect each site, not just the state.
-  const [allSites, setAllSites] = useState<Array<{ siteId:number; siteName:string; siteCode:string; state:string; gated:boolean; adoptedCount:number; total:number }>>([]);
+  const [allSites, setAllSites] = useState<Array<{ siteId:number; siteName:string; siteBssId:string; state:string; gated:boolean; adoptedCount:number; total:number }>>([]);
   const [report, setReport] = useState<ValidationReport | null>(null);
   const [batchView, setBatchView] = useState<string | null>(null);
   const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
@@ -141,7 +141,7 @@ export default function ContractorCompliancePage() {
     (contractor.complianceBatches || [])
       .filter(b => (b.financialYear || '') === fyKey && b.month === month && (b.frequency || 'Monthly') === freq)
       .forEach(b => {
-        const key = b.site || b.siteCode || '';
+        const key = b.site || b.siteBssId || '';
         if (!key) return;
         const version = b.version ?? 1;
         const prev = map.get(key);
@@ -151,8 +151,8 @@ export default function ContractorCompliancePage() {
   }, [contractor.complianceBatches, fyKey, month, freq]);
   const siteStatus = useMemo(() => (contractor.sites || [])
     .map(s => {
-      const hit = generatedForPeriod.get(s.name) || generatedForPeriod.get(s.code);
-      return { name: s.name, code: s.code, state: s.state || '', done: !!hit, version: hit?.version ?? 0, status: hit?.status || '' };
+      const hit = generatedForPeriod.get(s.name) || generatedForPeriod.get(s.bssId);
+      return { name: s.name, bssId: s.bssId, state: s.state || '', done: !!hit, version: hit?.version ?? 0, status: hit?.status || '' };
     })
     .sort((a, b) => (a.state || '').localeCompare(b.state || '') || a.name.localeCompare(b.name)),
     [contractor.sites, generatedForPeriod]);
@@ -255,7 +255,7 @@ export default function ContractorCompliancePage() {
       if (!response.ok || !result.data) throw new Error(result.error ?? 'Registers could not be generated.');
       const created = result.data;
       replaceContractor({ ...contractor, complianceBatches: [...created, ...contractor.complianceBatches] });
-      const sites = created.map(b => b.site || b.siteCode).filter(Boolean);
+      const sites = created.map(b => b.site || b.siteBssId).filter(Boolean);
       setNotice(`Generated ${created.length} register set${created.length === 1 ? '' : 's'} for ${sites.length} site${sites.length === 1 ? '' : 's'} (${sites.join(', ')}) from ${masterFile.name}${signatureFile ? ' with digital signature' : ''}.`);
       setMasterFile(null); setSignatureFile(null);
       void refresh();
@@ -433,14 +433,14 @@ export default function ContractorCompliancePage() {
           </header>
           <ul className="divide-y divide-bss-border">
             {siteStatus.map(s => (
-              <li key={`${s.state}-${s.name}-${s.code}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-bss-bg">
+              <li key={`${s.state}-${s.name}-${s.bssId}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-bss-bg">
                 <div className="min-w-0 flex items-center gap-3">
                   <span className={`w-8 h-8 rounded-lg grid place-items-center flex-shrink-0 ${s.done ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-bss-orange'}`}>
                     {s.done ? <CheckCircle2 size={16}/> : <Clock3 size={16}/>}
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-bss-text-primary">{s.name}</p>
-                    <p className="truncate text-[11px] text-bss-text-muted">{s.state}{s.code ? ` · ${s.code}` : ''}</p>
+                    <p className="truncate text-[11px] text-bss-text-muted">{s.state}{s.bssId ? ` · ${s.bssId}` : ''}</p>
                   </div>
                 </div>
                 {s.done ? (

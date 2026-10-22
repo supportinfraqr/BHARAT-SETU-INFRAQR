@@ -251,7 +251,7 @@ def _ce_binding_row(b):
             "id": a.id,
             "siteId": a.site_id,
             "site": a.site.site_name if a.site else "",
-            "siteCode": a.site.site_code if a.site else "",
+            "siteBssId": a.site.bss_site_id if a.site else "",
             "status": allot_status.get(str(a.status).upper(), "Pending"),
             "source": _d(a.source),
             "releaseRequested": bool(a.release_requested_at),
@@ -368,7 +368,7 @@ def _default_site_info(profile):
     site = getattr(profile, "default_site", None) if profile else None
     if site is None:
         return None
-    return {"id": str(site.id), "name": _d(site.site_name), "code": _d(site.site_code)}
+    return {"id": str(site.id), "name": _d(site.site_name), "bssId": _d(site.bss_site_id)}
 
 
 def _site_compliance_pct(user, site):

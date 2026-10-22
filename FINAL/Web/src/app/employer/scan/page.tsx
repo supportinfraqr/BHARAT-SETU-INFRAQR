@@ -335,7 +335,7 @@ export default function EmployerScanPage() {
                     <button key={site.id} type="button" onClick={() => setChosenSiteIds(current => on ? current.filter(x => x !== id) : [...current, id])} className={`w-full flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-colors ${on ? 'border-[#01183A] bg-[#01183A]/5' : 'border-bss-border hover:bg-bss-bg'}`}>
                       <span className="min-w-0">
                         <span className="block text-sm font-semibold text-bss-text-primary truncate">{site.name}{isDefault && <span className="ml-1.5 text-[10px] font-bold text-[#E45D24]">Default</span>}</span>
-                        <span className="block text-[11px] text-bss-text-muted font-mono truncate">{site.code}{site.location ? ` · ${site.location}` : ''}</span>
+                        <span className="block text-[11px] text-bss-text-muted font-mono truncate">{site.bssId}{site.location ? ` · ${site.location}` : ''}</span>
                       </span>
                       <span className={`w-5 h-5 rounded-md border grid place-items-center flex-shrink-0 ${on ? 'bg-[#01183A] border-[#01183A] text-white' : 'border-bss-border'}`}>{on && <Check size={13}/>}</span>
                     </button>

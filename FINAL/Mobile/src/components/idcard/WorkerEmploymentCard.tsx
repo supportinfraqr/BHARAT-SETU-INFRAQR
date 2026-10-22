@@ -24,7 +24,7 @@ export type EmploymentCardProps = {
   contractorEmail?: string;
   siteName?: string;
   siteId?: string;
-  siteCode?: string;
+  siteBssId?: string;
   siteAddress?: string;
   supervisorName?: string;
   supervisorContact?: string;
@@ -59,7 +59,7 @@ export default function WorkerEmploymentCard({
   contractorEmail = "",
   siteName = "—",
   siteId = "—",
-  siteCode,
+  siteBssId,
   siteAddress = "—",
   supervisorName = "—",
   supervisorContact = "—",
@@ -181,7 +181,7 @@ export default function WorkerEmploymentCard({
               <div className="text-white text-center pt-3 px-4 pb-0 relative z-10" style={{ background: siteColour }}>
                 <div className="mb-1.5">
                   <div className="text-[13px] font-extrabold leading-tight tracking-tight">{companyName}</div>
-                  <div className="text-[9px] font-mono font-bold text-white/90 tracking-[0.08em] mt-0.5">{siteCode || siteId || siteName || "—"}</div>
+                  <div className="text-[9px] font-mono font-bold text-white/90 tracking-[0.08em] mt-0.5">{siteBssId || "—"}</div>
                 </div>
                 <div className="flex h-[4px] w-full">
                   <div className="flex-1 bg-[#FF9933]" />
@@ -287,7 +287,7 @@ export default function WorkerEmploymentCard({
                   <div className="text-[10.5px] font-extrabold text-slate-900">{siteName || "—"}</div>
                   <div className="flex justify-between items-center text-slate-600 text-[8.5px] mt-0.5">
                     <span>{siteAddress || "—"}</span>
-                    <span>Site ID: <b className="text-slate-900">{siteCode || siteId || "—"}</b></span>
+                    <span>BSS Site ID: <b className="text-slate-900">{siteBssId || "—"}</b></span>
                   </div>
                 </div>
 

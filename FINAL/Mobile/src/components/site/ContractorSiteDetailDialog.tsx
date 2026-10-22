@@ -10,8 +10,7 @@ const noopSubscribe = () => () => {};
 export type ContractorSiteDetail = {
   id?: string;
   name: string;
-  code: string;
-  bssId?: string;
+  bssId: string;
   employer?: string;
   location?: string;
   state?: string;
@@ -58,7 +57,7 @@ export default function ContractorSiteDetailDialog({
           <h2 className="mt-3 text-lg font-bold text-bss-text-primary">{site.name}</h2>
           <p className="text-xs text-bss-text-secondary mt-0.5">
             {site.bssId ? <span className="font-mono text-bss-interactive-blue">{site.bssId}</span> : null}
-            {site.code ? `${site.bssId ? " · " : ""}${site.code}` : ""}
+            {site.bssId}
             {site.employer ? ` · ${site.employer}` : ""}
           </p>
           {(site.location || site.state) && (

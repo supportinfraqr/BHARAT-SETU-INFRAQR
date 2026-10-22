@@ -158,9 +158,10 @@ def new_bss_employer_code():
     return _allocate(ROLE_PREFIX["employer"])
 
 
-def new_bss_site_code():
+def new_bss_site_id():
     """Random-looking 16-char site identifier, e.g. BSS-S6YQ2M9X4RTA."""
     return _allocate(ROLE_PREFIX["site"])
+
 
 
 # Letter reference prefixes: A = appointment letter, R = releasing (experience).

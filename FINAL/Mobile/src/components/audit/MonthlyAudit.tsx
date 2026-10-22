@@ -63,7 +63,7 @@ function statusLabel(value: string) {
   return value === 'READY' ? 'Ready' : value === 'FAILED' ? 'Failed' : value === 'RUNNING' ? 'Running' : value === 'BUILDING' ? 'Preparing' : 'Queued';
 }
 
-type SiteOption = { id: string; name: string; code?: string };
+type SiteOption = { id: string; name: string; bssId?: string };
 
 export default function MonthlyAudit({ role, listEndpoint, sites, defaultSiteId }: { role: 'contractor' | 'employer'; listEndpoint: string; sites: SiteOption[]; defaultSiteId?: string }) {
   const [rows, setRows] = useState<JobRow[]>([]);
@@ -215,7 +215,7 @@ export default function MonthlyAudit({ role, listEndpoint, sites, defaultSiteId 
           <label className="min-w-[220px] flex-1">
             <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-bss-text-muted">Site</span>
             <select value={siteId} onChange={e => setSiteId(e.target.value)} className="h-11 w-full rounded-xl border border-bss-border bg-white px-3 text-sm">
-              {sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` · ${s.code}` : ''}</option>)}
+              {sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.bssId ? ` · ${s.bssId}` : ''}</option>)}
             </select>
           </label>
           <label className="min-w-[180px] flex-1">

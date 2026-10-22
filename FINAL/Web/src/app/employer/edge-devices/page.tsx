@@ -34,7 +34,7 @@ type DeviceBrief = {
 type SiteRow = {
   siteId: number;
   siteName: string;
-  siteCode: string;
+  bssId: string;
   cameraLimit: number;
   cameraCount: number;
   cameras: CameraRow[];
@@ -285,9 +285,9 @@ export default function EdgeDevicesPage() {
     } finally { setRevoking(''); }
   };
 
-  const copySiteCode = async (code: string) => {
-    try { await navigator.clipboard.writeText(code); setNotice('Site code copied.'); }
-    catch { setNotice(`Site code: ${code}`); }
+  const copySiteId = async (code: string) => {
+    try { await navigator.clipboard.writeText(code); setNotice('BSS Site ID copied.'); }
+    catch { setNotice(`BSS Site ID: ${code}`); }
   };
 
   return (
@@ -322,7 +322,7 @@ export default function EdgeDevicesPage() {
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-bss-bg text-bss-text-muted">Cameras {site.cameraCount} / {site.cameraLimit}</span>
                 {site.devices.length === 0 && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-bss-soft-orange text-bss-error">No client activated</span>}
               </div>
-              <p className="text-sm text-bss-text-muted mt-0.5">{site.siteCode || 'No site code'} · Cameras can be configured before the client is activated.</p>
+              <p className="text-sm text-bss-text-muted mt-0.5">{site.bssId || 'No BSS site ID'} · Cameras can be configured before the client is activated.</p>
               {site.devices.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {site.devices.map(device => (
@@ -336,9 +336,9 @@ export default function EdgeDevicesPage() {
                 </div>
               )}
             </div>
-            {site.siteCode && (
-              <button type="button" onClick={() => void copySiteCode(site.siteCode)} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-semibold flex items-center gap-1.5 hover:bg-bss-bg self-start">
-                <Copy size={14} /> Site code
+            {site.bssId && (
+              <button type="button" onClick={() => void copySiteId(site.bssId)} className="h-9 px-3 rounded-lg border border-bss-border text-xs font-semibold flex items-center gap-1.5 hover:bg-bss-bg self-start">
+                <Copy size={14} /> BSS Site ID
               </button>
             )}
           </div>

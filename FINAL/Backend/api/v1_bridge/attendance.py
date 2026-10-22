@@ -78,7 +78,7 @@ def attendance_template(request):
     site_obj = None
     if site:
         site_obj = (Site.objects.filter(site_name__iexact=site).first()
-                    or Site.objects.filter(site_code__iexact=site).first())
+                    or Site.objects.filter(bss_site_id__iexact=site).first())
     if site_obj is not None:
         try:
             days = sheets.date_range(start, end)
@@ -133,7 +133,7 @@ def attendance_upload(request):
     site = None
     if site_label:
         site = (Site.objects.filter(site_name__iexact=site_label).first()
-                or Site.objects.filter(site_code=site_label).first())
+                or Site.objects.filter(bss_site_id=site_label).first())
     if site is None:
         site = Site.objects.filter(id__in=_contractor_site_ids(user)).order_by("id").first()
 

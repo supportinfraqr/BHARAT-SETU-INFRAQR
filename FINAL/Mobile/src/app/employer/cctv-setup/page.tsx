@@ -187,7 +187,7 @@ export default function CctvSetupPage() {
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
           <select value={effectiveSite} onChange={e => { setSiteId(e.target.value); setForm(null); }} className={`${input} sm:max-w-md`}>
             {sites.length === 0 && <option value="">No sites available</option>}
-            {sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` · ${s.code}` : ''}</option>)}
+            {sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.bssId ? ` · ${s.bssId}` : ''}</option>)}
           </select>
           <button type="button" onClick={() => void load()} className="h-10 px-3 rounded-lg border border-bss-border text-sm font-semibold text-bss-text-secondary flex items-center gap-1.5 hover:bg-bss-bg">
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Refresh

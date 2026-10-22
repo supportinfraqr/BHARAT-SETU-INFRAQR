@@ -195,7 +195,7 @@ export default function EmployerComplianceSubmissionPage() {
                   </tr></thead>
                   <tbody className="divide-y divide-bss-border text-xs">
                     {row.batches.map(b => <tr key={b.id} className="hover:bg-bss-bg/70">
-                      <td className="py-2.5 px-3"><p className="font-semibold text-bss-text-primary">{b.site || '—'}</p>{b.siteCode && <p className="font-mono text-[10px] text-bss-text-muted">{b.siteCode}</p>}</td>
+                      <td className="py-2.5 px-3"><p className="font-semibold text-bss-text-primary">{b.site || '—'}</p>{b.siteBssId && <p className="font-mono text-[10px] text-bss-text-muted">{b.siteBssId}</p>}</td>
                       <td className="py-2.5 px-3 text-bss-text-secondary">{b.month} {b.year}</td>
                       <td className="py-2.5 px-3"><VersionHistory versions={(b.versions || []).map(v => ({ version:v.version, isCurrent:v.isCurrent, status:v.status, date:v.generatedOn }))} /></td>
                       <td className="py-2.5 px-3 font-bold text-[#01183A]">{b.employeeCount}</td>

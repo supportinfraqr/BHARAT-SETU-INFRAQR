@@ -41,7 +41,7 @@ ENTITIES = {
     "relations": ("Relations", [
         ("Employer Mobile", "employer_mobile"), ("Contractor Mobile", "contractor_mobile"),
         ("Worker Mobile", "worker_mobile"), ("Site Name", "site_name"),
-        ("Site Code", "site_code"), ("Designation", "designation"), ("Wage", "wage"),
+        ("Site BSS ID", "site_bss_id"), ("Designation", "designation"), ("Wage", "wage"),
     ]),
 }
 
@@ -375,12 +375,10 @@ def _process_relations(rows):
         site = None
         if site_name:
             site = (Site.objects.filter(site_name__iexact=site_name, employer=employer).first()
-                    or Site.objects.filter(site_code__iexact=str(r.get("site_code") or "").strip(),
+                    or Site.objects.filter(bss_site_id__iexact=str(r.get("site_bss_id") or "").strip(),
                                            employer=employer).first())
             if site is None:
                 site = Site(employer=employer, site_name=site_name[:200], state="")
-                code = str(r.get("site_code") or "").strip()
-                site.site_code = code or bss_ids.new_bss_site_code()
                 site.save()
         # Employer ↔ Contractor binding.
         binding, _ = ContractorEmployerBinding.objects.get_or_create(

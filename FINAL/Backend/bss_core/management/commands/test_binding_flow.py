@@ -21,7 +21,7 @@ from api import v1_payloads as payloads
 EMPLOYER_PHONE = "7777777777"
 CONTRACTOR_PHONE = "4444444444"
 WORKER_PHONE = "1111111111"
-SITE_CODE = "TEST-SITE-001"
+SITE_BSS_ID = "BSS-STEST000001"
 
 
 class Command(BaseCommand):
@@ -45,7 +45,7 @@ class Command(BaseCommand):
 
         # ── Setup: employer site + contractor<->worker binding ──────────────
         site, _ = Site.objects.get_or_create(
-            site_code=SITE_CODE,
+            bss_site_id=SITE_BSS_ID,
             defaults={
                 "employer": employer,
                 "site_name": "Demo Metro Site",
@@ -143,7 +143,7 @@ class Command(BaseCommand):
         # ── Report ──────────────────────────────────────────────────────────
         self.stdout.write("")
         self.stdout.write(f"Binding #{binding.id}: worker {worker.username} "
-                          f"<-> contractor {contractor.username} @ {site.site_code} "
+                          f"<-> contractor {contractor.username} @ {site.bss_site_id} "
                           f"(employer {employer.username})")
         self.stdout.write("")
         failed = 0

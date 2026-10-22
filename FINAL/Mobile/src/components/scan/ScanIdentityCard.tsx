@@ -53,7 +53,7 @@ export type ScanVerifyData = {
     address?: { current?: string; permanent?: string; migrant?: boolean };
     banking?: { bankName?: string; accountHolder?: string; accountMasked?: string; ifsc?: string; status?: string };
     socialSecurity?: { uan?: string; esic?: string; lwf?: string; bocw?: string; eshram?: string };
-    employment?: { contractor?: string; contractorBssId?: string; employer?: string; employerBssId?: string; site?: string; siteCode?: string; designation?: string; department?: string; shift?: string; doj?: string; natureOfJob?: string; typeOfWork?: string };
+    employment?: { contractor?: string; contractorBssId?: string; employer?: string; employerBssId?: string; site?: string; siteBssId?: string; designation?: string; department?: string; shift?: string; doj?: string; natureOfJob?: string; typeOfWork?: string };
     wages?: { lastGross?: number | null; frequency?: string; periodEnd?: string } | null;
     welfare?: {
       ppeRequired?: boolean | null; ppe?: string; safetyTraining?: boolean;
@@ -389,8 +389,8 @@ export default function ScanIdentityCard({ data }: { data: ScanVerifyData }) {
               <Field
                 label="Site"
                 empty="Not allotted"
-                value={d.employment?.site || d.employment?.siteCode
-                  ? <span className="block">{d.employment?.site || "Site"}{d.employment?.siteCode && <span className="mt-0.5 block font-mono text-[10px] font-medium text-gray-500">{d.employment.siteCode}</span>}</span>
+                value={d.employment?.site || d.employment?.siteBssId
+                  ? <span className="block">{d.employment?.site || "Site"}{d.employment?.siteBssId && <span className="mt-0.5 block font-mono text-[10px] font-medium text-gray-500">{d.employment.siteBssId}</span>}</span>
                   : undefined}
               />
               <Field label="Designation" value={d.employment?.designation} empty="Not provided" />

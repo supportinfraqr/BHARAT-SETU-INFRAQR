@@ -96,7 +96,7 @@ export default function EmploymentHistoryPage() {
                     <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-[12px]">
                       <div><p className="text-bss-text-muted">Contractor BSS ID</p><p className="font-mono font-semibold text-bss-text-primary">{h.contractorCode || '—'}</p></div>
                       <div><p className="text-bss-text-muted">Employer BSS ID</p><p className="font-mono font-semibold text-bss-text-primary">{h.employerCode || '—'}</p></div>
-                      <div><p className="text-bss-text-muted">Site ID</p><p className="font-mono font-semibold text-bss-text-primary">{h.siteId || '—'}</p></div>
+                      <div><p className="text-bss-text-muted">BSS Site ID</p><p className="font-mono font-semibold text-bss-text-primary">{h.siteBssId || '—'}</p></div>
                       <div><p className="text-bss-text-muted">Duration</p><p className="font-semibold text-bss-text-primary">{h.durationLabel || '—'}</p></div>
                       <div><p className="text-bss-text-muted">Designation</p><p className="font-semibold text-bss-text-primary">{h.designation || '—'}</p></div>
                       <div><p className="text-bss-text-muted">Department</p><p className="font-semibold text-bss-text-primary">{h.department || '—'}</p></div>
@@ -131,8 +131,8 @@ export default function EmploymentHistoryPage() {
           contractorName={cardFor.contractor}
           contractorId={cardFor.contractorCode}
           siteName={cardFor.site}
-          siteId={cardFor.siteId}
-          siteCode={cardFor.siteId}
+          siteId={cardFor.siteBssId}
+          siteBssId={cardFor.siteBssId}
           emergencyName={worker.identity.emergencyContactName}
           emergencyNumber={worker.identity.emergencyContactNumber}
           emergencyRelation={worker.identity.emergencyContactRelation}

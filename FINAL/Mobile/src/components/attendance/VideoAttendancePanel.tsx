@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Camera, CameraOff, Radio, Settings2, Video, X } from 'lucide-react';
 import CameraPreview from '@/components/employer/CameraPreview';
 
-type SiteOption = { id: string; name: string; code?: string };
+type SiteOption = { id: string; name: string; bssId?: string };
 type Sighting = { id: number; name: string | null; tsStart: number; camera?: string | null };
 type CameraRow = { id?: number; siteId?: number; label: string; area: string; enabled: boolean; configured: boolean; running?: boolean };
 
@@ -145,7 +145,7 @@ export default function VideoAttendancePanel({
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Site</span>
           <select value={effectiveSite} onChange={e => { setSiteId(e.target.value); stoppedManually.current = false; }} disabled={running} className="w-full h-9 bg-slate-900 border border-slate-700 rounded-lg px-2 text-xs font-semibold text-slate-200 focus:outline-none disabled:opacity-60">
             {sites.length === 0 && <option value="">No sites available</option>}
-            {sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` · ${s.code}` : ''}</option>)}
+            {sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.bssId ? ` · ${s.bssId}` : ''}</option>)}
           </select>
           <p className="text-[10px] text-slate-400">Status: <span className={running ? 'text-emerald-400 font-bold' : 'text-slate-400 font-bold'}>{running ? 'Running' : 'Stopped'}</span></p>
         </div>

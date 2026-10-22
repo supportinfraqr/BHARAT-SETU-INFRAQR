@@ -355,21 +355,6 @@ def _auto_assign_letter_templates(site):
             setattr(site, attr, template)
 
 
-def _new_unique_site_code():
-    """A globally-unique site code in the SITE-XXXXXXXX house format.
-
-    Loops until the random code is not already used, so a generated code can
-    never match an existing site's code.
-    """
-    import random
-    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    for _ in range(50):
-        code = "SITE-" + "".join(random.choice(alphabet) for _ in range(8))
-        if not Site.objects.filter(site_code=code).exists():
-            return code
-    return "SITE-" + uuid.uuid4().hex[:8].upper()
-
-
 def _handle_site(user, body, method):
     site = None
     site_id = body.get("id")
@@ -382,13 +367,7 @@ def _handle_site(user, body, method):
         created = False
     else:
         created = True
-        code = str(body.get("site_code") or body.get("code") or "").strip().upper()
-        # Guarantee a unique code in the SITE-XXXXXXXX house format. If the
-        # supplied code is missing or already taken, generate a fresh one so a
-        # random code can never collide with an existing site.
-        if not code or Site.objects.filter(site_code=code).exists():
-            code = _new_unique_site_code()
-        site = Site(employer=user, site_code=code)
+        site = Site(employer=user)
     old_head = None
     if not created:
         old_head = ("Central" if getattr(site, "jurisdiction", "state") == "central"
@@ -430,8 +409,6 @@ def _handle_site(user, body, method):
             raise PortalMutationError(f"{field.title()} is outside the valid range.", 400)
 
     for field in _SITE_EDITABLE_FIELDS:
-        if field == "site_code":
-            continue
         if field in body and body.get(field) is not None:
             model_field = Site._meta.get_field(field)
             coerced = _coerce_site_value(model_field, body.get(field))
@@ -457,7 +434,7 @@ def _handle_site(user, body, method):
     try:
         site.save()
     except IntegrityError:
-        raise PortalMutationError("That site code is already in use.", 409)
+        raise PortalMutationError("That BSS site ID is already in use.", 409)
     # On create, pin the site's head letter templates (if the admin has any).
     if created:
         _auto_assign_letter_templates(site)

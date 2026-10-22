@@ -20,7 +20,7 @@ export type GatePassStyle = {
 export type GatePassValues = {
   workerName: string; bssId: string; designation: string; dob: string; bloodGroup: string;
   emergencyContact: string; employer: string; contractor: string;
-  site: string; siteCode: string; siteAddress: string;
+  site: string; siteBssId: string; siteAddress: string;
   issueDate: string; validTo: string; days: string;
   status: string; type: 'Permanent' | 'Temporary'; photo: string; qr: string;
 };
@@ -47,7 +47,7 @@ function signs(width: number, status: string, sColor: string, note = '') {
   const badge = `<div style="text-align:center;align-self:center"><span style="display:inline-block;font-size:9px;font-weight:800;letter-spacing:.1em;color:${sColor};border:1px solid ${sColor}55;background:${sColor}12;border-radius:999px;padding:2px 10px;white-space:nowrap">${status}</span>${note ? `<div style="font-size:8px;color:#94a3b8;margin-top:2px;white-space:nowrap">${note}</div>` : ''}</div>`;
   return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">${line('Contractor')}${badge}${line('Employer')}</div>`;
 }
-const siteLine = (v: GatePassValues) => `${v.site}${v.siteCode ? ` (${v.siteCode})` : ''}${v.siteAddress ? `, ${v.siteAddress}` : ''}`;
+const siteLine = (v: GatePassValues) => `${v.site}${v.siteBssId ? ` (${v.siteBssId})` : ''}${v.siteAddress ? `, ${v.siteAddress}` : ''}`;
 function brandWords(text: string, colors: string[] | undefined, fallback: string) {
   const words = String(text || '').split(/\s+/).filter(Boolean);
   return words.map((w, i) => `<span style="color:${(colors && colors[i]) || fallback}">${esc(w)}</span>`).join(' ');

@@ -27,7 +27,7 @@ from api import v1_payloads as payloads
 
 EMPLOYER_PHONE = "7777777777"
 CONTRACTOR_PHONE = "4444444444"
-SITE_CODE = "TEST-SITE-001"
+SITE_BSS_ID = "BSS-STEST000001"
 
 
 class Command(BaseCommand):
@@ -47,7 +47,7 @@ class Command(BaseCommand):
             return
 
         site, _ = Site.objects.get_or_create(
-            site_code=SITE_CODE,
+            bss_site_id=SITE_BSS_ID,
             defaults={
                 "employer": employer,
                 "site_name": "Demo Metro Site",
@@ -124,7 +124,7 @@ class Command(BaseCommand):
         # A dedicated site for the same employer that is NOT allotted to this
         # contractor — binding workers here must be blocked by the gating rule.
         other_site, _ = Site.objects.get_or_create(
-            site_code="TEST-SITE-002",
+            bss_site_id="BSS-STEST000002",
             defaults={"employer": employer, "site_name": "Non-allotted Test Site",
                       "state": "Maharashtra", "site_qr_token": str(uuid.uuid4())},
         )
@@ -140,7 +140,7 @@ class Command(BaseCommand):
         # ── Report ──────────────────────────────────────────────────────────
         self.stdout.write("")
         self.stdout.write(f"Binding #{binding.id}: contractor {contractor.username} "
-                          f"<-> employer {employer.username} @ {site.site_code}")
+                          f"<-> employer {employer.username} @ {site.bss_site_id}")
         self.stdout.write("")
         failed = 0
         for label, ok in results:

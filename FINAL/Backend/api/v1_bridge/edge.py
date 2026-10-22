@@ -199,7 +199,7 @@ def _device_payload(device):
         "deviceId": str(device.id),
         "name": device.name,
         "siteId": device.site_id,
-        "siteCode": getattr(device.site, "site_code", ""),
+        "siteBssId": getattr(device.site, "bss_site_id", ""),
         "siteName": device.site.site_name if device.site else "",
         "version": device.version,
         "active": device.is_active,
@@ -377,7 +377,7 @@ def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id)
 
 def _employer_sites(owner):
     return [
-        {"id": site.id, "code": getattr(site, "site_code", ""), "name": site.site_name}
+        {"id": site.id, "bssId": site.bss_site_id, "name": site.site_name}
         for site in Site.objects.filter(employer=owner).order_by("site_name")
     ]
 
@@ -456,7 +456,7 @@ def edge_activate_complete(request):
     """Complete activation for the site selected from the OTP-verified list."""
     body = request.data if isinstance(request.data, dict) else {}
     activation_token = str(body.get("activationToken") or "").strip()
-    site_ref = str(body.get("siteId") or body.get("siteCode") or "").strip()
+    site_ref = str(body.get("siteId") or body.get("siteBssId") or "").strip()
     fingerprint = str(body.get("deviceFingerprint") or body.get("fingerprint") or "").strip()[:128]
     if not activation_token or not site_ref or not fingerprint:
         return Response({"error": "activationToken, site and device fingerprint are required."},
@@ -473,7 +473,7 @@ def edge_activate_complete(request):
                         status=status.HTTP_401_UNAUTHORIZED)
     site = Site.objects.filter(pk=site_ref, employer=owner).first() if site_ref.isdigit() else None
     if site is None:
-        site = Site.objects.filter(site_code__iexact=site_ref, employer=owner).first()
+        site = Site.objects.filter(bss_site_id__iexact=site_ref, employer=owner).first()
     if site is None:
         return Response({"error": "That site does not belong to this employer."},
                         status=status.HTTP_404_NOT_FOUND)
@@ -488,7 +488,7 @@ def edge_activate_complete(request):
     return Response({"data": {
         "deviceId": str(device.id),
         "token": raw_token,
-        "site": {"id": site.id, "code": getattr(site, "site_code", ""), "name": site.site_name},
+        "site": {"id": site.id, "bssId": site.bss_site_id, "name": site.site_name},
         "cameras": [_camera_payload(c, device) for c in site.attendance_cameras.order_by("id")],
     }}, status=status.HTTP_200_OK)
 
@@ -502,7 +502,7 @@ def edge_activate_verify(request):
     phone = _normalize_mobile(body.get("phone") or body.get("mobile"))
     otp = str(body.get("otp") or "").strip()
     fingerprint = str(body.get("deviceFingerprint") or body.get("fingerprint") or "").strip()[:128]
-    site_ref = str(body.get("siteCode") or body.get("siteId") or body.get("site") or "").strip()
+    site_ref = str(body.get("siteBssId") or body.get("siteId") or body.get("site") or "").strip()
     if not phone or not otp or not fingerprint or not site_ref:
         return Response({"error": "Phone, OTP, device fingerprint and site are required."},
                         status=status.HTTP_400_BAD_REQUEST)
@@ -512,7 +512,7 @@ def edge_activate_verify(request):
                         status=status.HTTP_404_NOT_FOUND)
     if not _verify_edge_otp(phone, otp):
         return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_401_UNAUTHORIZED)
-    site_q = Q(site_code__iexact=site_ref) | Q(site_name__iexact=site_ref)
+    site_q = Q(bss_site_id__iexact=site_ref) | Q(site_name__iexact=site_ref)
     if site_ref.isdigit():
         site_q |= Q(pk=int(site_ref))
     site = Site.objects.filter(site_q, employer=owner).first()
@@ -530,7 +530,7 @@ def edge_activate_verify(request):
     return Response({"data": {
         "deviceId": str(device.id),
         "token": raw_token,
-        "site": {"id": site.id, "code": getattr(site, "site_code", ""), "name": site.site_name},
+        "site": {"id": site.id, "bssId": site.bss_site_id, "name": site.site_name},
         "cameras": [_camera_payload(c, device) for c in site.attendance_cameras.order_by("id")],
     }}, status=status.HTTP_200_OK)
 
@@ -910,7 +910,7 @@ def employer_attendance_cameras(request):
         rows.append({
             "siteId": site.id,
             "siteName": site.site_name,
-            "siteCode": getattr(site, "site_code", ""),
+            "bssId": site.bss_site_id,
             "cameraLimit": int(getattr(site, "max_cctv_cameras", 5) or 5),
             "cameraCount": len(cameras),
             "cameras": [_employer_camera_payload(c) for c in cameras],

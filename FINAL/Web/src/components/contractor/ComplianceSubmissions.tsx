@@ -518,7 +518,7 @@ export default function ComplianceSubmissions({ embedded = false, onSubmitted }:
   // view: every batch field is a column (site, state, month/year, counts,
   // generated on/by) plus the Documents drill-down and Download/Submit actions.
   const generatedBatchCols: DataColumn<ContractorPortalData['complianceBatches'][number]>[] = [
-    { id:'site', header:'Site', value:b => `${b.site || ''}${b.siteCode ? ` (${b.siteCode})` : ''}`, render:b => <div><p className="font-semibold text-bss-text-primary">{b.site || b.siteCode || '—'}</p>{b.siteCode && <p className="font-mono text-[10px] text-bss-text-muted">{b.siteCode}</p>}</div> },
+    { id:'site', header:'Site', value:b => `${b.site || ''}${b.siteBssId ? ` (${b.siteBssId})` : ''}`, render:b => <div><p className="font-semibold text-bss-text-primary">{b.site || b.siteBssId || '—'}</p>{b.siteBssId && <p className="font-mono text-[10px] text-bss-text-muted">{b.siteBssId}</p>}</div> },
     { id:'state', header:'State', value:b => b.state || '—' },
     { id:'month', header:'Month', value:b => b.month || '—' },
     { id:'year', header:'Year', value:b => b.year || '—' },

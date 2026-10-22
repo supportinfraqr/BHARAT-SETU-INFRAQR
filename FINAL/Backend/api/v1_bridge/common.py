@@ -232,7 +232,7 @@ _SITE_EDITABLE_FIELDS = tuple(
     and not getattr(f, "many_to_one", False)
     and not getattr(f, "many_to_many", False)
     and not getattr(f, "one_to_one", False)
-    and f.name not in ("id", "site_qr_token", "created_at", "updated_at", "employer")
+    and f.name not in ("id", "bss_site_id", "site_qr_token", "created_at", "updated_at", "employer")
 )
 _TEXT_FIELD_TYPES = ("CharField", "TextField", "SlugField", "EmailField", "URLField")
 

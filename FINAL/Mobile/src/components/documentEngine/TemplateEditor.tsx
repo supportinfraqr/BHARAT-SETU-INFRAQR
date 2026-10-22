@@ -19,7 +19,7 @@ function sampleGatePassValues(type: DocumentType): GatePassValues {
     workerName: 'Demo Name', bssId: 'Demo BSS ID', designation: 'Demo Designation',
     dob: 'Demo DOB', bloodGroup: 'Demo', emergencyContact: 'Demo Contact',
     employer: 'Demo Employer', contractor: 'Demo Contractor',
-    site: 'Demo Site', siteCode: 'DEMO', siteAddress: 'Demo Address',
+    site: 'Demo Site', siteBssId: 'DEMO', siteAddress: 'Demo Address',
     issueDate: 'Demo Date', validTo: temp ? 'Demo Date (+7 days)' : 'Demo Date', days: temp ? '7' : '',
     status: 'Active', type: temp ? 'Temporary' : 'Permanent', photo: '', qr: '',
   };
@@ -379,7 +379,7 @@ export default function TemplateEditor({
                 <label className="flex items-center justify-between text-xs font-semibold text-gray-600"><span>Show brand header</span><input type="checkbox" checked={template.styles.showBrandHeader} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, showBrandHeader: event.target.checked } }))} className="accent-[#073B67] w-4 h-4"/></label>
                 {template.styles.showBrandHeader && <label className="block text-xs font-semibold text-gray-600">Brand header text<input value={template.styles.brandHeaderText} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, brandHeaderText: event.target.value } }))} className={inputCls + ' text-xs'}/></label>}
                 <label className="block text-xs font-semibold text-gray-600">Document footer<textarea rows={2} value={template.styles.footerText} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, footerText: event.target.value } }))} className={textareaCls + ' text-xs'}/></label>
-                <label className="block text-xs font-semibold text-gray-600">Numbering pattern<code className="block mt-1"><input value={template.numberingPattern} onChange={event => setTemplate(current => ({ ...current, numberingPattern: event.target.value }))} className={inputCls + ' text-xs font-mono'}/></code><span className="text-[10px] text-gray-400">Supports {'{{year}}'}, {'{{sequence}}'}, {'{{bssSeq}}'}, {'{{siteCode}}'}</span></label>
+                <label className="block text-xs font-semibold text-gray-600">Numbering pattern<code className="block mt-1"><input value={template.numberingPattern} onChange={event => setTemplate(current => ({ ...current, numberingPattern: event.target.value }))} className={inputCls + ' text-xs font-mono'}/></code><span className="text-[10px] text-gray-400">Supports {'{{year}}'}, {'{{sequence}}'}, {'{{bssSeq}}'}, {'{{siteBssId}}'}</span></label>
               </div>
             )}
 

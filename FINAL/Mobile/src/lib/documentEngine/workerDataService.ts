@@ -30,12 +30,12 @@ export type WorkerLike = {
 export type PortalView = {
   owner: OwnerScope;
   workers: WorkerLike[];
-  sites: Array<{ id?: string; code?: string; name?: string; location?: string; state?: string; address?: string; department?: string; workArea?: string; medicalOfficer?: string; employer?: string }>;
+  sites: Array<{ id?: string; bssId?: string; name?: string; location?: string; state?: string; address?: string; department?: string; workArea?: string; medicalOfficer?: string; employer?: string }>;
   contractors: Array<{ id?: string; name: string; bssId: string; contact?: string; address?: string; signatory?: string }>;
   employers: Array<{ id?: string; name: string; bssId?: string; address?: string; signatory?: string; contact?: string }>;
   payroll?: Array<{ workerId?: string; workerName?: string; employer?: string; site?: string; period?: string; netPay?: number; gross?: number; earnings?: Array<{ component: string; amount: number }> }>;
   // direct overrides used by the employer portal
-  siteMap?: Record<string, { code?: string; location?: string; state?: string; address?: string }>;
+  siteMap?: Record<string, { bssId?: string; location?: string; state?: string; address?: string }>;
 };
 
 // ---------------------------------------------------------------- demo supplement
@@ -124,7 +124,7 @@ export function resolveWorkerTokens(portal: PortalView, worker: WorkerLike): Res
     'employer.authorizedSignatory': employer?.signatory ?? '',
     // site
     'site.name': worker.site ?? site?.name ?? '',
-    'site.code': site?.code ?? portal.siteMap?.[worker.site ?? '']?.code ?? '',
+    'site.bssId': site?.bssId ?? portal.siteMap?.[worker.site ?? '']?.bssId ?? '',
     'site.address': site?.location ?? site?.address ?? portal.siteMap?.[worker.site ?? '']?.location ?? '',
     'site.state': site?.state ?? portal.siteMap?.[worker.site ?? '']?.state ?? '',
     'site.department': site?.department ?? worker.department ?? '',
@@ -166,7 +166,7 @@ export function resolveWorkerTokens(portal: PortalView, worker: WorkerLike): Res
     { label: 'Worker', value: `${worker.name}\n${worker.bssId}` },
     { label: 'Contractor', value: values['contractor.legalName'] },
     { label: 'Employer', value: values['employer.legalName'] },
-    { label: 'Site', value: `${values['site.name']}${values['site.code'] ? ` (${values['site.code']})` : ''}` },
+    { label: 'Site', value: `${values['site.name']}${values['site.bssId'] ? ` (${values['site.bssId']})` : ''}` },
     { label: 'Employment', value: `${values['employment.designation']}${values['employment.skillCategory'] ? ' / ' + values['employment.skillCategory'] : ''}` },
   ];
   return { tokens: values, summary, missing, warnings: [] };

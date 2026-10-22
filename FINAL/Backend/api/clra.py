@@ -235,7 +235,7 @@ def apply_calculation_rules(rows, rules):
 # "sl" (row serial), or "backend:<key>" (a value from the render context).
 _BACKEND_CONTEXT_KEYS = {
     "contractor": "contractor", "employer": "employer",
-    "site": "site", "siteCode": "site_code", "state": "state",
+    "site": "site", "siteBssId": "site_bss_id", "state": "state",
     "month": "month", "year": "year", "financialYear": "financial_year",
     "recordCount": "record_count", "generatedOn": "generated_on",
     "contractorAddress": "contractor_address", "employerAddress": "employer_address",
@@ -451,7 +451,7 @@ _TAG_RE = re.compile(r"<[^>]+>")
 _CSS_RULE_RE = re.compile(r"\.([A-Za-z_][\w-]*)\s*\{([^}]*)\}", re.S)
 _META_TOKEN_SOURCES = {
     "CONTRACTOR_NAME": "contractor", "EMPLOYER_NAME": "employer",
-    "SITE_NAME": "site", "SITE_CODE": "siteCode", "STATE": "state",
+    "SITE_NAME": "site", "SITE_BSS_ID": "siteBssId", "STATE": "state",
     "MONTH": "month", "YEAR": "year", "FINANCIAL_YEAR": "financialYear",
     "GENERATED_ON": "generatedOn", "RECORD_COUNT": "recordCount",
     "CONTRACTOR_ADDRESS": "contractorAddress", "EMPLOYER_ADDRESS": "employerAddress",
@@ -548,7 +548,7 @@ _EMPTY_DECL_RE = re.compile(r"^\s*(no\b|there\s+is\s+no\b|nil\b)", re.I)
 # entry; a value only in these does not make a register non-empty.
 _IDENTITY_KEYS = {
     "sl", "name", "fatherName", "gender", "designation", "department",
-    "bssId", "doj", "mobile", "site", "siteCode", "location", "employer",
+    "bssId", "doj", "mobile", "site", "siteBssId", "location", "employer",
     "contractor", "state", "month", "year", "financialYear", "recordCount",
     "generatedOn",
 }
@@ -843,7 +843,7 @@ def build_register_workbook(template, rows, context=None, signature=None):
     return out.getvalue()
 
 
-def build_workbook(rows, *, contractor="", employer="", site="", site_code="", state="",
+def build_workbook(rows, *, contractor="", employer="", site="", site_bss_id="", state="",
                    financial_year="", month="", year="", registers=None,
                    generated_on="", templates=None, signature=None,
                    contractor_address="", employer_address="", nature_of_work="", location=""):
@@ -862,7 +862,7 @@ def build_workbook(rows, *, contractor="", employer="", site="", site_code="", s
         # title/form/state rows, no branding or dates.
         wb.remove(wb.active)
         context = backend_context(
-            contractor=contractor, employer=employer, site=site, site_code=site_code, state=state,
+            contractor=contractor, employer=employer, site=site, site_bss_id=site_bss_id, state=state,
             month=month, year=year, financial_year=financial_year,
             record_count=len(rows), generated_on=generated_on,
             contractor_address=contractor_address, employer_address=employer_address,
@@ -886,7 +886,7 @@ def build_workbook(rows, *, contractor="", employer="", site="", site_code="", s
     meta = [
         ("Contractor", contractor),
         ("Principal Employer / Site", site),
-        ("Site Code", site_code),
+        ("Site BSS ID", site_bss_id),
         ("State", state),
         ("Financial Year", financial_year),
         ("Wage Period", f"{month} {year}".strip()),
@@ -965,7 +965,7 @@ def render_doc_body(body, rows, context):
     return _DOC_FIELD_RE.sub(field, out)
 
 
-def render_register_html(template, rows, *, contractor="", employer="", site="", site_code="",
+def render_register_html(template, rows, *, contractor="", employer="", site="", site_bss_id="",
                          state="", month="", year="", financial_year="", generated_on="",
                          signature_data_uri="", contractor_address="", employer_address="",
                          nature_of_work="", location=""):
@@ -991,7 +991,7 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
             f'style="height:38px;max-width:190px;object-fit:contain;display:block;margin-left:auto" />'
             f'<div style="font-size:9px;color:#555;text-align:right">Authorised Signatory</div>')
     context = backend_context(
-        contractor=contractor, employer=employer, site=site, site_code=site_code,
+        contractor=contractor, employer=employer, site=site, site_bss_id=site_bss_id,
         state=state, month=month, year=year, financial_year=financial_year,
         record_count=len(rows), generated_on=generated_on,
         contractor_address=contractor_address, employer_address=employer_address,
@@ -1013,7 +1013,7 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
         tokens = {
             "TITLE": _esc(title), "FORM_CODE": _esc(template.get("formCode", "")),
             "STATE": _esc(template.get("state", "")), "CONTRACTOR_NAME": _esc(contractor),
-            "EMPLOYER_NAME": _esc(employer), "SITE_NAME": _esc(site), "SITE_CODE": _esc(site_code),
+            "EMPLOYER_NAME": _esc(employer), "SITE_NAME": _esc(site), "SITE_BSS_ID": _esc(site_bss_id),
             "MONTH": _esc(month), "YEAR": _esc(year), "FINANCIAL_YEAR": _esc(financial_year),
             "GENERATED_ON": _esc(generated_on), "RECORD_COUNT": str(len(render_rows)),
             "ACT": _esc(template.get("act", "")),
@@ -1036,7 +1036,7 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
         return out
 
     meta = [
-        ("Contractor", contractor), ("Site", site), ("Site Code", site_code),
+        ("Contractor", contractor), ("Site", site), ("Site BSS ID", site_bss_id),
         ("State", state), ("Financial Year", financial_year),
         ("Wage Period", f"{month} {year}".strip()),
     ]

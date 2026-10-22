@@ -7,7 +7,7 @@ def backfill_site_ids(apps, schema_editor):
 
     Site = apps.get_model("bss_core", "Site")
     for site in Site.objects.filter(bss_site_id__isnull=True):
-        site.bss_site_id = bss_ids.new_bss_site_code()
+        site.bss_site_id = bss_ids.new_bss_site_id()
         site.save(update_fields=["bss_site_id"])
 
 

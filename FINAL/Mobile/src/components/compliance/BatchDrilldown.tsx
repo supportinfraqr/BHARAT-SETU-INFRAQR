@@ -6,8 +6,8 @@ import { CheckCircle2, Download, TriangleAlert, X } from 'lucide-react';
 type RegisterAudit = { status?:string; valid?:boolean; confidence?:number; summary?:string; findings?:string[]; matchedColumns?:string[]; missing?:string[]; issues?:string[]; providerLabel?:string; model?:string; message?:string };
 type DocRow = { purpose:string; form:string; frequency:string; mandatory:boolean; templateId:number | null; outputFormat?:string; audit?:RegisterAudit | null };
 type TemplateRow = { id:number; formCode:string; title:string; columns:number; hasFile:boolean; outputFormat?:string; audit?:RegisterAudit | null };
-type BatchSummary = { state:string; month:string; year:string; employees:number; site?:string; siteCode?:string; locations?:number; sites:Array<{ site:string; location:string; employees:number }> };
-type SiteDocs = { site:string; siteCode:string; state:string; documents:DocRow[]; templates:TemplateRow[] };
+type BatchSummary = { state:string; month:string; year:string; employees:number; site?:string; siteBssId?:string; locations?:number; sites:Array<{ site:string; location:string; employees:number }> };
+type SiteDocs = { site:string; siteBssId:string; state:string; documents:DocRow[]; templates:TemplateRow[] };
 
 function AuditBadge({ audit }: { audit?: RegisterAudit | null }) {
   const status = audit?.status;
@@ -40,7 +40,7 @@ export default function BatchDrilldown({ batchId, role, onClose }: { batchId:str
   // A batch is always generated for a single site, so there is nothing to pick
   // from a list — the site's documents are shown directly.
   const singleSite = !!summary && summary.sites.length === 1;
-  const siteLabel = summary ? [summary.site, summary.siteCode ? `(${summary.siteCode})` : ''].filter(Boolean).join(' ') : '';
+  const siteLabel = summary ? [summary.site, summary.siteBssId ? `(${summary.siteBssId})` : ''].filter(Boolean).join(' ') : '';
   const placeCount = summary ? (singleSite ? (summary.locations ?? 0) : summary.sites.length) : 0;
   const placeLabel = singleSite ? 'location(s)' : 'site(s)';
 
@@ -121,7 +121,7 @@ export default function BatchDrilldown({ batchId, role, onClose }: { batchId:str
       {site && <div className="space-y-4">
         <div className="rounded-xl border border-bss-border p-4">
           <div className="flex items-center justify-between gap-2 mb-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted">Applicable documents — {site.site}{site.siteCode ? ` (${site.siteCode})` : ''} · {site.state}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted">Applicable documents — {site.site}{site.siteBssId ? ` (${site.siteBssId})` : ''} · {site.state}</p>
           </div>
           {site.documents.length
             ? <ul className="space-y-1.5">{site.documents.map((doc, i) => <li key={i} className="flex items-center justify-between gap-3 rounded-lg border border-bss-border px-3 py-2 text-xs"><span className="text-bss-text-secondary">{doc.purpose}</span><span className="flex items-center gap-2 text-bss-text-muted">{doc.form}{doc.mandatory ? ' · mandatory' : ''}{doc.templateId ? <><AuditBadge audit={doc.audit}/><a href={`${base}/register/${doc.templateId}/${doc.outputFormat === 'xlsx' ? 'xlsx' : 'pdf'}`} className="text-bss-interactive-blue font-semibold hover:underline">{doc.outputFormat === 'xlsx' ? 'Download Excel' : 'Download PDF'}</a><a href={`${base}/register/${doc.templateId}/issues`} className="text-bss-error font-semibold hover:underline inline-flex items-center gap-1"><Download size={11}/>Issues</a></> : <span className="text-bss-text-muted">no template</span>}</span></li>)}</ul>

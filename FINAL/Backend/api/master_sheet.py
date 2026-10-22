@@ -66,7 +66,7 @@ MASTER_COLUMNS = [
     "Amount_ifpaid_section8", "Amountof_wages_Paid_section9", "Amountof_wages_Paidleave_section10", "Nominated_person",
     "Women_dies_Date_and_beneift_person", "if_mother_dies_child_survive_beneift", "Deduction_Incentive", "Holiday_List",
     "Holiday_Day", "Holiday_Date", "Earned_Statutory_Bonus", "Earned_Medical",
-    "Name_of_Employer", "SiteCode", "ComplianceCategory", "Years",
+    "Name_of_Employer", "SiteBSSId", "ComplianceCategory", "Years",
     "Insurance_No", "Payment_Date",
 ]
 
@@ -81,7 +81,7 @@ MASTER_KEY_OVERRIDES = {
     "Date_Of_Leaving": "dol",
     "Designation": "designation",
     "Department": "department",
-    "SiteCode": "site",
+    "SiteBSSId": "site",
     "Location": "location",
     "State": "state",
     "Name_of_Employer": "employer",
@@ -122,7 +122,7 @@ BACKEND_FIELDS = [
     ("contractor", "Contractor name"),
     ("employer", "Principal employer"),
     ("site", "Site name"),
-    ("siteCode", "Site code"),
+    ("siteBssId", "BSS site ID"),
     ("state", "State"),
     ("month", "Month"),
     ("year", "Year"),

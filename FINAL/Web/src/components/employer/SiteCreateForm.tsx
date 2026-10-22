@@ -384,13 +384,12 @@ const BOOLEAN_NAMES = new Set(
   SECTIONS.flatMap(s => s.fields).filter(f => f.type === 'checkbox').map(f => f.name)
 );
 
-export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial, existingCodes }: {
+export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial }: {
   busy: boolean;
   error: string;
   onSubmit: (payload: Record<string, unknown>) => void;
   onClose: () => void;
   initial?: Record<string, unknown> | null;
-  existingCodes?: string[];
 }) {
   const [geo, setGeo] = useState<SiteGeo | null>(() => initial && initial.latitude ? { lat: Number(initial.latitude), lng: Number(initial.longitude), label: 'Saved site location' } : null);
   const [location, setLocation] = useState(String(initial?.location ?? ''));
@@ -398,7 +397,6 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   const [jurisdiction, setJurisdiction] = useState<'state' | 'central'>(initial?.jurisdiction === 'central' ? 'central' : 'state');
   const [stateOpen, setStateOpen] = useState(false);
   const [name, setName] = useState(String(initial?.site_name ?? initial?.name ?? ''));
-  const [code, setCode] = useState(String(initial?.site_code ?? initial?.code ?? ''));
   const [startDate, setStartDate] = useState(String(initial?.site_start_date ?? ''));
   const [endDate, setEndDate] = useState(String(initial?.expected_end_date ?? ''));
   const [status, setStatus] = useState(String(initial?.site_status ?? 'Active'));
@@ -439,33 +437,11 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     if (place.state) setState(place.state);
   }
 
-  // Site code format: SITE-XXXXXXXX (8 chars, auto-generated and locked). Never
-  // reuses a code already in use (known codes here; the backend also guarantees
-  // global uniqueness on save).
-  function makeSiteCode() {
-    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    const taken = new Set((existingCodes ?? []).map(c => String(c).toUpperCase()));
-    for (let attempt = 0; attempt < 50; attempt += 1) {
-      let suffix = '';
-      for (let i = 0; i < 8; i += 1) suffix += alphabet[Math.floor(Math.random() * alphabet.length)];
-      const code = `SITE-${suffix}`;
-      if (!taken.has(code)) return code;
-    }
-    return `SITE-${Math.random().toString(36).slice(2, 10).toUpperCase().padEnd(8, '0').slice(0, 8)}`;
-  }
-
-  // Auto-fill the locked site code for a brand-new site.
-  useEffect(() => {
-    queueMicrotask(() => { if (!initial && !code) setCode(makeSiteCode()); });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- generate once on mount
-  }, []);
-
   // Mandatory = everything except the optional "Additional details" section.
   // The Register/Save button stays disabled until all are filled, and an empty
   // mandatory field shows a red border.
   const missing = {
     name: !name.trim(),
-    code: !code.trim(),
     location: !location.trim(),
     state: jurisdiction === 'state' && !state.trim(),
     startDate: !startDate,
@@ -482,7 +458,6 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     const payload: Record<string, unknown> = {};
     if (initial?.id !== undefined && initial.id !== null && initial.id !== '') payload.id = initial.id;
     payload.name = name.trim();
-    payload.code = code.trim().toUpperCase();
     payload.location = location.trim();
     payload.jurisdiction = jurisdiction;
     payload.state = jurisdiction === 'state' ? (state.trim() || geo?.state || '') : '';
@@ -534,11 +509,8 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
               <p className="text-[11px] text-bss-text-muted mt-1">{jurisdiction === 'central' ? 'Central — the site is governed centrally (not tied to a state); only Central CLRA templates apply.' : 'State — the site follows a single state’s statutory / CLRA templates.'}</p>
             </div>
             <label className="text-xs font-semibold text-bss-text-primary">Site name <span className="text-bss-error">*</span><input required value={name} onChange={e => setName(e.target.value)} className={fieldCls} /></label>
-            <label className="text-xs font-semibold text-bss-text-primary">Site code <span className="text-bss-error">*</span>
-              <div className="flex gap-2">
-                <input required readOnly value={code} title="Auto-generated site code (locked)" className={fieldCls + ' bg-bss-bg text-bss-text-muted cursor-not-allowed'} />
-                <button type="button" onClick={() => setCode(makeSiteCode())} title="Regenerate the site code" className="mt-1 h-10 px-3 rounded-lg border border-bss-border bg-bss-bg text-[11px] font-bold text-bss-text-primary hover:bg-bss-bg shrink-0">Auto</button>
-              </div>
+            <label className="text-xs font-semibold text-bss-text-primary">BSS Site ID
+              <input readOnly value={String(initial?.bss_site_id ?? initial?.bssId ?? 'Generated automatically on save')} title="BSS-generated site ID (locked)" className={fieldCls + ' bg-bss-bg text-bss-text-muted cursor-not-allowed'} />
             </label>
             <label className="text-xs font-semibold text-bss-text-primary">Site colour
               <div className="mt-1 flex items-center gap-3">

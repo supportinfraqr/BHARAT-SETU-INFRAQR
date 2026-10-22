@@ -41,7 +41,7 @@ function currentMonth() {
 
 export default function EmployerAttendancePage() {
   const { employer } = useEmployer();
-  const sites = employer.sites.map(site => ({ id: String(site.id), name: site.name, code: site.code }));
+  const sites = employer.sites.map(site => ({ id: String(site.id), name: site.name, bssId: site.bssId }));
 
   const [recMonth, setRecMonth] = useState(() => currentMonth());
   const [recSite, setRecSite] = useState('');
@@ -95,7 +95,7 @@ export default function EmployerAttendancePage() {
       <div className="p-5 space-y-4">
         <div className="grid sm:grid-cols-2 gap-3">
           <label className="text-xs font-semibold">Month<input type="month" value={recMonth} onChange={e => setRecMonth(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white"/></label>
-          <label className="text-xs font-semibold">Site<select value={recSite} onChange={e => setRecSite(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white"><option value="">All my sites</option>{sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` · ${s.code}` : ''}</option>)}</select></label>
+          <label className="text-xs font-semibold">Site<select value={recSite} onChange={e => setRecSite(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white"><option value="">All my sites</option>{sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.bssId ? ` · ${s.bssId}` : ''}</option>)}</select></label>
         </div>
         {recBusy && <p className="text-[11px] text-bss-text-muted">Loading attendance…</p>}
         <EnterpriseDataTable title="Attendance records" rows={recRows} columns={recColumns} rowKey={r => r.id} filename={`attendance-records-${recMonth}`} />

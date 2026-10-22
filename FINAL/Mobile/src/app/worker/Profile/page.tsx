@@ -1828,8 +1828,8 @@ export default function WorkerProfilePage() {
                     <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.name ?? worker.employment.site} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
-                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Site ID</label>
-                    <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.code} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
+                    <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">BSS Site ID</label>
+                    <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.bssId} className="w-full bg-[#F2F6FC] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-bss-text-primary" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">Site Location</label>

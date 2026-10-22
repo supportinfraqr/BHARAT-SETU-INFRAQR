@@ -56,7 +56,7 @@ def _worker_history_row(b):
                                     or (payloads._bss_employer_code(b.site.employer_id)
                                         if b.site and b.site.employer_id else "")),
         "site": payloads._d(b.site.site_name) if b.site else "",
-        "siteId": payloads._d(getattr(b.site, "site_code", "") if b.site else ""),
+        "siteBssId": payloads._d(getattr(b.site, "bss_site_id", "") if b.site else ""),
         "designation": payloads._d(b.designation),
         "department": payloads._d(b.department),
         "shift": payloads._d(b.shift),

@@ -95,7 +95,7 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
 
   return <div className="space-y-6">
     <Link href="/employer/sites" className="inline-flex items-center gap-1 text-xs font-semibold text-bss-interactive-blue hover:underline"><ArrowLeft size={14}/>Back to My Sites</Link>
-    <header><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{current.name}</h1><Status value={current.status}/></div><p className="font-mono text-xs text-bss-text-muted mt-1">{current.code}</p><p className="text-sm text-bss-text-secondary flex items-center gap-1 mt-2"><MapPin size={13}/>{current.location}{current.jurisdiction === 'central' ? ', Central' : (current.state ? `, ${current.state}` : '')}</p></div><div className="flex gap-2">
+    <header><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{current.name}</h1><Status value={current.status}/></div><p className="font-mono text-xs text-bss-text-muted mt-1">{current.bssId}</p><p className="text-sm text-bss-text-secondary flex items-center gap-1 mt-2"><MapPin size={13}/>{current.location}{current.jurisdiction === 'central' ? ', Central' : (current.state ? `, ${current.state}` : '')}</p></div><div className="flex gap-2">
       <button onClick={() => setQrOpen(true)} className="h-10 px-4 rounded-lg border border-bss-border text-bss-text-primary text-sm font-semibold flex items-center gap-2 hover:bg-bss-bg"><QrCode size={15}/>Site QR</button>
       {editing ? <><button onClick={() => setEditing(false)} className="h-10 px-4 rounded-lg border border-bss-border text-bss-text-primary text-sm font-semibold">Cancel</button><button onClick={saveInline} disabled={busy} className="h-10 px-4 rounded-lg bg-bss-navy text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-60"><Save size={15}/>{busy ? 'Saving…' : 'Save changes'}</button></> : <button onClick={startEdit} className="h-10 px-4 rounded-lg bg-bss-navy text-white text-sm font-semibold flex items-center gap-2"><Pencil size={15}/>Edit</button>}
       <button onClick={() => setConfirmDelete(true)} disabled={busy} className="h-10 px-4 rounded-lg border border-bss-border text-bss-error text-sm font-semibold flex items-center gap-2 hover:bg-bss-soft-orange"><Trash2 size={15}/>Delete</button>
@@ -108,14 +108,14 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
       {error && <p role="alert" className="mb-4 text-sm text-bss-error bg-bss-soft-orange border border-bss-border rounded-lg p-3">{error}</p>}
       <dl className="grid sm:grid-cols-2 gap-x-8 gap-y-5">{TAB_FIELDS[tab].map(name => {
         const def = FIELD_DEFS[name] ?? { label: LABELS[name] ?? name };
-        const isLockedCode = name === 'site_code';
+        const isLockedCode = name === 'bss_site_id';
         const isColour = name === 'assign_color';
-        const labelText = isLockedCode ? 'Site code' : (def.label ?? name);
+        const labelText = isLockedCode ? 'BSS Site ID' : (def.label ?? name);
         return <div key={name}>
           <dt className="text-[11px] uppercase font-semibold text-bss-text-muted">{labelText}{isLockedCode && editing ? <span className="ml-1 normal-case tracking-normal text-bss-text-muted">(locked)</span> : null}</dt>
           {editing ? (
             isLockedCode ? (
-              <input value={String(current.code ?? draft[name] ?? '')} readOnly disabled title="The site code cannot be changed" className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm bg-bss-bg text-bss-text-muted cursor-not-allowed"/>
+              <input value={String(current.bssId ?? draft[name] ?? '')} readOnly disabled title="The BSS site ID cannot be changed" className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm bg-bss-bg text-bss-text-muted cursor-not-allowed"/>
             ) : isColour ? (
               <div className="mt-1 flex items-center gap-3">
                 <input type="color" value={String(draft[name] || '#E45D24')} onChange={e => setDraft(d => ({ ...d, [name]: e.target.value }))} className="h-10 w-16 rounded-lg border border-bss-border bg-white p-1 cursor-pointer"/>
@@ -156,10 +156,10 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
         <div className="mt-8 pt-6 border-t border-bss-border">
           <p className="text-[11px] uppercase font-semibold text-bss-text-muted mb-3 flex items-center gap-1.5"><QrCode size={12}/>Site QR — contractors scan this to request binding</p>
           <div className="relative w-44 h-44 bg-white p-2 rounded-xl border border-bss-border">
-            <SiteQr siteToken={current.qrToken} siteCode={current.code} bssId={current.bssId} className="w-full h-full"/>
+            <SiteQr siteToken={current.qrToken} bssId={current.bssId} className="w-full h-full"/>
             <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="w-[38px] h-[38px] bg-white rounded-[7px] grid place-items-center shadow-sm"><img src="/bss-original-logo.png" alt="" className="w-[30px] h-[30px] object-contain"/></span></span>
           </div>
-          <p className="text-xs text-bss-text-muted mt-2 font-mono">{current.code}</p>
+          <p className="text-xs text-bss-text-muted mt-2 font-mono">{current.bssId}</p>
         </div>
       )}
 
@@ -198,7 +198,7 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
           </header>
           <div className="p-5">
             {current.qrToken
-              ? <SiteQrPanel siteToken={current.qrToken} siteCode={current.code} bssId={current.bssId} name={current.name}/>
+              ? <SiteQrPanel siteToken={current.qrToken} bssId={current.bssId} name={current.name}/>
               : <p className="text-sm text-bss-text-muted">This site has no QR token yet — save the site once to generate it.</p>}
           </div>
         </div>
@@ -212,8 +212,7 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
       description={`"${current.name}" and its site master details will be removed. This cannot be undone.`}
       details={[
         { label: 'Site', value: current.name },
-        { label: 'Site code', value: current.code },
-        { label: 'BSS ID', value: current.bssId ?? '—' },
+        { label: 'BSS Site ID', value: current.bssId ?? '—' },
       ]}
       confirmLabel="Delete site"
       busy={busy}

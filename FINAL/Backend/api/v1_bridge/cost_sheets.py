@@ -391,7 +391,7 @@ def cost_sheet_sites(request):
     if not _require_admin(request):
         return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
     rows = [{
-        "id": s.id, "name": payloads._d(s.site_name), "code": payloads._d(s.site_code),
+        "id": s.id, "name": payloads._d(s.site_name), "bssId": payloads._d(s.bss_site_id),
         "state": payloads._d(s.state),
         "employer": payloads._d(s.employer.username if s.employer else ""),
     } for s in Site.objects.select_related("employer").order_by("site_name")[:1000]]

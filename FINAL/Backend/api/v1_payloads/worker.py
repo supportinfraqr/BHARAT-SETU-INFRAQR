@@ -65,7 +65,7 @@ def _worker_employment_section(user, identity):
             "costSheet": "", "costSheetName": "", "offeredWage": 0, "ctc": 0, "costBreakdown": {},
             "contractorDetails": {"name": "", "code": "", "contact": "", "email": "", "lin": "", "state": "", "address": ""},
             "employerDetails": {"name": "", "code": "", "industry": "", "email": "", "lin": "", "state": "", "address": ""},
-            "siteDetails": {"name": "", "code": "", "location": "", "medicalOfficer": "", "officerContact": "", "state": "", "colour": ""},
+            "siteDetails": {"name": "", "bssId": "", "location": "", "medicalOfficer": "", "officerContact": "", "state": "", "colour": ""},
             "history": _worker_employment_history(user),
         }
     employer_name = ""
@@ -81,7 +81,7 @@ def _worker_employment_section(user, identity):
     contractor_lin = ""
 
     site_name = ""
-    site_code = ""
+    site_bss_id = ""
     site_location = ""
     medical_officer = ""
     officer_contact = ""
@@ -91,7 +91,7 @@ def _worker_employment_section(user, identity):
         if binding.site:
             site = binding.site
             site_name = site.site_name or ""
-            site_code = getattr(site, "site_code", "") or ""
+            site_bss_id = getattr(site, "bss_site_id", "") or ""
             site_location = getattr(site, "location", "") or ""
             medical_officer = getattr(site, "medical_officer", "") or ""
             officer_contact = getattr(site, "officer_contact", "") or ""
@@ -185,7 +185,7 @@ def _worker_employment_section(user, identity):
         },
         "siteDetails": {
             "name": site_name,
-            "code": site_code,
+            "bssId": site_bss_id,
             "location": site_location,
             "medicalOfficer": medical_officer,
             "officerContact": officer_contact,
@@ -1218,7 +1218,7 @@ def _worker_employment_history(user):
             "employerCode": _d(getattr(ep, "employer_code", "")
                                or (_bss_employer_code(b.site.employer_id) if b.site and b.site.employer_id else "")),
             "site": _d(b.site.site_name) if b.site else "",
-            "siteId": _d(getattr(b.site, "site_code", "") if b.site else ""),
+            "siteBssId": _d(getattr(b.site, "bss_site_id", "") if b.site else ""),
             "designation": _d(b.designation),
             "department": _d(b.department),
             "shift": _d(b.shift),

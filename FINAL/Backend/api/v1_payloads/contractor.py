@@ -155,7 +155,7 @@ def _contractor_sites(user):
     for s in sites:
         emp_name = _org_name(s.employer)
         rows.append({
-            "id": str(s.id), "code": _d(s.site_code), "name": _d(s.site_name),
+            "id": str(s.id), "name": _d(s.site_name),
             "bssId": _d(s.bss_site_id),
             "employer": emp_name, "location": _d(s.location) or _d(s.city),
             "state": _d(s.state),
@@ -185,7 +185,7 @@ def _contractor_pending_sites(user):
         if s is None:
             continue
         rows.append({
-            "id": str(s.id), "code": _d(s.site_code), "name": _d(s.site_name),
+            "id": str(s.id), "name": _d(s.site_name),
             "bssId": _d(s.bss_site_id),
             "employer": _org_name(s.employer),
             "location": _d(s.location) or _d(s.city),
@@ -236,7 +236,7 @@ def _contractor_workers(user):
             "bssId": _d(wi.bss_worker_id if wi else ""),
             "mobile": _d(wi.mobile_number if wi else ""),
             "siteColour": _d(getattr(b.site, "assign_color", "") or "") if b.site else "",
-            "siteCode": _d(getattr(b.site, "site_code", "") or "") if b.site else "",
+            "siteBssId": _d(getattr(b.site, "bss_site_id", "") or "") if b.site else "",
             "siteAddress": _d(getattr(b.site, "location", "") or "") if b.site else "",
             "site": site.site_name if site else "",
             "employer": _org_name(b.site.employer) if b.site else "",
@@ -491,7 +491,7 @@ def _contractor_employers(user):
         # the full detail rows so the contractor can see exactly what is allotted.
         v["sites"] = [_d(s.site_name) for s in site_rows]
         v["siteDetails"] = [{
-            "id": str(s.id), "name": _d(s.site_name), "code": _d(s.site_code),
+            "id": str(s.id), "name": _d(s.site_name), "bssId": _d(s.bss_site_id),
             "location": _d(s.location) or _d(s.city), "state": _d(s.state),
         } for s in site_rows]
         rows.append(v)
@@ -891,7 +891,7 @@ def _contractor_binding_requests(user):
             "allotments": [{
                 "siteId": a.site_id,
                 "site": a.site.site_name if a.site else "",
-                "siteCode": a.site.site_code if a.site else "",
+                "siteBssId": a.site.bss_site_id if a.site else "",
                 "status": {"PENDING": "Pending", "APPROVED": "Approved",
                            "REJECTED": "Rejected", "RELEASED": "Released"}.get(str(a.status).upper(), "Pending"),
                 "source": _d(a.source),
@@ -1037,7 +1037,7 @@ def _contractor_compliance_batch_row(b):
         "month": _d(b.month), "year": _d(b.year), "state": _d(b.state),
         "frequency": _d(b.frequency),
         "site": b.site.site_name if b.site else "",
-        "siteCode": b.site.site_code if b.site else "",
+        "siteBssId": b.site.bss_site_id if b.site else "",
         "employeeCount": b.employee_count, "locationCount": b.location_count,
         "generatedOn": _dts(b.generated_on) if b.generated_on else "",
         "generatedBy": _d(b.generated_by),
@@ -1374,7 +1374,7 @@ def build_contractor_portal(user):
     default_site = _default_site_info(getattr(user, "contractor_profile", None))
     if default_site is None or default_site["id"] not in allowed_site_ids:
         # The first allotted site is always the implicit default when none was chosen.
-        default_site = ({"id": str(sites[0]["id"]), "name": sites[0]["name"], "code": sites[0]["code"]}
+        default_site = ({"id": str(sites[0]["id"]), "name": sites[0]["name"], "bssId": sites[0]["bssId"]}
                         if sites else None)
     return {
         "identity": _contractor_identity(user),

@@ -17,7 +17,7 @@ export const tabs = [
 export type Tab = typeof tabs[number][0];
 
 export const TAB_FIELDS: Record<Tab, string[]> = {
-  basic: ['site_code', 'site_name', 'site_display_name', 'internal_location_code', 'parent_company', 'business_unit', 'division', 'department', 'cost_centre', 'profit_centre', 'project_code', 'erp_site_code', 'site_status', 'site_start_date', 'expected_end_date', 'actual_start_date', 'actual_completion_date', 'primary_industry', 'sub_industry', 'site_type', 'site_category', 'site_nature', 'assign_color'],
+  basic: ['bss_site_id', 'site_name', 'site_display_name', 'internal_location_code', 'parent_company', 'business_unit', 'division', 'department', 'cost_centre', 'profit_centre', 'project_code', 'erp_site_code', 'site_status', 'site_start_date', 'expected_end_date', 'actual_start_date', 'actual_completion_date', 'primary_industry', 'sub_industry', 'site_type', 'site_category', 'site_nature', 'assign_color'],
   address: ['country', 'tehsil_taluka', 'village', 'landmark', 'geo_fence_radius', 'location', 'state', 'district', 'city', 'pincode', 'latitude', 'longitude', 'labour_jurisdiction', 'labour_office', 'pf_office', 'esic_office', 'police_station', 'fire_department'],
   team: ['site_head', 'hr_head', 'admin_head', 'ehs_head', 'security_head', 'compliance_officer', 'payroll_spoc', 'contractor_management_spoc', 'medical_officer', 'emergency_coordinator', 'fire_safety_officer'],
   workforce: ['direct_employees', 'contract_workers', 'apprentices', 'trainees', 'interns', 'consultants', 'temporary_workers', 'casual_workers', 'daily_wage_workers', 'migrant_workers', 'interstate_migrant_workers', 'foreign_workers', 'gig_workers', 'women_workers', 'night_shift_workers', 'minimum_workforce', 'average_workforce', 'maximum_workforce'],

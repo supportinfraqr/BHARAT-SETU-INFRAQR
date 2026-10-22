@@ -86,7 +86,7 @@ export default function DocumentsModule() {
     const view: PortalView = {
       owner,
       workers: [workerLike],
-      sites: [{ name: employment.site, code: employment.siteDetails?.code, address: employment.siteDetails?.location }],
+      sites: [{ name: employment.site, bssId: employment.siteDetails?.bssId, address: employment.siteDetails?.location }],
       contractors: [{ name: employment.contractor, bssId: employment.contractorDetails?.code ?? '', address: employment.contractorDetails?.address }],
       employers: [{ name: employment.employer, bssId: employment.employerDetails?.code ?? '', address: employment.employerDetails?.address }],
     };

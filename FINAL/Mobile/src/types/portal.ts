@@ -65,13 +65,13 @@ export type WorkerRecord = {
     costBreakdown?: CostBreakdown;
     contractorDetails?: { name: string; code: string; contact: string; email: string; lin: string; state?: string; address?: string };
     employerDetails?: { name: string; code: string; industry: string; email: string; lin: string; state?: string; address?: string };
-    siteDetails?: { name: string; code: string; location: string; medicalOfficer: string; officerContact: string; state?: string; colour?: string };
+    siteDetails?: { name: string; bssId: string; location: string; medicalOfficer: string; officerContact: string; state?: string; colour?: string };
     /** Completed engagements (accepted, ended or site-changed) with their issued letters. */
     history?: Array<{
       id: number; ref: string;
       contractor: string; contractorCode: string;
       employer: string; employerCode: string;
-      site: string; siteId: string;
+      site: string; siteBssId: string;
       designation: string; department: string; shift: string; wage: number;
       startDate: string; endDate: string; status: string; current: boolean;
       durationDays?: number; durationLabel?: string; sequence?: number;
@@ -161,7 +161,7 @@ export type WorkerRecord = {
 export type ContractorWorker = {
   id: string; name: string; bssId: string; mobile: string; site: string; employer: string;
   /** The underlying worker↔contractor binding and its site (for moving a worker). */
-  bindingId?: number; siteId?: string; siteColour?: string; siteCode?: string;
+  bindingId?: number; siteId?: string; siteColour?: string; siteBssId?: string;
   idCardIssueDate?: string; idCardValidityTill?: string;
   /** Latest dispatched gate pass (present only once the employer dispatches it). */
   gatePass?: { id: number; number: string; type: string; validFrom: string; validTo: string; status: string; blocked?: boolean; branding?: { companyName?: string; logoUrl?: string; header?: string } } | null;
@@ -262,7 +262,7 @@ export type ContractorBindingRequest = {
 };
 
 export type SiteAllotment = {
-  siteId: number; site: string; siteCode: string;
+  siteId: number; site: string; siteBssId: string;
   status: 'Pending' | 'Approved' | 'Rejected' | 'Released'; source: string;
   releaseRequested?: boolean; releaseRequestedBy?: string;
   /** Persisted successor contractor chosen for this site (survives refresh). */
@@ -280,7 +280,7 @@ export type ContractorRegister = {
 export type BatchVersionEntry = { id: string; version: number; status: string; generatedOn?: string; generatedBy?: string; isCurrent: boolean; hasFile?: boolean; auditStatus?: string };
 
 export type ContractorComplianceBatch = {
-  id: string; financialYear: string; month: string; year: string; state: string; site: string; siteCode: string; frequency?: string; employeeCount: number; locationCount: number; generatedOn: string; generatedBy: string; status: 'Generated' | 'Pending' | 'Submitted' | 'Verified' | 'Returned' | 'Rejected' | 'Failed';
+  id: string; financialYear: string; month: string; year: string; state: string; site: string; siteBssId: string; frequency?: string; employeeCount: number; locationCount: number; generatedOn: string; generatedBy: string; status: 'Generated' | 'Pending' | 'Submitted' | 'Verified' | 'Returned' | 'Rejected' | 'Failed';
   rowsCount?: number; hasFile?: boolean; notes?: string; registerCount?: number; auditStatus?: 'pending' | 'passed' | 'failed' | 'review' | 'unavailable'; reviewNote?: string;
   version?: number; isCurrent?: boolean; versions?: BatchVersionEntry[];
 };
@@ -377,15 +377,15 @@ export type ContractorPortalData = {
   identity: { name: string; company: string; photoUrl?: string; bssId: string; incorpDate: string; entity: string; verified: boolean; rating: number; memberSince?: string; contact: string; email: string; accountStatus?: string; cardIssueDate?: string; cardValidTill?: string };
   stats: { totalWorkers: number; activeSites: number; complianceScore: number; pendingAlerts: number };
   principalEmployer: { name: string; code: string; industry: string; email: string; lin: string };
-  sites: Array<{ id: string; code: string; name: string; employer: string; location: string; workers: number; compliance: number | null; bssId?: string; state?: string; status?: string; boundSince?: string; documents?: SiteDocs; data?: Record<string, unknown> }>;
-  pendingSites?: Array<{ id: string; code: string; name: string; employer: string; location: string; state: string; source: string }>;
-  defaultSite?: { id: string; name: string; code: string } | null;
+  sites: Array<{ id: string; bssId: string; name: string; employer: string; location: string; workers: number; compliance: number | null; state?: string; status?: string; boundSince?: string; documents?: SiteDocs; data?: Record<string, unknown> }>;
+  pendingSites?: Array<{ id: string; bssId: string; name: string; employer: string; location: string; state: string; source: string }>;
+  defaultSite?: { id: string; name: string; bssId: string } | null;
   workers: ContractorWorker[];
   compliances: Array<{ id: string; item: string; category: string; reference: string; employer: string; site: string; worker: string | null; issue: string; expiry: string; verification: 'Verified' | 'Pending' | 'Rejected'; status: 'Active' | 'Expiring' | 'Expired' }>;
   gatePasses: Array<{ id: string; workerName: string; workerId: string; employer: string; type: 'Temporary' | 'Permanent' | 'Not eligible'; site: string; validFrom: string; validTo: string; status: 'Approved' | 'Pending' | 'Rejected' | 'Blocked' | 'Not eligible'; contact?: string; skill?: string; requestedAt?: string; requestedBy?: string; approvedBy?: string; approvedAt?: string; auto?: boolean; number?: string; blocked?: boolean; eligible?: boolean; missing?: string[]; eligibility?: GatePassEligibility; branding?: { companyName?: string; logoUrl?: string; header?: string } }>;
   applications: Array<{ id: string; workerName: string; workerId: string; employer: string; trade: string; experience: string; expectedWage: number; location: string; status: 'Pending' | 'Shortlisted' | 'Hired' | 'Rejected'; dateApplied: string; matchScore: number }>;
   availableWorkers: Array<{ id: number; workerName: string; workerId: string; trade: string; skills: string[]; experience: string; expectedWage: number; location: string; status: string; dateApplied: string; matchScore: number }>;
-  employers: Array<{ id: string; name: string; employerId: string; code?: string; industry?: string; email?: string; lin?: string; sites: string[]; siteDetails?: Array<{ id: string; name: string; code: string; location: string; state: string }>; status: 'Active' | 'Inactive'; boundSince: string }>;
+  employers: Array<{ id: string; name: string; employerId: string; code?: string; industry?: string; email?: string; lin?: string; sites: string[]; siteDetails?: Array<{ id: string; name: string; bssId: string; location: string; state: string }>; status: 'Active' | 'Inactive'; boundSince: string }>;
   submissions: {
     documents: Array<{ id: string; uniqueNo?: string; type: string; employer: string; site: string; state?: string; financialYear?: string; month?: string; location?: string; documentType?: string; period: string; status: string; submittedAt: string; updatedAt?: string; daysLeft?: number; mandatory?: boolean; frequency?: string; accuracy?: number; aiStatus?: string; checkpoints?: Array<{ key?: string; label?: string; required?: boolean; passed?: boolean; detail?: string }>; findings?: string[]; source?: string; fileName?: string; checksum?: string }>;
   };
@@ -465,7 +465,7 @@ export type GlobalAuditReport = {
 
 export type EmployerSite = {
   id: string;
-  code: string;
+  bssId: string;
   name: string;
   location: string;
   state: string;
@@ -478,7 +478,6 @@ export type EmployerSite = {
   pastContractors?: Array<{ id: string; name: string; bssId: string; status: string; endedAt: string }>;
   compliance: number;
   qrToken?: string;
-  bssId?: string;
   /** State-wise letter templates selected for this site (admin-owned). */
   appointmentLetterTemplateId?: number | null;
   experienceLetterTemplateId?: number | null;
@@ -543,7 +542,7 @@ export type EmployerSubmission = {
   hasFile?: boolean;
   registerCount?: number;
   formCount?: number;
-  batches?: Array<{ id:string; site:string; siteCode:string; month:string; year:string; state?:string; employeeCount:number; registerCount?:number; auditStatus?:string; hasFile?:boolean; status?:string; version?:number; isCurrent?:boolean; versions?:BatchVersionEntry[] }>;
+  batches?: Array<{ id:string; site:string; siteBssId:string; month:string; year:string; state?:string; employeeCount:number; registerCount?:number; auditStatus?:string; hasFile?:boolean; status?:string; version?:number; isCurrent?:boolean; versions?:BatchVersionEntry[] }>;
   forms?: Array<{ id:string; name:string; status:string; aiStatus?:string; checkpoints?:Array<{ key?:string; label?:string; required?:boolean; passed?:boolean; detail?:string }>; findings?:string[] }>;
 };
 
@@ -623,7 +622,7 @@ export type EmployerWorker = {
   contractor: string;
   siteId: string;
   siteColour?: string;
-  siteCode?: string;
+  siteBssId?: string;
   idCardIssueDate?: string;
   idCardValidityTill?: string;
   siteAddress?: string; campNo?: string; routeBusNo?: string; uan?: string; esic?: string;
@@ -717,7 +716,7 @@ export type EmployerPortalData = {
     pendingApprovals: number;
   };
   sites: EmployerSite[];
-  defaultSite?: { id: string; name: string; code: string } | null;
+  defaultSite?: { id: string; name: string; bssId: string } | null;
   contractors: EmployerContractor[];
   workers: EmployerWorker[];
   grievances: ContractorGrievance[];

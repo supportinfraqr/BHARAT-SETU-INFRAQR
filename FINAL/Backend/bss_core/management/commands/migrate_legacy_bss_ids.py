@@ -34,12 +34,12 @@ TARGETS = [
     ("contractor", "ContractorProfile", "contractor_code", "new_bss_contractor_code"),
     ("employer", "EmployerProfile", "employer_code", "new_bss_employer_code"),
     ("worker", "WorkerIdentity", "bss_worker_id", "new_bss_worker_id"),
-    ("site", "Site", "bss_site_id", "new_bss_site_code"),
+    ("site", "Site", "bss_site_id", "new_bss_site_id"),
 ]
 
 
 class Command(BaseCommand):
-    help = "Report (and with --apply, fix) BSS codes still using a legacy format."
+    help = "Report (and with --apply, fix) BSS IDs still using a legacy format."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -101,7 +101,7 @@ class Command(BaseCommand):
 
         if not rows:
             self.stdout.write(self.style.SUCCESS(
-                "No legacy BSS codes found — nothing to do."))
+                "No legacy BSS IDs found — nothing to do."))
             return
 
         self.stdout.write(self.style.WARNING(

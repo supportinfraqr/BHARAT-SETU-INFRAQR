@@ -82,7 +82,7 @@ function renderActivation() {
       const data = await api('/api/activate/verify-otp', { method: 'POST', body: JSON.stringify({ phone: qs('phone').value.trim(), otp: qs('otp').value.trim() }) });
       activationToken = data.activationToken;
       const select = qs('siteSelect');
-      select.innerHTML = '<option value="">Select site</option>' + (data.sites || []).map(site => `<option value="${site.id}">${esc(site.name)}${site.code ? ` · ${esc(site.code)}` : ''}</option>`).join('');
+      select.innerHTML = '<option value="">Select site</option>' + (data.sites || []).map(site => `<option value="${esc(site.bssId)}">${esc(site.name)}${site.bssId ? ` · ${esc(site.bssId)}` : ''}</option>`).join('');
       qs('siteStep').classList.remove('hidden');
       showMessage('activationMsg', 'OTP verified. Select the site.', true);
     } catch (error) { showMessage('activationMsg', error.message); }
@@ -153,7 +153,7 @@ function render() {
   qs('app').innerHTML = `
     <div class="dashboard">
       <section class="card summary">
-        <div><h2>${esc(state.site?.name || 'Attendance site')}</h2><p class="muted">${esc(state.site?.code || '')} · ${esc(state.faceModel?.model || '')} ${esc(state.faceModel?.version || '')}</p></div>
+        <div><h2>${esc(state.site?.name || 'Attendance site')}</h2><p class="muted">${esc(state.site?.bssId || '')} · ${esc(state.faceModel?.model || '')} ${esc(state.faceModel?.version || '')}</p></div>
         <div class="meta">
           <div>Heartbeat<b>${esc(when(state.lastHeartbeatAt))}</b></div>
           <div>Pending events<b>${esc(state.outbox ?? 0)}</b></div>

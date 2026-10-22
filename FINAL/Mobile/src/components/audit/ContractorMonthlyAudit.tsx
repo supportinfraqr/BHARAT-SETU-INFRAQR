@@ -8,7 +8,7 @@ export default function ContractorMonthlyAudit() {
   return <MonthlyAudit
     role="contractor"
     listEndpoint="/api/contractor/audit-jobs"
-    sites={contractor.sites.map(s => ({ id: s.id, name: s.name, code: s.code }))}
+    sites={contractor.sites.map(s => ({ id: s.id, name: s.name, bssId: s.bssId }))}
     defaultSiteId={contractor.defaultSite?.id}
   />;
 }

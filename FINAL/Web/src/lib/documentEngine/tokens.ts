@@ -41,7 +41,7 @@ export const TOKEN_DEFS: TokenDef[] = [
   { key: 'employer.authorizedSignatory', label: 'Authorized Signatory', category: 'Employer', locked: true },
   // Site
   { key: 'site.name', label: 'Site Name', category: 'Site', required: true, locked: true },
-  { key: 'site.code', label: 'Site Code', category: 'Site', locked: true },
+  { key: 'site.bssId', label: 'BSS Site ID', category: 'Site', locked: true },
   { key: 'site.address', label: 'Site Address / Location', category: 'Site', locked: true },
   { key: 'site.state', label: 'Site State', category: 'Site', locked: true },
   { key: 'site.department', label: 'Site Department', category: 'Site', locked: true },

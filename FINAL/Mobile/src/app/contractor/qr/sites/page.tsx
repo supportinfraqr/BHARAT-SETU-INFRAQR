@@ -64,7 +64,7 @@ export default function ContractorQrSitesPage() {
                   <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-bss-orange bg-bss-soft-orange px-2 py-1 rounded-full">Pending approval</span>
                 </div>
                 <h2 className="font-semibold text-bss-text-primary mt-4">{site.name}</h2>
-                <p className="font-mono text-[11px] text-bss-text-muted mt-1">{site.code}</p>
+                <p className="font-mono text-[11px] text-bss-text-muted mt-1">{site.bssId}</p>
                 <p className="text-xs text-bss-text-secondary flex items-center gap-1 mt-3"><MapPin size={12} />{site.location || '—'}</p>
                 <p className="text-xs text-bss-text-secondary mt-1.5">Principal employer: <span className="font-semibold text-bss-text-primary">{site.employer || '—'}</span></p>
                 <Link href="/contractor/qr/requests" className="mt-4 h-10 rounded-lg bg-bss-interactive-blue text-white text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-bss-deep-navy shadow-sm">Review &amp; approve</Link>
@@ -86,7 +86,7 @@ export default function ContractorQrSitesPage() {
                     {isDefault && <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-bss-orange bg-bss-soft-orange px-2 py-1 rounded-full"><Star size={11} />Default</span>}
                   </div>
                   <h2 className="font-semibold text-bss-text-primary mt-4">{site.name}</h2>
-                  <p className="font-mono text-[11px] text-bss-text-muted mt-1">{site.code}</p>
+                  <p className="font-mono text-[11px] text-bss-text-muted mt-1">{site.bssId}</p>
                   <p className="text-xs text-bss-text-secondary flex items-center gap-1 mt-3"><MapPin size={12} />{site.location || '—'}</p>
                   <p className="text-xs text-bss-text-secondary mt-1.5">Principal employer: <span className="font-semibold text-bss-text-primary">{site.employer || '—'}</span></p>
                 </div>

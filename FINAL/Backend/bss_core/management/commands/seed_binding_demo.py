@@ -86,7 +86,7 @@ class Command(BaseCommand):
                 alloc.status = "APPROVED"
                 alloc.approved_at = alloc.approved_at or timezone.now()
                 alloc.save()
-            self.stdout.write(f"  allotted: {site.site_code} {site.site_name} [{alloc.status}]")
+            self.stdout.write(f"  allotted: {site.bss_site_id} {site.site_name} [{alloc.status}]")
 
         demo = [s for s in sites if "demo" in s.site_name.lower()]
         # Spread workers over the first two demo sites so the contractor has

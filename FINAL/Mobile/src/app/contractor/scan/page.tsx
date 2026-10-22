@@ -11,7 +11,7 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { playScanBeep, primeAudio } from "@/lib/scanFeedback";
 import { createQrReader, QR_VIDEO_CONSTRAINTS, applyContinuousFocus, decodeQrFromImageFile } from "@/lib/qrScanner";
 
-type Payload = { v: number; type: "BSS_WORKER" | "BSS_CONTRACTOR" | "BSS_EMPLOYER" | "BSS_SITE"; bssId?: string; siteToken?: string; siteCode?: string; issuer: string };
+type Payload = { v: number; type: "BSS_WORKER" | "BSS_CONTRACTOR" | "BSS_EMPLOYER" | "BSS_SITE"; bssId?: string; siteToken?: string; issuer: string };
 
 type ScannedEntity = { kind: 'worker' | 'employer'; bssId: string; name: string; employer: string; site: string; designation: string };
 
@@ -132,7 +132,7 @@ export default function ContractorScanPage() {
       const bssId = p.bssId ?? "";
       const sentHere = sentBssIds.includes(bssId);
       if (p.type === "BSS_SITE") {
-        setEntity({ kind: 'employer', bssId: p.bssId ?? '', name: `Site ${p.siteCode ?? ''}`.trim(), employer: 'Principal Employer', site: p.siteCode ?? '', designation: 'Site binding' });
+        setEntity({ kind: 'employer', bssId: p.bssId ?? '', name: `Site ${p.bssId ?? ''}`.trim(), employer: 'Principal Employer', site: p.bssId ?? '', designation: 'Site binding' });
         setRequestSent(false);
         setAlreadyPending(sentHere);
         setState("binding");
@@ -531,7 +531,7 @@ export default function ContractorScanPage() {
       details={entity ? [
         { label: entity.kind === 'worker' ? 'Worker' : scanned?.type === 'BSS_SITE' ? 'Site' : 'Employer', value: entity.name },
         ...(entity.bssId ? [{ label: 'BSS ID', value: entity.bssId }] : []),
-        { label: scanned?.type === 'BSS_SITE' ? 'Site code' : 'Site', value: (entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site) || '—' },
+        { label: scanned?.type === 'BSS_SITE' ? 'BSS Site ID' : 'Site', value: (entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site) || '—' },
         { label: 'Designation', value: entity.designation || '—' },
         ...(entity.kind === 'worker' && wageMode === 'sheet' && costSheetId
           ? [{ label: 'Cost sheet', value: availableCostSheets.find(s => String(s.id) === costSheetId)?.name ?? 'Selected cost sheet' }]

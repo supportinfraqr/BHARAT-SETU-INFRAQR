@@ -218,7 +218,7 @@ export default function EmployerQrBindingRequestsPage() {
       rows={(allotFor?.allotments ?? []).map(a => ({
         siteId: a.siteId,
         name: a.site,
-        code: a.siteCode,
+        bssId: a.siteBssId,
         status: a.status as SitePermissionStatus,
         source: a.source,
         isDefault: employer.defaultSite?.id === String(a.siteId),
@@ -236,7 +236,7 @@ export default function EmployerQrBindingRequestsPage() {
       }))}
       proposeableSites={allotFor ? employer.sites
         .filter(site => !(allotFor.allotments ?? []).some(a => a.siteId === Number(site.id)))
-        .map(site => ({ siteId: Number(site.id), name: site.name, code: site.code })) : []}
+        .map(site => ({ siteId: Number(site.id), name: site.name, bssId: site.bssId })) : []}
       busy={busy}
       note={!employer.defaultSite ? 'No default site set — propose a site for this binding, or set a default in Sites.' : undefined}
       onClose={() => { setAllotFor(null); setError(''); }}

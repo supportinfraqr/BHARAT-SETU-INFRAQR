@@ -542,13 +542,10 @@ class Command(BaseCommand):
 
         def _site_for(employer, code, name, location, state, city):
             site, _ = Site.objects.get_or_create(
-                site_code=code,
-                defaults={"employer": employer, "site_name": name, "location": location,
-                          "state": state, "city": city, "site_qr_token": str(uuid.uuid4())},
+                employer=employer, site_name=name,
+                defaults={"location": location, "state": state, "city": city,
+                          "site_qr_token": str(uuid.uuid4())},
             )
-            if site.employer_id != employer.id:
-                site.employer = employer
-                site.save(update_fields=["employer"])
             return site
 
         def _accept_contractor(contractor, employer, site):
@@ -594,7 +591,7 @@ class Command(BaseCommand):
                 pass
             return b
 
-        # (employer, contractor, site_code, site_name, location, state, city, workers)
+        # (employer, contractor, demo key, site_name, location, state, city, workers)
         DEMO_NETWORK = [
             ("7777777777", "4444444444", "DEMO-SITE-001", "Demo Metro Site",
              "Sector 21, Navi Mumbai", "Maharashtra", "Mumbai", ["1111111111", "2222222222"]),
@@ -620,7 +617,7 @@ class Command(BaseCommand):
                     _accept_worker(worker, contractor, site, designation="Mason",
                                    department="Civil Works", shift="Day", offered_wage=21000)
             self.stdout.write(
-                f"network   {employer.username} <-> {contractor.username} @ {site.site_code} "
+                f"network   {employer.username} <-> {contractor.username} @ {site.bss_site_id} "
                 f"({len(worker_phones)} worker(s))")
 
         # --- Site-level statutory profile: drive the per-site "Compliance &
@@ -697,13 +694,13 @@ class Command(BaseCommand):
         # by hand in the running DB) still gets the statutory profile so its
         # Compliance & Statutory tab isn't empty.
         demo_ids = [u.pk for u in map(_user, ("contractor_4444444444", "contractor_5555555555")) if u]
-        handled_codes = set(SITE_COMPLIANCE)
+        handled_site_ids = {s.id for s in demo_sites.values()}
         for a in (ContractorSiteAllotment.objects
                   .filter(status="APPROVED", binding__binding_status="ACCEPTED",
                           binding__contractor_id__in=demo_ids)
                   .select_related("site", "binding__contractor")):
             site = a.site
-            if site.site_code in handled_codes:
+            if site.id in handled_site_ids:
                 continue
             for key, value in site_compliance_extra.items():
                 if key == "applicable_state" and (site.state or "").strip():
@@ -720,7 +717,7 @@ class Command(BaseCommand):
         from decimal import Decimal as _Decimal
 
         def _seed_evidence(contractor, site, employer_name, docs, month="October"):
-            tag = f"SEED-{(site.site_code or 'X').upper()}-"
+            tag = f"SEED-{(site.bss_site_id or 'X').upper()}-"
             _Evidence.objects.filter(user=contractor, unique_no__startswith=tag).delete()
             for i, (doc_type, document_type, status) in enumerate(docs, start=1):
                 _Evidence.objects.create(

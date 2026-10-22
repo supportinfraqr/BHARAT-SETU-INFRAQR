@@ -6,7 +6,7 @@ import { Camera, Loader2, RefreshCw, Search } from 'lucide-react';
 type Row = {
   id: number;
   name: string;
-  code: string;
+  bssId: string;
   employer: string;
   maxCameras: number;
   cameraCount: number;
@@ -40,7 +40,7 @@ export default function SitesCctvPage() {
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     if (!term) return rows;
-    return rows.filter(r => `${r.name} ${r.code} ${r.employer}`.toLowerCase().includes(term));
+    return rows.filter(r => `${r.name} ${r.bssId} ${r.employer}`.toLowerCase().includes(term));
   }, [rows, q]);
 
   async function save(r: Row) {
@@ -79,7 +79,7 @@ export default function SitesCctvPage() {
 
       <label className="relative inline-block">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-bss-text-muted"/>
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search site, code or employer" className="h-10 w-80 rounded-lg border border-bss-border pl-9 pr-3 text-sm bg-white"/>
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search site, BSS ID or employer" className="h-10 w-80 rounded-lg border border-bss-border pl-9 pr-3 text-sm bg-white"/>
       </label>
 
       {loading && !rows.length
@@ -101,7 +101,7 @@ export default function SitesCctvPage() {
                     const value = draft[r.id] ?? r.maxCameras;
                     const dirty = value !== r.maxCameras;
                     return <tr key={r.id} className="hover:bg-bss-bg/60">
-                      <td className="px-4 py-3"><strong className="text-bss-text-primary">{r.name}</strong><p className="font-mono text-[10px] text-bss-text-muted mt-0.5">{r.code}</p></td>
+                      <td className="px-4 py-3"><strong className="text-bss-text-primary">{r.name}</strong><p className="font-mono text-[10px] text-bss-text-muted mt-0.5">{r.bssId}</p></td>
                       <td className="px-4 py-3 text-bss-text-secondary">{r.employer || '—'}</td>
                       <td className="px-4 py-3 text-bss-text-secondary">{r.cameraCount}</td>
                       <td className="px-4 py-3">

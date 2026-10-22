@@ -23,7 +23,7 @@ export function useContractorDocView(): { owner: OwnerScope; view: PortalView; w
     const view: PortalView = {
       owner,
       workers,
-      sites: contractor.sites.map(site => ({ id: site.id, code: site.code, name: site.name, location: site.location, state: site.location.includes(',') ? site.location.split(',').pop()?.trim() : '', employer: site.employer })),
+      sites: contractor.sites.map(site => ({ id: site.id, bssId: site.bssId, name: site.name, location: site.location, state: site.location.includes(',') ? site.location.split(',').pop()?.trim() : '', employer: site.employer })),
       contractors: [self],
       employers,
       payroll: contractor.payroll?.records?.map(record => ({ workerId: record.workerId, workerName: record.workerName, employer: record.employer, site: record.site, period: record.period, netPay: record.netPay, gross: record.gross, earnings: record.earnings })) ?? [],
@@ -53,7 +53,7 @@ export function useEmployerDocView(): { owner: OwnerScope; view: PortalView; wor
     const view: PortalView = {
       owner,
       workers,
-      sites: employer.sites.map(site => ({ id: site.id, code: site.code, name: site.name, location: site.location, state: site.state, address: site.details?.address?.address, department: site.details?.address?.district, medicalOfficer: site.details?.contacts?.find(contact => /medical/i.test(contact.label))?.value, employer: employer.identity.company })),
+      sites: employer.sites.map(site => ({ id: site.id, bssId: site.bssId, name: site.name, location: site.location, state: site.state, address: site.details?.address?.address, department: site.details?.address?.district, medicalOfficer: site.details?.contacts?.find(contact => /medical/i.test(contact.label))?.value, employer: employer.identity.company })),
       contractors: employer.contractors.map(item => ({ id: item.id, name: item.name, bssId: item.bssId, contact: item.contact, signatory: item.name })),
       employers: [self],
       payroll: employer.payroll?.records?.map(record => ({ workerId: record.workerId, workerName: record.workerName, employer: record.employer, site: record.site, period: record.period, netPay: record.netPay, gross: record.gross, earnings: record.earnings })) ?? [],
