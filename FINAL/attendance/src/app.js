@@ -30,15 +30,16 @@ function when(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 'Never' : date.toLocaleString();
 }
-function claimLabel(camera) {
-  if (camera.claimedByThisDevice) return 'Claimed by this device';
-  if (camera.claimStatus === 'CLAIMED_BY_OTHER') return `Claimed by ${camera.claimedByDeviceName || 'another device'}`;
-  return 'Not claimed';
+function approvalLabel(camera) {
+  if (camera.approvalStatus === 'PENDING') return 'Waiting for employer approval';
+  if (camera.approvalStatus === 'APPROVED') return camera.cameraOnline ? 'Approved · online' : 'Approved';
+  return 'Removed by employer';
 }
 function statusPill(camera) {
-  if (camera.status === 'ONLINE') return '<span class="pill ok">Online</span>';
+  if (camera.approvalStatus === 'PENDING') return '<span class="pill warn">Pending approval</span>';
+  if (camera.status === 'ONLINE') return '<span class="pill ok">Live</span>';
   if (camera.status === 'NO_RTSP') return '<span class="pill warn">No RTSP</span>';
-  if (camera.status === 'AUTH_FAILED') return '<span class="pill bad">Re-claim needed</span>';
+  if (camera.status === 'AUTH_FAILED') return '<span class="pill bad">Reconnect needed</span>';
   return `<span class="pill ${camera.status === 'RECONNECTING' ? 'warn' : 'muted'}">${esc(camera.status || 'Unknown')}</span>`;
 }
 function showMessage(id, text, ok = false) {
@@ -230,23 +231,23 @@ function renderActivation() {
 function cameraCard(camera) {
   const id = camera.cameraId;
   const canPreview = camera.rtspConfigured;
-  const claim = camera.claimedByThisDevice;
-  const takeover = camera.claimStatus === 'CLAIMED_BY_OTHER';
+  const approved = camera.approvalStatus === 'APPROVED';
   return `<section class="card cam" data-camera="${id}">
     <div class="cam-head">
       <div class="cam-title"><h3>${esc(camera.label)}</h3>${statusPill(camera)}</div>
-      <span class="pill ${camera.claimedByThisDevice ? 'ok' : takeover ? 'warn' : 'muted'}">${esc(claimLabel(camera))}</span>
+      <span class="pill ${approved ? 'ok' : 'warn'}">${esc(approvalLabel(camera))}</span>
     </div>
     ${canPreview ? `<img class="feed" src="${BASE}/stream/${id}?t=${Date.now()}" alt="${esc(camera.label)} live view" />` : `<div class="feed" style="display:grid;place-items:center;color:#94A3B8;font-size:12px">RTSP not configured</div>`}
     <div class="cam-body">
       <div class="cam-info">
         <div>Camera ID<b class="mono">${esc(camera.uid || '—')}</b></div>
         <div>BSS Site ID<b>${esc(camera.siteBssId || '—')}</b></div>
-        <div>Allowed IP<b>${esc(camera.allowedIp || 'Not set in BSS')}</b></div>
+        <div>Timezone<b>IST (UTC+05:30)</b></div>
+        <div>Allowed IP<b>${esc(camera.allowedIp || 'Not set by employer')}</b></div>
         <div>Schedule<b>${esc(camera.schedule || '24/7')}</b></div>
         <div>FPS<b>${esc(camera.fps ?? 0)}</b></div>
         <div>Last event<b>${esc(when(camera.lastEventAt))}</b></div>
-        <div>Mode<b>${esc(camera.sendAllowed ? 'Sending allowed' : 'Live only')}</b></div>
+        <div>Mode<b>${esc(approved ? (camera.sendAllowed ? 'Attendance active' : 'Waiting') : 'Pending approval')}</b></div>
       </div>
       <div class="rtsp-row">
         <div><label>Channel<input id="channel-${id}" inputmode="numeric" value="${esc(camera.channel ?? '')}" placeholder="1" /></label></div>
@@ -258,26 +259,34 @@ function cameraCard(camera) {
         <button id="testRtsp-${id}" class="btn" type="button">Test</button>
       </div>
       <p id="testMsg-${id}" class="note"></p>
-      ${claim ? `
+      ${approved ? `
         <div class="cam-controls">
           <div><label>Mode<select id="mode-${id}">
             <option value="LIVE" ${camera.mode !== 'SENDING' ? 'selected' : ''}>Live only</option>
-            <option value="SENDING" ${camera.mode === 'SENDING' ? 'selected' : ''} ${camera.sendAllowed ? '' : 'disabled'}>Send data</option>
+            <option value="SENDING" ${camera.mode === 'SENDING' ? 'selected' : ''} ${camera.sendAllowed ? '' : 'disabled'}>Send attendance</option>
           </select></label></div>
           <button id="applyMode-${id}" class="btn primary" type="button">Apply mode</button>
         </div>
         <p class="note">${camera.sendBlockedReason ? `<span class="blocked">${esc(camera.sendBlockedReason)}</span>` : 'Ready inside the capture window.'}</p>
       ` : `
-        <div class="row">
-          ${takeover ? `<button id="takeover-${id}" class="btn primary" type="button">Take over camera</button>
-            <input id="takeoverOtp-${id}" class="hidden" inputmode="numeric" placeholder="Employer OTP" style="max-width:220px" />
-            <button id="takeoverConfirm-${id}" class="btn hidden" type="button">Confirm takeover</button>`
-            : `<button id="claim-${id}" class="btn primary" type="button" ${camera.canClaim ? '' : 'disabled'}>Claim camera</button>`}
-          <span class="note">${camera.allowedIp ? 'Claim after testing the local RTSP feed.' : 'The employer must set the allowed IP before claiming.'}</span>
-        </div>
+        <p class="note">You can set the RTSP and channel now. The employer must approve this camera before attendance starts.</p>
       `}
     </div>
   </section>`;
+}
+
+function localEventRows(events, cameras) {
+  if (!events.length) return '<p class="muted" style="margin:0">No local events yet. Events are saved here even when the internet is down.</p>';
+  const labels = new Map(cameras.map(camera => [Number(camera.cameraId), camera.label]));
+  return events.map(event => {
+    const status = event.syncStatus === 'SYNCED' ? 'Synced to BSS'
+      : event.syncStatus === 'REJECTED' ? 'Rejected by BSS' : 'Saved locally · waiting to sync';
+    const cls = event.syncStatus === 'SYNCED' ? 'ok' : event.syncStatus === 'REJECTED' ? 'bad' : 'warn';
+    return `<div class="local-event">
+      <div><b>${esc(labels.get(Number(event.cameraId)) || `Camera ${event.cameraId}`)}</b><span>${esc(when(event.occurredAt))}</span></div>
+      <span class="pill ${cls}">${esc(status)}</span>
+    </div>`;
+  }).join('');
 }
 
 function siteSection(site, cameras) {
@@ -328,8 +337,36 @@ function render() {
         </div>
       </section>
 
+      <section class="card">
+        <div class="cam-title"><h3>Add camera</h3><span class="pill muted">Employer approval required</span></div>
+        <p class="muted">Add the camera here, then set its channel and RTSP locally. It will appear in the employer BSS for approval.</p>
+        <div class="rtsp-row">
+          <div><label>Site<select id="newCameraSite">${sites.map(site => `<option value="${esc(site.bssId || site.id)}">${esc(site.name)}</option>`).join('')}</select></label></div>
+          <div><label>Camera label<input id="newCameraLabel" maxlength="120" placeholder="Main Gate" /></label></div>
+          <button id="addCameraBtn" class="btn primary" type="button" ${sites.length ? '' : 'disabled'}>Add camera</button>
+        </div>
+        ${sites.length ? '' : '<p class="note blocked">The employer must create a site before you can add a camera.</p>'}
+      </section>
+
+      <section class="card">
+        <div class="cam-title"><h3>Local event log</h3><span class="pill ${state.outbox ? 'warn' : 'ok'}">${esc(state.outbox ? `${state.outbox} waiting to sync` : 'All events synced')}</span></div>
+        <p class="muted">Events are stored on this machine when the internet is down and sync automatically when BSS is reachable.</p>
+        ${localEventRows(state.localEvents || [], cameras)}
+      </section>
+
       ${grouped.length ? grouped.map(group => siteSection(group, group.cameras)).join('') : '<div class="card empty">No employer sites are available for this client yet. Ask the employer to create a site.</div>'}
     </div>`;
+
+  qs('addCameraBtn')?.addEventListener('click', async () => {
+    const label = qs('newCameraLabel').value.trim();
+    if (!label) { showMessage('mainMsg', 'Enter a camera label.'); return; }
+    try {
+      state = await api('/api/cameras', { method: 'POST', body: JSON.stringify({
+        label, siteBssId: qs('newCameraSite').value,
+      }) });
+      render();
+    } catch (error) { showMessage('mainMsg', error.message); }
+  });
 
   for (const camera of cameras) {
     const id = camera.cameraId;
@@ -352,24 +389,6 @@ function render() {
         message.textContent = result.ok ? `Connected — ${result.width}×${result.height}` : result.error;
         message.style.color = result.ok ? '#14843C' : '#DC2626';
       } catch (error) { message.textContent = error.message; message.style.color = '#DC2626'; }
-    });
-    qs(`claim-${id}`)?.addEventListener('click', async () => {
-      try { state = await api(`/api/cameras/${id}/claim`, { method: 'POST', body: '{}' }); render(); }
-      catch (error) { showMessage('mainMsg', error.message); }
-    });
-    qs(`takeover-${id}`)?.addEventListener('click', async () => {
-      try {
-        await api(`/api/cameras/${id}/takeover-otp`, { method: 'POST', body: '{}' });
-        qs(`takeoverOtp-${id}`).classList.remove('hidden');
-        qs(`takeoverConfirm-${id}`).classList.remove('hidden');
-        showMessage('mainMsg', 'Takeover OTP sent to the employer owner.', true);
-      } catch (error) { showMessage('mainMsg', error.message); }
-    });
-    qs(`takeoverConfirm-${id}`)?.addEventListener('click', async () => {
-      try {
-        state = await api(`/api/cameras/${id}/claim`, { method: 'POST', body: JSON.stringify({ otp: qs(`takeoverOtp-${id}`).value.trim() }) });
-        render();
-      } catch (error) { showMessage('mainMsg', error.message); }
     });
     qs(`applyMode-${id}`)?.addEventListener('click', async () => {
       try { state = await api(`/api/cameras/${id}/mode`, { method: 'POST', body: JSON.stringify({ mode: qs(`mode-${id}`).value }) }); render(); }
@@ -412,7 +431,9 @@ function startPolling() {
       const shape = value => JSON.stringify({
         activated: value?.activated,
         sites: (value?.sites || []).map(site => [site.id, site.bssId, site.name]),
-        cameras: (value?.cameras || []).map(camera => [camera.cameraId, camera.claimStatus, camera.rtspConfigured, camera.claimedByThisDevice]),
+        cameras: (value?.cameras || []).map(camera => [camera.cameraId, camera.approvalStatus, camera.status, camera.rtspConfigured, camera.sendAllowed, camera.cameraOnline]),
+        outbox: value?.outbox,
+        localEvents: (value?.localEvents || []).map(event => [event.eventId, event.syncStatus]),
       });
       state = fresh;
       if (shape(old) !== shape(fresh)) render();

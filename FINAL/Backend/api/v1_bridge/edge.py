@@ -165,6 +165,14 @@ def _verify_edge_otp(phone, value, purpose="EDGE_ACTIVATION"):
     return True
 
 
+def _camera_online(camera):
+    return bool(camera.approval_status == "APPROVED"
+                and camera.device_id
+                and camera.device.is_active
+                and camera.last_seen_at
+                and timezone.now() - camera.last_seen_at <= EDGE_DEVICE_ONLINE_WINDOW)
+
+
 def _camera_payload(camera, device=None):
     claimed_by_this = bool(device and camera.device_id == device.id)
     claimed_by_other = bool(camera.device_id and not claimed_by_this)
@@ -176,16 +184,21 @@ def _camera_payload(camera, device=None):
         "uid": str(camera.uid),
         "siteId": camera.site_id,
         "label": camera.label,
+        "employerLabel": camera.employer_label or "",
         "channel": camera.channel,
         "allowedIp": camera.allowed_ip or "",
-        "timezone": camera.timezone,
+        "timezone": "Asia/Kolkata",
+        "timezoneLabel": "IST (UTC+05:30)",
         "scheduleEnabled": bool(camera.schedule_enabled),
         "windows": camera.capture_windows or [],
         "mode": camera.last_mode,
         "status": camera.last_status,
+        "approvalStatus": camera.approval_status,
+        "online": _camera_online(camera),
         "lastSeenAt": camera.last_seen_at.isoformat() if camera.last_seen_at else None,
         "lastSeenIp": camera.last_seen_ip or "",
         "lastEventAt": camera.last_event_at.isoformat() if camera.last_event_at else None,
+        "createdByDeviceId": str(camera.created_by_device_id or ""),
         "isClaimed": bool(camera.is_claimed),
         "claimStatus": status,
         "claimedByThisDevice": claimed_by_this,
@@ -200,7 +213,8 @@ def _device_payload(device):
     camera_count = 0
     for site in (Site.objects.filter(employer_id=device.employer_id)
                  .prefetch_related("attendance_cameras").order_by("site_name")):
-        cameras = list(site.attendance_cameras.order_by("id"))
+        cameras = list(site.attendance_cameras.exclude(
+            approval_status__in=("REMOVED", "REJECTED")).order_by("id"))
         camera_count += len(cameras)
         sites.append({
             "id": site.id,
@@ -237,7 +251,8 @@ def _create_camera(site, label, channel=None, device=None):
             existing.device = device
             existing.save(update_fields=["device", "updated_at"])
         return existing
-    if EdgeCamera.objects.filter(site=site).count() >= _camera_limit(site):
+    if EdgeCamera.objects.filter(site=site).exclude(
+            approval_status__in=("REMOVED", "REJECTED")).count() >= _camera_limit(site):
         return None
     return EdgeCamera.objects.create(
         site=site, device=device, label=label,
@@ -740,15 +755,18 @@ def edge_camera_create(request):
     if site is None:
         return Response({"error": "That site does not belong to this employer."},
                         status=status.HTTP_404_NOT_FOUND)
-    if EdgeCamera.objects.filter(site=site, label__iexact=label).exists():
+    if (EdgeCamera.objects.filter(site=site, label__iexact=label)
+            .exclude(approval_status__in=("REMOVED", "REJECTED")).exists()):
         return Response({"error": "A camera with this label already exists."}, status=status.HTTP_409_CONFLICT)
     limit = _camera_limit(site)
-    if EdgeCamera.objects.filter(site=site).count() >= limit:
+    if EdgeCamera.objects.filter(site=site).exclude(
+            approval_status__in=("REMOVED", "REJECTED")).count() >= limit:
         return Response({"error": f"Camera limit reached for this site ({limit})."},
                         status=status.HTTP_400_BAD_REQUEST)
     channel = body.get("channel")
     camera = EdgeCamera.objects.create(
-        site=site, device=None, label=label,
+        site=site, device=None, created_by_device=device, label=label,
+        approval_status="PENDING", timezone="Asia/Kolkata",
         channel=int(channel) if str(channel or "").isdigit() else None,
     )
     return Response({"data": _camera_payload(camera, device)}, status=status.HTTP_201_CREATED)
@@ -763,7 +781,11 @@ def edge_camera_setup(request, camera_id):
     if device is None:
         return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
     camera = EdgeCamera.objects.filter(pk=camera_id, site__employer_id=device.employer_id).first()
-    if camera is None or (camera.device_id and camera.device_id != device.id):
+    if camera is None or camera.approval_status in ("REMOVED", "REJECTED"):
+        return Response({"error": "Camera not found."}, status=status.HTTP_404_NOT_FOUND)
+    if camera.device_id and camera.device_id != device.id:
+        return Response({"error": "Camera not found."}, status=status.HTTP_404_NOT_FOUND)
+    if camera.created_by_device_id and camera.created_by_device_id != device.id:
         return Response({"error": "Camera not found."}, status=status.HTTP_404_NOT_FOUND)
     body = request.data if isinstance(request.data, dict) else {}
     if "channel" in body:
@@ -785,6 +807,11 @@ def edge_camera_claim(request, camera_id):
               .select_related("device", "site").first())
     if camera is None:
         return Response({"error": "Camera not found for this employer."}, status=status.HTTP_404_NOT_FOUND)
+    if camera.approval_status != "APPROVED":
+        return Response({"error": "This camera is still waiting for employer approval."},
+                        status=status.HTTP_409_CONFLICT)
+    if camera.created_by_device_id and camera.created_by_device_id != device.id:
+        return Response({"error": "Camera not found for this device."}, status=status.HTTP_404_NOT_FOUND)
     if not camera.allowed_ip:
         return Response({"error": "The employer must set the allowed IP before this camera can be claimed."},
                         status=status.HTTP_400_BAD_REQUEST)
@@ -918,11 +945,14 @@ def employer_edge_devices(request):
 def _employer_camera_payload(camera):
     payload = _camera_payload(camera, None)
     device = camera.device
+    creator = camera.created_by_device
     payload["claimStatus"] = "CLAIMED" if camera.is_claimed else "UNCLAIMED"
     payload["claimedByThisDevice"] = False
     payload["claimedByOtherDevice"] = False
     payload["claimedByDeviceId"] = str(device.id) if device else ""
     payload["claimedByDeviceName"] = device.name if device else ""
+    payload["createdByDeviceName"] = creator.name if creator else ""
+    payload["createdByDeviceVersion"] = creator.version if creator else ""
     return payload
 
 
@@ -936,7 +966,9 @@ def employer_attendance_cameras(request):
              .prefetch_related("attendance_cameras").order_by("site_name"))
     rows = []
     for site in sites:
-        cameras = list(site.attendance_cameras.select_related("device").order_by("id"))
+        cameras = list(site.attendance_cameras.exclude(
+            approval_status__in=("REMOVED", "REJECTED"))
+            .select_related("device", "created_by_device").order_by("id"))
         device_map = {}
         for camera in cameras:
             if camera.device_id and camera.device and camera.device_id not in device_map:
@@ -963,46 +995,56 @@ def employer_attendance_cameras(request):
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
-def employer_attendance_camera_create(request):
-    """Employer creates a site camera before or after client activation."""
+def employer_attendance_camera_approve(request, camera_id):
+    """Employer accepts a client-created camera and optionally white-labels it."""
     _require_owner(request)
+    camera = (EdgeCamera.objects.filter(pk=camera_id, site__employer=request.user)
+              .select_related("site", "device", "created_by_device").first())
+    if camera is None or camera.approval_status == "REMOVED":
+        return Response({"error": "Camera not found."}, status=status.HTTP_404_NOT_FOUND)
     body = request.data if isinstance(request.data, dict) else {}
-    try:
-        site_id = int(body.get("siteId") or body.get("site_id"))
-    except (TypeError, ValueError):
-        return Response({"error": "Select a site."}, status=status.HTTP_400_BAD_REQUEST)
-    site = Site.objects.filter(pk=site_id, employer=request.user).first()
-    if site is None:
-        return Response({"error": "Site not found."}, status=status.HTTP_404_NOT_FOUND)
-    label = str(body.get("label") or body.get("name") or "").strip()[:120]
-    if not label:
-        return Response({"error": "Camera label is required."}, status=status.HTTP_400_BAD_REQUEST)
-    if EdgeCamera.objects.filter(site=site, label__iexact=label).exists():
-        return Response({"error": "A camera with this label already exists."}, status=status.HTTP_409_CONFLICT)
-    limit = _camera_limit(site)
-    if EdgeCamera.objects.filter(site=site).count() >= limit:
-        return Response({"error": f"Camera limit reached for this site ({limit}). Ask BSS admin to raise it."},
-                        status=status.HTTP_400_BAD_REQUEST)
-    allowed_ip, ip_error = _public_ipv4(body.get("allowedIp") or body.get("allowed_ip"))
-    if ip_error:
-        return Response({"error": ip_error}, status=status.HTTP_400_BAD_REQUEST)
-    zone = str(body.get("timezone") or "Asia/Kolkata").strip()[:64] or "Asia/Kolkata"
-    try:
-        ZoneInfo(zone)
-    except ZoneInfoNotFoundError:
-        return Response({"error": "Invalid timezone."}, status=status.HTTP_400_BAD_REQUEST)
-    windows, window_error = _validate_windows(body.get("windows") or body.get("capture_windows") or [])
-    if window_error:
-        return Response({"error": window_error}, status=status.HTTP_400_BAD_REQUEST)
-    channel = body.get("channel")
-    camera = EdgeCamera.objects.create(
-        site=site, label=label,
-        channel=int(channel) if str(channel or "").isdigit() else None,
-        allowed_ip=allowed_ip, timezone=zone,
-        schedule_enabled=bool(body.get("scheduleEnabled") or body.get("schedule_enabled")),
-        capture_windows=windows,
-    )
-    return Response({"data": _employer_camera_payload(camera)}, status=status.HTTP_201_CREATED)
+    label = str(body.get("employerLabel") or body.get("employer_label") or "").strip()[:120]
+    with transaction.atomic():
+        if label:
+            camera.employer_label = label
+        elif not camera.employer_label:
+            camera.employer_label = camera.label
+        if camera.device_id is None and camera.created_by_device_id:
+            camera.device = camera.created_by_device
+        camera.approval_status = "APPROVED"
+        camera.approved_at = timezone.now()
+        camera.approved_by = request.user
+        camera.timezone = "Asia/Kolkata"
+        camera.save(update_fields=["employer_label", "device", "approval_status", "approved_at",
+                                   "approved_by", "timezone", "updated_at"])
+    return Response({"data": _employer_camera_payload(camera)}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def employer_attendance_camera_remove(request, camera_id):
+    """Soft-remove a camera; historical attendance is retained."""
+    _require_owner(request)
+    camera = (EdgeCamera.objects.filter(pk=camera_id, site__employer=request.user)
+              .select_related("site", "device").first())
+    if camera is None:
+        return Response({"error": "Camera not found."}, status=status.HTTP_404_NOT_FOUND)
+    with transaction.atomic():
+        camera.approval_status = "REMOVED"
+        camera.removed_at = timezone.now()
+        camera.removed_by = request.user
+        camera.device = None
+        camera.is_claimed = False
+        camera.token_hash = ""
+        camera.token_prefix = ""
+        camera.claimed_at = None
+        camera.last_mode = "OFFLINE"
+        camera.last_status = "Removed"
+        camera.save(update_fields=["approval_status", "removed_at", "removed_by", "device",
+                                   "is_claimed", "token_hash", "token_prefix", "claimed_at",
+                                   "last_mode", "last_status", "updated_at"])
+    return Response({"data": {"cameraId": camera.id, "removed": True}}, status=status.HTTP_200_OK)
 
 
 @api_view(["PATCH"])
@@ -1024,13 +1066,9 @@ def employer_attendance_camera_detail(request, camera_id):
             if error:
                 return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
             camera.allowed_ip = parsed
-    if body.get("timezone") is not None:
-        zone = str(body.get("timezone") or "").strip()[:64] or "Asia/Kolkata"
-        try:
-            ZoneInfo(zone)
-        except ZoneInfoNotFoundError:
-            return Response({"error": "Invalid timezone."}, status=status.HTTP_400_BAD_REQUEST)
-        camera.timezone = zone
+    if body.get("employerLabel") is not None or body.get("employer_label") is not None:
+        camera.employer_label = str(body.get("employerLabel", body.get("employer_label")) or "").strip()[:120]
+    camera.timezone = "Asia/Kolkata"
     if body.get("scheduleEnabled") is not None or body.get("schedule_enabled") is not None:
         camera.schedule_enabled = bool(body.get("scheduleEnabled", body.get("schedule_enabled")))
     if body.get("windows") is not None or body.get("capture_windows") is not None:
@@ -1077,7 +1115,8 @@ __all__ = [
     "edge_events",
     "employer_edge_devices",
     "employer_attendance_cameras",
-    "employer_attendance_camera_create",
+    "employer_attendance_camera_approve",
+    "employer_attendance_camera_remove",
     "employer_attendance_camera_detail",
     "employer_edge_device_revoke",
 ]

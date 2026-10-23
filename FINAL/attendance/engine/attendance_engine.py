@@ -12,11 +12,12 @@ import logging
 import os
 import platform
 import shutil
+import sqlite3
 import sys
 import threading
 import time
 import uuid
-from datetime import datetime, time as dt_time
+from datetime import datetime, time as dt_time, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, unquote
@@ -27,7 +28,7 @@ import numpy as np
 import requests
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.2.3"
+APP_VERSION = "1.3.0"
 MODEL_NAME = "ArcFace"
 MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
 DETECTOR_BACKEND = "retinaface"
@@ -143,6 +144,7 @@ class Store:
         data.setdefault("deviceName", "")
         data.setdefault("employerName", "")
         data.setdefault("cameras", {})
+        data.setdefault("bssCameras", {})
         data.setdefault("outbox", [])
         return data
 
@@ -151,6 +153,109 @@ class Store:
             tmp = self.path.with_suffix(".tmp")
             tmp.write_text(json.dumps(self.data, indent=2), encoding="utf-8")
             tmp.replace(self.path)
+
+
+class LocalEventStore:
+    """Durable local event log; survives restarts, logout and internet loss."""
+
+    def __init__(self, home):
+        self.path = Path(home) / "events.db"
+        self.lock = threading.Lock()
+        with self.lock:
+            conn = self._connect()
+            try:
+                with conn:
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS local_events (
+                            id TEXT PRIMARY KEY,
+                            camera_id INTEGER NOT NULL,
+                            occurred_at TEXT NOT NULL,
+                            payload TEXT NOT NULL,
+                            sync_status TEXT NOT NULL DEFAULT 'PENDING',
+                            last_error TEXT NOT NULL DEFAULT '',
+                            created_at TEXT NOT NULL,
+                            synced_at TEXT
+                        )
+                    """)
+                    conn.execute("CREATE INDEX IF NOT EXISTS local_events_status ON local_events(sync_status, occurred_at)")
+            finally:
+                conn.close()
+
+    def _connect(self):
+        return sqlite3.connect(str(self.path), timeout=15)
+
+    def add(self, event):
+        event_id = str(event.get("eventId") or "").strip()
+        if not event_id:
+            return
+        with self.lock:
+            conn = self._connect()
+            try:
+                with conn:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO local_events(id, camera_id, occurred_at, payload, created_at) VALUES(?,?,?,?,?)",
+                        (event_id, int(event.get("cameraId") or 0), str(event.get("occurredAt") or ""),
+                         json.dumps(event, separators=(",", ":")), _now().isoformat()),
+                    )
+            finally:
+                conn.close()
+
+    def pending(self):
+        with self.lock:
+            conn = self._connect()
+            try:
+                rows = conn.execute(
+                    "SELECT id, payload FROM local_events WHERE sync_status='PENDING' ORDER BY occurred_at"
+                ).fetchall()
+            finally:
+                conn.close()
+        return [(row[0], json.loads(row[1])) for row in rows]
+
+    def count(self):
+        with self.lock:
+            conn = self._connect()
+            try:
+                return int(conn.execute("SELECT COUNT(*) FROM local_events WHERE sync_status='PENDING'").fetchone()[0])
+            finally:
+                conn.close()
+
+    def mark(self, ids, status="SYNCED", error=""):
+        ids = [str(i) for i in ids if i]
+        if not ids:
+            return
+        with self.lock:
+            conn = self._connect()
+            try:
+                with conn:
+                    conn.executemany(
+                        "UPDATE local_events SET sync_status=?, last_error=?, synced_at=? WHERE id=?",
+                        [(status, error[:500], _now().isoformat(), event_id) for event_id in ids],
+                    )
+            finally:
+                conn.close()
+
+    def recent(self, limit=25):
+        with self.lock:
+            conn = self._connect()
+            try:
+                rows = conn.execute(
+                    "SELECT id, camera_id, occurred_at, sync_status, last_error FROM local_events "
+                    "ORDER BY occurred_at DESC LIMIT ?", (int(limit),)
+                ).fetchall()
+            finally:
+                conn.close()
+        return [{"eventId": r[0], "cameraId": r[1], "occurredAt": r[2],
+                 "syncStatus": r[3], "lastError": r[4]} for r in rows]
+
+    def prune(self, keep_days=7):
+        cutoff = (_now() - timedelta(days=keep_days)).isoformat()
+        with self.lock:
+            conn = self._connect()
+            try:
+                with conn:
+                    conn.execute("DELETE FROM local_events WHERE sync_status != 'PENDING' AND occurred_at < ?", (cutoff,))
+            finally:
+                conn.close()
 
 
 class CameraWorker:
@@ -354,14 +459,27 @@ class Engine:
         self.device_name = str(self.store.data.get("deviceName") or "")
         self.employer_name = str(self.store.data.get("employerName") or "")
         self.bss_cameras = {}
+        for key, camera in (self.store.data.get("bssCameras") or {}).items():
+            try:
+                self.bss_cameras[int(key)] = camera
+            except (TypeError, ValueError):
+                continue
         self.workers = {}
         self.last_heartbeat = None
         self.last_event_at = {}
-        self.outbox = list(self.store.data.get("outbox") or [])
+        self.events = LocalEventStore(home)
+        for legacy in list(self.store.data.get("outbox") or []):
+            if isinstance(legacy, dict):
+                self.events.add(legacy)
+        if self.store.data.get("outbox"):
+            self.store.data["outbox"] = []
+            self.store.save()
         self._stop = threading.Event()
         self._load_cameras()
         self._heartbeat_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
         self._heartbeat_thread.start()
+        self._config_thread = threading.Thread(target=self._config_loop, daemon=True)
+        self._config_thread.start()
 
     def _load_cameras(self):
         for key, camera in (self.store.data.get("cameras") or {}).items():
@@ -509,9 +627,13 @@ class Engine:
                 if cid not in incoming:
                     self.workers.pop(cid).stop()
                     self.bss_cameras.pop(cid, None)
+            self.store.data["bssCameras"] = {str(k): v for k, v in self.bss_cameras.items()}
             missing_claims = [
                 cid for cid, worker in self.workers.items()
-                if (self.bss_cameras.get(cid) or {}).get("claimedByThisDevice")
+                if (self.bss_cameras.get(cid) or {}).get("approvalStatus") == "APPROVED"
+                and (self.bss_cameras.get(cid) or {}).get("allowedIp")
+                and ((self.bss_cameras.get(cid) or {}).get("claimedByThisDevice")
+                     or (self.bss_cameras.get(cid) or {}).get("createdByDeviceId") == self.device_id)
                 and not worker.camera_token
             ]
             self.store.save()
@@ -537,7 +659,8 @@ class Engine:
 
     def send_allowed(self, worker):
         camera = self.bss_cameras.get(worker.camera_id) or {}
-        return bool(camera.get("allowedIp") and camera.get("claimedByThisDevice")
+        return bool(camera.get("approvalStatus") == "APPROVED"
+                    and camera.get("allowedIp") and camera.get("claimedByThisDevice")
                     and schedule_active(camera) and worker.camera_token)
 
     def send_event(self, worker, embedding, when):
@@ -546,20 +669,16 @@ class Engine:
             "occurredAt": when.isoformat(), "type": "FACE",
             "embedding": embedding, "modelVersion": MODEL_VERSION,
         }
-        with self.lock:
-            self.outbox.append(event)
-            self.outbox = self.outbox[-500:]
-            self.store.data["outbox"] = self.outbox
-            self.store.save()
+        self.events.add(event)
         self.flush_outbox()
 
     def flush_outbox(self):
-        with self.lock:
-            pending = list(self.outbox)
+        pending = self.events.pending()
         if not pending:
             return
         by_camera = {}
-        for event in pending:
+        for event_id, event in pending:
+            event["eventId"] = event.get("eventId") or event_id
             by_camera.setdefault(str(event.get("cameraId")), []).append(event)
         for camera_key, events in by_camera.items():
             try:
@@ -582,14 +701,16 @@ class Engine:
                     LOG.warning("Event send failed for camera %s: %s", cid, exc)
                     continue
                 results = ((body.get("data") or {}).get("results") or [])
-                handled = {str(r.get("eventId")) for r in results if r.get("eventId")}
-                with self.lock:
-                    self.outbox = [e for e in self.outbox if e.get("eventId") not in handled]
-                    self.store.data["outbox"] = self.outbox
-                    for result in results:
-                        if result.get("status") in ("ACCEPTED", "UNKNOWN"):
-                            self.last_event_at[cid] = _now()
-                    self.store.save()
+                accepted = [str(r.get("eventId")) for r in results
+                            if r.get("eventId") and r.get("status") != "REJECTED"]
+                rejected = [str(r.get("eventId")) for r in results
+                            if r.get("eventId") and r.get("status") == "REJECTED"]
+                self.events.mark(accepted, "SYNCED")
+                self.events.mark(rejected, "REJECTED", "Rejected by BSS")
+                for result in results:
+                    if result.get("status") in ("ACCEPTED", "UNKNOWN"):
+                        self.last_event_at[cid] = _now()
+        self.events.prune()
 
     def set_mode(self, camera_id, mode):
         worker = self.workers.get(camera_id)
@@ -598,12 +719,12 @@ class Engine:
             raise ValueError("Camera not found.")
         mode = str(mode or "").upper()
         if mode == "SENDING":
+            if camera.get("approvalStatus") != "APPROVED":
+                raise ValueError("This camera is waiting for employer approval.")
             if not camera.get("allowedIp"):
                 raise ValueError("The employer has not set the allowed IP yet.")
-            if not camera.get("claimedByThisDevice"):
-                raise ValueError("Claim this camera first.")
             if not worker.camera_token:
-                raise ValueError("Camera token is missing. Claim the camera again.")
+                raise ValueError("Camera is still being activated. Try again in a moment.")
             if not schedule_active(camera):
                 raise ValueError("This camera is outside its capture window.")
         worker.set_mode(mode)
@@ -651,11 +772,11 @@ class Engine:
         self.sites = []
         self.device_name = ""
         self.employer_name = ""
-        self.outbox = []
+        self.bss_cameras = {}
         for worker in self.workers.values():
             worker.camera_token = ""
-        self.store.data.update({"token": "", "deviceId": "", "sites": [],
-                                "deviceName": "", "employerName": "", "outbox": []})
+        self.store.data.update({"token": "", "deviceId": "", "sites": [], "bssCameras": {},
+                                "deviceName": "", "employerName": ""})
         for local in self.store.data.get("cameras", {}).values():
             local["cameraToken"] = ""
         self.store.save()
@@ -716,13 +837,27 @@ class Engine:
         self.sites = []
         self.device_name = ""
         self.employer_name = ""
+        self.bss_cameras = {}
         for worker in self.workers.values():
             worker.camera_token = ""
-        self.store.data.update({"token": "", "deviceId": "", "sites": [],
+        self.store.data.update({"token": "", "deviceId": "", "sites": [], "bssCameras": {},
                                 "deviceName": "", "employerName": ""})
         for local in self.store.data.get("cameras", {}).values():
             local["cameraToken"] = ""
         self.store.save()
+
+    def _config_loop(self):
+        while not self._stop.is_set():
+            if self.token and self.device_id:
+                try:
+                    self.refresh_config()
+                except BssError as exc:
+                    if exc.status_code == 401:
+                        self._deactivate_local()
+                    LOG.warning("Config refresh failed: %s", exc)
+                except Exception as exc:  # noqa: BLE001
+                    LOG.warning("Config refresh error: %s", exc)
+            self._stop.wait(30)
 
     def _heartbeat_loop(self):
         while not self._stop.is_set():
@@ -764,12 +899,14 @@ class Engine:
             reason = ""
             if not bss:
                 reason = "Waiting for BSS sync"
+            elif bss.get("approvalStatus") == "PENDING":
+                reason = "Waiting for employer approval"
+            elif bss.get("approvalStatus") != "APPROVED":
+                reason = "Camera was removed by the employer"
             elif not bss.get("allowedIp"):
-                reason = "Allowed IP not set in BSS"
-            elif not bss.get("claimedByThisDevice"):
-                reason = "Claim this camera"
+                reason = "Employer must set the allowed IP"
             elif not worker.camera_token:
-                reason = "Camera token missing — claim again"
+                reason = "Activating camera"
             elif not allowed:
                 reason = "Outside capture window"
             cameras.append({
@@ -782,11 +919,14 @@ class Engine:
                 "siteId": bss.get("siteId"),
                 "siteBssId": bss.get("siteBssId") or "",
                 "siteName": bss.get("siteName") or "",
-                "claimStatus": bss.get("claimStatus") or "UNCLAIMED",
-                "claimedByDeviceName": bss.get("claimedByDeviceName") or "",
-                "claimedByThisDevice": bool(bss.get("claimedByThisDevice")),
-                "canClaim": bool(bss.get("allowedIp")) and not bss.get("claimedByThisDevice"),
-                "sendAllowed": bool(bss.get("allowedIp") and bss.get("claimedByThisDevice") and allowed and worker.camera_token),
+                "approvalStatus": bss.get("approvalStatus") or "PENDING",
+                "employerLabel": bss.get("employerLabel") or "",
+                "cameraOnline": bool(bss.get("online")),
+                "timezoneLabel": "IST (UTC+05:30)",
+                "canClaim": False,
+                "sendAllowed": bool(bss.get("approvalStatus") == "APPROVED"
+                                    and bss.get("allowedIp") and bss.get("claimedByThisDevice")
+                                    and allowed and worker.camera_token),
                 "sendBlockedReason": reason,
             })
         return {
@@ -801,7 +941,8 @@ class Engine:
             "lastHeartbeatAt": _iso(self.last_heartbeat),
             "faceModel": {"model": MODEL_NAME, "version": MODEL_VERSION, "detector": DETECTOR_BACKEND},
             "cameras": cameras,
-            "outbox": len(self.outbox),
+            "outbox": self.events.count(),
+            "localEvents": self.events.recent(25),
         }
 
 
@@ -844,6 +985,8 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/api/status":
             return self._json({"data": ENGINE.status()})
+        if path == "/api/events":
+            return self._json({"data": ENGINE.events.recent(100)})
         if path == "/api/health":
             return self._json({"ok": True})
         if path.startswith("/stream/"):

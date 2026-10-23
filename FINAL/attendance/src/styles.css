@@ -175,3 +175,8 @@ input:focus, select:focus { border-color: #93B4E8; box-shadow: 0 0 0 3px rgba(30
   .wrap { padding: 14px; }
   .update-banner { padding: 0 14px; }
 }
+
+.local-event { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-top:1px solid var(--line); }
+.local-event:first-of-type { border-top:0; }
+.local-event > div { display:flex; flex-direction:column; gap:2px; font-size:12px; }
+.local-event > div span { color:var(--muted); font-size:11px; }

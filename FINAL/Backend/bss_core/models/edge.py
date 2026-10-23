@@ -67,6 +67,22 @@ class EdgeCamera(models.Model):
     device = models.ForeignKey(EdgeDevice, on_delete=models.SET_NULL, null=True, blank=True,
                                related_name="cameras")
     uid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    APPROVAL = [
+        ("PENDING", "Pending approval"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+        ("REMOVED", "Removed"),
+    ]
+    approval_status = models.CharField(max_length=12, choices=APPROVAL, default="PENDING", db_index=True)
+    employer_label = models.CharField(max_length=120, blank=True)
+    created_by_device = models.ForeignKey("EdgeDevice", on_delete=models.SET_NULL, null=True, blank=True,
+                                          related_name="created_cameras")
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name="approved_edge_cameras")
+    removed_at = models.DateTimeField(null=True, blank=True)
+    removed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="removed_edge_cameras")
     label = models.CharField(max_length=120)
     channel = models.PositiveSmallIntegerField(null=True, blank=True)
     allowed_ip = models.GenericIPAddressField(null=True, blank=True)
