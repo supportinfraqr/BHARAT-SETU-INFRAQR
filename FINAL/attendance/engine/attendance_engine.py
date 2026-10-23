@@ -27,7 +27,7 @@ import numpy as np
 import requests
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.2.1"
 MODEL_NAME = "ArcFace"
 MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
 DETECTOR_BACKEND = "retinaface"
@@ -458,6 +458,10 @@ class Engine:
                                     "deviceName": self.device_name, "employerName": self.employer_name})
             self.store.save()
         self.refresh_config()
+        try:
+            self._send_device_heartbeat()
+        except BssError:
+            pass
         return self.status()
 
     def refresh_config(self):
@@ -649,9 +653,35 @@ class Engine:
         finally:
             cap.release()
 
+    def _send_device_heartbeat(self):
+        self.bss_call("POST", "/v1/edge/device-heartbeat", {
+            "version": APP_VERSION, "status": "ONLINE",
+        }, timeout=10)
+        self.last_heartbeat = _now()
+
+    def _deactivate_local(self):
+        self.token = ""
+        self.device_id = ""
+        self.sites = []
+        self.device_name = ""
+        self.employer_name = ""
+        for worker in self.workers.values():
+            worker.camera_token = ""
+        self.store.data.update({"token": "", "deviceId": "", "sites": [],
+                                "deviceName": "", "employerName": ""})
+        for local in self.store.data.get("cameras", {}).values():
+            local["cameraToken"] = ""
+        self.store.save()
+
     def _heartbeat_loop(self):
         while not self._stop.is_set():
             try:
+                try:
+                    self._send_device_heartbeat()
+                except BssError as exc:
+                    if exc.status_code == 401:
+                        self._deactivate_local()
+                    LOG.warning("Device heartbeat failed: %s", exc)
                 for worker in list(self.workers.values()):
                     if not worker.camera_token:
                         continue
@@ -660,7 +690,6 @@ class Engine:
                             "version": APP_VERSION, "mode": worker.mode,
                             "status": worker.status, "fps": round(worker.fps, 1),
                         }, timeout=10, camera_token=worker.camera_token)
-                        self.last_heartbeat = _now()
                     except BssError as exc:
                         if exc.status_code == 401:
                             worker.camera_token = ""
@@ -674,6 +703,9 @@ class Engine:
             self._stop.wait(20)
 
     def status(self):
+        now = _now()
+        heartbeat_fresh = bool(self.last_heartbeat
+                               and (now - self.last_heartbeat).total_seconds() < 60)
         cameras = []
         for cid, worker in sorted(self.workers.items()):
             bss = self.bss_cameras.get(cid) or {}
@@ -711,7 +743,8 @@ class Engine:
             "employerName": self.employer_name,
             "sites": self.sites,
             "bss": self.bss,
-            "bssConnected": self.last_heartbeat is not None,
+            "version": APP_VERSION,
+            "bssConnected": heartbeat_fresh,
             "lastHeartbeatAt": _iso(self.last_heartbeat),
             "faceModel": {"model": MODEL_NAME, "version": MODEL_VERSION, "detector": DETECTOR_BACKEND},
             "cameras": cameras,

@@ -13,7 +13,7 @@ const LINUX_DEFAULT = '/downloads/attendance/BSS-Attendance-Linux.AppImage';
 export default function AttendanceDownloadPage() {
   const windowsUrl = process.env.BSS_ATTENDANCE_WINDOWS_URL || WINDOWS_DEFAULT;
   const linuxUrl = process.env.BSS_ATTENDANCE_LINUX_URL || LINUX_DEFAULT;
-  const version = process.env.BSS_ATTENDANCE_VERSION || '1.2.0';
+  const version = process.env.BSS_ATTENDANCE_VERSION || '1.2.1';
 
   return (
     <main className="min-h-screen bg-[#F5F8FC] text-[#0F172A]">

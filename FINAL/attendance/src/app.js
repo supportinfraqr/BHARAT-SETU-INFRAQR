@@ -318,6 +318,7 @@ function render() {
           <div>Heartbeat<b>${esc(when(state.lastHeartbeatAt))}</b></div>
           <div>Pending events<b>${esc(state.outbox ?? 0)}</b></div>
           <div>Cameras<b>${cameras.length}</b></div>
+          <div>Client version<b>${esc(state.version || '—')}</b></div>
         </div>
       </section>
 
@@ -462,12 +463,12 @@ async function checkForUpdates(manual = false) {
       updateInfo = update;
       renderUpdateBanner({
         title: `Update available: ${update.version}`,
-        body: `You are on ${update.currentVersion}. Download and install, then the app will restart.`,
+        body: `Installed: ${update.currentVersion} · Available: ${update.version}. Download and install, then the app will restart.`,
         action: 'Download & install',
         onAction: () => void installUpdate(),
       });
     } else if (manual) {
-      renderUpdateBanner({ title: 'You are up to date', body: 'This client is on the latest version.', action: 'Close' });
+      renderUpdateBanner({ title: 'You are up to date', body: `Installed version: ${state?.version || update?.currentVersion || 'unknown'}.`, action: 'Close' });
     }
   } catch (error) {
     if (manual) renderUpdateBanner({ title: 'Update check failed', body: error?.message || String(error), action: 'Close' });

@@ -536,6 +536,25 @@ def edge_config(request):
 
 
 @api_view(["POST"])
+@authentication_classes([EdgeTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def edge_device_heartbeat(request):
+    """Device-level heartbeat, independent of any claimed camera."""
+    device = _edge_device(request)
+    if device is None:
+        return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
+    body = request.data if isinstance(request.data, dict) else {}
+    now = timezone.now()
+    ip = _source_ip(request)
+    device.last_seen_at = now
+    device.last_seen_ip = ip or None
+    device.version = str(body.get("version") or device.version or "")[:40]
+    device.save(update_fields=["last_seen_at", "last_seen_ip", "version", "updated_at"])
+    return Response({"data": {"ok": True, "deviceId": str(device.id), "serverTime": now.isoformat()}},
+                    status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
 @authentication_classes([EdgeCameraAuthentication])
 @permission_classes([IsAuthenticated])
 def edge_heartbeat(request):
@@ -1024,6 +1043,7 @@ __all__ = [
     "edge_camera_claim",
     "edge_camera_takeover_otp",
     "edge_camera_rotate",
+    "edge_device_heartbeat",
     "edge_heartbeat",
     "edge_events",
     "employer_edge_devices",
