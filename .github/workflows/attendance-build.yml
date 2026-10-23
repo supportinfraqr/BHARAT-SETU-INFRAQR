@@ -139,12 +139,12 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: bss-attendance-windows
-          path: download/windows
+          path: FINAL/attendance/download/windows
 
       - uses: actions/download-artifact@v4
         with:
           name: bss-attendance-linux
-          path: download/linux
+          path: FINAL/attendance/download/linux
 
       - name: Build update manifest
         working-directory: FINAL/attendance
