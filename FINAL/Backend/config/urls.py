@@ -44,6 +44,7 @@ _v1_patterns = _v1(
     ("edge/config", v1_bridge.edge_config, "v1_edge_config"),
     ("edge/cameras", v1_bridge.edge_camera_create, "v1_edge_camera_create"),
     ("edge/cameras/<int:camera_id>/claim", v1_bridge.edge_camera_claim, "v1_edge_camera_claim"),
+    ("edge/cameras/<int:camera_id>/setup", v1_bridge.edge_camera_setup, "v1_edge_camera_setup"),
     ("edge/cameras/<int:camera_id>/takeover-otp", v1_bridge.edge_camera_takeover_otp, "v1_edge_camera_takeover_otp"),
     ("edge/cameras/<int:camera_id>/rotate", v1_bridge.edge_camera_rotate, "v1_edge_camera_rotate"),
     ("edge/device-heartbeat", v1_bridge.edge_device_heartbeat, "v1_edge_device_heartbeat"),

@@ -172,6 +172,7 @@ def _camera_payload(camera, device=None):
               else "UNCLAIMED")
     return {
         "id": camera.id,
+        "uid": str(camera.uid),
         "siteId": camera.site_id,
         "label": camera.label,
         "channel": camera.channel,
@@ -749,6 +750,25 @@ def edge_camera_create(request):
 @api_view(["POST"])
 @authentication_classes([EdgeTokenAuthentication])
 @permission_classes([IsAuthenticated])
+def edge_camera_setup(request, camera_id):
+    """Update the BSS-side channel for a camera owned by this device."""
+    device = _edge_device(request)
+    if device is None:
+        return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
+    camera = EdgeCamera.objects.filter(pk=camera_id, device=device).first()
+    if camera is None:
+        return Response({"error": "Camera not found."}, status=status.HTTP_404_NOT_FOUND)
+    body = request.data if isinstance(request.data, dict) else {}
+    if "channel" in body:
+        raw = str(body.get("channel") or "").strip()
+        camera.channel = int(raw) if raw.isdigit() else None
+    camera.save(update_fields=["channel", "updated_at"])
+    return Response({"data": _camera_payload(camera, device)}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([EdgeTokenAuthentication])
+@permission_classes([IsAuthenticated])
 def edge_camera_claim(request, camera_id):
     """Claim a camera token. A camera already owned by another device needs OTP."""
     device = _edge_device(request)
@@ -1041,6 +1061,7 @@ __all__ = [
     "edge_config",
     "edge_camera_create",
     "edge_camera_claim",
+    "edge_camera_setup",
     "edge_camera_takeover_otp",
     "edge_camera_rotate",
     "edge_device_heartbeat",

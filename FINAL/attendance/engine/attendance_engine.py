@@ -27,7 +27,7 @@ import numpy as np
 import requests
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.2.1"
+APP_VERSION = "1.2.2"
 MODEL_NAME = "ArcFace"
 MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
 DETECTOR_BACKEND = "retinaface"
@@ -620,6 +620,16 @@ class Engine:
         self.store.save()
         return self.status()
 
+    def set_channel(self, camera_id, channel):
+        worker = self.workers.get(camera_id)
+        if worker is None:
+            raise ValueError("Camera not found.")
+        body = self.bss_call("POST", f"/v1/edge/cameras/{camera_id}/setup", {
+            "channel": channel or "",
+        })
+        self.refresh_config()
+        return self.status()
+
     def claim(self, camera_id, otp=None):
         body = self.bss_call("POST", f"/v1/edge/cameras/{camera_id}/claim",
                              {"otp": otp} if otp else {})
@@ -726,6 +736,8 @@ class Engine:
                 "allowedIp": bss.get("allowedIp") or "",
                 "scheduleEnabled": bool(bss.get("scheduleEnabled")),
                 "schedule": schedule_text(bss) if bss else "Not synced",
+                "uid": bss.get("uid") or "",
+                "channel": bss.get("channel"),
                 "siteId": bss.get("siteId"),
                 "siteBssId": bss.get("siteBssId") or "",
                 "siteName": bss.get("siteName") or "",
@@ -842,6 +854,8 @@ class Handler(BaseHTTPRequestHandler):
                 action = parts[1] if len(parts) > 1 else ""
                 if action == "rtsp":
                     return self._json({"data": ENGINE.set_rtsp(cid, body.get("rtsp"))})
+                if action == "channel":
+                    return self._json({"data": ENGINE.set_channel(cid, body.get("channel"))})
                 if action == "mode":
                     return self._json({"data": ENGINE.set_mode(cid, body.get("mode"))})
                 if action == "claim":

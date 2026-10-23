@@ -66,6 +66,7 @@ class EdgeCamera(models.Model):
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="attendance_cameras")
     device = models.ForeignKey(EdgeDevice, on_delete=models.SET_NULL, null=True, blank=True,
                                related_name="cameras")
+    uid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     label = models.CharField(max_length=120)
     channel = models.PositiveSmallIntegerField(null=True, blank=True)
     allowed_ip = models.GenericIPAddressField(null=True, blank=True)

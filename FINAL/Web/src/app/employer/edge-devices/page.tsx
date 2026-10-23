@@ -6,6 +6,7 @@ import { Camera, Clock3, Copy, Download, Loader2, Plus, RefreshCw, Save, ShieldC
 type CaptureWindow = { days: string[]; start: string; end: string };
 type CameraRow = {
   id: number;
+  uid: string;
   siteId: number;
   label: string;
   channel: number | null;
@@ -62,7 +63,6 @@ function when(value: string | null) {
 
 function CameraCard({ site, camera, onSaved }: { site: SiteRow; camera: CameraRow; onSaved: (message: string) => void }) {
   const [allowedIp, setAllowedIp] = useState(camera.allowedIp || '');
-  const [timezone, setTimezone] = useState(camera.timezone || 'Asia/Kolkata');
   const [scheduleEnabled, setScheduleEnabled] = useState(Boolean(camera.scheduleEnabled));
   const [windows, setWindows] = useState<CaptureWindow[]>(camera.windows?.length ? camera.windows : []);
   const [busy, setBusy] = useState(false);
@@ -73,7 +73,7 @@ function CameraCard({ site, camera, onSaved }: { site: SiteRow; camera: CameraRo
     try {
       const response = await fetch(`/api/employer/attendance-cameras/${camera.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ allowedIp, timezone, scheduleEnabled, windows }),
+        body: JSON.stringify({ allowedIp, scheduleEnabled, windows }),
       });
       const body = await response.json().catch(() => ({})) as { data?: CameraRow; error?: string };
       if (!response.ok || !body.data) throw new Error(body.error ?? 'Could not save this camera.');
@@ -103,6 +103,7 @@ function CameraCard({ site, camera, onSaved }: { site: SiteRow; camera: CameraRo
           <span className="w-9 h-9 rounded-lg bg-bss-bg grid place-items-center"><Camera size={18} /></span>
           <div>
             <h3 className="text-sm font-bold text-bss-text-primary">{camera.label}{camera.channel ? ` · CH ${camera.channel}` : ''}</h3>
+            <p className="text-[11px] text-bss-text-muted font-mono break-all">Camera ID: {camera.uid || '—'}</p>
             <p className="text-[11px] text-bss-text-muted">Last seen {when(camera.lastSeenAt)} · IP {camera.lastSeenIp || 'unknown'}</p>
           </div>
         </div>
@@ -122,10 +123,6 @@ function CameraCard({ site, camera, onSaved }: { site: SiteRow; camera: CameraRo
             <label className={label}>Allowed public IP</label>
             <input value={allowedIp} onChange={e => setAllowedIp(e.target.value)} placeholder="e.g. 203.0.113.10" className={input} />
             <p className="text-[11px] text-bss-text-muted mt-1">Exact public IPv4. The client must send from this IP.</p>
-          </div>
-          <div>
-            <label className={label}>Camera timezone</label>
-            <input value={timezone} onChange={e => setTimezone(e.target.value)} placeholder="Asia/Kolkata" className={input} />
           </div>
         </div>
         <div className="flex items-center justify-between rounded-xl border border-bss-border p-3">
@@ -171,82 +168,6 @@ function CameraCard({ site, camera, onSaved }: { site: SiteRow; camera: CameraRo
           <button type="button" onClick={() => void save()} disabled={busy}
             className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black disabled:opacity-50">
             {busy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Save camera
-          </button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function AddCameraForm({ site, onSaved }: { site: SiteRow; onSaved: (message: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const [label, setLabel] = useState('');
-  const [channel, setChannel] = useState('');
-  const [allowedIp, setAllowedIp] = useState('');
-  const [timezone, setTimezone] = useState('Asia/Kolkata');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const atLimit = site.cameraCount >= site.cameraLimit;
-
-  const submit = async () => {
-    setBusy(true); setError('');
-    try {
-      const response = await fetch('/api/employer/attendance-cameras', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siteId: site.siteId, label, channel: channel || undefined, allowedIp, timezone }),
-      });
-      const body = await response.json().catch(() => ({})) as { data?: CameraRow; error?: string };
-      if (!response.ok || !body.data) throw new Error(body.error ?? 'Could not add this camera.');
-      onSaved(`${label} added to ${site.siteName}.`);
-      setLabel(''); setChannel(''); setAllowedIp(''); setTimezone('Asia/Kolkata'); setOpen(false);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not add this camera.');
-    } finally { setBusy(false); }
-  };
-
-  const input = 'w-full h-10 rounded-lg border border-bss-border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200';
-  const fieldLabel = 'text-[11px] font-bold uppercase tracking-wider text-bss-text-muted mb-1 block';
-
-  if (atLimit) {
-    return <div className="bss-card rounded-2xl p-4 text-sm text-bss-text-muted flex items-center gap-2"><ShieldCheck size={16} /> Camera limit reached for this site ({site.cameraCount} / {site.cameraLimit}). Ask BSS admin to raise it.</div>;
-  }
-
-  if (!open) {
-    return (
-      <div className="bss-card rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-bss-text-primary">Add a site camera</p>
-          <p className="text-[11px] text-bss-text-muted mt-0.5">Create the camera, allowlist its public IP, then let the client claim it.</p>
-        </div>
-        <button type="button" onClick={() => setOpen(true)} className="h-9 px-3 rounded-lg bg-[#01183A] text-white text-xs font-semibold flex items-center gap-1.5 hover:bg-black self-start">
-          <Plus size={14} /> Add camera
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <section className="bss-card rounded-2xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-bss-border flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-bold text-bss-text-primary">Add camera to {site.siteName}</h3>
-          <p className="text-[11px] text-bss-text-muted mt-0.5">The client must use this same camera label. RTSP stays on the client.</p>
-        </div>
-        <button type="button" onClick={() => { setOpen(false); setError(''); }} className="w-8 h-8 grid place-items-center rounded-full hover:bg-bss-bg"><X size={16} /></button>
-      </div>
-      <div className="p-4 space-y-3">
-        {error && <p className="text-sm text-bss-error bg-bss-soft-orange border border-bss-border rounded-lg p-3">{error}</p>}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div><label className={fieldLabel}>Camera label *</label><input value={label} onChange={e => setLabel(e.target.value)} placeholder="Main Gate" className={input} /></div>
-          <div><label className={fieldLabel}>Channel</label><input value={channel} onChange={e => setChannel(e.target.value.replace(/\D/g, ''))} placeholder="1" className={input} /></div>
-          <div><label className={fieldLabel}>Allowed public IPv4</label><input value={allowedIp} onChange={e => setAllowedIp(e.target.value)} placeholder="203.0.113.10" className={input} /></div>
-          <div><label className={fieldLabel}>Timezone</label><input value={timezone} onChange={e => setTimezone(e.target.value)} placeholder="Asia/Kolkata" className={input} /></div>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[11px] text-bss-text-muted">Add the capture window after creating the camera.</p>
-          <button type="button" onClick={() => void submit()} disabled={busy || !label.trim()}
-            className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black disabled:opacity-50">
-            {busy ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} Add camera
           </button>
         </div>
       </div>
@@ -348,6 +269,7 @@ export default function EdgeDevicesPage() {
                   <p className="text-sm font-bold text-bss-text-primary flex items-center gap-2"><Wifi size={14} /> {device.name || 'Attendance client'}</p>
                   <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${device.active ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-bss-error'}`}>{device.active ? 'Active' : 'Revoked'}</span>
                 </div>
+                <p className="text-[11px] text-bss-text-muted font-mono break-all">Device ID: {device.deviceId}</p>
                 <p className="text-[11px] text-bss-text-muted">Last seen {when(device.lastSeenAt)} · IP {device.lastSeenIp || 'unknown'}</p>
                 <p className="text-[11px] text-bss-text-muted">Version {device.version || '—'} · {device.cameraCount} camera{device.cameraCount === 1 ? '' : 's'}</p>
                 <p className="text-[11px] text-bss-text-muted">{device.sites.length ? device.sites.map(site => site.name).join(', ') : 'No sites yet'}</p>
@@ -367,7 +289,7 @@ export default function EdgeDevicesPage() {
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-bss-bg text-bss-text-muted">Cameras {site.cameraCount} / {site.cameraLimit}</span>
                 {site.devices.length === 0 && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-bss-soft-orange text-bss-error">No client activated</span>}
               </div>
-              <p className="text-sm text-bss-text-muted mt-0.5">{site.bssId || 'No BSS site ID'} · Cameras can be configured before the client is activated.</p>
+              <p className="text-sm text-bss-text-muted mt-0.5">{site.bssId || 'No BSS site ID'} · Camera limit is controlled by BSS admin.</p>
               {site.devices.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {site.devices.map(device => (
@@ -388,10 +310,8 @@ export default function EdgeDevicesPage() {
             )}
           </div>
 
-          <AddCameraForm site={site} onSaved={message => { setNotice(message); void load(); }} />
-
           {site.cameras.length === 0 ? (
-            <div className="bss-card rounded-2xl p-5 text-sm text-bss-text-muted flex items-center gap-2"><Clock3 size={16} /> No cameras added for this site yet.</div>
+            <div className="bss-card rounded-2xl p-5 text-sm text-bss-text-muted flex items-center gap-2"><Clock3 size={16} /> Cameras are added from the attendance client and appear here.</div>
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               {site.cameras.map(camera => (

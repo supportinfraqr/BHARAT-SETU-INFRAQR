@@ -240,12 +240,17 @@ function cameraCard(camera) {
     ${canPreview ? `<img class="feed" src="${BASE}/stream/${id}?t=${Date.now()}" alt="${esc(camera.label)} live view" />` : `<div class="feed" style="display:grid;place-items:center;color:#94A3B8;font-size:12px">RTSP not configured</div>`}
     <div class="cam-body">
       <div class="cam-info">
+        <div>Camera ID<b class="mono">${esc(camera.uid || '—')}</b></div>
         <div>BSS Site ID<b>${esc(camera.siteBssId || '—')}</b></div>
         <div>Allowed IP<b>${esc(camera.allowedIp || 'Not set in BSS')}</b></div>
         <div>Schedule<b>${esc(camera.schedule || '24/7')}</b></div>
         <div>FPS<b>${esc(camera.fps ?? 0)}</b></div>
         <div>Last event<b>${esc(when(camera.lastEventAt))}</b></div>
         <div>Mode<b>${esc(camera.sendAllowed ? 'Sending allowed' : 'Live only')}</b></div>
+      </div>
+      <div class="rtsp-row">
+        <div><label>Channel<input id="channel-${id}" inputmode="numeric" value="${esc(camera.channel ?? '')}" placeholder="1" /></label></div>
+        <button id="saveChannel-${id}" class="btn" type="button">Save channel</button>
       </div>
       <div class="rtsp-row">
         <div><label>RTSP URL<input id="url-${id}" placeholder="${camera.rtspConfigured ? 'RTSP configured — enter to replace' : 'rtsp://...'}" /></label></div>
@@ -315,6 +320,7 @@ function render() {
           <p class="muted">${esc(state.employerName || 'Employer')} · ${sites.length} site${sites.length === 1 ? '' : 's'}</p>
         </div>
         <div class="meta">
+          <div>Device ID<b class="mono" style="font-size:10px;word-break:break-all">${esc(state.deviceId || '—')}</b></div>
           <div>Heartbeat<b>${esc(when(state.lastHeartbeatAt))}</b></div>
           <div>Pending events<b>${esc(state.outbox ?? 0)}</b></div>
           <div>Cameras<b>${cameras.length}</b></div>
@@ -327,10 +333,9 @@ function render() {
         <div class="addbar">
           <div><label>Site<select id="newSite"><option value="">Select site</option>${sites.map(site => `<option value="${esc(site.bssId)}">${esc(site.name)}${site.bssId ? ` · ${esc(site.bssId)}` : ''}</option>`).join('')}</select></label></div>
           <div><label>Camera label<input id="newLabel" placeholder="Main Gate" /></label></div>
-          <div><label>Channel<input id="newChannel" placeholder="1" /></label></div>
           <button id="addCamera" class="btn primary" type="button">Add camera</button>
         </div>
-        <p class="input-note" style="margin-top:8px">Create the camera for a site, then enter its local RTSP. The employer sets IP and schedule in BSS.</p>
+        <p class="input-note" style="margin-top:8px">Add the camera with a site and label, then set its channel and local RTSP below. The employer sets IP and schedule in BSS.</p>
         <p id="mainMsg" class="msg"></p>
       </section>
 
@@ -343,13 +348,19 @@ function render() {
     if (!siteBssId) { showMessage('mainMsg', 'Select a site for this camera.'); return; }
     if (!label) { showMessage('mainMsg', 'Enter a camera label.'); return; }
     try {
-      state = await api('/api/cameras', { method: 'POST', body: JSON.stringify({ siteBssId, label, channel: qs('newChannel').value.trim() }) });
+      state = await api('/api/cameras', { method: 'POST', body: JSON.stringify({ siteBssId, label }) });
       render();
     } catch (error) { showMessage('mainMsg', error.message); }
   };
 
   for (const camera of cameras) {
     const id = camera.cameraId;
+    qs(`saveChannel-${id}`)?.addEventListener('click', async () => {
+      try {
+        state = await api(`/api/cameras/${id}/channel`, { method: 'POST', body: JSON.stringify({ channel: qs(`channel-${id}`).value.trim() }) });
+        render();
+      } catch (error) { showMessage('mainMsg', error.message); }
+    });
     qs(`saveRtsp-${id}`)?.addEventListener('click', async () => {
       try {
         state = await api(`/api/cameras/${id}/rtsp`, { method: 'POST', body: JSON.stringify({ rtsp: qs(`url-${id}`).value.trim() }) });
