@@ -7,7 +7,7 @@ on:
       - 'attendance-v*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -124,85 +124,56 @@ jobs:
           fi
           ls -lh executable/${{ matrix.artifact }}
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: bss-attendance-${{ matrix.artifact }}
-          path: FINAL/attendance/executable/${{ matrix.artifact }}/*
-          if-no-files-found: error
+      - name: Prepare production SSH
+        shell: bash
+        env:
+          BSS_DEPLOY_SSH_KEY: ${{ secrets.BSS_DEPLOY_SSH_KEY }}
+          BSS_DEPLOY_HOST: ${{ secrets.BSS_DEPLOY_HOST }}
+          BSS_DEPLOY_USER: ${{ secrets.BSS_DEPLOY_USER }}
+          BSS_DEPLOY_PATH: ${{ secrets.BSS_DEPLOY_PATH }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$BSS_DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/bss_deploy
+          chmod 700 ~/.ssh
+          chmod 600 ~/.ssh/bss_deploy
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/bss_deploy "$BSS_DEPLOY_USER@$BSS_DEPLOY_HOST" "mkdir -p '$BSS_DEPLOY_PATH/.incoming-$GITHUB_RUN_ID/${{ matrix.artifact }}'"
 
-  manifest:
+      - name: Upload directly to production
+        working-directory: FINAL/attendance
+        shell: bash
+        env:
+          BSS_DEPLOY_HOST: ${{ secrets.BSS_DEPLOY_HOST }}
+          BSS_DEPLOY_USER: ${{ secrets.BSS_DEPLOY_USER }}
+          BSS_DEPLOY_PATH: ${{ secrets.BSS_DEPLOY_PATH }}
+        run: |
+          scp -q -r -o StrictHostKeyChecking=no -i ~/.ssh/bss_deploy "executable/${{ matrix.artifact }}/." "$BSS_DEPLOY_USER@$BSS_DEPLOY_HOST:$BSS_DEPLOY_PATH/.incoming-$GITHUB_RUN_ID/${{ matrix.artifact }}/"
+
+  publish:
     needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: bss-attendance-windows
-          path: FINAL/attendance/download/windows
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: bss-attendance-linux
-          path: FINAL/attendance/download/linux
-
-      - name: Build update manifest
-        working-directory: FINAL/attendance
+      - name: Prepare production SSH
         shell: bash
+        env:
+          BSS_DEPLOY_SSH_KEY: ${{ secrets.BSS_DEPLOY_SSH_KEY }}
+          BSS_DEPLOY_HOST: ${{ secrets.BSS_DEPLOY_HOST }}
+          BSS_DEPLOY_USER: ${{ secrets.BSS_DEPLOY_USER }}
         run: |
-          python3 - <<'PY'
-          import datetime
-          import json
-          import shutil
-          from pathlib import Path
+          mkdir -p ~/.ssh
+          printf '%s\n' "$BSS_DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/bss_deploy
+          chmod 700 ~/.ssh
+          chmod 600 ~/.ssh/bss_deploy
 
-          root = Path('download')
-          out = Path('updates')
-          out.mkdir(parents=True, exist_ok=True)
-          version = json.loads(Path('package.json').read_text(encoding='utf-8'))['version']
-          base = 'https://login.bharatshramsetu.com/downloads/attendance/updates'
-
-          win_exe = next(p for p in (root / 'windows').glob('*.exe') if not p.name.endswith('.sig'))
-          win_sig = Path(str(win_exe) + '.sig')
-          linux_app = next((root / 'linux').glob('*.AppImage'))
-          linux_sig = Path(str(linux_app) + '.sig')
-          if not win_sig.exists() or not linux_sig.exists():
-              raise SystemExit('Missing updater signature file')
-
-          win_name = f'BSS-Attendance-{version}-Windows-Setup.exe'
-          linux_name = f'BSS-Attendance-{version}-Linux.AppImage'
-          shutil.copy2(win_exe, out / win_name)
-          shutil.copy2(win_sig, out / f'{win_name}.sig')
-          shutil.copy2(linux_app, out / linux_name)
-          shutil.copy2(linux_sig, out / f'{linux_name}.sig')
-          for name in ('*.msi', '*.msi.sig', '*.deb'):
-              for path in (root / 'windows').glob(name):
-                  shutil.copy2(path, out / path.name)
-              for path in (root / 'linux').glob(name):
-                  shutil.copy2(path, out / path.name)
-
-          manifest = {
-              'version': version,
-              'notes': f'BSS Attendance {version}',
-              'pub_date': datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00', 'Z'),
-              'platforms': {
-                  'windows-x86_64': {
-                      'signature': win_sig.read_text(encoding='utf-8').strip(),
-                      'url': f'{base}/{win_name}',
-                  },
-                  'linux-x86_64': {
-                      'signature': linux_sig.read_text(encoding='utf-8').strip(),
-                      'url': f'{base}/{linux_name}',
-                  },
-              },
-          }
-          (out / 'latest.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
-          for path in sorted(out.iterdir()):
-              print(path.name, path.stat().st_size)
-          PY
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: bss-attendance-updates
-          path: FINAL/attendance/updates/*
-          if-no-files-found: error
+      - name: Publish update manifest and stable links
+        shell: bash
+        env:
+          BSS_DEPLOY_HOST: ${{ secrets.BSS_DEPLOY_HOST }}
+          BSS_DEPLOY_USER: ${{ secrets.BSS_DEPLOY_USER }}
+          BSS_DEPLOY_PATH: ${{ secrets.BSS_DEPLOY_PATH }}
+        run: |
+          VERSION=$(python3 -c "import json; print(json.load(open('FINAL/attendance/package.json'))['version'])")
+          scp -q -o StrictHostKeyChecking=no -i ~/.ssh/bss_deploy FINAL/attendance/publish_update.py "$BSS_DEPLOY_USER@$BSS_DEPLOY_HOST:/tmp/bss_publish_update_$GITHUB_RUN_ID.py"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/bss_deploy "$BSS_DEPLOY_USER@$BSS_DEPLOY_HOST" "python3 /tmp/bss_publish_update_$GITHUB_RUN_ID.py --version '$VERSION' --run-id '$GITHUB_RUN_ID' --root '$BSS_DEPLOY_PATH'"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/bss_deploy "$BSS_DEPLOY_USER@$BSS_DEPLOY_HOST" "rm -f /tmp/bss_publish_update_$GITHUB_RUN_ID.py"
