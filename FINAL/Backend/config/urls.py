@@ -132,6 +132,7 @@ _v1_patterns = _v1(
     ("admin/sites-cctv", v1_bridge.admin_sites_cctv, "v1_admin_sites_cctv"),
     ("employer/edge-devices", v1_bridge.employer_edge_devices, "v1_employer_edge_devices"),
     ("employer/attendance-cameras", v1_bridge.employer_attendance_cameras, "v1_employer_attendance_cameras"),
+    ("employer/attendance-cameras/create", v1_bridge.employer_attendance_camera_create, "v1_employer_attendance_camera_create"),
     ("employer/attendance-cameras/<int:camera_id>", v1_bridge.employer_attendance_camera_detail, "v1_employer_attendance_camera_detail"),
     ("employer/edge-devices/<uuid:device_id>/revoke", v1_bridge.employer_edge_device_revoke, "v1_employer_edge_device_revoke"),
     ("employer/staff", v1_bridge.employer_staff, "v1_employer_staff"),

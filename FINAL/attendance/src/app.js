@@ -328,30 +328,8 @@ function render() {
         </div>
       </section>
 
-      <section class="card">
-        <p class="section-label" style="margin-bottom:10px">Add a camera</p>
-        <div class="addbar">
-          <div><label>Site<select id="newSite"><option value="">Select site</option>${sites.map(site => `<option value="${esc(site.bssId)}">${esc(site.name)}${site.bssId ? ` · ${esc(site.bssId)}` : ''}</option>`).join('')}</select></label></div>
-          <div><label>Camera label<input id="newLabel" placeholder="Main Gate" /></label></div>
-          <button id="addCamera" class="btn primary" type="button">Add camera</button>
-        </div>
-        <p class="input-note" style="margin-top:8px">Add the camera with a site and label, then set its channel and local RTSP below. The employer sets IP and schedule in BSS.</p>
-        <p id="mainMsg" class="msg"></p>
-      </section>
-
       ${grouped.length ? grouped.map(group => siteSection(group, group.cameras)).join('') : '<div class="card empty">No employer sites are available for this client yet. Ask the employer to create a site.</div>'}
     </div>`;
-
-  qs('addCamera').onclick = async () => {
-    const siteBssId = qs('newSite').value;
-    const label = qs('newLabel').value.trim();
-    if (!siteBssId) { showMessage('mainMsg', 'Select a site for this camera.'); return; }
-    if (!label) { showMessage('mainMsg', 'Enter a camera label.'); return; }
-    try {
-      state = await api('/api/cameras', { method: 'POST', body: JSON.stringify({ siteBssId, label }) });
-      render();
-    } catch (error) { showMessage('mainMsg', error.message); }
-  };
 
   for (const camera of cameras) {
     const id = camera.cameraId;

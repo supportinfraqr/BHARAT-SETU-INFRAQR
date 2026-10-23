@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const session = await requireApiSession('Employer');
     const config = getRuntimeConfig();
     const body = await readJsonObject(request, 32_000);
-    const result = await upstreamRequest(config.apiBaseUrl, '/v1/employer/attendance-cameras', session, {
+    const result = await upstreamRequest(config.apiBaseUrl, '/v1/employer/attendance-cameras/create', session, {
       method: 'POST', body: JSON.stringify(body),
     });
     return NextResponse.json(result, { headers: noStore });

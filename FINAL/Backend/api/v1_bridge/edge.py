@@ -755,8 +755,8 @@ def edge_camera_setup(request, camera_id):
     device = _edge_device(request)
     if device is None:
         return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
-    camera = EdgeCamera.objects.filter(pk=camera_id, device=device).first()
-    if camera is None:
+    camera = EdgeCamera.objects.filter(pk=camera_id, site__employer_id=device.employer_id).first()
+    if camera is None or (camera.device_id and camera.device_id != device.id):
         return Response({"error": "Camera not found."}, status=status.HTTP_404_NOT_FOUND)
     body = request.data if isinstance(request.data, dict) else {}
     if "channel" in body:
