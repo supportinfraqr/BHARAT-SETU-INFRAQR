@@ -715,7 +715,7 @@ class Engine:
     def status(self):
         now = _now()
         heartbeat_fresh = bool(self.last_heartbeat
-                               and (now - self.last_heartbeat).total_seconds() < 60)
+                               and (now - self.last_heartbeat).total_seconds() < 90)
         cameras = []
         for cid, worker in sorted(self.workers.items()):
             bss = self.bss_cameras.get(cid) or {}

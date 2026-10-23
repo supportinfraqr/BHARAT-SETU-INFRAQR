@@ -28,6 +28,7 @@ type DeviceBrief = {
   deviceId: string;
   name: string;
   active: boolean;
+  online: boolean;
   lastSeenAt: string | null;
   lastSeenIp: string;
   version: string;
@@ -59,6 +60,13 @@ function when(value: string | null) {
   if (!value) return 'Never';
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 'Never' : date.toLocaleString();
+}
+
+function deviceStatus(device: DeviceBrief) {
+  if (!device.active) return { label: 'Revoked', className: 'bg-bss-soft-orange text-bss-error' };
+  return device.online
+    ? { label: 'Online', className: 'bg-bss-soft-green text-bss-green' }
+    : { label: 'Offline', className: 'bg-bss-bg text-bss-text-muted' };
 }
 
 function CameraCard({ site, camera, onSaved }: { site: SiteRow; camera: CameraRow; onSaved: (message: string) => void }) {
@@ -341,7 +349,7 @@ export default function EdgeDevicesPage() {
               <div key={device.deviceId} className="rounded-xl border border-bss-border p-4 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-bold text-bss-text-primary flex items-center gap-2"><Wifi size={14} /> {device.name || 'Attendance client'}</p>
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${device.active ? 'bg-bss-soft-green text-bss-green' : 'bg-bss-soft-orange text-bss-error'}`}>{device.active ? 'Active' : 'Revoked'}</span>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${deviceStatus(device).className}`}>{deviceStatus(device).label}</span>
                 </div>
                 <p className="text-[11px] text-bss-text-muted font-mono break-all">Device ID: {device.deviceId}</p>
                 <p className="text-[11px] text-bss-text-muted">Last seen {when(device.lastSeenAt)} · IP {device.lastSeenIp || 'unknown'}</p>
@@ -368,7 +376,7 @@ export default function EdgeDevicesPage() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   {site.devices.map(device => (
                     <span key={device.deviceId} className="inline-flex items-center gap-2 text-[11px] text-bss-text-muted bg-bss-bg rounded-lg px-2.5 py-1">
-                      <Wifi size={12} /> {device.name || 'Client'} · {device.active ? 'Active' : 'Revoked'} · last seen {when(device.lastSeenAt)}
+                      <Wifi size={12} /> {device.name || 'Client'} · {deviceStatus(device).label} · last seen {when(device.lastSeenAt)}
                       {device.active && <button type="button" onClick={() => void revoke(device)} disabled={revoking === device.deviceId} className="text-bss-error font-bold ml-1 disabled:opacity-50">
                         {revoking === device.deviceId ? '…' : 'Revoke'}
                       </button>}

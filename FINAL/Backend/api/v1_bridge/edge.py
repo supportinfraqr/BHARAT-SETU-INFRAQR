@@ -52,6 +52,7 @@ EDGE_FACE_MARGIN = 0.08
 EDGE_FACE_TOPK = 3
 EDGE_FACE_VOTES = 2
 EDGE_DAY_NAMES = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+EDGE_DEVICE_ONLINE_WINDOW = timedelta(seconds=90)
 
 
 class EdgeTokenAuthentication(BaseAuthentication):
@@ -214,6 +215,7 @@ def _device_payload(device):
         "employerName": _employer_name(device.employer) if device.employer_id else "",
         "version": device.version,
         "active": device.is_active,
+        "online": _device_online(device),
         "lastSeenAt": device.last_seen_at.isoformat() if device.last_seen_at else None,
         "lastSeenIp": device.last_seen_ip or "",
         "cameraCount": camera_count,
@@ -384,6 +386,11 @@ def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id)
         remarks=remarks,
     )
     return attendance
+
+
+def _device_online(device):
+    return bool(device.is_active and device.last_seen_at
+                and timezone.now() - device.last_seen_at <= EDGE_DEVICE_ONLINE_WINDOW)
 
 
 def _employer_name(user):
@@ -944,6 +951,7 @@ def employer_attendance_cameras(request):
             "cameras": [_employer_camera_payload(c) for c in cameras],
             "devices": [{
                 "deviceId": str(d.id), "name": d.name, "active": d.is_active,
+                "online": _device_online(d),
                 "lastSeenAt": d.last_seen_at.isoformat() if d.last_seen_at else None,
                 "lastSeenIp": d.last_seen_ip or "",
                 "version": d.version,
