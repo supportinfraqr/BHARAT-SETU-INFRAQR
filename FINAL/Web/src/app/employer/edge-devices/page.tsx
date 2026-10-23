@@ -287,7 +287,11 @@ export default function EdgeDevicesPage() {
     if (!window.confirm(`Revoke ${device.name || 'this client'}? All its claimed cameras will be released.`)) return;
     setRevoking(device.deviceId); setError(''); setNotice('');
     try {
-      const response = await fetch(`/api/employer/edge-devices/${device.deviceId}/revoke`, { method: 'POST' });
+      const response = await fetch(`/api/employer/edge-devices/${device.deviceId}/revoke`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
       const body = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(body.error ?? 'Could not revoke the device.');
       setNotice('Device revoked. Its cameras are now unclaimed.');
