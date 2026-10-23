@@ -30,247 +30,55 @@ function when(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 'Never' : date.toLocaleString();
 }
-function approvalLabel(camera) {
-  if (camera.approvalStatus === 'PENDING') return 'Waiting for employer approval';
-  if (camera.approvalStatus === 'APPROVED') return camera.cameraOnline ? 'Approved · online' : 'Approved';
-  return 'Removed by employer';
+function cameraState(camera) {
+  if (camera.approvalStatus !== 'APPROVED') return { label: 'Removed by employer', cls: 'muted' };
+  if (!camera.ipWhitelisted) return { label: 'IP whitelisting pending', cls: 'warn' };
+  if (camera.cameraOnline) return { label: 'Active · online', cls: 'ok' };
+  return { label: 'Active · offline', cls: 'muted' };
 }
 function statusPill(camera) {
-  if (camera.approvalStatus === 'PENDING') return '<span class="pill warn">Pending approval</span>';
-  if (camera.status === 'ONLINE') return '<span class="pill ok">Live</span>';
   if (camera.status === 'NO_RTSP') return '<span class="pill warn">No RTSP</span>';
+  if (camera.status === 'ONLINE') return '<span class="pill ok">Live</span>';
   if (camera.status === 'AUTH_FAILED') return '<span class="pill bad">Reconnect needed</span>';
   return `<span class="pill ${camera.status === 'RECONNECTING' ? 'warn' : 'muted'}">${esc(camera.status || 'Unknown')}</span>`;
-}
-function showMessage(id, text, ok = false) {
-  const el = qs(id);
-  if (!el) return;
-  el.textContent = text;
-  el.className = `msg ${ok ? 'ok' : 'error'}`;
-}
-function setStep(step) {
-  const ids = ['phoneStep', 'otpStep', 'deviceStep'];
-  ids.forEach((id, index) => {
-    const el = qs(id);
-    if (el) el.classList.toggle('hidden', index + 1 !== step);
-    const pill = qs(`stepPill${index + 1}`);
-    if (pill) {
-      pill.classList.toggle('active', index + 1 === step);
-      pill.classList.toggle('done', index + 1 < step);
-    }
-  });
-}
-function clearOtpTimer() {
-  if (otpCountdown) clearInterval(otpCountdown);
-  otpCountdown = null;
-}
-function startOtpTimer() {
-  clearOtpTimer();
-  otpSeconds = 60;
-  const btn = qs('resendOtpBtn');
-  const label = qs('resendNote');
-  const tick = () => {
-    if (btn) btn.disabled = otpSeconds > 0;
-    if (label) label.textContent = otpSeconds > 0 ? `Resend available in ${otpSeconds}s` : 'You can resend the OTP now.';
-    if (otpSeconds <= 0) { clearOtpTimer(); return; }
-    otpSeconds -= 1;
-  };
-  tick();
-  otpCountdown = setInterval(tick, 1000);
-}
-
-function renderActivation() {
-  clearOtpTimer();
-  qs('logoutBtn').classList.add('hidden');
-  qs('refreshBtn').classList.add('hidden');
-  qs('app').innerHTML = `
-    <section class="card activation">
-      <div class="activation-head">
-        <img class="activation-logo" src="bss-original-logo.png" alt="Bharat Shram Setu" />
-        <div>
-          <h2>Activate this client</h2>
-          <p class="muted">Sign in with the employer owner's mobile. This device will be able to run cameras for every site of that employer.</p>
-        </div>
-      </div>
-      <div class="stepper">
-        <div id="stepPill1" class="step-pill active">1 · Mobile</div>
-        <div id="stepPill2" class="step-pill">2 · OTP</div>
-        <div id="stepPill3" class="step-pill">3 · Device</div>
-      </div>
-
-      <section id="phoneStep" class="activation-step">
-        <div class="step-title"><span class="num">1</span><p>Employer mobile number</p></div>
-        <label>Employer owner mobile
-          <input id="phone" inputmode="numeric" maxlength="10" autocomplete="tel" placeholder="10-digit mobile" />
-        </label>
-        <div class="row"><button id="sendOtpBtn" class="btn primary" type="button">Send OTP</button></div>
-      </section>
-
-      <section id="otpStep" class="activation-step hidden">
-        <div class="step-title"><span class="num">2</span><p>Verify OTP</p></div>
-        <label>One-time password
-          <input id="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6-digit OTP" />
-        </label>
-        <div class="row">
-          <button id="verifyOtpBtn" class="btn primary" type="button">Verify OTP</button>
-          <button id="resendOtpBtn" class="btn" type="button">Resend OTP</button>
-          <button id="changePhoneBtn" class="btn ghost" type="button">Change number</button>
-        </div>
-        <div class="otp-meta">
-          <p id="otpSentTo"></p>
-          <p id="resendNote"></p>
-        </div>
-      </section>
-
-      <section id="deviceStep" class="activation-step hidden">
-        <div class="step-title"><span class="num">3</span><p>Name this device</p></div>
-        <label>Device name
-          <input id="deviceName" maxlength="120" placeholder="Reception laptop" />
-        </label>
-        <p class="input-note">Use a name your team will recognise. No site selection is needed.</p>
-        <div class="row"><button id="activateBtn" class="btn orange" type="button">Activate device</button></div>
-      </section>
-
-      <p id="activationMsg" class="msg"></p>
-    </section>`;
-
-  qs('sendOtpBtn').onclick = async () => {
-    const phone = qs('phone').value.replace(/\D/g, '');
-    if (phone.length !== 10) { showMessage('activationMsg', 'Enter a valid 10-digit employer mobile number.'); return; }
-    const btn = qs('sendOtpBtn');
-    btn.disabled = true;
-    btn.textContent = 'Sending OTP…';
-    try {
-      await api('/api/activate/request-otp', { method: 'POST', body: JSON.stringify({ phone }) });
-      activationPhone = phone;
-      qs('otpSentTo').textContent = `OTP sent to ${phone.slice(0, 2)}••••••${phone.slice(-2)}`;
-      qs('activationMsg').className = 'msg';
-      setStep(2);
-      startOtpTimer();
-      qs('otp').focus();
-    } catch (error) {
-      showMessage('activationMsg', error.message);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Send OTP';
-    }
-  };
-
-  qs('verifyOtpBtn').onclick = async () => {
-    const otp = qs('otp').value.trim();
-    if (!/^\d{4,8}$/.test(otp)) { showMessage('activationMsg', 'Enter the OTP sent to the employer mobile.'); return; }
-    const btn = qs('verifyOtpBtn');
-    btn.disabled = true;
-    btn.textContent = 'Verifying…';
-    try {
-      const data = await api('/api/activate/verify-otp', { method: 'POST', body: JSON.stringify({ phone: activationPhone, otp }) });
-      activationToken = data.activationToken;
-      clearOtpTimer();
-      setStep(3);
-      qs('activationMsg').className = 'msg';
-      qs('deviceName').focus();
-    } catch (error) {
-      showMessage('activationMsg', error.message);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Verify OTP';
-    }
-  };
-
-  qs('resendOtpBtn').onclick = async () => {
-    const btn = qs('resendOtpBtn');
-    btn.disabled = true;
-    try {
-      await api('/api/activate/request-otp', { method: 'POST', body: JSON.stringify({ phone: activationPhone }) });
-      startOtpTimer();
-      showMessage('activationMsg', 'A new OTP has been sent.', true);
-    } catch (error) {
-      showMessage('activationMsg', error.message);
-      btn.disabled = false;
-    }
-  };
-
-  qs('changePhoneBtn').onclick = () => {
-    clearOtpTimer();
-    activationToken = '';
-    activationPhone = '';
-    qs('phone').value = '';
-    qs('otp').value = '';
-    qs('activationMsg').className = 'msg';
-    setStep(1);
-    qs('phone').focus();
-  };
-
-  qs('activateBtn').onclick = async () => {
-    const deviceName = qs('deviceName').value.trim();
-    if (!deviceName) { showMessage('activationMsg', 'Enter a device name.'); return; }
-    const btn = qs('activateBtn');
-    btn.disabled = true;
-    btn.textContent = 'Activating…';
-    try {
-      state = await api('/api/activate/complete', {
-        method: 'POST',
-        body: JSON.stringify({ activationToken, deviceName }),
-      });
-      render();
-      startPolling();
-      void checkForUpdates(false);
-    } catch (error) {
-      showMessage('activationMsg', error.message);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Activate device';
-    }
-  };
-
-  qs('phone').addEventListener('keydown', event => { if (event.key === 'Enter') qs('sendOtpBtn').click(); });
-  qs('otp').addEventListener('keydown', event => { if (event.key === 'Enter') qs('verifyOtpBtn').click(); });
-  qs('deviceName').addEventListener('keydown', event => { if (event.key === 'Enter') qs('activateBtn').click(); });
 }
 
 function cameraCard(camera) {
   const id = camera.cameraId;
+  const stateInfo = cameraState(camera);
   const canPreview = camera.rtspConfigured;
-  const approved = camera.approvalStatus === 'APPROVED';
   return `<section class="card cam" data-camera="${id}">
     <div class="cam-head">
       <div class="cam-title"><h3>${esc(camera.label)}</h3>${statusPill(camera)}</div>
-      <span class="pill ${approved ? 'ok' : 'warn'}">${esc(approvalLabel(camera))}</span>
+      <span class="pill ${stateInfo.cls}">${esc(stateInfo.label)}</span>
     </div>
     ${canPreview ? `<img class="feed" src="${BASE}/stream/${id}?t=${Date.now()}" alt="${esc(camera.label)} live view" />` : `<div class="feed" style="display:grid;place-items:center;color:#94A3B8;font-size:12px">RTSP not configured</div>`}
     <div class="cam-body">
       <div class="cam-info">
         <div>Camera ID<b class="mono">${esc(camera.uid || '—')}</b></div>
         <div>BSS Site ID<b>${esc(camera.siteBssId || '—')}</b></div>
+        <div>Channel<b>${esc(camera.channel ?? '—')}</b></div>
         <div>Timezone<b>IST (UTC+05:30)</b></div>
-        <div>Allowed IP<b>${esc(camera.allowedIp || 'Not set by employer')}</b></div>
-        <div>Schedule<b>${esc(camera.schedule || '24/7')}</b></div>
-        <div>FPS<b>${esc(camera.fps ?? 0)}</b></div>
+        <div>Allowed IP<b>${esc(camera.allowedIp || 'Waiting for employer')}</b></div>
         <div>Last event<b>${esc(when(camera.lastEventAt))}</b></div>
-        <div>Mode<b>${esc(approved ? (camera.sendAllowed ? 'Attendance active' : 'Waiting') : 'Pending approval')}</b></div>
       </div>
-      <div class="rtsp-row">
-        <div><label>Channel<input id="channel-${id}" inputmode="numeric" value="${esc(camera.channel ?? '')}" placeholder="1" /></label></div>
-        <button id="saveChannel-${id}" class="btn" type="button">Save channel</button>
-      </div>
-      <div class="rtsp-row">
-        <div><label>RTSP URL<input id="url-${id}" placeholder="${camera.rtspConfigured ? 'RTSP configured — enter to replace' : 'rtsp://...'}" /></label></div>
-        <button id="saveRtsp-${id}" class="btn" type="button">Save RTSP</button>
-        <button id="testRtsp-${id}" class="btn" type="button">Test</button>
-      </div>
-      <p id="testMsg-${id}" class="note"></p>
-      ${approved ? `
-        <div class="cam-controls">
-          <div><label>Mode<select id="mode-${id}">
-            <option value="LIVE" ${camera.mode !== 'SENDING' ? 'selected' : ''}>Live only</option>
-            <option value="SENDING" ${camera.mode === 'SENDING' ? 'selected' : ''} ${camera.sendAllowed ? '' : 'disabled'}>Send attendance</option>
-          </select></label></div>
-          <button id="applyMode-${id}" class="btn primary" type="button">Apply mode</button>
+      <p class="note">${camera.sendBlockedReason ? `<span class="${camera.approvalStatus === 'APPROVED' && camera.ipWhitelisted ? 'blocked' : ''}">${esc(camera.sendBlockedReason)}</span>` : 'Attendance is active. Events sync automatically after an internet outage.'}</p>
+      <details class="setup">
+        <summary>Edit channel / RTSP</summary>
+        <div class="rtsp-row" style="margin-top:8px">
+          <div><label>Channel<input id="channel-${id}" inputmode="numeric" value="${esc(camera.channel ?? '')}" placeholder="1" /></label></div>
+          <button id="saveChannel-${id}" class="btn" type="button">Save channel</button>
         </div>
-        <p class="note">${camera.sendBlockedReason ? `<span class="blocked">${esc(camera.sendBlockedReason)}</span>` : 'Ready inside the capture window.'}</p>
-      ` : `
-        <p class="note">You can set the RTSP and channel now. The employer must approve this camera before attendance starts.</p>
-      `}
+        <div class="rtsp-row" style="margin-top:8px">
+          <div><label>RTSP URL<input id="url-${id}" placeholder="${camera.rtspConfigured ? 'RTSP configured — enter to replace' : 'rtsp://...'}" /></label></div>
+          <button id="saveRtsp-${id}" class="btn" type="button">Save RTSP</button>
+          <button id="testRtsp-${id}" class="btn" type="button">Test</button>
+        </div>
+        <p id="testMsg-${id}" class="note"></p>
+      </details>
+      <div class="row" style="margin-top:10px">
+        <button id="remove-${id}" class="btn ghost" type="button">Remove camera</button>
+      </div>
     </div>
   </section>`;
 }
@@ -338,12 +146,14 @@ function render() {
       </section>
 
       <section class="card">
-        <div class="cam-title"><h3>Add camera</h3><span class="pill muted">Employer approval required</span></div>
-        <p class="muted">Add the camera here, then set its channel and RTSP locally. It will appear in the employer BSS for approval.</p>
-        <div class="rtsp-row">
+        <div class="cam-title"><h3>Add camera</h3><span class="pill muted">One step</span></div>
+        <p class="muted">Enter every camera detail here. RTSP stays on this machine; the camera appears in the employer dashboard as IP whitelisting pending.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;align-items:end">
           <div><label>Site<select id="newCameraSite">${sites.map(site => `<option value="${esc(site.bssId || site.id)}">${esc(site.name)}</option>`).join('')}</select></label></div>
           <div><label>Camera label<input id="newCameraLabel" maxlength="120" placeholder="Main Gate" /></label></div>
-          <button id="addCameraBtn" class="btn primary" type="button" ${sites.length ? '' : 'disabled'}>Add camera</button>
+          <div><label>Channel<input id="newCameraChannel" inputmode="numeric" placeholder="1" /></label></div>
+          <div><label>RTSP URL<input id="newCameraRtsp" placeholder="rtsp://user:pass@ip/stream" /></label></div>
+          <button id="addCameraBtn" class="btn primary" type="button" ${sites.length ? '' : 'disabled'}>Save camera</button>
         </div>
         ${sites.length ? '' : '<p class="note blocked">The employer must create a site before you can add a camera.</p>'}
       </section>
@@ -359,10 +169,16 @@ function render() {
 
   qs('addCameraBtn')?.addEventListener('click', async () => {
     const label = qs('newCameraLabel').value.trim();
+    const channel = qs('newCameraChannel').value.trim();
+    const rtsp = qs('newCameraRtsp').value.trim();
     if (!label) { showMessage('mainMsg', 'Enter a camera label.'); return; }
+    if (!/^\d+$/.test(channel)) { showMessage('mainMsg', 'Enter a numeric camera channel.'); return; }
+    if (!rtsp.toLowerCase().startsWith('rtsp://') && !rtsp.toLowerCase().startsWith('rtsps://')) {
+      showMessage('mainMsg', 'Enter a valid RTSP URL.'); return;
+    }
     try {
       state = await api('/api/cameras', { method: 'POST', body: JSON.stringify({
-        label, siteBssId: qs('newCameraSite').value,
+        label, channel, rtsp, siteBssId: qs('newCameraSite').value,
       }) });
       render();
     } catch (error) { showMessage('mainMsg', error.message); }
@@ -390,8 +206,9 @@ function render() {
         message.style.color = result.ok ? '#14843C' : '#DC2626';
       } catch (error) { message.textContent = error.message; message.style.color = '#DC2626'; }
     });
-    qs(`applyMode-${id}`)?.addEventListener('click', async () => {
-      try { state = await api(`/api/cameras/${id}/mode`, { method: 'POST', body: JSON.stringify({ mode: qs(`mode-${id}`).value }) }); render(); }
+    qs(`remove-${id}`)?.addEventListener('click', async () => {
+      if (!window.confirm(`Remove ${camera.label}?`)) return;
+      try { state = await api(`/api/cameras/${id}`, { method: 'DELETE' }); render(); }
       catch (error) { showMessage('mainMsg', error.message); }
     });
   }
@@ -431,7 +248,7 @@ function startPolling() {
       const shape = value => JSON.stringify({
         activated: value?.activated,
         sites: (value?.sites || []).map(site => [site.id, site.bssId, site.name]),
-        cameras: (value?.cameras || []).map(camera => [camera.cameraId, camera.approvalStatus, camera.status, camera.rtspConfigured, camera.sendAllowed, camera.cameraOnline]),
+        cameras: (value?.cameras || []).map(camera => [camera.cameraId, camera.approvalStatus, camera.status, camera.rtspConfigured, camera.sendAllowed, camera.cameraOnline, camera.ipWhitelisted]),
         outbox: value?.outbox,
         localEvents: (value?.localEvents || []).map(event => [event.eventId, event.syncStatus]),
       });

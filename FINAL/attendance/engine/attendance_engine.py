@@ -28,7 +28,7 @@ import numpy as np
 import requests
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.3.0"
+APP_VERSION = "1.3.1"
 MODEL_NAME = "ArcFace"
 MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
 DETECTOR_BACKEND = "retinaface"
@@ -617,7 +617,10 @@ class Engine:
                         self.workers[cid] = worker
                     worker.label = local["label"]
                     worker.rtsp = str(local.get("rtsp") or "")
-                    worker.mode = str(local.get("mode") or "LIVE").upper()
+                    worker.mode = str(local.get("mode") or "SENDING").upper()
+                    if camera.get("approvalStatus") == "APPROVED":
+                        worker.mode = "SENDING"
+                        local["mode"] = "SENDING"
                     worker.camera_token = str(local.get("cameraToken") or "")
                     if worker.rtsp and not worker._running:
                         worker.start()
@@ -627,6 +630,7 @@ class Engine:
                 if cid not in incoming:
                     self.workers.pop(cid).stop()
                     self.bss_cameras.pop(cid, None)
+                    self.store.data.get("cameras", {}).pop(str(cid), None)
             self.store.data["bssCameras"] = {str(k): v for k, v in self.bss_cameras.items()}
             missing_claims = [
                 cid for cid, worker in self.workers.items()
@@ -744,7 +748,7 @@ class Engine:
         except (TypeError, ValueError):
             raise ValueError("BSS did not return a camera id.")
         local = self.local_camera(cid)
-        local.update({"label": label, "mode": "LIVE", "cameraToken": "",
+        local.update({"label": label, "mode": "SENDING", "cameraToken": "",
                       "siteBssId": site_bss_id})
         if rtsp:
             local["rtsp"] = rtsp
@@ -754,6 +758,22 @@ class Engine:
             worker = self.workers.get(cid)
             if worker:
                 worker.set_rtsp(rtsp)
+        return self.status()
+
+    def remove_camera(self, camera_id):
+        worker = self.workers.get(camera_id)
+        try:
+            self.bss_call("DELETE", f"/v1/edge/cameras/{camera_id}/remove", timeout=15)
+        except BssError as exc:
+            if exc.status_code != 404:
+                raise ValueError("Could not remove the camera from BSS. Check the internet connection and try again.")
+        if worker is not None:
+            worker.stop()
+        self.workers.pop(camera_id, None)
+        self.bss_cameras.pop(camera_id, None)
+        self.store.data.get("cameras", {}).pop(str(camera_id), None)
+        self.store.data["bssCameras"] = {str(k): v for k, v in self.bss_cameras.items()}
+        self.store.save()
         return self.status()
 
     def set_rtsp(self, camera_id, rtsp):
@@ -857,7 +877,7 @@ class Engine:
                     LOG.warning("Config refresh failed: %s", exc)
                 except Exception as exc:  # noqa: BLE001
                     LOG.warning("Config refresh error: %s", exc)
-            self._stop.wait(30)
+            self._stop.wait(15)
 
     def _heartbeat_loop(self):
         while not self._stop.is_set():
@@ -899,12 +919,10 @@ class Engine:
             reason = ""
             if not bss:
                 reason = "Waiting for BSS sync"
-            elif bss.get("approvalStatus") == "PENDING":
-                reason = "Waiting for employer approval"
             elif bss.get("approvalStatus") != "APPROVED":
                 reason = "Camera was removed by the employer"
             elif not bss.get("allowedIp"):
-                reason = "Employer must set the allowed IP"
+                reason = "Waiting for employer IP whitelisting"
             elif not worker.camera_token:
                 reason = "Activating camera"
             elif not allowed:
@@ -919,7 +937,8 @@ class Engine:
                 "siteId": bss.get("siteId"),
                 "siteBssId": bss.get("siteBssId") or "",
                 "siteName": bss.get("siteName") or "",
-                "approvalStatus": bss.get("approvalStatus") or "PENDING",
+                "approvalStatus": bss.get("approvalStatus") or "APPROVED",
+                "ipWhitelisted": bool(bss.get("ipWhitelisted")),
                 "employerLabel": bss.get("employerLabel") or "",
                 "cameraOnline": bool(bss.get("online")),
                 "timezoneLabel": "IST (UTC+05:30)",
@@ -1067,14 +1086,12 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith("/api/cameras/"):
             try:
                 cid = int(unquote(path[len("/api/cameras/"):]))
-            except ValueError:
-                return self._json({"error": "Camera not found."}, 404)
-            worker = ENGINE.workers.pop(cid, None)
-            if worker:
-                worker.stop()
-            ENGINE.store.data.get("cameras", {}).pop(str(cid), None)
-            ENGINE.store.save()
-            return self._json({"data": ENGINE.status()})
+                return self._json({"data": ENGINE.remove_camera(cid)})
+            except (ValueError, BssError) as exc:
+                return self._json({"error": str(exc)}, 400)
+            except Exception as exc:  # noqa: BLE001
+                LOG.exception("Remove camera error: %s", exc)
+                return self._json({"error": "Unexpected engine error."}, 500)
         return self._json({"error": "Not found."}, 404)
 
 

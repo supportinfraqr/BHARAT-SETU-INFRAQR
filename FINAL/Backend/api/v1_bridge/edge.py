@@ -194,6 +194,7 @@ def _camera_payload(camera, device=None):
         "mode": camera.last_mode,
         "status": camera.last_status,
         "approvalStatus": camera.approval_status,
+        "ipWhitelisted": bool(camera.allowed_ip),
         "online": _camera_online(camera),
         "lastSeenAt": camera.last_seen_at.isoformat() if camera.last_seen_at else None,
         "lastSeenIp": camera.last_seen_ip or "",
@@ -766,7 +767,8 @@ def edge_camera_create(request):
     channel = body.get("channel")
     camera = EdgeCamera.objects.create(
         site=site, device=None, created_by_device=device, label=label,
-        approval_status="PENDING", timezone="Asia/Kolkata",
+        employer_label=label, approval_status="APPROVED", approved_at=timezone.now(),
+        timezone="Asia/Kolkata",
         channel=int(channel) if str(channel or "").isdigit() else None,
     )
     return Response({"data": _camera_payload(camera, device)}, status=status.HTTP_201_CREATED)
@@ -844,6 +846,27 @@ def edge_camera_claim(request, camera_id):
         "camera": _camera_payload(camera, device),
         "takeover": bool(old_device_id and old_device_id != device.id),
     }}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST", "DELETE"])
+@authentication_classes([EdgeTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def edge_camera_remove(request, camera_id):
+    """Client removes its camera from BSS; historical attendance is retained."""
+    device = _edge_device(request)
+    if device is None:
+        return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
+    camera = (EdgeCamera.objects.filter(pk=camera_id, site__employer_id=device.employer_id)
+              .select_related("site", "device").first())
+    if camera is None or camera.approval_status == "REMOVED":
+        return Response({"error": "Camera not found."}, status=status.HTTP_404_NOT_FOUND)
+    if camera.created_by_device_id and camera.created_by_device_id != device.id:
+        return Response({"error": "Camera not found for this device."}, status=status.HTTP_404_NOT_FOUND)
+    if camera.device_id and camera.device_id != device.id:
+        return Response({"error": "Camera not found for this device."}, status=status.HTTP_404_NOT_FOUND)
+    with transaction.atomic():
+        _soft_remove_camera(camera)
+    return Response({"data": {"cameraId": camera.id, "removed": True}}, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
@@ -942,6 +965,22 @@ def employer_edge_devices(request):
     return Response({"data": [_device_payload(d) for d in devices]}, status=status.HTTP_200_OK)
 
 
+def _soft_remove_camera(camera, user=None):
+    camera.approval_status = "REMOVED"
+    camera.removed_at = timezone.now()
+    camera.removed_by = user
+    camera.device = None
+    camera.is_claimed = False
+    camera.token_hash = ""
+    camera.token_prefix = ""
+    camera.claimed_at = None
+    camera.last_mode = "OFFLINE"
+    camera.last_status = "Removed"
+    camera.save(update_fields=["approval_status", "removed_at", "removed_by", "device",
+                               "is_claimed", "token_hash", "token_prefix", "claimed_at",
+                               "last_mode", "last_status", "updated_at"])
+
+
 def _employer_camera_payload(camera):
     payload = _camera_payload(camera, None)
     device = camera.device
@@ -995,34 +1034,6 @@ def employer_attendance_cameras(request):
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
-def employer_attendance_camera_approve(request, camera_id):
-    """Employer accepts a client-created camera and optionally white-labels it."""
-    _require_owner(request)
-    camera = (EdgeCamera.objects.filter(pk=camera_id, site__employer=request.user)
-              .select_related("site", "device", "created_by_device").first())
-    if camera is None or camera.approval_status == "REMOVED":
-        return Response({"error": "Camera not found."}, status=status.HTTP_404_NOT_FOUND)
-    body = request.data if isinstance(request.data, dict) else {}
-    label = str(body.get("employerLabel") or body.get("employer_label") or "").strip()[:120]
-    with transaction.atomic():
-        if label:
-            camera.employer_label = label
-        elif not camera.employer_label:
-            camera.employer_label = camera.label
-        if camera.device_id is None and camera.created_by_device_id:
-            camera.device = camera.created_by_device
-        camera.approval_status = "APPROVED"
-        camera.approved_at = timezone.now()
-        camera.approved_by = request.user
-        camera.timezone = "Asia/Kolkata"
-        camera.save(update_fields=["employer_label", "device", "approval_status", "approved_at",
-                                   "approved_by", "timezone", "updated_at"])
-    return Response({"data": _employer_camera_payload(camera)}, status=status.HTTP_200_OK)
-
-
-@api_view(["POST"])
-@authentication_classes([BssSessionAuthentication])
-@permission_classes([IsAuthenticated])
 def employer_attendance_camera_remove(request, camera_id):
     """Soft-remove a camera; historical attendance is retained."""
     _require_owner(request)
@@ -1031,19 +1042,7 @@ def employer_attendance_camera_remove(request, camera_id):
     if camera is None:
         return Response({"error": "Camera not found."}, status=status.HTTP_404_NOT_FOUND)
     with transaction.atomic():
-        camera.approval_status = "REMOVED"
-        camera.removed_at = timezone.now()
-        camera.removed_by = request.user
-        camera.device = None
-        camera.is_claimed = False
-        camera.token_hash = ""
-        camera.token_prefix = ""
-        camera.claimed_at = None
-        camera.last_mode = "OFFLINE"
-        camera.last_status = "Removed"
-        camera.save(update_fields=["approval_status", "removed_at", "removed_by", "device",
-                                   "is_claimed", "token_hash", "token_prefix", "claimed_at",
-                                   "last_mode", "last_status", "updated_at"])
+        _soft_remove_camera(camera, request.user)
     return Response({"data": {"cameraId": camera.id, "removed": True}}, status=status.HTTP_200_OK)
 
 
@@ -1108,6 +1107,7 @@ __all__ = [
     "edge_camera_create",
     "edge_camera_claim",
     "edge_camera_setup",
+    "edge_camera_remove",
     "edge_camera_takeover_otp",
     "edge_camera_rotate",
     "edge_device_heartbeat",
@@ -1115,7 +1115,6 @@ __all__ = [
     "edge_events",
     "employer_edge_devices",
     "employer_attendance_cameras",
-    "employer_attendance_camera_approve",
     "employer_attendance_camera_remove",
     "employer_attendance_camera_detail",
     "employer_edge_device_revoke",
