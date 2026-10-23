@@ -40,10 +40,6 @@ const qrGroup = { key:'nav.qrSystem', icon:Network, items:[
   ['nav.idCard','/employer/idcard'],
   ['nav.scanQr','/employer/scan'],
 ] };
-const adminGroup = { key:'nav.administration', icon:ShieldCheck, items:[
-  ['Staff Accounts','/employer/manage-staff'],
-] };
-
 export default function EmployerShell({ children }: { children:React.ReactNode }) {
   const [mobile, setMobile] = useState(false);
   const [profile, setProfile] = useState(false);
@@ -63,7 +59,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
       { key: 'Monthly Audit', href: '/employer/audit-reports', icon: FileSpreadsheet },
     ] : []),
   ];
-  const groups = isStaff ? staffGroups : [ { key:'nav.dashboard', href:'/employer/dashboard', icon:LayoutDashboard }, workforceGroup, sitesGroup, { key:'nav.payroll', href:'/employer/payroll', icon:Banknote }, complianceGroup, qrGroup, ...(employer.canAccessAdmin ? [adminGroup] : []) ];
+  const groups = isStaff ? staffGroups : [ { key:'nav.dashboard', href:'/employer/dashboard', icon:LayoutDashboard }, workforceGroup, sitesGroup, { key:'nav.payroll', href:'/employer/payroll', icon:Banknote }, complianceGroup, qrGroup ];
   const mobileItems = groups.reduce<Array<readonly [string,string]>>((items, group) => items.concat('href' in group ? [[group.key, group.href]] : group.items as unknown as readonly [string,string][]), []);
 
   // Close every popover on navigation (adjust state during render — the
@@ -121,7 +117,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
               {!isStaff && <>
               <Link href="/employer/profile" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><Settings size={16}/>{t('nav.profile')}</Link>
               <Link href="/employer/onboarding" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><FileSpreadsheet size={16}/>Onboarding</Link>
-              <Link href="/employer/manage-staff" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><UserCog size={16}/>Staff Accounts</Link>
+              {employer.canAccessAdmin && <Link href="/employer/manage-staff" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><UserCog size={16}/>Staff Accounts</Link>}
               <Link href="/employer/clra-registers" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><ClipboardCheck size={16}/>Registers Adoption</Link>
               <Link href="/employer/letter-adoption" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><FileText size={16}/>Appointment Letter Adoption</Link>
               <Link href="/employer/cost-sheets" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><Calculator size={16}/>Cost Sheet Adoption</Link>
