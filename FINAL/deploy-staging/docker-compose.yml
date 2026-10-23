@@ -128,7 +128,7 @@ services:
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-AIzaSyCqfNilx-gBvPdG0pVwJGm9heWjkZKPKfA}
       BSS_ATTENDANCE_WINDOWS_URL: ${BSS_ATTENDANCE_WINDOWS_URL:-https://login.bharatshramsetu.com/downloads/attendance/BSS-Attendance-Windows-Setup.exe}
       BSS_ATTENDANCE_LINUX_URL: ${BSS_ATTENDANCE_LINUX_URL:-https://login.bharatshramsetu.com/downloads/attendance/BSS-Attendance-Linux.AppImage}
-      BSS_ATTENDANCE_VERSION: ${BSS_ATTENDANCE_VERSION:-1.2.2}
+      BSS_ATTENDANCE_VERSION: ${BSS_ATTENDANCE_VERSION:-1.2.3}
 
   audit-runner:
     build:

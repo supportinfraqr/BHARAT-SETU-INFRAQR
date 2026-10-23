@@ -27,7 +27,7 @@ import numpy as np
 import requests
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.2.2"
+APP_VERSION = "1.2.3"
 MODEL_NAME = "ArcFace"
 MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
 DETECTOR_BACKEND = "retinaface"
@@ -509,6 +509,29 @@ class Engine:
                 if cid not in incoming:
                     self.workers.pop(cid).stop()
                     self.bss_cameras.pop(cid, None)
+            missing_claims = [
+                cid for cid, worker in self.workers.items()
+                if (self.bss_cameras.get(cid) or {}).get("claimedByThisDevice")
+                and not worker.camera_token
+            ]
+            self.store.save()
+        for cid in missing_claims:
+            try:
+                body = self.bss_call("POST", f"/v1/edge/cameras/{cid}/claim", {})
+                token = (body.get("data") or {}).get("cameraToken") or ""
+                if not token:
+                    continue
+                local = self.local_camera(cid)
+                local["cameraToken"] = token
+                worker = self.workers.get(cid)
+                if worker is not None:
+                    worker.camera_token = token
+                    worker.mode = str(local.get("mode") or "LIVE").upper()
+                    if worker.mode == "SENDING":
+                        worker._ensure_ai()
+            except BssError as exc:
+                LOG.warning("Could not restore camera token for %s: %s", cid, exc)
+        if missing_claims:
             self.store.save()
         return self.status()
 
@@ -617,6 +640,24 @@ class Engine:
         if worker is None:
             raise ValueError("Camera not found.")
         worker.set_rtsp(rtsp)
+        self.store.save()
+        return self.status()
+
+    def logout(self):
+        for worker in list(self.workers.values()):
+            worker.stop()
+        self.token = ""
+        self.device_id = ""
+        self.sites = []
+        self.device_name = ""
+        self.employer_name = ""
+        self.outbox = []
+        for worker in self.workers.values():
+            worker.camera_token = ""
+        self.store.data.update({"token": "", "deviceId": "", "sites": [],
+                                "deviceName": "", "employerName": "", "outbox": []})
+        for local in self.store.data.get("cameras", {}).values():
+            local["cameraToken"] = ""
         self.store.save()
         return self.status()
 
@@ -870,16 +911,7 @@ class Handler(BaseHTTPRequestHandler):
                 if action == "test":
                     return self._json({"data": ENGINE.test_rtsp(body.get("rtsp"))})
             if path == "/api/logout":
-                ENGINE.token = ""
-                ENGINE.device_id = ""
-                ENGINE.outbox = []
-                for worker in ENGINE.workers.values():
-                    worker.camera_token = ""
-                ENGINE.store.data.update({"token": "", "deviceId": "", "sites": [], "deviceName": "", "employerName": "", "outbox": []})
-                for local in ENGINE.store.data.get("cameras", {}).values():
-                    local["cameraToken"] = ""
-                ENGINE.store.save()
-                return self._json({"data": ENGINE.status()})
+                return self._json({"data": ENGINE.logout()})
             return self._json({"error": "Not found."}, 404)
         except (BssError, ValueError) as exc:
             return self._json({"error": str(exc)}, 400)
