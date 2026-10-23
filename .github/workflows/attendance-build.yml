@@ -146,7 +146,7 @@ jobs:
           BSS_DEPLOY_USER: ${{ secrets.BSS_DEPLOY_USER }}
           BSS_DEPLOY_PATH: ${{ secrets.BSS_DEPLOY_PATH }}
         run: |
-          scp -q -r -o StrictHostKeyChecking=no -i ~/.ssh/bss_deploy "executable/${{ matrix.artifact }}/*" "$BSS_DEPLOY_USER@$BSS_DEPLOY_HOST:$BSS_DEPLOY_PATH/.incoming-$GITHUB_RUN_ID/${{ matrix.artifact }}/"
+          scp -q -r -o StrictHostKeyChecking=no -i ~/.ssh/bss_deploy executable/${{ matrix.artifact }}/* "$BSS_DEPLOY_USER@$BSS_DEPLOY_HOST:$BSS_DEPLOY_PATH/.incoming-$GITHUB_RUN_ID/${{ matrix.artifact }}/"
 
   publish:
     needs: build
