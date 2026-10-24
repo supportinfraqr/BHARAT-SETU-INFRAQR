@@ -97,6 +97,11 @@ async fn install_update(
 }
 
 #[tauri::command]
+fn app_version(app: AppHandle) -> String {
+    app.package_info().version.to_string()
+}
+
+#[tauri::command]
 fn stop_engine_now(app: AppHandle) {
     quit_app(&app);
 }
@@ -287,7 +292,7 @@ fn main() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![check_update, install_update, stop_engine_now, read_engine_log, engine_port])
+        .invoke_handler(tauri::generate_handler![check_update, install_update, stop_engine_now, read_engine_log, engine_port, app_version])
         .build(tauri::generate_context!())
         .expect("error while building BSS Attendance")
         .run(|app, event| {

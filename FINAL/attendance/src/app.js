@@ -12,6 +12,13 @@ let otpSeconds = 0;
 let updateInfo = null;
 let updateBusy = false;
 let engineAttempts = 0;
+let appVersion = '';
+
+async function loadAppVersion() {
+  const bridge = tauri();
+  if (!bridge?.core?.invoke) return;
+  try { appVersion = String(await bridge.core.invoke('app_version') || ''); } catch { /* ignore */ }
+}
 
 async function discoverEngine() {
   const bridge = tauri();
@@ -441,7 +448,7 @@ async function checkForUpdates(manual = false) {
         onAction: () => void installUpdate(),
       });
     } else if (manual) {
-      renderUpdateBanner({ title: 'You are up to date', body: `Installed version: ${state?.version || update?.currentVersion || 'unknown'}.`, action: 'Close' });
+      renderUpdateBanner({ title: 'You are up to date', body: `Installed version: ${appVersion || 'unknown'}${state?.version && appVersion && state.version !== appVersion ? ` · Engine: ${state.version}` : ''}.`, action: 'Close' });
     }
   } catch (error) {
     if (manual) renderUpdateBanner({ title: 'Update check failed', body: error?.message || String(error), action: 'Close' });
@@ -494,5 +501,7 @@ qs('logoutBtn').onclick = async () => {
   catch (error) { await showAlert('Could not sign out', error.message); }
 };
 
-refresh();
-setTimeout(() => void checkForUpdates(false), 3000);
+void loadAppVersion().then(() => {
+  refresh();
+  setTimeout(() => void checkForUpdates(false), 3000);
+});
