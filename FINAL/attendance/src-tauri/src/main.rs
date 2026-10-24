@@ -5,7 +5,7 @@ use std::io::Write;
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::Command;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -22,6 +22,7 @@ struct EngineProcess {
     child: Mutex<Option<CommandChild>>,
     stopping: AtomicBool,
 }
+struct EnginePort(AtomicU16);
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -149,6 +150,13 @@ fn stop_stale_engine() {
         ] {
             let _ = Command::new("taskkill").args(["/F", "/IM", name]).output();
         }
+        let _ = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-Command",
+                "Get-Process | Where-Object { $_.ProcessName -like 'attendance-engine*' } | Stop-Process -Force -ErrorAction SilentlyContinue",
+            ])
+            .output();
     }
     #[cfg(not(target_os = "windows"))]
     {
@@ -165,6 +173,11 @@ fn free_engine_port() -> u16 {
         }
     }
     8765
+}
+
+#[tauri::command]
+fn engine_port(state: State<'_, EnginePort>) -> u16 {
+    state.0.load(Ordering::SeqCst)
 }
 
 fn read_engine_log_text() -> String {
@@ -187,6 +200,7 @@ fn start_engine(app: AppHandle) {
                 break;
             }
             let port = free_engine_port();
+            app.state::<EnginePort>().0.store(port, Ordering::SeqCst);
             let sidecar = match app.shell().sidecar("attendance-engine") {
                 Ok(sidecar) => sidecar,
                 Err(error) => {
@@ -242,6 +256,7 @@ fn main() {
                 child: Mutex::new(None),
                 stopping: AtomicBool::new(false),
             });
+            app.manage(EnginePort(AtomicU16::new(0)));
             start_engine(app.handle().clone());
 
             let open_item = MenuItem::with_id(app, "open", "Open BSS Attendance", true, None::<&str>)?;
@@ -272,7 +287,7 @@ fn main() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![check_update, install_update, stop_engine_now, read_engine_log])
+        .invoke_handler(tauri::generate_handler![check_update, install_update, stop_engine_now, read_engine_log, engine_port])
         .build(tauri::generate_context!())
         .expect("error while building BSS Attendance")
         .run(|app, event| {

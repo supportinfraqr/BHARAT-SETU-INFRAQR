@@ -14,6 +14,16 @@ let updateBusy = false;
 let engineAttempts = 0;
 
 async function discoverEngine() {
+  const bridge = tauri();
+  if (bridge?.core?.invoke) {
+    try {
+      const port = Number(await bridge.core.invoke('engine_port'));
+      if (port > 0) {
+        BASE = `http://127.0.0.1:${port}`;
+        return true;
+      }
+    } catch { /* fall back to scanning in a browser */ }
+  }
   for (const port of ENGINE_PORTS) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 700);
