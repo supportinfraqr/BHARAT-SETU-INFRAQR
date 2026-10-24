@@ -27,6 +27,11 @@ import cv2
 import numpy as np
 import requests
 
+try:
+    import psutil
+except Exception:  # pragma: no cover - detection degrades gracefully
+    psutil = None
+
 LOG = logging.getLogger("attendance-engine")
 APP_VERSION = "1.3.3"
 MODEL_NAME = "ArcFace"
@@ -153,6 +158,28 @@ class Store:
             tmp = self.path.with_suffix(".tmp")
             tmp.write_text(json.dumps(self.data, indent=2), encoding="utf-8")
             tmp.replace(self.path)
+
+
+class ResourceGate:
+    def __init__(self, limit=2):
+        self.lock = threading.Lock()
+        self.limit = max(1, int(limit))
+        self.active = 0
+
+    def set_limit(self, limit):
+        with self.lock:
+            self.limit = max(1, int(limit))
+
+    def acquire(self):
+        with self.lock:
+            if self.active >= self.limit:
+                return False
+            self.active += 1
+            return True
+
+    def release(self):
+        with self.lock:
+            self.active = max(0, self.active - 1)
 
 
 class LocalEventStore:
@@ -408,13 +435,18 @@ class CameraWorker:
             if not self.engine.send_allowed(self):
                 time.sleep(2)
                 continue
+            if not self.engine.gate.acquire():
+                time.sleep(0.5)
+                continue
             try:
                 event = self._recognise(frame)
                 if event:
                     self.engine.send_event(self, event[0], event[1])
             except Exception as exc:  # noqa: BLE001
                 LOG.exception("Face processing failed for %s: %s", self.label, exc)
-            time.sleep(1.5)
+            finally:
+                self.engine.gate.release()
+            time.sleep(max(1.0, float(self.engine.resource_settings.get("processInterval") or 2.0)))
 
     def _recognise(self, frame):
         if time.time() - self._last_sent < 25:
@@ -467,6 +499,9 @@ class Engine:
         self.workers = {}
         self.last_heartbeat = None
         self.last_event_at = {}
+        self.gate = ResourceGate(2)
+        self.resource_settings = self._normalise_resources(self.store.data.get("resources") or {})
+        self._apply_resources(self.resource_settings, persist=False)
         self.events = LocalEventStore(home)
         for legacy in list(self.store.data.get("outbox") or []):
             if isinstance(legacy, dict):
@@ -580,6 +615,77 @@ class Engine:
             self._send_device_heartbeat()
         except BssError:
             pass
+        return self.status()
+
+    def _detected_system(self):
+        cpu_count = (psutil.cpu_count(logical=True) if psutil else os.cpu_count()) or 1
+        cpu_percent = None
+        memory_total = None
+        memory_available = None
+        process_memory = None
+        if psutil is not None:
+            try:
+                cpu_percent = round(float(psutil.cpu_percent(interval=None)), 1)
+                memory = psutil.virtual_memory()
+                memory_total = round(memory.total / (1024 * 1024))
+                memory_available = round(memory.available / (1024 * 1024))
+                process_memory = round(psutil.Process().memory_info().rss / (1024 * 1024))
+            except Exception:
+                pass
+        return {
+            "cpuCores": int(cpu_count),
+            "cpuPercent": cpu_percent,
+            "memoryTotalMb": memory_total,
+            "memoryAvailableMb": memory_available,
+            "processMemoryMb": process_memory,
+            "platform": platform.system(),
+            "machine": platform.machine(),
+        }
+
+    def _normalise_resources(self, raw):
+        detected = self._detected_system()
+        total = max(1, int(detected.get("cpuCores") or 1))
+        try:
+            cores = int(raw.get("cpuCores", 0))
+        except (TypeError, ValueError):
+            cores = 0
+        cores = max(0, min(cores, total))
+        try:
+            workers = int(raw.get("maxCameraWorkers", 2))
+        except (TypeError, ValueError):
+            workers = 2
+        workers = max(1, min(workers, 16))
+        try:
+            interval = float(raw.get("processInterval", 2.0))
+        except (TypeError, ValueError):
+            interval = 2.0
+        interval = max(1.0, min(interval, 30.0))
+        return {"cpuCores": cores, "maxCameraWorkers": workers, "processInterval": interval}
+
+    def _apply_resources(self, settings, persist=True):
+        detected = self._detected_system()
+        total = max(1, int(detected.get("cpuCores") or 1))
+        cores = int(settings.get("cpuCores") or 0)
+        if psutil is not None:
+            try:
+                psutil.Process().cpu_affinity(list(range(min(cores, total) if cores > 0 else total)))
+            except Exception as exc:  # noqa: BLE001
+                LOG.warning("Could not apply CPU affinity: %s", exc)
+        thread_limit = str(min(cores, total) if cores > 0 else total)
+        for key in ("TF_NUM_INTRAOP_THREADS", "TF_NUM_INTEROP_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"):
+            os.environ[key] = thread_limit
+        self.gate.set_limit(settings.get("maxCameraWorkers") or 2)
+        if persist:
+            self.store.data["resources"] = dict(settings)
+            self.store.save()
+
+    def resource_payload(self):
+        return {"detected": self._detected_system(), "settings": dict(self.resource_settings)}
+
+    def set_resources(self, raw):
+        settings = self._normalise_resources(raw or {})
+        self.resource_settings = settings
+        self._apply_resources(settings, persist=True)
         return self.status()
 
     def refresh_config(self):
@@ -962,6 +1068,7 @@ class Engine:
             "lastHeartbeatAt": _iso(self.last_heartbeat),
             "faceModel": {"model": MODEL_NAME, "version": MODEL_VERSION, "detector": DETECTOR_BACKEND},
             "cameras": cameras,
+            "resources": self.resource_payload(),
             "outbox": self.events.count(),
             "localEvents": self.events.recent(25),
         }
@@ -1013,6 +1120,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"data": ENGINE.status()})
         if path == "/api/events":
             return self._json({"data": ENGINE.events.recent(100)})
+        if path == "/api/system":
+            return self._json({"data": ENGINE.resource_payload()})
         if path == "/api/health":
             return self._json({"ok": True})
         if path == "/api/test-rtsp":
@@ -1055,6 +1164,8 @@ class Handler(BaseHTTPRequestHandler):
                     body.get("activationToken"), body.get("deviceName"))})
             if path == "/api/config/refresh":
                 return self._json({"data": ENGINE.refresh_config()})
+            if path == "/api/resources":
+                return self._json({"data": ENGINE.set_resources(body)})
             if path == "/api/test-rtsp":
                 return self._json({"data": ENGINE.test_rtsp(body.get("rtsp"))})
             if path == "/api/cameras":

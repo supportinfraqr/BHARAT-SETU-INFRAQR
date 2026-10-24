@@ -106,10 +106,48 @@ function siteSection(site, cameras) {
   </section>`;
 }
 
+function resourceCard(resources) {
+  const detected = resources?.detected || {};
+  const settings = resources?.settings || {};
+  const cores = Number(detected.cpuCores || 1);
+  const cpu = detected.cpuPercent == null ? '—' : `${detected.cpuPercent}%`;
+  const totalRam = detected.memoryTotalMb ? `${(detected.memoryTotalMb / 1024).toFixed(1)} GB` : '—';
+  const freeRam = detected.memoryAvailableMb ? `${(detected.memoryAvailableMb / 1024).toFixed(1)} GB` : '—';
+  const procRam = detected.processMemoryMb ? `${detected.processMemoryMb} MB` : '—';
+  return `<section class="card">
+    <div class="cam-title"><h3>System resources</h3><span class="pill muted">${esc(detected.platform || 'Local system')} · ${esc(detected.machine || '')}</span></div>
+    <p class="muted">Choose how much of this machine the attendance engine may use. CPU affinity and camera concurrency apply immediately; AI thread changes take effect after restarting the engine.</p>
+    <div class="cam-info" style="margin-bottom:12px">
+      <div>CPU cores<b>${esc(cores)}</b></div>
+      <div>CPU usage<b id="resourceCpu">${esc(cpu)}</b></div>
+      <div>RAM total<b>${esc(totalRam)}</b></div>
+      <div>RAM available<b id="resourceRam">${esc(freeRam)}</b></div>
+      <div>Engine memory<b id="resourceProcess">${esc(procRam)}</b></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;align-items:end">
+      <div><label>CPU cores to use<input id="resourceCores" type="number" min="0" max="${cores}" value="${esc(settings.cpuCores ?? 0)}" /><span class="note">0 = all cores</span></label></div>
+      <div><label>Cameras processed at once<input id="resourceWorkers" type="number" min="1" max="16" value="${esc(settings.maxCameraWorkers ?? 2)}" /></label></div>
+      <div><label>AI interval seconds<input id="resourceInterval" type="number" min="1" max="30" step="0.5" value="${esc(settings.processInterval ?? 2)}" /></label></div>
+      <button id="saveResourcesBtn" class="btn primary" type="button">Save resources</button>
+    </div>
+    <p id="resourceMsg" class="note"></p>
+  </section>`;
+}
+
+function updateResourceLive(resources) {
+  const detected = resources?.detected || {};
+  const cpu = detected.cpuPercent == null ? '—' : `${detected.cpuPercent}%`;
+  const freeRam = detected.memoryAvailableMb ? `${(detected.memoryAvailableMb / 1024).toFixed(1)} GB` : '—';
+  const procRam = detected.processMemoryMb ? `${detected.processMemoryMb} MB` : '—';
+  const set = (id, text) => { const el = qs(id); if (el) el.textContent = text; };
+  set('resourceCpu', cpu); set('resourceRam', freeRam); set('resourceProcess', procRam);
+}
+
 function render() {
   if (!state || !state.activated) { renderActivation(); return; }
   qs('logoutBtn').classList.remove('hidden');
   qs('refreshBtn').classList.remove('hidden');
+  qs('stopEngineBtn').classList.remove('hidden');
   const conn = qs('conn');
   conn.textContent = state.bssConnected ? 'BSS connected' : 'Connecting to BSS…';
   conn.className = `pill ${state.bssConnected ? 'ok' : 'warn'}`;
@@ -146,6 +184,8 @@ function render() {
           <div>Client version<b>${esc(state.version || '—')}</b></div>
         </div>
       </section>
+
+      ${resourceCard(state.resources)}
 
       <section class="card">
         <div class="cam-title"><h3>Add camera</h3><span class="pill muted">Test before saving</span></div>
@@ -246,6 +286,21 @@ function render() {
     }
   });
 
+  qs('saveResourcesBtn')?.addEventListener('click', async () => {
+    const msg = qs('resourceMsg');
+    try {
+      state = await api('/api/resources', { method: 'POST', body: JSON.stringify({
+        cpuCores: Number(qs('resourceCores').value || 0),
+        maxCameraWorkers: Number(qs('resourceWorkers').value || 1),
+        processInterval: Number(qs('resourceInterval').value || 2),
+      }) });
+      render();
+      showMessage('resourceMsg', 'Resource settings saved.', true);
+    } catch (error) {
+      if (msg) { msg.textContent = error.message; msg.style.color = '#DC2626'; }
+    }
+  });
+
   for (const camera of cameras) {
     const id = camera.cameraId;
     qs(`remove-${id}`)?.addEventListener('click', async () => {
@@ -308,6 +363,7 @@ function startPolling() {
         const conn = qs('conn');
         conn.textContent = state.bssConnected ? 'BSS connected' : 'Connecting to BSS…';
         conn.className = `pill ${state.bssConnected ? 'ok' : 'warn'}`;
+        updateResourceLive(state.resources);
       }
     } catch { /* keep last known state */ }
   }, 5000);
@@ -373,6 +429,19 @@ qs('refreshBtn').onclick = async () => {
   catch (error) { alert(error.message); }
 };
 qs('updateBtn').onclick = () => void checkForUpdates(true);
+qs('stopEngineBtn').onclick = async () => {
+  const confirmed = await showDialog({
+    title: 'Stop the local engine?',
+    body: 'Camera processing, heartbeats and offline syncing will stop, and the app will close. Sign out keeps the engine running; this does not.',
+    confirmLabel: 'Stop engine',
+    danger: true,
+  });
+  if (!confirmed) return;
+  const bridge = tauri();
+  if (!bridge?.core?.invoke) { await showAlert('Stop engine unavailable', 'Run the installed desktop client to use this action.'); return; }
+  try { await bridge.core.invoke('stop_engine_now'); }
+  catch (error) { await showAlert('Could not stop engine', error?.message || String(error)); }
+};
 qs('logoutBtn').onclick = async () => {
   const confirmed = await showDialog({
     title: 'Sign out this client?',

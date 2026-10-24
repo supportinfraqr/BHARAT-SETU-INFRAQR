@@ -94,6 +94,11 @@ async fn install_update(
     Ok(())
 }
 
+#[tauri::command]
+fn stop_engine_now(app: AppHandle) {
+    quit_app(&app);
+}
+
 fn show_main(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
@@ -242,7 +247,7 @@ fn main() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![check_update, install_update])
+        .invoke_handler(tauri::generate_handler![check_update, install_update, stop_engine_now])
         .build(tauri::generate_context!())
         .expect("error while building BSS Attendance")
         .run(|app, event| {

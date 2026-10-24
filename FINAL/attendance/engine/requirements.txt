@@ -7,3 +7,4 @@ retina-face==0.0.18
 opencv-python==4.14.0.94
 numpy==2.2.6
 requests==2.32.5
+psutil==7.0.0
