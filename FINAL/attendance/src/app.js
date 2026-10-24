@@ -1,4 +1,7 @@
-const BASE = 'http://127.0.0.1:8765';
+let BASE = 'http://127.0.0.1:8765';
+const ENGINE_PORTS = Array.from({ length: 20 }, (_, index) => 8765 + index);
+let startupLogText = '';
+let startupLogLoading = false;
 const qs = (id) => document.getElementById(id);
 let state = null;
 let timer = null;
@@ -9,6 +12,22 @@ let otpSeconds = 0;
 let updateInfo = null;
 let updateBusy = false;
 let engineAttempts = 0;
+
+async function discoverEngine() {
+  for (const port of ENGINE_PORTS) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 700);
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/api/health`, { cache: 'no-store', signal: controller.signal });
+      if (response.ok) {
+        BASE = `http://127.0.0.1:${port}`;
+        return true;
+      }
+    } catch { /* try the next port */ }
+    finally { clearTimeout(timer); }
+  }
+  return false;
+}
 
 async function api(path, options = {}) {
   const response = await fetch(`${BASE}${path}`, { headers: { 'Content-Type': 'application/json' }, ...options });
@@ -321,6 +340,7 @@ function render() {
 
 async function refresh() {
   try {
+    if (!state || !state.activated) await discoverEngine();
     state = await api('/api/status');
     engineAttempts = 0;
     render();
@@ -331,13 +351,23 @@ async function refresh() {
     conn.textContent = 'Starting local engine…';
     conn.className = 'pill warn';
     const app = qs('app');
+    if (engineAttempts >= 8 && !startupLogText && !startupLogLoading) {
+      const bridge = tauri();
+      if (bridge?.core?.invoke) {
+        startupLogLoading = true;
+        try { startupLogText = await bridge.core.invoke('read_engine_log'); }
+        catch { startupLogText = 'Could not read the engine log.'; }
+        finally { startupLogLoading = false; }
+      }
+    }
     if (app && (!state || !state.activated)) {
       app.innerHTML = `<section class="card activation">
         <div class="activation-head">
           <img class="activation-logo" src="bss-original-logo.png" alt="Bharat Shram Setu" />
           <div><h2>Starting local attendance engine…</h2><p class="muted">This can take a few seconds on first launch.</p></div>
         </div>
-        <p id="startupMsg" class="msg ${engineAttempts >= 8 ? 'error' : ''}">${engineAttempts >= 8 ? 'The local engine did not start. The app will keep retrying. If it still fails, send the engine log from .bss-attendance/engine.log in your home folder to BSS support.' : 'Please wait…'}</p>
+        <p id="startupMsg" class="msg ${engineAttempts >= 8 ? 'error' : ''}">${engineAttempts >= 8 ? 'The local engine did not start. The app will keep retrying. If it still fails, send the engine log below to BSS support.' : 'Please wait…'}</p>
+        ${startupLogText ? `<pre class="engine-log">${esc(startupLogText)}</pre>` : ''}
       </section>`;
     }
     setTimeout(refresh, 2000);

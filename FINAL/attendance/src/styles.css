@@ -192,3 +192,5 @@ input:focus, select:focus { border-color: #93B4E8; box-shadow: 0 0 0 3px rgba(30
 .dialog-icon.danger { background:var(--soft-red); color:var(--red); }
 .dialog-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:22px; }
 .btn.danger { background:var(--red); color:#fff; border-color:var(--red); }
+
+.engine-log { margin-top:12px; padding:12px; max-height:260px; overflow:auto; background:#0B1220; color:#D7E3F4; border-radius:10px; font-size:10px; line-height:1.5; white-space:pre-wrap; word-break:break-word; }

@@ -1,7 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::fs::OpenOptions;
+use std::fs::{self, OpenOptions};
 use std::io::Write;
+use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -157,6 +158,27 @@ fn stop_stale_engine() {
     }
 }
 
+fn free_engine_port() -> u16 {
+    for port in 8765..=8784 {
+        if TcpListener::bind(("127.0.0.1", port)).is_ok() {
+            return port;
+        }
+    }
+    8765
+}
+
+fn read_engine_log_text() -> String {
+    let text = fs::read_to_string(engine_log_path()).unwrap_or_else(|_| "No engine log yet.".into());
+    let mut tail: String = text.chars().rev().take(6000).collect();
+    tail = tail.chars().rev().collect();
+    tail
+}
+
+#[tauri::command]
+fn read_engine_log() -> String {
+    read_engine_log_text()
+}
+
 fn start_engine(app: AppHandle) {
     stop_stale_engine();
     tauri::async_runtime::spawn(async move {
@@ -164,6 +186,7 @@ fn start_engine(app: AppHandle) {
             if app.state::<EngineProcess>().stopping.load(Ordering::SeqCst) {
                 break;
             }
+            let port = free_engine_port();
             let sidecar = match app.shell().sidecar("attendance-engine") {
                 Ok(sidecar) => sidecar,
                 Err(error) => {
@@ -172,7 +195,9 @@ fn start_engine(app: AppHandle) {
                     continue;
                 }
             };
-            match sidecar.spawn() {
+            let port_arg = port.to_string();
+            log_engine(&format!("starting engine on port {port}"));
+            match sidecar.args(["--port", port_arg.as_str()]).spawn() {
                 Ok((mut events, child)) => {
                     log_engine("engine started");
                     let state = app.state::<EngineProcess>();
@@ -247,7 +272,7 @@ fn main() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![check_update, install_update, stop_engine_now])
+        .invoke_handler(tauri::generate_handler![check_update, install_update, stop_engine_now, read_engine_log])
         .build(tauri::generate_context!())
         .expect("error while building BSS Attendance")
         .run(|app, event| {
