@@ -245,7 +245,6 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
   }
   if (role === 'Employer' && resource === 'sites' && method === 'POST') {
     requiredString(body, 'name', 200);
-    requiredString(body, 'code', 40);
     const location = typeof body.location === 'string' ? body.location.trim() : '';
     const state = typeof body.state === 'string' ? body.state.trim() : '';
     if (location.length > 200 || state.length > 120) fail('Site location is too long.');
