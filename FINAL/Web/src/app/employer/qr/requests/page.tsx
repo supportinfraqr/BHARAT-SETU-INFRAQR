@@ -300,7 +300,7 @@ export default function EmployerQrBindingRequestsPage() {
                   {candidates.map(c => <option key={c.contractorId} value={c.contractorId}>{c.name}</option>)}
                 </select>
               </label>
-            ) : <p className="text-xs text-bss-error">{requiresSuccessor ? 'No other contractor is available in the system — onboard another contractor first, then unbind.' : 'No other contractor is available — the sites will be released without a successor.'}</p>}
+            ) : <p className="text-xs text-bss-error">{requiresSuccessor ? 'No other contractor is bound to your organisation — bind another contractor first, then unbind.' : 'No other contractor is bound to your organisation — the sites will be released without a successor.'}</p>}
           </div>
           <div className="px-6 py-4 border-t border-bss-border flex justify-end gap-2">
             <button onClick={() => setUnbindFor(null)} className="h-10 px-4 rounded-xl border border-bss-border text-sm font-bold text-bss-text-secondary hover:bg-bss-bg">Cancel</button>

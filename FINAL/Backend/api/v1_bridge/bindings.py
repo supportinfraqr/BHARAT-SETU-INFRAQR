@@ -97,12 +97,9 @@ def _resolve_successor(employer, leaving_binding, successor_binding_id=None,
         chosen = candidates.filter(contractor_id=contractor_id).first()
         if chosen is not None:
             return chosen
-        # Match production behaviour: the employer-selected successor is
-        # enrolled immediately for the transfer. This does not require a
-        # separate successor consent.
-        successor_user = User.objects.filter(pk=contractor_id, role="contractor").first()
-        if successor_user is not None:
-            return _ensure_ce_binding(employer, successor_user)
+        # Only an already-bound contractor can receive workers. Do not enrol a
+        # contractor from another employer through the successor action.
+        return None
 
     requested = _int(successor_binding_id)
     if not requested and leaving_binding.unbind_successor_id:
@@ -1174,7 +1171,7 @@ def employer_binding_action(request, binding_id):
         successor = _resolve_successor(b.employer, b, request.data.get("successorBindingId"),
                                        request.data.get("successorContractorId")) if at_risk else None
         if at_risk and successor is None:
-            return Response({"error": f"This contractor still has {len(at_risk)} worker(s) on your sites. Provide a successor contractor so they are not orphaned."},
+            return Response({"error": f"This contractor still has {len(at_risk)} worker(s) on your sites. Provide a successor contractor already bound to your organisation so they are not orphaned."},
                             status=status.HTTP_400_BAD_REQUEST)
         b.binding_status = "REJECTED"
         b.rejected_by = "employer" if user.role == "employer" else "contractor"
@@ -1221,12 +1218,12 @@ def employer_binding_action(request, binding_id):
         # The employer must name a successor when workers are at risk.
         if user.role == "employer" and at_risk and successor is None:
             b.save()
-            return Response({"error": f"This contractor still has {len(at_risk)} worker(s) on your sites. Provide a successor contractor so they are not orphaned."},
+            return Response({"error": f"This contractor still has {len(at_risk)} worker(s) on your sites. Provide a successor contractor already bound to your organisation so they are not orphaned."},
                             status=status.HTTP_400_BAD_REQUEST)
         if b.unbind_consent_contractor and b.unbind_consent_employer:
             if at_risk and successor is None:
                 b.save()
-                return Response({"error": f"This contractor still has {len(at_risk)} worker(s) on your sites. Provide a successor contractor so they are not orphaned."},
+                return Response({"error": f"This contractor still has {len(at_risk)} worker(s) on your sites. Provide a successor contractor already bound to your organisation so they are not orphaned."},
                                 status=status.HTTP_400_BAD_REQUEST)
             b.binding_status = "CANCELLED"
             b.unbound_at = timezone.now()
@@ -1379,7 +1376,7 @@ def employer_binding_action(request, binding_id):
         successor = _resolve_successor(b.employer, b, request.data.get("successorBindingId"),
                                        provided) if provided else None
         if at_risk and successor is None:
-            return Response({"error": f"This contractor still has {len(at_risk)} worker(s) at this site. Provide a successor contractor so they are not orphaned."},
+            return Response({"error": f"This contractor still has {len(at_risk)} worker(s) at this site. Provide a successor contractor already bound to your organisation so they are not orphaned."},
                             status=status.HTTP_400_BAD_REQUEST)
         if successor is not None:
             _shift_workers_to_successor(b.contractor, successor.contractor, [site_id],
@@ -1420,6 +1417,11 @@ def employer_binding_action(request, binding_id):
             if successor_user.id == b.contractor_id:
                 return Response({"error": "The successor cannot be the current contractor."},
                                 status=status.HTTP_400_BAD_REQUEST)
+            if not (ContractorEmployerBinding.objects
+                    .filter(employer=user, contractor=successor_user,
+                            binding_status="ACCEPTED").exists()):
+                return Response({"error": "The successor contractor is not bound to your organisation."},
+                                status=status.HTTP_400_BAD_REQUEST)
         a.successor_contractor = successor_user
         a.save(update_fields=["successor_contractor", "updated_at"])
     elif action == "release-site":
@@ -1442,7 +1444,7 @@ def employer_binding_action(request, binding_id):
         successor = _resolve_successor(b.employer, b, request.data.get("successorBindingId"),
                                        provided) if provided else None
         if at_risk and successor is None:
-            return Response({"error": f"This contractor still has {len(at_risk)} worker(s) at this site. Provide a successor contractor so they are not orphaned."},
+            return Response({"error": f"This contractor still has {len(at_risk)} worker(s) at this site. Provide a successor contractor already bound to your organisation so they are not orphaned."},
                             status=status.HTTP_400_BAD_REQUEST)
         if successor is not None:
             _shift_workers_to_successor(b.contractor, successor.contractor, [site_id],

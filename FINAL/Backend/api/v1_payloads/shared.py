@@ -686,23 +686,16 @@ def _portal_settings(user):
 
 
 def _successor_candidates(employer, leaving):
-    """Contractors the employer can pick as a successor when `leaving` ends:
-    their other ACCEPTED contractors first, then every other contractor in the
-    system (the employer may engage a new one directly). Rows carry a
-    ``contractorId`` always and a ``bindingId`` only when a CE binding exists."""
+    """Contractors bound to this employer who can receive the leaving contractor's
+    workers/sites. Only an ACCEPTED contractor↔employer binding is eligible; an
+    unrelated contractor from another employer must never appear here."""
     rows = []
-    seen = set()
     for cb in (ContractorEmployerBinding.objects
-               .filter(employer=employer, binding_status="ACCEPTED")
+               .filter(employer=employer, binding_status="ACCEPTED",
+                       contractor__is_active=True)
                .exclude(pk=leaving.pk).select_related("contractor")):
-        seen.add(cb.contractor_id)
         rows.append({"bindingId": cb.id, "contractorId": cb.contractor_id,
                      "name": _org_name(cb.contractor)})
-    for cp in (ContractorProfile.objects.select_related("user")
-               .exclude(user_id__in=seen)
-               .exclude(user_id=leaving.contractor_id)):
-        rows.append({"bindingId": None, "contractorId": cp.user_id,
-                     "name": _d(cp.contractor_name) or _org_name(cp.user)})
     return rows
 
 
