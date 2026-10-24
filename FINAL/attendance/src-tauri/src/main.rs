@@ -172,6 +172,13 @@ fn stop_stale_engine() {
 }
 
 fn free_engine_port() -> u16 {
+    // Prefer an OS-assigned ephemeral loopback port. Fixed ranges can be
+    // reserved by Windows/Hyper-V and make the sidecar fail to bind forever.
+    if let Ok(listener) = TcpListener::bind(("127.0.0.1", 0)) {
+        if let Ok(address) = listener.local_addr() {
+            return address.port();
+        }
+    }
     for port in 8765..=8784 {
         if TcpListener::bind(("127.0.0.1", port)).is_ok() {
             return port;

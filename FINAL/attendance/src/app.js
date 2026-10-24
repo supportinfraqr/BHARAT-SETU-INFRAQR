@@ -23,13 +23,17 @@ async function loadAppVersion() {
 async function discoverEngine() {
   const bridge = tauri();
   if (bridge?.core?.invoke) {
-    try {
-      const port = Number(await bridge.core.invoke('engine_port'));
-      if (port > 0) {
-        BASE = `http://127.0.0.1:${port}`;
-        return true;
-      }
-    } catch { /* fall back to scanning in a browser */ }
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      try {
+        const port = Number(await bridge.core.invoke('engine_port'));
+        if (port > 0) {
+          BASE = `http://127.0.0.1:${port}`;
+          return true;
+        }
+      } catch { /* retry while the supervisor starts the sidecar */ }
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    return false;
   }
   for (const port of ENGINE_PORTS) {
     const controller = new AbortController();
