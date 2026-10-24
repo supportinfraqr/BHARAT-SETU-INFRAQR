@@ -83,6 +83,193 @@ function statusPill(camera) {
   return `<span class="pill ${camera.status === 'RECONNECTING' ? 'warn' : 'muted'}">${esc(camera.status || 'Unknown')}</span>`;
 }
 
+function showMessage(id, text, ok = false) {
+  const el = qs(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = `msg ${ok ? 'ok' : 'error'}`;
+}
+function setStep(step) {
+  const ids = ['phoneStep', 'otpStep', 'deviceStep'];
+  ids.forEach((id, index) => {
+    const el = qs(id);
+    if (el) el.classList.toggle('hidden', index + 1 !== step);
+    const pill = qs(`stepPill${index + 1}`);
+    if (pill) {
+      pill.classList.toggle('active', index + 1 === step);
+      pill.classList.toggle('done', index + 1 < step);
+    }
+  });
+}
+function clearOtpTimer() {
+  if (otpCountdown) clearInterval(otpCountdown);
+  otpCountdown = null;
+}
+function startOtpTimer() {
+  clearOtpTimer();
+  otpSeconds = 60;
+  const btn = qs('resendOtpBtn');
+  const label = qs('resendNote');
+  const tick = () => {
+    if (btn) btn.disabled = otpSeconds > 0;
+    if (label) label.textContent = otpSeconds > 0 ? `Resend available in ${otpSeconds}s` : 'You can resend the OTP now.';
+    if (otpSeconds <= 0) { clearOtpTimer(); return; }
+    otpSeconds -= 1;
+  };
+  tick();
+  otpCountdown = setInterval(tick, 1000);
+}
+
+function renderActivation() {
+  clearOtpTimer();
+  qs('logoutBtn').classList.add('hidden');
+  qs('refreshBtn').classList.add('hidden');
+  qs('stopEngineBtn').classList.add('hidden');
+  qs('app').innerHTML = `
+    <section class="card activation">
+      <div class="activation-head">
+        <img class="activation-logo" src="bss-original-logo.png" alt="Bharat Shram Setu" />
+        <div>
+          <h2>Activate this client</h2>
+          <p class="muted">Sign in with the employer owner's mobile. This device will be able to run cameras for every site of that employer.</p>
+        </div>
+      </div>
+      <div class="stepper">
+        <div id="stepPill1" class="step-pill active">1 · Mobile</div>
+        <div id="stepPill2" class="step-pill">2 · OTP</div>
+        <div id="stepPill3" class="step-pill">3 · Device</div>
+      </div>
+
+      <section id="phoneStep" class="activation-step">
+        <div class="step-title"><span class="num">1</span><p>Employer mobile number</p></div>
+        <label>Employer owner mobile
+          <input id="phone" inputmode="numeric" maxlength="10" autocomplete="tel" placeholder="10-digit mobile" />
+        </label>
+        <div class="row"><button id="sendOtpBtn" class="btn primary" type="button">Send OTP</button></div>
+      </section>
+
+      <section id="otpStep" class="activation-step hidden">
+        <div class="step-title"><span class="num">2</span><p>Verify OTP</p></div>
+        <label>One-time password
+          <input id="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6-digit OTP" />
+        </label>
+        <div class="row">
+          <button id="verifyOtpBtn" class="btn primary" type="button">Verify OTP</button>
+          <button id="resendOtpBtn" class="btn" type="button">Resend OTP</button>
+          <button id="changePhoneBtn" class="btn ghost" type="button">Change number</button>
+        </div>
+        <div class="otp-meta">
+          <p id="otpSentTo"></p>
+          <p id="resendNote"></p>
+        </div>
+      </section>
+
+      <section id="deviceStep" class="activation-step hidden">
+        <div class="step-title"><span class="num">3</span><p>Name this device</p></div>
+        <label>Device name
+          <input id="deviceName" maxlength="120" placeholder="Site server" />
+        </label>
+        <p class="input-note">Use a name your team will recognise. No site selection is needed.</p>
+        <div class="row"><button id="activateBtn" class="btn orange" type="button">Activate device</button></div>
+      </section>
+
+      <p id="activationMsg" class="msg"></p>
+    </section>`;
+
+  qs('sendOtpBtn').onclick = async () => {
+    const phone = qs('phone').value.replace(/\D/g, '');
+    if (phone.length !== 10) { showMessage('activationMsg', 'Enter a valid 10-digit employer mobile number.'); return; }
+    const btn = qs('sendOtpBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending OTP…';
+    try {
+      await api('/api/activate/request-otp', { method: 'POST', body: JSON.stringify({ phone }) });
+      activationPhone = phone;
+      qs('otpSentTo').textContent = `OTP sent to ${phone.slice(0, 2)}••••••${phone.slice(-2)}`;
+      qs('activationMsg').className = 'msg';
+      setStep(2);
+      startOtpTimer();
+      qs('otp').focus();
+    } catch (error) {
+      showMessage('activationMsg', error.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Send OTP';
+    }
+  };
+
+  qs('verifyOtpBtn').onclick = async () => {
+    const otp = qs('otp').value.trim();
+    if (!/^\d{4,8}$/.test(otp)) { showMessage('activationMsg', 'Enter the OTP sent to the employer mobile.'); return; }
+    const btn = qs('verifyOtpBtn');
+    btn.disabled = true;
+    btn.textContent = 'Verifying…';
+    try {
+      const data = await api('/api/activate/verify-otp', { method: 'POST', body: JSON.stringify({ phone: activationPhone, otp }) });
+      activationToken = data.activationToken;
+      clearOtpTimer();
+      setStep(3);
+      qs('activationMsg').className = 'msg';
+      qs('deviceName').focus();
+    } catch (error) {
+      showMessage('activationMsg', error.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Verify OTP';
+    }
+  };
+
+  qs('resendOtpBtn').onclick = async () => {
+    const btn = qs('resendOtpBtn');
+    btn.disabled = true;
+    try {
+      await api('/api/activate/request-otp', { method: 'POST', body: JSON.stringify({ phone: activationPhone }) });
+      startOtpTimer();
+      showMessage('activationMsg', 'A new OTP has been sent.', true);
+    } catch (error) {
+      showMessage('activationMsg', error.message);
+      btn.disabled = false;
+    }
+  };
+
+  qs('changePhoneBtn').onclick = () => {
+    clearOtpTimer();
+    activationToken = '';
+    activationPhone = '';
+    qs('phone').value = '';
+    qs('otp').value = '';
+    qs('activationMsg').className = 'msg';
+    setStep(1);
+    qs('phone').focus();
+  };
+
+  qs('activateBtn').onclick = async () => {
+    const deviceName = qs('deviceName').value.trim();
+    if (!deviceName) { showMessage('activationMsg', 'Enter a device name.'); return; }
+    const btn = qs('activateBtn');
+    btn.disabled = true;
+    btn.textContent = 'Activating…';
+    try {
+      state = await api('/api/activate/complete', {
+        method: 'POST',
+        body: JSON.stringify({ activationToken, deviceName }),
+      });
+      render();
+      startPolling();
+      void checkForUpdates(false);
+    } catch (error) {
+      showMessage('activationMsg', error.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Activate device';
+    }
+  };
+
+  qs('phone').addEventListener('keydown', event => { if (event.key === 'Enter') qs('sendOtpBtn').click(); });
+  qs('otp').addEventListener('keydown', event => { if (event.key === 'Enter') qs('verifyOtpBtn').click(); });
+  qs('deviceName').addEventListener('keydown', event => { if (event.key === 'Enter') qs('activateBtn').click(); });
+}
+
 function cameraCard(camera) {
   const id = camera.cameraId;
   const stateInfo = cameraState(camera);
