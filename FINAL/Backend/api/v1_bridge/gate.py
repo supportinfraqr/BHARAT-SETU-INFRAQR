@@ -14,6 +14,41 @@ def _worker_name(user):
     return payloads._d(wi.name if wi and wi.name else user.username)
 
 
+def _pass_for_identity(identity):
+    """Latest real pass, or the worker's auto pass when one has not been materialised.
+
+    Every worker QR is also the gate-pass QR, so a scan must resolve the same
+    automatic pass the gate-pass register shows. Expired/revoked/pending rows are
+    returned deliberately so the scanner can explain the denial.
+    """
+    from bss_core.models import WorkerContractorBinding, WorkerGatePass
+
+    worker = identity.user
+    gp = (WorkerGatePass.objects.filter(worker=worker)
+          .select_related("worker", "site").order_by("-created_at").first())
+    if gp is not None:
+        return gp
+    binding = (WorkerContractorBinding.objects
+               .filter(worker=worker, binding_status="ACCEPTED")
+               .select_related("site__employer").order_by("-accepted_at").first())
+    if binding is None or binding.site is None:
+        return None
+    employer = binding.site.employer if binding.site.employer_id else None
+    if payloads._is_gate_pass_blocked(worker, employer):
+        return None
+    gp_type = payloads._auto_gate_pass_type(worker)
+    if not gp_type:
+        return None
+    start, end = payloads._auto_gate_pass_dates(worker, gp_type)
+    gp, _ = WorkerGatePass.objects.get_or_create(
+        worker=worker, gate_pass_type=gp_type,
+        gate_pass_no=payloads._auto_gate_pass_no(worker, gp_type),
+        defaults={"site": binding.site, "status": "ACTIVE", "start_date": start,
+                  "end_date": end, "source": "SYSTEM"},
+    )
+    return gp
+
+
 def _resolve_pass(body):
     from bss_core.models import WorkerGatePass, WorkerIdentity
     import json as _json
@@ -30,9 +65,7 @@ def _resolve_pass(body):
     if bss_candidate:
         identity = WorkerIdentity.objects.filter(bss_worker_id=bss_candidate).first()
         if identity is not None:
-            return (WorkerGatePass.objects
-                    .filter(worker=identity.user, status__in=("ACTIVE", "PENDING"))
-                    .select_related("worker", "site").order_by("-created_at").first())
+            return _pass_for_identity(identity)
     if code:
         gp = (WorkerGatePass.objects.filter(gate_pass_no=code)
               .select_related("worker", "site").order_by("-created_at").first())
@@ -41,16 +74,12 @@ def _resolve_pass(body):
         # The code may itself be the worker's BSS id (the single QR/id).
         identity = WorkerIdentity.objects.filter(bss_worker_id=code.upper()).first()
         if identity is not None:
-            return (WorkerGatePass.objects
-                    .filter(worker=identity.user, status__in=("ACTIVE", "PENDING"))
-                    .select_related("worker", "site").order_by("-created_at").first())
+            return _pass_for_identity(identity)
     bss_id = str(body.get("bssId") or body.get("worker") or "").strip().upper()
     if bss_id:
         identity = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
         if identity is not None:
-            return (WorkerGatePass.objects
-                    .filter(worker=identity.user, status__in=("ACTIVE", "PENDING"))
-                    .select_related("worker", "site").order_by("-created_at").first())
+            return _pass_for_identity(identity)
     return None
 
 

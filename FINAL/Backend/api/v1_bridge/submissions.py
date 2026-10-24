@@ -549,7 +549,7 @@ def contractor_compliance_batches(request):
     plans, failures = [], []
     for label, group_rows in sorted(groups.items()):
         site = (Site.objects.filter(id__in=site_ids, site_name=label).first()
-                or Site.objects.filter(id__in=site_ids, site_bss_id=label).first())
+                or Site.objects.filter(id__in=site_ids, bss_site_id=label).first())
         if site is None:
             failures.append(f"Site \u201c{label or '(blank)'}\u201d is not one of your allotted sites.")
             continue
@@ -1202,7 +1202,7 @@ def compliance_batch_site_documents(request, batch_id):
     site = None
     if site_name:
         site = (Site.objects.filter(site_name__iexact=site_name).first()
-                or Site.objects.filter(site_bss_id__iexact=site_name).first())
+                or Site.objects.filter(bss_site_id__iexact=site_name).first())
     if site is None:
         site = batch.site
     state = (site.state if site and site.state else batch.state)
