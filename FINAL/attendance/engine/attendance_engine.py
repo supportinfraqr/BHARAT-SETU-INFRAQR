@@ -28,7 +28,7 @@ import numpy as np
 import requests
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.3.2"
+APP_VERSION = "1.3.3"
 MODEL_NAME = "ArcFace"
 MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
 DETECTOR_BACKEND = "retinaface"
@@ -970,6 +970,11 @@ class Engine:
 ENGINE = None
 
 
+class EngineServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "BSSAttendance/1.0"
 
@@ -1050,6 +1055,8 @@ class Handler(BaseHTTPRequestHandler):
                     body.get("activationToken"), body.get("deviceName"))})
             if path == "/api/config/refresh":
                 return self._json({"data": ENGINE.refresh_config()})
+            if path == "/api/test-rtsp":
+                return self._json({"data": ENGINE.test_rtsp(body.get("rtsp"))})
             if path == "/api/cameras":
                 return self._json({"data": ENGINE.add_camera(body.get("label"), body.get("channel"), body.get("siteBssId"), body.get("rtsp"))})
             if path.startswith("/api/cameras/"):
@@ -1059,10 +1066,8 @@ class Handler(BaseHTTPRequestHandler):
                 except (IndexError, ValueError):
                     return self._json({"error": "Camera not found."}, 404)
                 action = parts[1] if len(parts) > 1 else ""
-                if action == "rtsp":
-                    return self._json({"data": ENGINE.set_rtsp(cid, body.get("rtsp"))})
-                if action == "channel":
-                    return self._json({"data": ENGINE.set_channel(cid, body.get("channel"))})
+                if action in ("rtsp", "channel"):
+                    return self._json({"error": "Camera connection details cannot be edited after saving."}, 403)
                 if action == "mode":
                     return self._json({"data": ENGINE.set_mode(cid, body.get("mode"))})
                 if action == "claim":
@@ -1148,7 +1153,16 @@ def main():
     os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS",
                           "rtsp_transport;tcp|rw_timeout;8000000|stimeout;8000000|fflags;nobuffer|flags;low_delay")
     ENGINE = Engine(args.home)
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
+    server = None
+    for attempt in range(30):
+        try:
+            server = EngineServer(("127.0.0.1", args.port), Handler)
+            break
+        except OSError as exc:
+            LOG.warning("Engine port %s is not available yet (%s); retrying…", args.port, exc)
+            time.sleep(1)
+    if server is None:
+        raise SystemExit(f"Could not bind the local engine port {args.port}.")
     LOG.info("Attendance engine listening on http://127.0.0.1:%s", args.port)
     try:
         server.serve_forever()

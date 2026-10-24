@@ -282,7 +282,7 @@ async function refresh() {
           <img class="activation-logo" src="bss-original-logo.png" alt="Bharat Shram Setu" />
           <div><h2>Starting local attendance engine…</h2><p class="muted">This can take a few seconds on first launch.</p></div>
         </div>
-        <p id="startupMsg" class="msg ${engineAttempts >= 8 ? 'error' : ''}">${engineAttempts >= 8 ? 'The local engine did not start. Close and reopen the app. If it still fails, contact BSS support.' : 'Please wait…'}</p>
+        <p id="startupMsg" class="msg ${engineAttempts >= 8 ? 'error' : ''}">${engineAttempts >= 8 ? 'The local engine did not start. The app will keep retrying. If it still fails, send the engine log from .bss-attendance/engine.log in your home folder to BSS support.' : 'Please wait…'}</p>
       </section>`;
     }
     setTimeout(refresh, 2000);

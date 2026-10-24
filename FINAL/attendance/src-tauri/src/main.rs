@@ -1,6 +1,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::PathBuf;
+use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
 use tauri::menu::{Menu, MenuItem};
@@ -11,7 +17,10 @@ use tauri_plugin_shell::ShellExt;
 use tauri_plugin_updater::{Update, UpdaterExt};
 
 struct PendingUpdate(Mutex<Option<Update>>);
-struct EngineProcess(Mutex<Option<CommandChild>>);
+struct EngineProcess {
+    child: Mutex<Option<CommandChild>>,
+    stopping: AtomicBool,
+}
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -94,15 +103,87 @@ fn show_main(app: &AppHandle) {
 }
 
 fn stop_engine(app: &AppHandle) {
-    if let Some(mut child) = app
-        .state::<EngineProcess>()
-        .0
-        .lock()
-        .ok()
-        .and_then(|mut guard| guard.take())
-    {
+    let state = app.state::<EngineProcess>();
+    state.stopping.store(true, Ordering::SeqCst);
+    if let Some(mut child) = state.child.lock().ok().and_then(|mut guard| guard.take()) {
         let _ = child.kill();
     }
+}
+
+fn engine_log_path() -> PathBuf {
+    let home = std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(PathBuf::from)
+        .unwrap_or_else(std::env::temp_dir);
+    let directory = home.join(".bss-attendance");
+    let _ = std::fs::create_dir_all(&directory);
+    directory.join("engine.log")
+}
+
+fn log_engine(message: &str) {
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0);
+    if let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(engine_log_path())
+    {
+        let _ = writeln!(file, "[{stamp}] {message}");
+    }
+}
+
+fn stop_stale_engine() {
+    #[cfg(target_os = "windows")]
+    {
+        for name in [
+            "attendance-engine.exe",
+            "attendance-engine-x86_64-pc-windows-msvc.exe",
+        ] {
+            let _ = Command::new("taskkill").args(["/F", "/IM", name]).output();
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = Command::new("pkill")
+            .args(["-x", "attendance-engine"])
+            .output();
+    }
+}
+
+fn start_engine(app: AppHandle) {
+    stop_stale_engine();
+    tauri::async_runtime::spawn(async move {
+        loop {
+            if app.state::<EngineProcess>().stopping.load(Ordering::SeqCst) {
+                break;
+            }
+            let sidecar = match app.shell().sidecar("attendance-engine") {
+                Ok(sidecar) => sidecar,
+                Err(error) => {
+                    log_engine(&format!("sidecar lookup failed: {error}"));
+                    std::thread::sleep(Duration::from_secs(3));
+                    continue;
+                }
+            };
+            match sidecar.spawn() {
+                Ok((mut events, child)) => {
+                    log_engine("engine started");
+                    let state = app.state::<EngineProcess>();
+                    if let Ok(mut guard) = state.child.lock() {
+                        *guard = Some(child);
+                    }
+                    while let Some(event) = events.recv().await {
+                        log_engine(&format!("engine: {event:?}"));
+                    }
+                    log_engine("engine exited; restarting in 3 seconds");
+                }
+                Err(error) => log_engine(&format!("engine spawn failed: {error}")),
+            }
+            std::thread::sleep(Duration::from_secs(3));
+        }
+    });
 }
 
 fn quit_app(app: &AppHandle) {
@@ -127,15 +208,11 @@ fn main() {
             app.handle()
                 .plugin(tauri_plugin_updater::Builder::new().build());
             app.manage(PendingUpdate(Mutex::new(None)));
-
-            let sidecar = app.shell().sidecar("attendance-engine")?;
-            let (mut events, child) = sidecar.spawn()?;
-            app.manage(EngineProcess(Mutex::new(Some(child))));
-            tauri::async_runtime::spawn(async move {
-                while let Some(event) = events.recv().await {
-                    println!("engine: {event:?}");
-                }
+            app.manage(EngineProcess {
+                child: Mutex::new(None),
+                stopping: AtomicBool::new(false),
             });
+            start_engine(app.handle().clone());
 
             let open_item = MenuItem::with_id(app, "open", "Open BSS Attendance", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
