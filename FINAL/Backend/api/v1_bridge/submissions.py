@@ -548,8 +548,15 @@ def contractor_compliance_batches(request):
     # Pre-flight every site group. Any failure blocks the whole upload.
     plans, failures = [], []
     for label, group_rows in sorted(groups.items()):
-        site = (Site.objects.filter(id__in=site_ids, site_name=label).first()
-                or Site.objects.filter(id__in=site_ids, bss_site_id=label).first())
+        from django.db.models import Q
+        site = (Site.objects.filter(id__in=site_ids)
+                .filter(Q(site_name__iexact=label)
+                        | Q(bss_site_id__iexact=label)
+                        | Q(internal_location_code__iexact=label)
+                        | Q(erp_site_code__iexact=label)
+                        | Q(project_code__iexact=label)
+                        | Q(site_display_name__iexact=label))
+                .first())
         if site is None:
             failures.append(f"Site \u201c{label or '(blank)'}\u201d is not one of your allotted sites.")
             continue
