@@ -2,7 +2,6 @@
 
 use std::fs::{self, OpenOptions};
 use std::io::Write;
-use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
@@ -13,7 +12,7 @@ use serde::Serialize;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
-use tauri_plugin_shell::process::CommandChild;
+use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_updater::{Update, UpdaterExt};
 
@@ -171,22 +170,6 @@ fn stop_stale_engine() {
     }
 }
 
-fn free_engine_port() -> u16 {
-    // Prefer an OS-assigned ephemeral loopback port. Fixed ranges can be
-    // reserved by Windows/Hyper-V and make the sidecar fail to bind forever.
-    if let Ok(listener) = TcpListener::bind(("127.0.0.1", 0)) {
-        if let Ok(address) = listener.local_addr() {
-            return address.port();
-        }
-    }
-    for port in 8765..=8784 {
-        if TcpListener::bind(("127.0.0.1", port)).is_ok() {
-            return port;
-        }
-    }
-    8765
-}
-
 #[tauri::command]
 fn engine_port(state: State<'_, EnginePort>) -> u16 {
     state.0.load(Ordering::SeqCst)
@@ -211,8 +194,7 @@ fn start_engine(app: AppHandle) {
             if app.state::<EngineProcess>().stopping.load(Ordering::SeqCst) {
                 break;
             }
-            let port = free_engine_port();
-            app.state::<EnginePort>().0.store(port, Ordering::SeqCst);
+            app.state::<EnginePort>().0.store(0, Ordering::SeqCst);
             let sidecar = match app.shell().sidecar("attendance-engine") {
                 Ok(sidecar) => sidecar,
                 Err(error) => {
@@ -221,9 +203,8 @@ fn start_engine(app: AppHandle) {
                     continue;
                 }
             };
-            let port_arg = port.to_string();
-            log_engine(&format!("starting engine on port {port}"));
-            match sidecar.args(["--port", port_arg.as_str()]).spawn() {
+            log_engine("starting engine with an OS-assigned port");
+            match sidecar.args(["--port", "0"]).spawn() {
                 Ok((mut events, child)) => {
                     log_engine("engine started");
                     let state = app.state::<EngineProcess>();
@@ -231,6 +212,19 @@ fn start_engine(app: AppHandle) {
                         *guard = Some(child);
                     }
                     while let Some(event) = events.recv().await {
+                        if let CommandEvent::Stdout(bytes) = &event {
+                            let text = String::from_utf8_lossy(bytes);
+                            for line in text.lines() {
+                                if let Some(raw_port) = line.trim().strip_prefix("ENGINE_PORT=") {
+                                    if let Ok(port) = raw_port.trim().parse::<u16>() {
+                                        if port > 0 {
+                                            app.state::<EnginePort>().0.store(port, Ordering::SeqCst);
+                                            log_engine(&format!("engine bound port {port}"));
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         log_engine(&format!("engine: {event:?}"));
                     }
                     log_engine("engine exited; restarting in 3 seconds");

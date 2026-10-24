@@ -33,7 +33,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.3.7"
+APP_VERSION = "1.3.8"
 MODEL_NAME = "ArcFace"
 MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
 DETECTOR_BACKEND = "retinaface"
@@ -1274,7 +1274,8 @@ def main():
             time.sleep(1)
     if server is None:
         raise SystemExit(f"Could not bind the local engine port {args.port}.")
-    LOG.info("Attendance engine listening on http://127.0.0.1:%s", args.port)
+    print(f"ENGINE_PORT={server.server_port}", flush=True)
+    LOG.info("Attendance engine listening on http://127.0.0.1:%s", server.server_port)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
