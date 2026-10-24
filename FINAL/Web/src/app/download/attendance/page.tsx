@@ -4,7 +4,7 @@ import { ArrowLeft, CheckCircle2, Download, Monitor, ShieldCheck, Terminal, Wifi
 
 export const metadata: Metadata = {
   title: 'Download Attendance Client | Bharat Shram Setu',
-  description: 'Download the BSS attendance client for Windows or Linux. The client runs on the site laptop and connects directly to local RTSP cameras.',
+  description: 'Download the BSS attendance client for Windows or Linux. The client runs on the site server and connects directly to local RTSP cameras.',
 };
 
 const WINDOWS_DEFAULT = '/downloads/attendance/BSS-Attendance-Windows-Setup.exe';
@@ -37,8 +37,8 @@ export default function AttendanceDownloadPage() {
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#0F7B4F]">Site attendance</p>
           <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-[#01183A]">Download the attendance client</h1>
           <p className="mt-3 text-sm leading-6 text-[#475569]">
-            The client runs on the site laptop and connects directly to your DVR/CCTV cameras over RTSP.
-            Live video stays on the laptop. Only camera health and face embeddings are sent to BSS.
+            The client runs on the site server and connects directly to your DVR/CCTV cameras over RTSP.
+            Live video stays on the site server. Only camera health and face embeddings are sent to BSS.
           </p>
         </div>
 
@@ -72,7 +72,7 @@ export default function AttendanceDownloadPage() {
           <h2 className="text-base font-bold text-[#01183A]">Before you start</h2>
           <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-[#475569]">
             <div className="flex gap-3"><ShieldCheck size={18} className="mt-0.5 shrink-0 text-[#0F7B4F]" /><p><strong className="text-[#0F172A]">Activation is required.</strong><br />Use the employer-owner mobile number and OTP, then select the site from the list.</p></div>
-            <div className="flex gap-3"><Wifi size={18} className="mt-0.5 shrink-0 text-[#1D4ED8]" /><p><strong className="text-[#0F172A]">Local RTSP only.</strong><br />Enter the RTSP URL of each camera on the site laptop. It is never sent to BSS.</p></div>
+            <div className="flex gap-3"><Wifi size={18} className="mt-0.5 shrink-0 text-[#1D4ED8]" /><p><strong className="text-[#0F172A]">Local RTSP only.</strong><br />Enter the RTSP URL of each camera on the site server. It is never sent to BSS.</p></div>
             <div className="flex gap-3"><CheckCircle2 size={18} className="mt-0.5 shrink-0 text-[#0F7B4F]" /><p><strong className="text-[#0F172A]">Two modes per camera.</strong><br />Live only shows local video. Send data enables face embeddings for attendance.</p></div>
             <div className="flex gap-3"><ShieldCheck size={18} className="mt-0.5 shrink-0 text-[#A15C00]" /><p><strong className="text-[#0F172A]">Set the camera IP in BSS.</strong><br />The employer must allowlist the camera&apos;s public static IPv4 and configure its capture window.</p></div>
           </div>
