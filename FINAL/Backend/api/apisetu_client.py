@@ -89,11 +89,21 @@ def _request(method, url, *, params=None, payload=None, action=None, timeout=30,
         body = response.json()
     except ValueError:
         raise ApiSetuError(f"API Setu returned a non-JSON response (HTTP {response.status_code}).", 502)
-    if response.status_code >= 400 or str(body.get("status_cd")) == "0":
+    if isinstance(body, dict) and (response.status_code >= 400 or str(body.get("status_cd")) == "0"):
         message = (body.get("error_description") or body.get("error") or {}).get("message") if isinstance(body.get("error"), dict) else None
         message = message or body.get("error_description") or body.get("error") or f"API Setu error (HTTP {response.status_code})."
         raise ApiSetuError(str(message), 400 if response.status_code < 500 else 502)
+    if response.status_code >= 400:
+        raise ApiSetuError(f"API Setu error (HTTP {response.status_code}).", 400 if response.status_code < 500 else 502)
     return body
+
+
+def _dict_body(body, label="API Setu"):
+    if isinstance(body, dict):
+        return body
+    if isinstance(body, list) and len(body) == 1 and isinstance(body[0], dict):
+        return body[0]
+    raise ApiSetuError(f"{label} returned an unexpected response.", 502)
 
 
 def gstn_taxpayer(gstin, version=None):
@@ -106,6 +116,11 @@ def gstn_taxpayer(gstin, version=None):
                 "taxpayer_type": "Regular", "state": "", "district": "", "address": "",
                 "pincode": "", "city": "", "nature_of_business": "", "raw": {}}
     body = _request("GET", f"{_taxpayer_base_url()}{path}", timeout=40, retries=1)
+    if isinstance(body, list):
+        if not body:
+            raise ApiSetuError(f"No GST taxpayer record found for {gstin}.", 404)
+        body = _dict_body(body, "GST taxpayer lookup")
+    body = _dict_body(body, "GST taxpayer lookup")
     if version == "v1":
         return {
             "gstin": body.get("gstin") or gstin,
@@ -151,8 +166,8 @@ def gst_initiate(gstin, legal_name, email):
     """RC flow: send an OTP to the GST primary authorized signatory."""
     if _mock_enabled():
         return {"txn_id": str(uuid.uuid4()), "message": "MOCK: OTP sent."}
-    body = _request("POST", f"{_rc_base_url()}{INITIATE_PATH}", action="INITIATE",
-                    payload={"gstin": gstin, "legalName": legal_name, "emailId_pas": email})
+    body = _dict_body(_request("POST", f"{_rc_base_url()}{INITIATE_PATH}", action="INITIATE",
+                               payload={"gstin": gstin, "legalName": legal_name, "emailId_pas": email}))
     data = body.get("data") or {}
     txn_id = data.get("txnId")
     if not txn_id:
@@ -165,8 +180,8 @@ def gst_validate(gstin, otp, txn_id):
     if _mock_enabled():
         return {"gstin": gstin, "legal_name": "", "trade_name": "", "constitution": "",
                 "rc_pdf_base64": None, "txn_id": txn_id}
-    body = _request("POST", f"{_rc_base_url()}{VALIDATE_PATH}", action="VALIDATE",
-                    payload={"gstin": gstin, "otp": str(otp), "txnId": txn_id})
+    body = _dict_body(_request("POST", f"{_rc_base_url()}{VALIDATE_PATH}", action="VALIDATE",
+                               payload={"gstin": gstin, "otp": str(otp), "txnId": txn_id}))
     data = body.get("data") or {}
     details = data.get("data") or {}
     return {
