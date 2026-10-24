@@ -28,7 +28,7 @@ import numpy as np
 import requests
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.3.1"
+APP_VERSION = "1.3.2"
 MODEL_NAME = "ArcFace"
 MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
 DETECTOR_BACKEND = "retinaface"
@@ -941,6 +941,8 @@ class Engine:
                 "ipWhitelisted": bool(bss.get("ipWhitelisted")),
                 "employerLabel": bss.get("employerLabel") or "",
                 "cameraOnline": bool(bss.get("online")),
+                "sourceDeviceName": self.device_name,
+                "sourceDeviceId": self.device_id,
                 "timezoneLabel": "IST (UTC+05:30)",
                 "canClaim": False,
                 "sendAllowed": bool(bss.get("approvalStatus") == "APPROVED"
@@ -1008,6 +1010,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"data": ENGINE.events.recent(100)})
         if path == "/api/health":
             return self._json({"ok": True})
+        if path == "/api/test-rtsp":
+            return self._json({"data": ENGINE.test_rtsp((self._body() or {}).get("rtsp"))})
         if path.startswith("/stream/"):
             try:
                 cid = int(unquote(path[len("/stream/"):]))

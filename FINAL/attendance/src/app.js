@@ -56,26 +56,15 @@ function cameraCard(camera) {
     <div class="cam-body">
       <div class="cam-info">
         <div>Camera ID<b class="mono">${esc(camera.uid || '—')}</b></div>
+        <div>Source device<b>${esc(camera.sourceDeviceName || state.deviceName || 'This device')}</b></div>
         <div>BSS Site ID<b>${esc(camera.siteBssId || '—')}</b></div>
         <div>Channel<b>${esc(camera.channel ?? '—')}</b></div>
         <div>Timezone<b>IST (UTC+05:30)</b></div>
         <div>Allowed IP<b>${esc(camera.allowedIp || 'Waiting for employer')}</b></div>
+        <div>RTSP<b>${esc(camera.rtspConfigured ? 'Configured' : 'Not configured')}</b></div>
         <div>Last event<b>${esc(when(camera.lastEventAt))}</b></div>
       </div>
       <p class="note">${camera.sendBlockedReason ? `<span class="${camera.approvalStatus === 'APPROVED' && camera.ipWhitelisted ? 'blocked' : ''}">${esc(camera.sendBlockedReason)}</span>` : 'Attendance is active. Events sync automatically after an internet outage.'}</p>
-      <details class="setup">
-        <summary>Edit channel / RTSP</summary>
-        <div class="rtsp-row" style="margin-top:8px">
-          <div><label>Channel<input id="channel-${id}" inputmode="numeric" value="${esc(camera.channel ?? '')}" placeholder="1" /></label></div>
-          <button id="saveChannel-${id}" class="btn" type="button">Save channel</button>
-        </div>
-        <div class="rtsp-row" style="margin-top:8px">
-          <div><label>RTSP URL<input id="url-${id}" placeholder="${camera.rtspConfigured ? 'RTSP configured — enter to replace' : 'rtsp://...'}" /></label></div>
-          <button id="saveRtsp-${id}" class="btn" type="button">Save RTSP</button>
-          <button id="testRtsp-${id}" class="btn" type="button">Test</button>
-        </div>
-        <p id="testMsg-${id}" class="note"></p>
-      </details>
       <div class="row" style="margin-top:10px">
         <button id="remove-${id}" class="btn ghost" type="button">Remove camera</button>
       </div>
@@ -97,14 +86,21 @@ function localEventRows(events, cameras) {
   }).join('');
 }
 
+function siteCapacity(site, cameras) {
+  const limit = Math.max(1, Number(site.cameraLimit || 5));
+  const used = cameras.length;
+  return { limit, used, remaining: Math.max(0, limit - used) };
+}
+
 function siteSection(site, cameras) {
+  const capacity = siteCapacity(site, cameras);
   return `<section class="site-group">
     <div class="site-head">
       <div>
         <h3>${esc(site.name || 'Employer site')}</h3>
-        <p>${esc(site.bssId || 'No BSS site ID')} · ${cameras.length} camera${cameras.length === 1 ? '' : 's'}</p>
+        <p>${esc(site.bssId || 'No BSS site ID')} · ${capacity.used} / ${capacity.limit} camera slots used · ${capacity.remaining} remaining</p>
       </div>
-      <div class="site-meta"><span class="pill site">BSS Site ID</span></div>
+      <div class="site-meta"><span class="pill ${capacity.remaining ? 'ok' : 'warn'}">${capacity.remaining ? `${capacity.remaining} slots left` : 'Camera slots full'}</span></div>
     </div>
     ${cameras.length ? `<div class="grid cams">${cameras.map(cameraCard).join('')}</div>` : '<div class="card empty">No cameras added for this site yet.</div>'}
   </section>`;
@@ -127,6 +123,12 @@ function render() {
   const known = new Set(grouped.flatMap(group => group.cameras.map(camera => camera.cameraId)));
   const unassigned = cameras.filter(camera => !known.has(camera.cameraId));
   if (unassigned.length) grouped.push({ id: null, bssId: '', name: 'Unassigned cameras', cameras: unassigned });
+  const siteChoices = sites.map(site => {
+    const count = cameras.filter(camera => String(camera.siteBssId || '') === String(site.bssId || '') || Number(camera.siteId) === Number(site.id)).length;
+    return { ...site, capacity: siteCapacity(site, { length: count }) };
+  });
+  const firstAvailable = siteChoices.find(site => site.capacity.remaining > 0);
+  const allSitesFull = sites.length > 0 && !firstAvailable;
 
   qs('app').innerHTML = `
     <div class="dashboard">
@@ -146,16 +148,20 @@ function render() {
       </section>
 
       <section class="card">
-        <div class="cam-title"><h3>Add camera</h3><span class="pill muted">One step</span></div>
-        <p class="muted">Enter every camera detail here. RTSP stays on this machine; the camera appears in the employer dashboard as IP whitelisting pending.</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;align-items:end">
-          <div><label>Site<select id="newCameraSite">${sites.map(site => `<option value="${esc(site.bssId || site.id)}">${esc(site.name)}</option>`).join('')}</select></label></div>
+        <div class="cam-title"><h3>Add camera</h3><span class="pill muted">Test before saving</span></div>
+        <p class="muted">Enter all details, test the RTSP connection, then save. Connection details cannot be edited after saving.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;align-items:end">
+          <div><label>Site<select id="newCameraSite">${siteChoices.map(site => `<option value="${esc(site.bssId || site.id)}" ${site.capacity.remaining <= 0 ? 'disabled' : ''} ${firstAvailable && site.id === firstAvailable.id ? 'selected' : ''}>${esc(site.name)} — ${site.capacity.used}/${site.capacity.limit} used (${site.capacity.remaining} left)</option>`).join('')}</select></label></div>
           <div><label>Camera label<input id="newCameraLabel" maxlength="120" placeholder="Main Gate" /></label></div>
           <div><label>Channel<input id="newCameraChannel" inputmode="numeric" placeholder="1" /></label></div>
           <div><label>RTSP URL<input id="newCameraRtsp" placeholder="rtsp://user:pass@ip/stream" /></label></div>
-          <button id="addCameraBtn" class="btn primary" type="button" ${sites.length ? '' : 'disabled'}>Save camera</button>
         </div>
-        ${sites.length ? '' : '<p class="note blocked">The employer must create a site before you can add a camera.</p>'}
+        <div class="row" style="margin-top:10px">
+          <button id="testCameraBtn" class="btn" type="button" ${firstAvailable ? '' : 'disabled'}>Test RTSP</button>
+          <button id="addCameraBtn" class="btn primary" type="button" disabled>Save camera</button>
+        </div>
+        <p id="testCameraMsg" class="note"></p>
+        ${!sites.length ? '<p class="note blocked">The employer must create a site before you can add a camera.</p>' : allSitesFull ? '<p class="note blocked">All sites have reached their camera limit. Remove a camera or ask BSS admin to raise the limit.</p>' : ''}
       </section>
 
       <section class="card">
@@ -167,49 +173,93 @@ function render() {
       ${grouped.length ? grouped.map(group => siteSection(group, group.cameras)).join('') : '<div class="card empty">No employer sites are available for this client yet. Ask the employer to create a site.</div>'}
     </div>`;
 
-  qs('addCameraBtn')?.addEventListener('click', async () => {
-    const label = qs('newCameraLabel').value.trim();
-    const channel = qs('newCameraChannel').value.trim();
-    const rtsp = qs('newCameraRtsp').value.trim();
-    if (!label) { showMessage('mainMsg', 'Enter a camera label.'); return; }
-    if (!/^\d+$/.test(channel)) { showMessage('mainMsg', 'Enter a numeric camera channel.'); return; }
-    if (!rtsp.toLowerCase().startsWith('rtsp://') && !rtsp.toLowerCase().startsWith('rtsps://')) {
-      showMessage('mainMsg', 'Enter a valid RTSP URL.'); return;
-    }
+  let cameraTested = false;
+  const testMsg = qs('testCameraMsg');
+  const saveBtn = qs('addCameraBtn');
+  const testBtn = qs('testCameraBtn');
+  const resetTest = () => {
+    cameraTested = false;
+    if (saveBtn) saveBtn.disabled = true;
+    if (testMsg) { testMsg.textContent = ''; testMsg.style.color = ''; }
+  };
+  ['newCameraSite', 'newCameraLabel', 'newCameraChannel', 'newCameraRtsp'].forEach(id => {
+    qs(id)?.addEventListener('input', resetTest);
+    qs(id)?.addEventListener('change', resetTest);
+  });
+  const readForm = () => ({
+    siteBssId: qs('newCameraSite').value,
+    label: qs('newCameraLabel').value.trim(),
+    channel: qs('newCameraChannel').value.trim(),
+    rtsp: qs('newCameraRtsp').value.trim(),
+  });
+  const validateForm = form => {
+    if (!form.label) return 'Enter a camera label.';
+    if (!/^\d+$/.test(form.channel)) return 'Enter a numeric camera channel.';
+    if (!form.rtsp.toLowerCase().startsWith('rtsp://') && !form.rtsp.toLowerCase().startsWith('rtsps://')) return 'Enter a valid RTSP URL.';
+    return '';
+  };
+  testBtn?.addEventListener('click', async () => {
+    const form = readForm();
+    const problem = validateForm(form);
+    if (problem) { testMsg.textContent = problem; testMsg.style.color = '#DC2626'; return; }
+    resetTest();
+    testBtn.disabled = true;
+    testBtn.textContent = 'Testing…';
+    testMsg.textContent = 'Connecting to the camera stream…';
+    testMsg.style.color = '';
     try {
-      state = await api('/api/cameras', { method: 'POST', body: JSON.stringify({
-        label, channel, rtsp, siteBssId: qs('newCameraSite').value,
-      }) });
+      const result = await api('/api/test-rtsp', { method: 'POST', body: JSON.stringify({ rtsp: form.rtsp }) });
+      if (result.ok) {
+        cameraTested = true;
+        saveBtn.disabled = false;
+        testMsg.textContent = `RTSP connected — ${result.width}×${result.height}. You can save the camera.`;
+        testMsg.style.color = '#14843C';
+      } else {
+        testMsg.textContent = result.error || 'RTSP test failed.';
+        testMsg.style.color = '#DC2626';
+      }
+    } catch (error) {
+      testMsg.textContent = error.message;
+      testMsg.style.color = '#DC2626';
+    } finally {
+      testBtn.disabled = false;
+      testBtn.textContent = 'Test RTSP';
+    }
+  });
+  saveBtn?.addEventListener('click', async () => {
+    const form = readForm();
+    const problem = validateForm(form);
+    if (problem) { testMsg.textContent = problem; testMsg.style.color = '#DC2626'; return; }
+    if (!cameraTested) { testMsg.textContent = 'Test the RTSP connection before saving.'; testMsg.style.color = '#DC2626'; return; }
+    const chosen = siteChoices.find(site => String(site.bssId || site.id) === String(form.siteBssId));
+    if (!chosen || chosen.capacity.remaining <= 0) {
+      testMsg.textContent = 'This site has no camera slots left.'; testMsg.style.color = '#DC2626'; return;
+    }
+    saveBtn.disabled = true;
+    try {
+      state = await api('/api/cameras', { method: 'POST', body: JSON.stringify(form) });
       render();
-    } catch (error) { showMessage('mainMsg', error.message); }
+    } catch (error) {
+      testMsg.textContent = error.message;
+      testMsg.style.color = '#DC2626';
+      saveBtn.disabled = false;
+    }
   });
 
   for (const camera of cameras) {
     const id = camera.cameraId;
-    qs(`saveChannel-${id}`)?.addEventListener('click', async () => {
-      try {
-        state = await api(`/api/cameras/${id}/channel`, { method: 'POST', body: JSON.stringify({ channel: qs(`channel-${id}`).value.trim() }) });
-        render();
-      } catch (error) { showMessage('mainMsg', error.message); }
-    });
-    qs(`saveRtsp-${id}`)?.addEventListener('click', async () => {
-      try {
-        state = await api(`/api/cameras/${id}/rtsp`, { method: 'POST', body: JSON.stringify({ rtsp: qs(`url-${id}`).value.trim() }) });
-        render();
-      } catch (error) { showMessage('mainMsg', error.message); }
-    });
-    qs(`testRtsp-${id}`)?.addEventListener('click', async () => {
-      const message = qs(`testMsg-${id}`);
-      try {
-        const result = await api(`/api/cameras/${id}/test`, { method: 'POST', body: JSON.stringify({ rtsp: qs(`url-${id}`).value.trim() }) });
-        message.textContent = result.ok ? `Connected — ${result.width}×${result.height}` : result.error;
-        message.style.color = result.ok ? '#14843C' : '#DC2626';
-      } catch (error) { message.textContent = error.message; message.style.color = '#DC2626'; }
-    });
     qs(`remove-${id}`)?.addEventListener('click', async () => {
-      if (!window.confirm(`Remove ${camera.label}?`)) return;
-      try { state = await api(`/api/cameras/${id}`, { method: 'DELETE' }); render(); }
-      catch (error) { showMessage('mainMsg', error.message); }
+      const confirmed = await showDialog({
+        title: 'Remove this camera?',
+        body: `${camera.label} will stop reporting and disappear from the employer dashboard. Past attendance is kept.`,
+        confirmLabel: 'Remove camera',
+        danger: true,
+      });
+      if (!confirmed) return;
+      try {
+        state = await api(`/api/cameras/${id}`, { method: 'DELETE' });
+        render();
+      } catch (error) { await showAlert('Could not remove camera', error.message); }
     });
   }
 }
@@ -324,9 +374,15 @@ qs('refreshBtn').onclick = async () => {
 };
 qs('updateBtn').onclick = () => void checkForUpdates(true);
 qs('logoutBtn').onclick = async () => {
-  if (!window.confirm('Sign out this client? Local RTSP settings are kept.')) return;
+  const confirmed = await showDialog({
+    title: 'Sign out this client?',
+    body: 'Attendance will stop and this device will show offline. Camera setup stays saved locally.',
+    confirmLabel: 'Sign out',
+    danger: true,
+  });
+  if (!confirmed) return;
   try { state = await api('/api/logout', { method: 'POST', body: '{}' }); renderUpdateBanner(null); render(); }
-  catch (error) { alert(error.message); }
+  catch (error) { await showAlert('Could not sign out', error.message); }
 };
 
 refresh();

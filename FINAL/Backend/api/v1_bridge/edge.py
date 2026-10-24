@@ -992,6 +992,11 @@ def _employer_camera_payload(camera):
     payload["claimedByDeviceName"] = device.name if device else ""
     payload["createdByDeviceName"] = creator.name if creator else ""
     payload["createdByDeviceVersion"] = creator.version if creator else ""
+    source = device or creator
+    payload["sourceDeviceId"] = str(source.id) if source else ""
+    payload["sourceDeviceName"] = source.name if source else ""
+    payload["sourceDeviceVersion"] = source.version if source else ""
+    payload["sourceDeviceOnline"] = _device_online(source) if source else False
     return payload
 
 

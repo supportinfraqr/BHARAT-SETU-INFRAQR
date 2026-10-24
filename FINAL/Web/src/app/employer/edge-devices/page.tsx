@@ -17,6 +17,10 @@ type CameraRow = {
   ipWhitelisted: boolean;
   online: boolean;
   createdByDeviceName: string;
+  sourceDeviceId: string;
+  sourceDeviceName: string;
+  sourceDeviceVersion: string;
+  sourceDeviceOnline: boolean;
   lastSeenAt: string | null;
   lastSeenIp: string;
   lastEventAt: string | null;
@@ -127,8 +131,9 @@ function CameraCard({ camera, onSaved }: { camera: CameraRow; onSaved: (message:
       </div>
       <div className="p-4 space-y-4">
         {error && <p className="text-sm text-bss-error bg-bss-soft-orange border border-bss-border rounded-lg p-3">{error}</p>}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px] text-bss-text-muted">
-          <div>Site<b className="block text-xs text-bss-text-primary mt-1">{camera.siteId ? `Site ${camera.siteId}` : '—'}</b></div>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-[11px] text-bss-text-muted">
+          <div>Source device<b className="block text-xs text-bss-text-primary mt-1">{camera.sourceDeviceName || 'Unassigned'}</b><span className="block text-[10px] mt-0.5">{camera.sourceDeviceOnline ? 'Online' : 'Offline'}{camera.sourceDeviceVersion ? ` · v${camera.sourceDeviceVersion}` : ''}</span></div>
+          <div>Device ID<b className="block text-[10px] font-mono text-bss-text-primary mt-1 break-all">{camera.sourceDeviceId || '—'}</b></div>
           <div>Timezone<b className="block text-xs text-bss-text-primary mt-1">IST (UTC +05:30)</b></div>
           <div>RTSP<b className="block text-xs text-bss-text-primary mt-1">Configured on client</b></div>
           <div>Last seen<b className="block text-xs text-bss-text-primary mt-1">{when(camera.lastSeenAt)}</b></div>
