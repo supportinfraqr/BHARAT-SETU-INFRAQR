@@ -357,7 +357,7 @@ function render() {
 
 async function refresh() {
   try {
-    if (!state || !state.activated) await discoverEngine();
+    await discoverEngine();
     state = await api('/api/status');
     engineAttempts = 0;
     render();
@@ -412,7 +412,14 @@ function startPolling() {
         conn.className = `pill ${state.bssConnected ? 'ok' : 'warn'}`;
         updateResourceLive(state.resources);
       }
-    } catch { /* keep last known state */ }
+    } catch {
+      try {
+        if (await discoverEngine()) {
+          state = await api('/api/status');
+          render();
+        }
+      } catch { /* keep retrying */ }
+    }
   }, 5000);
 }
 
