@@ -40,7 +40,7 @@ const MODELS: Record<string, string[]> = {
   deepseek: ['deepseek-chat', 'deepseek-reasoner'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
   mistral: ['mistral-large-latest', 'mistral-small-latest', 'open-mistral-nemo'],
-  openrouter: ['openai/gpt-4o', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.3-70b-instruct'],
+  openrouter: ['deepseek/deepseek-v4.1-flash', 'openai/gpt-4o', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.3-70b-instruct'],
   custom: [],
 };
 
@@ -165,7 +165,7 @@ export default function AiAuditSettingsPage() {
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Administration · Audit</p>
           <h1 className="text-2xl font-bold mt-1 flex items-center gap-2"><Sparkles size={22} /> AI Audit Settings</h1>
-          <p className="text-sm text-gray-500 mt-1">Add API keys from different AI providers, choose the provider and model, and mark which one the audit engine should use.</p>
+          <p className="text-sm text-gray-500 mt-1">Add API keys from different AI providers, choose the provider and model, and mark which one the audit engine should use. The monthly document audit agent uses DeepSeek or OpenRouter.</p>
         </div>
         <button type="button" onClick={openNew} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black self-start sm:self-auto">
           <Plus size={16} /> Add provider key
@@ -184,6 +184,12 @@ export default function AiAuditSettingsPage() {
         </div>
         {active?.hasKey && <span className="inline-flex items-center gap-1 text-[11px] font-bold text-green-700 bg-green-50 border border-green-100 rounded-full px-2.5 py-1"><CheckCircle2 size={12} /> Key stored</span>}
       </div>
+      {active && !['deepseek', 'openrouter'].includes(active.provider) && (
+        <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-3">AI checkpoints and reports use this provider. The monthly document audit agent supports DeepSeek or OpenRouter only.</p>
+      )}
+      {active?.provider === 'openrouter' && (
+        <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-3">OpenRouter monthly audits need a vision-capable model (for document page images), for example <span className="font-mono">deepseek/deepseek-v4.1-flash</span>.</p>
+      )}
 
       {notice && <p className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-lg p-3">{notice}</p>}
       {error && <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg p-3">{error}</p>}
@@ -214,6 +220,7 @@ export default function AiAuditSettingsPage() {
                   {(MODELS[form.provider] ?? []).length > 0 && <button type="button" onClick={() => setForm({ ...form, customModel: false, model: MODELS[form.provider][0] })} className="h-10 px-2 rounded-lg border border-gray-200 text-xs font-semibold text-gray-500 whitespace-nowrap">List</button>}
                 </div>
               )}
+              {form.provider === 'openrouter' && <p className="mt-1 text-[11px] text-amber-700">Use a vision-capable model for monthly audits. Checkpoints can use any text model.</p>}
             </div>
             <div>
               <label className={label}>Label (optional)</label>
