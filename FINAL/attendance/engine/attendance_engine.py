@@ -33,7 +33,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.3.12"
+APP_VERSION = "1.3.13"
 MODEL_NAME = "ArcFace"
 MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
 DETECTOR_BACKEND = "retinaface"
@@ -1054,8 +1054,10 @@ class Engine:
                 "ipWhitelisted": bool(bss.get("ipWhitelisted")),
                 "employerLabel": bss.get("employerLabel") or "",
                 "cameraOnline": bool(bss.get("online")),
-                "sourceDeviceName": self.device_name,
-                "sourceDeviceId": self.device_id,
+                "sourceDeviceName": bss.get("sourceDeviceName") or (self.device_name if bss.get("claimedByThisDevice") else "Another device"),
+                "sourceDeviceId": bss.get("sourceDeviceId") or bss.get("createdByDeviceId") or "",
+                "createdByDeviceId": bss.get("createdByDeviceId") or "",
+                "canRemove": bool(bss.get("claimedByThisDevice") or bss.get("createdByDeviceId") == self.device_id),
                 "timezoneLabel": "IST (UTC+05:30)",
                 "canClaim": False,
                 "sendAllowed": bool(bss.get("approvalStatus") == "APPROVED"

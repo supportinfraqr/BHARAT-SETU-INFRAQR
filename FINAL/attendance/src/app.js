@@ -385,7 +385,6 @@ function cameraCard(camera) {
         <div>Camera ID<b class="mono">${esc(camera.uid || '—')}</b></div>
         <div>Source device<b>${esc(camera.sourceDeviceName || state.deviceName || 'This device')}</b></div>
         <div>BSS Site ID<b>${esc(camera.siteBssId || '—')}</b></div>
-        <div>Channel<b>${esc(camera.channel ?? '—')}</b></div>
         <div>Timezone<b>IST (UTC+05:30)</b></div>
         <div>Allowed IP<b>${esc(camera.allowedIp || 'Waiting for employer')}</b></div>
         <div>RTSP<b>${esc(camera.rtspConfigured ? 'Configured' : 'Not configured')}</b></div>
@@ -394,7 +393,9 @@ function cameraCard(camera) {
       <p class="note">${camera.sendBlockedReason ? `<span class="${camera.approvalStatus === 'APPROVED' && camera.ipWhitelisted ? 'blocked' : ''}">${esc(camera.sendBlockedReason)}</span>` : 'Attendance is active. Events sync automatically after an internet outage.'}</p>
       <div class="row cam-actions" style="margin-top:10px">
         <button id="live-${id}" class="btn primary" type="button" ${canPreview ? '' : 'disabled'}>See live</button>
-        <button id="remove-${id}" class="btn danger" type="button">Remove camera</button>
+        ${camera.canRemove
+          ? `<button id="remove-${id}" class="btn danger" type="button">Remove camera</button>`
+          : `<span class="note">Registered on ${esc(camera.sourceDeviceName || 'another device')} — remove it from that device.</span>`}
       </div>
     </div>
   </section>`;
@@ -451,9 +452,10 @@ function resourceCard(resources) {
       <div>RAM total<b>${esc(totalRam)}</b></div>
       <div>RAM available<b id="resourceRam">${esc(freeRam)}</b></div>
       <div>Engine memory<b id="resourceProcess">${esc(procRam)}</b></div>
+      <div>AI processing<b>CPU only (GPU disabled)</b></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;align-items:end">
-      <div><label>CPU cores to use<input id="resourceCores" type="number" min="0" max="${cores}" value="${esc(settings.cpuCores ?? 0)}" /><span class="note">0 = all cores</span></label></div>
+      <div><label>CPU cores to use<input id="resourceCores" type="number" min="0" max="${cores}" value="${esc(settings.cpuCores ?? 0)}" /><span class="note">0 = Automatic — uses all ${esc(cores)} available cores</span></label></div>
       <div><label>Cameras processed at once<input id="resourceWorkers" type="number" min="1" max="16" value="${esc(settings.maxCameraWorkers ?? 2)}" /></label></div>
       <div><label>AI interval seconds<input id="resourceInterval" type="number" min="1" max="30" step="0.5" value="${esc(settings.processInterval ?? 2)}" /></label></div>
       <button id="saveResourcesBtn" class="btn primary" type="button">Save resources</button>
@@ -522,7 +524,6 @@ function render() {
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;align-items:end">
           <div><label>Site<select id="newCameraSite">${siteChoices.map(site => `<option value="${esc(site.bssId || site.id)}" ${site.capacity.remaining <= 0 ? 'disabled' : ''} ${firstAvailable && site.id === firstAvailable.id ? 'selected' : ''}>${esc(site.name)} — ${site.capacity.used}/${site.capacity.limit} used (${site.capacity.remaining} left)</option>`).join('')}</select></label></div>
           <div><label>Camera label<input id="newCameraLabel" maxlength="120" placeholder="Main Gate" /></label></div>
-          <div><label>Channel<input id="newCameraChannel" inputmode="numeric" placeholder="1" /></label></div>
           <div><label>RTSP URL<input id="newCameraRtsp" placeholder="rtsp://user:pass@ip/stream" /></label></div>
         </div>
         <div class="row" style="margin-top:10px">
@@ -551,19 +552,17 @@ function render() {
     if (saveBtn) saveBtn.disabled = true;
     if (testMsg) { testMsg.textContent = ''; testMsg.style.color = ''; }
   };
-  ['newCameraSite', 'newCameraLabel', 'newCameraChannel', 'newCameraRtsp'].forEach(id => {
+  ['newCameraSite', 'newCameraLabel', 'newCameraRtsp'].forEach(id => {
     qs(id)?.addEventListener('input', resetTest);
     qs(id)?.addEventListener('change', resetTest);
   });
   const readForm = () => ({
     siteBssId: qs('newCameraSite').value,
     label: qs('newCameraLabel').value.trim(),
-    channel: qs('newCameraChannel').value.trim(),
     rtsp: qs('newCameraRtsp').value.trim(),
   });
   const validateForm = form => {
     if (!form.label) return 'Enter a camera label.';
-    if (!/^\d+$/.test(form.channel)) return 'Enter a numeric camera channel.';
     if (!form.rtsp.toLowerCase().startsWith('rtsp://') && !form.rtsp.toLowerCase().startsWith('rtsps://')) return 'Enter a valid RTSP URL.';
     return '';
   };
@@ -694,7 +693,7 @@ function startPolling() {
       const shape = value => JSON.stringify({
         activated: value?.activated,
         sites: (value?.sites || []).map(site => [site.id, site.bssId, site.name]),
-        cameras: (value?.cameras || []).map(camera => [camera.cameraId, camera.approvalStatus, camera.status, camera.rtspConfigured, camera.sendAllowed, camera.cameraOnline, camera.ipWhitelisted]),
+        cameras: (value?.cameras || []).map(camera => [camera.cameraId, camera.approvalStatus, camera.status, camera.rtspConfigured, camera.sendAllowed, camera.cameraOnline, camera.ipWhitelisted, camera.canRemove, camera.sourceDeviceName]),
         outbox: value?.outbox,
         localEvents: (value?.localEvents || []).map(event => [event.eventId, event.syncStatus]),
       });
