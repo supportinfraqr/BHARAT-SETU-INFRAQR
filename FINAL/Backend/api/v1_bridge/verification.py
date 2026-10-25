@@ -240,6 +240,9 @@ def verification_manual_submit(request):
     profile = _profile_for(request.user)
     if profile is None:
         return Response({"error": "Only employers and contractors."}, status=status.HTTP_403_FORBIDDEN)
+    if str(getattr(profile, "gst_verification_status", "") or "").upper() == "VERIFIED":
+        return Response({"error": "Your GST is already verified. No document upload is required."},
+                        status=status.HTTP_400_BAD_REQUEST)
 
     import re as _re
 
@@ -325,13 +328,12 @@ def admin_verification_queue(request):
             gst_status = str(
                 getattr(profile, "gst_verification_status", "") or "PENDING").upper()
             gst_not_applicable = gst_status == "NOT_APPLICABLE"
-            if manual in ("PENDING", "VERIFIED"):
+            if manual in ("PENDING", "VERIFIED") or gst_status == "VERIFIED":
                 stage = "PENDING"           # ready to review — only Admin Approval left
-            elif gst_status not in ("VERIFIED", "NOT_APPLICABLE"):
+            elif gst_status != "NOT_APPLICABLE":
                 stage = "AWAITING_GST"
             else:
-                # EntityLocker is disabled — every GST-cleared entity submits
-                # documents next.
+                # No-GST entities still submit documents.
                 stage = "AWAITING_DOCUMENTS"
             rows.append({
                 "userId": profile.user_id, "role": role,
@@ -340,6 +342,7 @@ def admin_verification_queue(request):
                 "bssId": _bss_id(user),
                 "gstin": profile.gstin or "", "legalName": profile.gst_legal_name or "",
                 "gstNotApplicable": gst_not_applicable,
+                "gstVerified": gst_status == "VERIFIED",
                 "stage": stage, "manualStatus": manual,
                 "declined": bool(profile.entity_locker_declined),
                 "documents": _documents(user),

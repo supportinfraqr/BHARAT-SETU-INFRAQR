@@ -148,7 +148,7 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
     } else {
       body = <GstVerifyCard role={role} onVerified={() => void load()} />;
     }
-  } else if (gstCleared && (manual.status === "NOT_SUBMITTED" || manual.status === "REJECTED")) {
+  } else if (gstCleared && !gstVerified && (manual.status === "NOT_SUBMITTED" || manual.status === "REJECTED")) {
     title = gstNotApplicable ? "Step 2 · Verification documents" : "Step 2 · Verification documents";
     body = (
       <div className="space-y-4">
@@ -215,7 +215,11 @@ export default function VerificationGate({ role }: { role: "contractor" | "emplo
           <Clock3 size={18} className="text-amber-600 mt-0.5 flex-shrink-0"/>
           <div>
             <p className="text-sm font-bold text-amber-800">Pending Admin Approval</p>
-            <p className="text-xs text-amber-700 mt-0.5">Your account is with BSS for review. You&apos;ll get access once Admin Approval is on.</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              {gstVerified
+                ? "Your GST is verified. No document upload is required; your account is waiting for Admin Approval."
+                : "Your account is with BSS for review. You’ll get access once Admin Approval is on."}
+            </p>
           </div>
         </div>
         {manual.status === "REJECTED" && <p className="text-red-700 font-semibold">Rejected{manual.note ? `: ${manual.note}` : ""} — please re-submit.</p>}

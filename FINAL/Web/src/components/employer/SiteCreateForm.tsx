@@ -398,7 +398,6 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   const [stateOpen, setStateOpen] = useState(false);
   const [name, setName] = useState(String(initial?.site_name ?? initial?.name ?? ''));
   const [startDate, setStartDate] = useState(String(initial?.site_start_date ?? ''));
-  const [endDate, setEndDate] = useState(String(initial?.expected_end_date ?? ''));
   const [status, setStatus] = useState(String(initial?.site_status ?? 'Active'));
   const [colour, setColour] = useState(String(initial?.assign_color ?? '#E45D24'));
   const [geography, setGeography] = useState<Record<string, Record<string, { city: string; pins: string[] }[]>>>({});
@@ -445,7 +444,6 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     location: !location.trim(),
     state: jurisdiction === 'state' && !state.trim(),
     startDate: !startDate,
-    endDate: !endDate,
     status: !status.trim(),
   };
   const hasMissing = Object.values(missing).some(Boolean);
@@ -462,7 +460,6 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     payload.jurisdiction = jurisdiction;
     payload.state = jurisdiction === 'state' ? (state.trim() || geo?.state || '') : '';
     payload.startDate = startDate;
-    payload.endDate = endDate;
     payload.status = status || 'Active';
     payload.assign_color = colour;
     if (geo) {
@@ -539,7 +536,6 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
             )}
             <datalist id="site-city-options">{cityOptions.map(city => <option key={city} value={city} />)}</datalist>
             <label className="text-xs font-semibold text-bss-text-primary">Start date <span className="text-bss-error">*</span><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={fieldCls} /></label>
-            <label className="text-xs font-semibold text-bss-text-primary">End date <span className="text-bss-error">*</span><input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={fieldCls} /></label>
             <label className="text-xs font-semibold text-bss-text-primary">Status <span className="text-bss-error">*</span><select value={status} onChange={e => setStatus(e.target.value)} className={`${fieldCls} bg-white`}><option>Active</option><option>Planned</option></select></label>
           </div>
 

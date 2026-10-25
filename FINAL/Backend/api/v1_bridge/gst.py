@@ -304,11 +304,8 @@ def gst_verification_verify(request):
     profile.gst_registration_date = str(result.get("registration_date") or "")[:20]
     fields = ["gstin", "gst_legal_name", "gst_trade_name", "gst_constitution",
               "gst_verification_status", "gst_verified_at", "gst_registration_date"]
-    # Date of Incorporation follows the GST registration date (GST is the source).
-    incorporation = _parse_gst_date(result.get("registration_date"))
-    if incorporation is not None:
-        profile.incorporation_date = incorporation
-        fields.append("incorporation_date")
+    # GST registration date is NOT the company's incorporation date. Keep
+    # incorporation date as a separately entered profile field.
     fields += _apply_gst_details(profile, result)
     if hasattr(profile, "updated_at"):
         fields.append("updated_at")
