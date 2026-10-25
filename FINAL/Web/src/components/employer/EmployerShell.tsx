@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ClipboardCheck, FileSpreadsheet, FileText, LayoutDashboard, LifeBuoy, Menu, Network, Settings, ShieldCheck, X, Banknote, Calculator, Stethoscope, HardHat, UserCog } from 'lucide-react';
+import { ChevronDown, ClipboardCheck, FileSpreadsheet, FileText, LayoutDashboard, LifeBuoy, Menu, Network, Settings, ShieldCheck, ScanLine, X, Banknote, Calculator, Stethoscope, HardHat, UserCog } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import BrandText from '@/components/BrandText';
@@ -53,7 +53,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
   const staffGroups = [
     ...(staffPerms.includes('medical') ? [{ key: 'Medical', href: '/employer/worker-compliance-checklists?tab=medical', icon: Stethoscope }] : []),
     ...(staffPerms.includes('safety') ? [{ key: 'Health & Safety', href: '/employer/worker-compliance-checklists?tab=safety', icon: HardHat }] : []),
-    ...(staffPerms.includes('gate_pass') ? [{ key: 'Gate Pass', href: '/employer/gate-pass', icon: ShieldCheck }] : []),
+    ...(staffPerms.includes('gate_pass') ? [{ key: 'Gate Pass', href: '/employer/gate-pass', icon: ShieldCheck }, { key: 'Gate Scan', href: '/employer/gate-scan', icon: ScanLine }] : []),
     ...(staffPerms.includes('compliance') ? [
       { key: 'Compliance Review', href: '/employer/compliance-submission', icon: ClipboardCheck },
       { key: 'Monthly Audit', href: '/employer/audit-reports', icon: FileSpreadsheet },

@@ -30,7 +30,7 @@ export default function IdentityCardPage() {
   const isEmployment = cardFormat === 'employment' && isBound;
 
   const getGenderInitial = (gender?: string) => {
-    if (!gender) return 'M';
+    if (!gender) return '';
     return gender.charAt(0).toUpperCase();
   };
 

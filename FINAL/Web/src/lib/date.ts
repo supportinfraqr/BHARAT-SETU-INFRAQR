@@ -38,3 +38,21 @@ export function formatDateTime(value?: string | Date | null, fallback = '—'): 
   const hours12 = hours24 % 12 || 12;
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(hours12)}:${pad(d.getMinutes())} ${ampm}`;
 }
+
+
+/** `DD/MM/YYYY hh:mm am/pm` in India Standard Time. */
+export function formatISTDateTime(value?: string | Date | null, fallback = '—'): string {
+  const d = toDate(value);
+  if (!d) return fallback;
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).formatToParts(d);
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find(part => part.type === type)?.value ?? '';
+  return `${get('day')}/${get('month')}/${get('year')} ${get('hour')}:${get('minute')} ${get('dayPeriod').toLowerCase()}`;
+}

@@ -864,6 +864,11 @@ class GatePassScan(models.Model):
     gate = models.ForeignKey("SiteGate", on_delete=models.SET_NULL, null=True, blank=True,
                              related_name="scans")
     gate_pass_no = models.CharField(max_length=40, blank=True)
+    pass_type = models.CharField(max_length=20, blank=True)
+    card_valid = models.BooleanField(null=True, blank=True)
+    valid_from = models.DateField(null=True, blank=True)
+    valid_to = models.DateField(null=True, blank=True)
+    snapshot = models.FileField(upload_to="gate_scans/%Y/%m/", blank=True, null=True)
     result = models.CharField(max_length=10, choices=RESULT)
     reason = models.CharField(max_length=255, blank=True)
     scanned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,

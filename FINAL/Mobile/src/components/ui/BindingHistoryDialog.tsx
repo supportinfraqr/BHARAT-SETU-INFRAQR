@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { History, X } from "lucide-react";
-import { formatDateTime } from "@/lib/date";
+import { formatISTDateTime } from "@/lib/date";
 import type { BindingHistoryEvent } from "@/types/portal";
 
 export type { BindingHistoryEvent };
@@ -12,7 +12,7 @@ const noopSubscribe = () => () => {};
 
 function formatWhen(value?: string): string {
   if (!value) return "";
-  return formatDateTime(value, value);
+  return formatISTDateTime(value, value);
 }
 
 /**

@@ -398,7 +398,6 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   const [stateOpen, setStateOpen] = useState(false);
   const [name, setName] = useState(String(initial?.site_name ?? initial?.name ?? ''));
   const [startDate, setStartDate] = useState(String(initial?.site_start_date ?? ''));
-  const [endDate, setEndDate] = useState(String(initial?.expected_end_date ?? ''));
   const [status, setStatus] = useState(String(initial?.site_status ?? 'Active'));
   const [colour, setColour] = useState(String(initial?.assign_color ?? '#E45D24'));
   const [geography, setGeography] = useState<Record<string, Record<string, { city: string; pins: string[] }[]>>>({});
@@ -443,9 +442,8 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   const missing = {
     name: !name.trim(),
     location: !location.trim(),
-    state: jurisdiction === 'state' && !state.trim(),
+    state: !state.trim(),
     startDate: !startDate,
-    endDate: !endDate,
     status: !status.trim(),
   };
   const hasMissing = Object.values(missing).some(Boolean);
@@ -460,9 +458,8 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     payload.name = name.trim();
     payload.location = location.trim();
     payload.jurisdiction = jurisdiction;
-    payload.state = jurisdiction === 'state' ? (state.trim() || geo?.state || '') : '';
+    payload.state = state.trim() || geo?.state || '';
     payload.startDate = startDate;
-    payload.endDate = endDate;
     payload.status = status || 'Active';
     payload.assign_color = colour;
     if (geo) {
@@ -506,7 +503,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
                   <button key={v} type="button" onClick={() => setJurisdiction(v)} className={`px-4 h-8 rounded-md text-xs font-semibold transition-colors ${jurisdiction === v ? 'bg-bss-navy text-white' : 'text-bss-text-secondary hover:bg-bss-bg'}`}>{l}</button>
                 ))}
               </div>
-              <p className="text-[11px] text-bss-text-muted mt-1">{jurisdiction === 'central' ? 'Central — the site is governed centrally (not tied to a state); only Central CLRA templates apply.' : 'State — the site follows a single state’s statutory / CLRA templates.'}</p>
+              <p className="text-[11px] text-bss-text-muted mt-1">{jurisdiction === 'central' ? 'Central — Central CLRA/statutory forms apply. State is still the physical location of the site.' : 'State — the site follows that state’s statutory / CLRA templates.'}</p>
             </div>
             <label className="text-xs font-semibold text-bss-text-primary">Site name <span className="text-bss-error">*</span><input required value={name} onChange={e => setName(e.target.value)} className={fieldCls} /></label>
             <label className="text-xs font-semibold text-bss-text-primary">BSS Site ID
@@ -519,8 +516,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
               </div>
             </label>
             <label className="text-xs font-semibold text-bss-text-primary">City / location <span className="text-bss-error">*</span><input list="site-city-options" value={location} onChange={event => setLocation(event.target.value)} className={fieldCls} /></label>
-            {jurisdiction === 'state' && (
-            <div className="relative text-xs font-semibold text-bss-text-primary">State (auto-filled from map if you pin) <span className="text-bss-error">*</span>
+            <div className="relative text-xs font-semibold text-bss-text-primary">State (physical site location; auto-filled from map if you pin) <span className="text-bss-error">*</span>
               <button type="button" onClick={() => setStateOpen(o => !o)} className={`${fieldCls} bg-white text-left flex items-center justify-between`}>
                 <span className={state ? 'text-bss-text-primary' : 'text-bss-text-muted'}>{state || 'Select state'}</span>
                 <ChevronDown size={14} className={`text-bss-text-muted transition-transform ${stateOpen ? 'rotate-180' : ''}`} />
@@ -536,10 +532,8 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
                 </>
               )}
             </div>
-            )}
             <datalist id="site-city-options">{cityOptions.map(city => <option key={city} value={city} />)}</datalist>
             <label className="text-xs font-semibold text-bss-text-primary">Start date <span className="text-bss-error">*</span><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={fieldCls} /></label>
-            <label className="text-xs font-semibold text-bss-text-primary">End date <span className="text-bss-error">*</span><input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={fieldCls} /></label>
             <label className="text-xs font-semibold text-bss-text-primary">Status <span className="text-bss-error">*</span><select value={status} onChange={e => setStatus(e.target.value)} className={`${fieldCls} bg-white`}><option>Active</option><option>Planned</option></select></label>
           </div>
 

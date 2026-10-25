@@ -9,6 +9,7 @@ import BindingHistoryDialog from '@/components/ui/BindingHistoryDialog';
 import BindingSitesExplainer from '@/components/qr/BindingSitesExplainer';
 import { useEmployer } from '@/contexts/EmployerContext';
 import { usePortalAutoRefresh } from '@/lib/usePortalAutoRefresh';
+import { formatISTDateTime } from '@/lib/date';
 import type { EmployerApproval } from '@/types/portal';
 
 type Row = EmployerApproval & { __decide?: (row: EmployerApproval, status: 'Approved' | 'Rejected') => void };
@@ -149,7 +150,7 @@ export default function EmployerQrBindingRequestsPage() {
     { id:'type', header:'Request type', value:row => row.entityType, render:row => <span className={`px-2 py-1 rounded text-[10px] font-semibold ${row.entityType === 'Contractor' ? 'bg-bss-blue-tint text-bss-interactive-blue' : 'bg-bss-soft-orange text-bss-orange'}`}>{row.entityType}</span> },
     { id:'site', header:'Site', value:row => row.site, export:{split:','} },
     { id:'through', header:'Connected through', value:row => row.contractor ?? 'Direct contractor request' },
-    { id:'submitted', header:'Requested', value:row => row.submittedAt.slice(0, 10) },
+    { id:'submitted', header:'Requested (IST)', value:row => formatISTDateTime(row.submittedAt) },
     { id:'initiated', header:'Initiated by', value:row => row.initiatedBy || '—', render:row => <span className="font-semibold text-bss-text-primary">{row.initiatedBy || '—'}</span> },
     { id:'accepted', header:'Accepted by', value:row => row.acceptedBy || '—', render:row => <span className={row.acceptedBy ? 'font-semibold text-bss-green' : 'text-bss-text-muted'}>{row.acceptedBy || '—'}</span> },
     { id:'status', header:'Relationship', value:row => row.status, render:row => <span className={row.status === 'Approved' || row.status === 'Accepted' ? 'text-bss-green' : row.status === 'Rejected' || row.status === 'Cancelled' ? 'text-bss-error' : 'text-bss-orange'}>{row.status}</span> },

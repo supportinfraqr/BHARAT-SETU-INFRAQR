@@ -4,7 +4,44 @@ Gate Pass Management System §6.
 """
 
 # ruff: noqa: F401,F403
+import base64
+import re
+import uuid
+
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+
 from .common import *
+
+
+_PASS_TYPE_LABELS = {"TGP": "Temporary Gate Pass", "PGP": "Permanent Gate Pass"}
+
+
+def _actor(request):
+    return getattr(getattr(request, "_request", None), "actor", None) or request.user
+
+
+def _actor_name(user):
+    if user is None:
+        return ""
+    return payloads._d(getattr(user, "full_name", "") or user.username)
+
+
+def _store_snapshot(value):
+    """Decode a browser camera/file snapshot and store it under media."""
+    text = str(value or "").strip()
+    match = re.match(r"^data:image/(jpeg|jpg|png|webp);base64,(.+)$", text, re.S | re.I)
+    if not match:
+        return None
+    try:
+        raw = base64.b64decode(match.group(2), validate=False)
+    except (ValueError, TypeError):
+        return None
+    if not raw or len(raw) > 2_500_000:
+        return None
+    ext = "jpg" if match.group(1).lower() in ("jpeg", "jpg") else match.group(1).lower()
+    name = f"gate_scans/{timezone.localdate():%Y/%m}/{uuid.uuid4().hex}.{ext}"
+    return default_storage.save(name, ContentFile(raw))
 
 
 def _worker_name(user):
@@ -90,6 +127,7 @@ def gate_scan(request):
     """Scan a gate-pass QR: Active + within validity → Allow + entry log;
     otherwise Deny + scan log + alert."""
     from bss_core.models import GatePassScan, Notification, SiteGate
+    _require_permission(request, "gate_pass")
     body = request.data if isinstance(request.data, dict) else {}
     today = timezone.localdate()
 
@@ -102,7 +140,8 @@ def gate_scan(request):
     if request.user.role == "worker":
         return Response({"error": "Gate scanning is performed by security or the employer, not the worker."},
                         status=status.HTTP_403_FORBIDDEN)
-    elif gp.status == "REVOKED":
+    result = "DENY"
+    if gp.status == "REVOKED":
         reason = "This gate pass has been revoked."
     elif gp.status == "EXPIRED" or (gp.end_date and gp.end_date < today):
         reason = "This gate pass has expired."
@@ -116,10 +155,16 @@ def gate_scan(request):
     else:
         result, reason = "ALLOW", "Entry allowed."
 
-    scan = GatePassScan.objects.create(
+    scan = GatePassScan(
         gate_pass=gp, worker=gp.worker, site=gp.site,
         gate=gate, gate_pass_no=payloads._auto_gate_pass_no(gp.worker, gp.gate_pass_type),
-        result=result, reason=reason, scanned_by=request.user)
+        pass_type=gp.gate_pass_type, card_valid=(result == "ALLOW"),
+        valid_from=gp.start_date, valid_to=gp.end_date,
+        result=result, reason=reason, scanned_by=_actor(request))
+    snapshot_name = _store_snapshot(body.get("snapshot"))
+    if snapshot_name:
+        scan.snapshot.name = snapshot_name
+    scan.save()
 
     if result == "DENY" and gp is not None:
         recipients = []
@@ -135,6 +180,11 @@ def gate_scan(request):
 
     return Response({"data": {
         "result": result, "reason": reason, "gatePassNo": scan.gate_pass_no,
+        "passType": _PASS_TYPE_LABELS.get(scan.pass_type, scan.pass_type),
+        "cardValid": scan.card_valid,
+        "validFrom": payloads._dts(scan.valid_from),
+        "validTo": payloads._dts(scan.valid_to),
+        "snapshotUrl": scan.snapshot.url if scan.snapshot else "",
         "worker": _worker_name(gp.worker) if gp else "",
         "site": gp.site.site_name if gp and gp.site else "",
         "at": payloads._dts(scan.scanned_at),
@@ -147,6 +197,7 @@ def gate_scan(request):
 def gate_scans(request):
     """Recent gate scan log, scoped to the caller's sites/workers."""
     from bss_core.models import GatePassScan, WorkerContractorBinding
+    _require_permission(request, "gate_pass")
     if request.user.role == "employer":
         qs = GatePassScan.objects.filter(site__employer=request.user)
     elif request.user.role == "contractor":
@@ -159,9 +210,14 @@ def gate_scans(request):
         return Response({"error": "not authorized"}, status=status.HTTP_403_FORBIDDEN)
     rows = [{
         "id": s.id, "gatePassNo": payloads._d(s.gate_pass_no),
+        "passType": _PASS_TYPE_LABELS.get(s.pass_type, s.pass_type),
+        "cardValid": s.card_valid,
+        "validFrom": payloads._dts(s.valid_from),
+        "validTo": payloads._dts(s.valid_to),
+        "snapshotUrl": s.snapshot.url if s.snapshot else "",
         "worker": _worker_name(s.worker), "site": s.site.site_name if s.site else "",
         "result": s.result, "reason": payloads._d(s.reason),
-        "scannedBy": payloads._d(s.scanned_by.username if s.scanned_by_id else ""),
+        "scannedBy": _actor_name(s.scanned_by) if s.scanned_by_id else "",
         "at": payloads._dts(s.scanned_at),
     } for s in qs.select_related("worker", "site", "scanned_by")[:100]]
     return Response({"rows": rows}, status=status.HTTP_200_OK)

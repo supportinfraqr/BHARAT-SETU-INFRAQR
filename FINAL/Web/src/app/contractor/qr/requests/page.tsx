@@ -8,6 +8,7 @@ import SitePermissionsDialog from '@/components/ui/SitePermissionsDialog';
 import BindingHistoryDialog from '@/components/ui/BindingHistoryDialog';
 import { useContractor } from '@/contexts/ContractorContext';
 import { usePortalAutoRefresh } from '@/lib/usePortalAutoRefresh';
+import { formatISTDateTime } from '@/lib/date';
 import { ResendOtp } from '@/components/auth/ResendOtp';
 import type { ContractorBindingRequest } from '@/types/portal';
 
@@ -279,7 +280,7 @@ export default function ContractorBindingRequestsPage() {
     { id:'employer', header:'Employer', value:r => r.employer },
     { id:'detail', header:'Designation / Wage', value:r => r.designation, render:r => <div><p className="text-bss-text-primary">{r.designation}</p><p className="text-[10px] text-bss-text-muted">{r.wage}</p></div> },
     { id:'joining', header:'Date of joining', value:r => r.type === 'Worker' ? (r.joiningDate || '—') : '—' },
-    { id:'requested', header:'Requested', value:r => r.requestedOn },
+    { id:'requested', header:'Requested (IST)', value:r => formatISTDateTime(r.requestedOn) },
     { id:'initiated', header:'Initiated by', value:r => r.initiatedBy || '—', render:r => <span className="font-semibold text-bss-text-primary">{r.initiatedBy || '—'}</span> },
     { id:'accepted', header:'Accepted by', value:r => r.acceptedBy || '—', render:r => <span className={r.acceptedBy ? 'font-semibold text-bss-green' : 'text-bss-text-muted'}>{r.acceptedBy || '—'}</span> },
     { id:'status', header:'Relationship', value:r => r.status, render:r => <span className={r.status === 'Accepted' ? 'text-bss-green' : r.status === 'Rejected' || r.status === 'Cancelled' ? 'text-bss-error' : r.status === 'Site Changed' ? 'text-bss-text-muted' : 'text-bss-orange'}>{r.status}</span> },

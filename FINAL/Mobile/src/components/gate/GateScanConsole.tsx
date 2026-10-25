@@ -1,14 +1,54 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { Camera, CheckCircle2, Loader2, ScanLine, Upload, X, XCircle } from "lucide-react";
 import { IScannerControls } from "@zxing/browser";
 import { createQrReader, QR_VIDEO_CONSTRAINTS, applyContinuousFocus, decodeQrFromImageFile } from "@/lib/qrScanner";
 import { playScanBeep, primeAudio } from "@/lib/scanFeedback";
 import ScanFrame from "@/components/qr/ScanFrame";
+import { formatDate, formatISTDateTime } from "@/lib/date";
 
-type ScanResult = { result: 'ALLOW' | 'DENY'; reason: string; gatePassNo: string; worker: string; site: string; at: string };
-type ScanRow = { id: number; gatePassNo: string; worker: string; site: string; result: string; reason: string; scannedBy: string; at: string };
+type ScanResult = {
+  result: 'ALLOW' | 'DENY'; reason: string; gatePassNo: string; worker: string; site: string; at: string;
+  passType: string; cardValid: boolean | null; validFrom: string; validTo: string; snapshotUrl: string;
+};
+type ScanRow = {
+  id: number; gatePassNo: string; worker: string; site: string; result: string; reason: string;
+  scannedBy: string; at: string; passType: string; cardValid: boolean | null;
+  validFrom: string; validTo: string; snapshotUrl: string;
+};
+
+function snapshotFromVideo(video: HTMLVideoElement | null): string {
+  if (!video || !video.videoWidth || !video.videoHeight) return "";
+  const max = 720;
+  const scale = Math.min(1, max / Math.max(video.videoWidth, video.videoHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(video.videoWidth * scale);
+  canvas.height = Math.round(video.videoHeight * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "";
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.72);
+}
+
+async function snapshotFromFile(file: File): Promise<string> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const max = 720;
+    const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) { bitmap.close(); return ""; }
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    return canvas.toDataURL("image/jpeg", 0.72);
+  } catch {
+    return "";
+  }
+}
 
 export default function GateScanConsole() {
   const [code, setCode] = useState("");
@@ -44,13 +84,14 @@ export default function GateScanConsole() {
     return () => { stopCamera(); };
   }, [stopCamera]);
 
-  async function processPassCode(passCode: string) {
+  async function processPassCode(passCode: string, snapshot = "") {
     const cleanCode = passCode.trim();
     if (!cleanCode) return;
     setBusy(true); setError(""); setLast(null);
     try {
       const response = await fetch("/api/gate/scan", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ gatePassNo: cleanCode }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gatePassNo: cleanCode, ...(snapshot ? { snapshot } : {}) }),
       });
       const body = await response.json().catch(() => ({})) as { data?: ScanResult; error?: string };
       if (!response.ok || !body.data) {
@@ -83,8 +124,9 @@ export default function GateScanConsole() {
           applyContinuousFocus(c);
           if (result) {
             const rawText = result.getText();
+            const snapshot = snapshotFromVideo(videoRef.current);
             stopCamera();
-            void processPassCode(rawText);
+            void processPassCode(rawText, snapshot);
           }
         }
       );
@@ -100,7 +142,8 @@ export default function GateScanConsole() {
     setError(""); setBusy(true);
     try {
       const decodedText = await decodeQrFromImageFile(file);
-      await processPassCode(decodedText);
+      const snapshot = await snapshotFromFile(file);
+      await processPassCode(decodedText, snapshot);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not decode QR code from the uploaded image.");
     } finally {
@@ -209,11 +252,19 @@ export default function GateScanConsole() {
               <p className="text-sm text-bss-text-secondary mt-0.5">{last.reason}</p>
             </div>
           </div>
-          <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <div><dt className="text-bss-text-muted font-medium">Gate Pass</dt><dd className="font-mono font-semibold text-bss-text-primary">{last.gatePassNo || "—"}</dd></div>
-            <div><dt className="text-bss-text-muted font-medium">Worker</dt><dd className="font-semibold text-bss-text-primary">{last.worker || "—"}</dd></div>
-            <div><dt className="text-bss-text-muted font-medium">Site</dt><dd className="font-semibold text-bss-text-primary">{last.site || "—"}</dd></div>
-            <div><dt className="text-bss-text-muted font-medium">Scanned At</dt><dd className="font-semibold text-bss-text-primary">{last.at ? new Date(last.at).toLocaleTimeString("en-IN") : "—"}</dd></div>
+          <div className="mt-3 flex flex-col sm:flex-row gap-4 text-xs">
+            {last.snapshotUrl && (
+              <Image src={last.snapshotUrl} alt="Snapshot captured at gate scan" width={88} height={88} unoptimized className="h-20 w-20 rounded-xl object-cover border border-bss-border bg-white" />
+            )}
+            <div className="grid flex-1 grid-cols-2 sm:grid-cols-3 gap-3">
+              <div><dt className="text-bss-text-muted font-medium">Gate Pass</dt><dd className="font-mono font-semibold text-bss-text-primary">{last.gatePassNo || "—"}</dd></div>
+              <div><dt className="text-bss-text-muted font-medium">Pass type</dt><dd className="font-semibold text-bss-text-primary">{last.passType || "—"}</dd></div>
+              <div><dt className="text-bss-text-muted font-medium">Card validity at scan</dt><dd className={`font-semibold ${last.cardValid ? "text-bss-green" : "text-bss-error"}`}>{last.cardValid === null ? "—" : last.cardValid ? "VALID" : "INVALID"}</dd></div>
+              <div><dt className="text-bss-text-muted font-medium">Valid till</dt><dd className="font-semibold text-bss-text-primary">{formatDate(last.validTo)}</dd></div>
+              <div><dt className="text-bss-text-muted font-medium">Worker</dt><dd className="font-semibold text-bss-text-primary">{last.worker || "—"}</dd></div>
+              <div><dt className="text-bss-text-muted font-medium">Site</dt><dd className="font-semibold text-bss-text-primary">{last.site || "—"}</dd></div>
+              <div className="sm:col-span-3"><dt className="text-bss-text-muted font-medium">Scanned at (IST)</dt><dd className="font-semibold text-bss-text-primary">{formatISTDateTime(last.at)}</dd></div>
+            </div>
           </div>
         </section>
       )}
@@ -228,10 +279,13 @@ export default function GateScanConsole() {
             <table className="w-full text-xs text-left">
               <thead className="bg-bss-bg text-bss-text-secondary uppercase tracking-wider">
                 <tr>
-                  <th className="px-5 py-2.5 font-semibold">When</th>
+                  <th className="px-5 py-2.5 font-semibold">When (IST)</th>
+                  <th className="px-5 py-2.5 font-semibold">Snapshot</th>
                   <th className="px-5 py-2.5 font-semibold">Pass</th>
+                  <th className="px-5 py-2.5 font-semibold">Type</th>
                   <th className="px-5 py-2.5 font-semibold">Worker</th>
                   <th className="px-5 py-2.5 font-semibold">Site</th>
+                  <th className="px-5 py-2.5 font-semibold">Validity at scan</th>
                   <th className="px-5 py-2.5 font-semibold">Result</th>
                   <th className="px-5 py-2.5 font-semibold">Reason</th>
                   <th className="px-5 py-2.5 font-semibold">By</th>
@@ -240,10 +294,16 @@ export default function GateScanConsole() {
               <tbody className="divide-y divide-bss-border">
                 {rows.map((r) => (
                   <tr key={r.id} className="hover:bg-bss-bg/60">
-                    <td className="px-5 py-2 text-bss-text-secondary">{r.at ? new Date(r.at).toLocaleString("en-IN") : "—"}</td>
-                    <td className="px-5 py-2 font-mono text-bss-interactive-blue font-semibold">{r.gatePassNo || "—"}</td>
+                    <td className="px-5 py-2 text-bss-text-secondary whitespace-nowrap">{formatISTDateTime(r.at)}</td>
+                    <td className="px-5 py-2">{r.snapshotUrl ? <Image src={r.snapshotUrl} alt={`Gate scan snapshot for ${r.worker || r.gatePassNo}`} width={40} height={40} unoptimized className="h-10 w-10 rounded-md object-cover border border-bss-border" /> : <span className="text-bss-text-muted">—</span>}</td>
+                    <td className="px-5 py-2 font-mono text-bss-interactive-blue font-semibold whitespace-nowrap">{r.gatePassNo || "—"}</td>
+                    <td className="px-5 py-2 text-bss-text-secondary whitespace-nowrap">{r.passType || "—"}</td>
                     <td className="px-5 py-2 text-bss-text-primary">{r.worker || "—"}</td>
                     <td className="px-5 py-2 text-bss-text-secondary">{r.site || "—"}</td>
+                    <td className="px-5 py-2 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${r.cardValid ? "bg-bss-soft-green text-bss-green" : "bg-bss-soft-orange text-bss-error"}`}>{r.cardValid === null ? "—" : r.cardValid ? "VALID" : "INVALID"}</span>
+                      <span className="ml-1 text-[10px] text-bss-text-muted">{r.validTo ? `till ${formatDate(r.validTo)}` : ""}</span>
+                    </td>
                     <td className="px-5 py-2">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${r.result === "ALLOW" ? "bg-bss-soft-green text-bss-green" : "bg-bss-soft-orange text-bss-error"}`}>{r.result === "ALLOW" ? <CheckCircle2 size={11}/> : <XCircle size={11}/>}{r.result}</span>
                     </td>
