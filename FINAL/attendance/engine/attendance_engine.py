@@ -24,6 +24,8 @@ from pathlib import Path
 from urllib.parse import urlparse, unquote
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
+
 import cv2
 import numpy as np
 import requests
@@ -34,7 +36,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.4.0"
+APP_VERSION = "1.4.1"
 MODEL_NAME = "ArcFace"
 MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
 DETECTOR_BACKEND = "retinaface"
@@ -394,6 +396,8 @@ class CameraWorker:
         self.frames_seen = 0
         self.frames_processed = 0
         self.faces_detected = 0
+        self._frame_seq = 0
+        self._last_ai_seq = -1
 
     def snapshot(self):
         with self.lock:
@@ -496,6 +500,7 @@ class CameraWorker:
                 continue
             with self.lock:
                 self.frames_seen += 1
+                self._frame_seq += 1
                 self._frame = frame
                 encoded, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 72])
                 if encoded:
@@ -532,9 +537,15 @@ class CameraWorker:
             if self.mode != "SENDING" or not self.camera_token:
                 time.sleep(1)
                 continue
-            frame = self.frame()
+            with self.lock:
+                seq = self._frame_seq
+                if seq == self._last_ai_seq:
+                    frame = None
+                else:
+                    self._last_ai_seq = seq
+                    frame = None if self._frame is None else self._frame.copy()
             if frame is None:
-                time.sleep(0.1)
+                time.sleep(0.02)
                 continue
             if not self.engine.send_allowed(self):
                 time.sleep(2)

@@ -42,6 +42,7 @@ def main():
         "--distpath", str(dist), "--workpath", str(work), "--specpath", str(spec),
         "--add-data", add_data,
         "--collect-submodules", "deepface", "--collect-data", "deepface",
+        "--copy-metadata", "gdown", "--collect-all", "gdown",
         "--collect-submodules", "retinaface",
         "--hidden-import", "retinaface",
         str(ENGINE),
