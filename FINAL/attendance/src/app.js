@@ -443,6 +443,10 @@ function resourceCard(resources) {
   const totalRam = detected.memoryTotalMb ? `${(detected.memoryTotalMb / 1024).toFixed(1)} GB` : '—';
   const freeRam = detected.memoryAvailableMb ? `${(detected.memoryAvailableMb / 1024).toFixed(1)} GB` : '—';
   const procRam = detected.processMemoryMb ? `${detected.processMemoryMb} MB` : '—';
+  const gpu = resources?.gpu || {};
+  const gpuText = gpu.active
+    ? `GPU active${gpu.devices?.length ? ` · ${gpu.devices.join(', ')}` : ''}${gpu.memoryLimitMb ? ` · ${gpu.memoryLimitMb} MB limit` : ''}`
+    : `CPU only${gpu.message ? ` · ${gpu.message}` : ''}`;
   return `<section class="card">
     <div class="cam-title"><h3>System resources</h3><span class="pill muted">${esc(detected.platform || 'Local system')} · ${esc(detected.machine || '')}</span></div>
     <p class="muted">All captured frames are processed; if the machine cannot keep up, the oldest unprocessed frames are dropped. CPU affinity and camera concurrency apply immediately. GPU mode changes take effect after the engine restarts.</p>
