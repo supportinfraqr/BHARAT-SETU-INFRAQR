@@ -445,19 +445,20 @@ function resourceCard(resources) {
   const procRam = detected.processMemoryMb ? `${detected.processMemoryMb} MB` : '—';
   return `<section class="card">
     <div class="cam-title"><h3>System resources</h3><span class="pill muted">${esc(detected.platform || 'Local system')} · ${esc(detected.machine || '')}</span></div>
-    <p class="muted">Choose how much of this machine the attendance engine may use. CPU affinity and camera concurrency apply immediately; AI thread changes take effect after restarting the engine.</p>
+    <p class="muted">All captured frames are processed; if the machine cannot keep up, the oldest unprocessed frames are dropped. CPU affinity and camera concurrency apply immediately. GPU mode changes take effect after the engine restarts.</p>
     <div class="cam-info" style="margin-bottom:12px">
       <div>CPU cores<b>${esc(cores)}</b></div>
       <div>CPU usage<b id="resourceCpu">${esc(cpu)}</b></div>
       <div>RAM total<b>${esc(totalRam)}</b></div>
       <div>RAM available<b id="resourceRam">${esc(freeRam)}</b></div>
       <div>Engine memory<b id="resourceProcess">${esc(procRam)}</b></div>
-      <div>AI processing<b>CPU only (GPU disabled)</b></div>
+      <div>AI processing<b>${esc(gpuText)}</b></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;align-items:end">
       <div><label>CPU cores to use<input id="resourceCores" type="number" min="0" max="${cores}" value="${esc(settings.cpuCores ?? 0)}" /><span class="note">0 = Automatic — uses all ${esc(cores)} available cores</span></label></div>
       <div><label>Cameras processed at once<input id="resourceWorkers" type="number" min="1" max="16" value="${esc(settings.maxCameraWorkers ?? 2)}" /></label></div>
-      <div><label>AI interval seconds<input id="resourceInterval" type="number" min="1" max="30" step="0.5" value="${esc(settings.processInterval ?? 2)}" /></label></div>
+      <div><label>AI acceleration<select id="resourceGpuMode"><option value="auto" ${settings.gpuMode !== 'off' && settings.gpuMode !== 'required' ? 'selected' : ''}>Automatic (GPU if available)</option><option value="off" ${settings.gpuMode === 'off' ? 'selected' : ''}>CPU only</option><option value="required" ${settings.gpuMode === 'required' ? 'selected' : ''}>Require GPU</option></select></label></div>
+      <div><label>GPU memory limit MB<input id="resourceGpuMemory" type="number" min="0" max="65536" value="${esc(settings.gpuMemoryMb ?? 0)}" /><span class="note">0 = grow as needed</span></label></div>
       <button id="saveResourcesBtn" class="btn primary" type="button">Save resources</button>
     </div>
     <p id="resourceMsg" class="note"></p>
@@ -620,7 +621,8 @@ function render() {
       state = await api('/api/resources', { method: 'POST', body: JSON.stringify({
         cpuCores: Number(qs('resourceCores').value || 0),
         maxCameraWorkers: Number(qs('resourceWorkers').value || 1),
-        processInterval: Number(qs('resourceInterval').value || 2),
+        gpuMode: qs('resourceGpuMode').value,
+        gpuMemoryMb: Number(qs('resourceGpuMemory').value || 0),
       }) });
       render();
       showMessage('resourceMsg', 'Resource settings saved.', true);

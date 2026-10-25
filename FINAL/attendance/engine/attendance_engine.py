@@ -6,6 +6,7 @@ camera token; the device token is used only for activation and camera claims.
 No video, images or RTSP credentials leave this machine.
 """
 import argparse
+import base64
 import hashlib
 import json
 import logging
@@ -33,7 +34,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.3.13"
+APP_VERSION = "1.4.0"
 MODEL_NAME = "ArcFace"
 MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
 DETECTOR_BACKEND = "retinaface"
@@ -285,6 +286,91 @@ class LocalEventStore:
                 conn.close()
 
 
+class FaceGallery:
+    """Versioned local worker gallery used for on-device matching."""
+
+    def __init__(self, payload=None):
+        payload = payload or {}
+        self.version = str(payload.get("galleryVersion") or "")
+        self.model = str(payload.get("model") or MODEL_NAME)
+        self.model_version = str(payload.get("version") or MODEL_VERSION)
+        self.threshold = float(payload.get("threshold") or 0.6)
+        self.margin = float(payload.get("margin") or 0.08)
+        self.topk = max(1, int(payload.get("topk") or 3))
+        self.votes = max(1, int(payload.get("votes") or 2))
+        self.weights_sha = str(payload.get("weightsSha") or ARCFACE_SHA)
+        self.entries = []  # (site_id, bss_worker_id, float32 embedding)
+        for worker in payload.get("workers") or []:
+            worker_id = str(worker.get("bssWorkerId") or "").strip().upper()
+            if not worker_id:
+                continue
+            site_ids = [int(site) for site in (worker.get("siteIds") or []) if str(site).isdigit()]
+            for encoded in worker.get("embeddings") or []:
+                try:
+                    raw = base64.b64decode(str(encoded))
+                    vector = np.frombuffer(raw, dtype=np.float32)
+                except Exception:
+                    continue
+                if vector.size != 512:
+                    continue
+                norm = float(np.linalg.norm(vector))
+                if norm <= 0:
+                    continue
+                for site_id in site_ids:
+                    self.entries.append((site_id, worker_id, vector / norm))
+
+    @property
+    def ready(self):
+        return bool(self.entries and self.model_version == MODEL_VERSION)
+
+    def match(self, embedding, site_id):
+        if not self.ready:
+            return None
+        try:
+            site_id = int(site_id)
+        except (TypeError, ValueError):
+            return None
+        vector = np.asarray(embedding, dtype=np.float32)
+        norm = float(np.linalg.norm(vector))
+        if norm <= 0:
+            return None
+        vector = vector / norm
+        by_worker = {}
+        for entry_site, worker_id, stored in self.entries:
+            if entry_site != site_id:
+                continue
+            denom = float(np.linalg.norm(stored))
+            if denom <= 0:
+                continue
+            distance = 1.0 - float(np.dot(stored, vector) / denom)
+            by_worker.setdefault(worker_id, []).append(distance)
+        ranked, short = [], None
+        for worker_id, distances in by_worker.items():
+            distances.sort()
+            votes = sum(1 for distance in distances[:self.topk] if distance <= self.threshold)
+            if votes >= self.votes:
+                ranked.append((worker_id, distances[0]))
+            elif distances[0] <= self.threshold and short is None:
+                short = distances[0]
+        if not ranked:
+            return None
+        ranked.sort(key=lambda item: item[1])
+        worker_id, distance = ranked[0]
+        runner = ranked[1][1] if len(ranked) > 1 else None
+        if distance > self.threshold:
+            return None
+        if runner is not None and runner - distance < self.margin:
+            return None
+        return worker_id, distance
+
+
+def _load_gallery(path):
+    try:
+        return FaceGallery(json.loads(Path(path).read_text(encoding="utf-8")))
+    except (OSError, ValueError, TypeError):
+        return FaceGallery()
+
+
 class CameraWorker:
     def __init__(self, engine, camera_id, label):
         self.engine = engine
@@ -304,6 +390,10 @@ class CameraWorker:
         self._ai_thread = None
         self._last_sent = 0.0
         self._last_embedding = None
+        self._face_boxes = []
+        self.frames_seen = 0
+        self.frames_processed = 0
+        self.faces_detected = 0
 
     def snapshot(self):
         with self.lock:
@@ -316,6 +406,10 @@ class CameraWorker:
                 "fps": round(self.fps, 1),
                 "tokenConfigured": bool(self.camera_token),
                 "lastEventAt": _iso(self.engine.last_event_at.get(self.camera_id)),
+                "faceCount": len(self._face_boxes),
+                "framesSeen": self.frames_seen,
+                "framesProcessed": self.frames_processed,
+                "facesDetected": self.faces_detected,
             }
 
     def set_rtsp(self, rtsp):
@@ -401,6 +495,7 @@ class CameraWorker:
                 time.sleep(2)
                 continue
             with self.lock:
+                self.frames_seen += 1
                 self._frame = frame
                 encoded, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 72])
                 if encoded:
@@ -415,7 +510,15 @@ class CameraWorker:
 
     def jpeg(self):
         with self.lock:
-            return self._jpeg
+            boxes = list(self._face_boxes)
+            frame = None if self._frame is None else self._frame.copy()
+            raw = self._jpeg
+        if not boxes or frame is None:
+            return raw
+        for x, y, w, h in boxes:
+            cv2.rectangle(frame, (int(x), int(y)), (int(x + w), int(y + h)), (60, 190, 100), 2)
+        encoded, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 72])
+        return buf.tobytes() if encoded else raw
 
     def _ensure_ai(self):
         if self._ai_thread and self._ai_thread.is_alive():
@@ -424,33 +527,51 @@ class CameraWorker:
         self._ai_thread.start()
 
     def _ai_loop(self):
+        """Process the latest queued frame continuously; oldest frames are skipped."""
         while self._running or self.mode == "SENDING":
             if self.mode != "SENDING" or not self.camera_token:
                 time.sleep(1)
                 continue
             frame = self.frame()
             if frame is None:
-                time.sleep(1)
+                time.sleep(0.1)
                 continue
             if not self.engine.send_allowed(self):
                 time.sleep(2)
                 continue
+            if not self.engine.gallery.ready:
+                time.sleep(1)
+                continue
+            self.engine.configure_gpu()
+            if (str(self.engine.resource_settings.get("gpuMode") or "auto") == "required"
+                    and not self.engine.gpu_status.get("active")):
+                if self.status != "GPU_REQUIRED_UNAVAILABLE":
+                    self.status = "GPU_REQUIRED_UNAVAILABLE"
+                time.sleep(5)
+                continue
             if not self.engine.gate.acquire():
-                time.sleep(0.5)
+                time.sleep(0.05)
                 continue
             try:
-                event = self._recognise(frame)
-                if event:
-                    self.engine.send_event(self, event[0], event[1])
+                with self.lock:
+                    self.frames_processed += 1
+                detections = self._recognise(frame)
+                camera = self.engine.bss_cameras.get(self.camera_id) or {}
+                site_id = camera.get("siteId")
+                when = _now()
+                for embedding, box in detections:
+                    match = self.engine.gallery.match(embedding, site_id)
+                    if match is not None:
+                        matched_worker, distance = match
+                        self.engine.send_event(self, matched_worker, when, distance, box)
             except Exception as exc:  # noqa: BLE001
                 LOG.exception("Face processing failed for %s: %s", self.label, exc)
             finally:
                 self.engine.gate.release()
-            time.sleep(max(1.0, float(self.engine.resource_settings.get("processInterval") or 2.0)))
 
     def _recognise(self, frame):
-        if time.time() - self._last_sent < 25:
-            return None
+        """Return every quality face in the frame: [(embedding, [x,y,w,h]), ...]."""
+        self.engine.configure_gpu()
         from deepface import DeepFace
 
         reps = DeepFace.represent(
@@ -458,26 +579,30 @@ class CameraWorker:
             detector_backend=DETECTOR_BACKEND,
             enforce_detection=False, align=True,
         )
-        if not reps:
-            return None
-        rep = max(reps, key=lambda r: (r.get("facial_area") or {}).get("w", 0) * (r.get("facial_area") or {}).get("h", 0))
-        area = rep.get("facial_area") or {}
-        if min(int(area.get("w", 0)), int(area.get("h", 0))) < 70:
-            return None
-        embedding = np.asarray(rep.get("embedding") or [], dtype=np.float32)
-        if embedding.size != 512 or float(np.linalg.norm(embedding)) <= 0:
-            return None
+        detections, boxes = [], []
+        height, width = frame.shape[:2]
+        for rep in reps or []:
+            area = rep.get("facial_area") or {}
+            x, y = int(area.get("x", 0)), int(area.get("y", 0))
+            w, h = int(area.get("w", 0)), int(area.get("h", 0))
+            if min(w, h) < 60:
+                continue
+            x1, y1 = max(0, x), max(0, y)
+            x2, y2 = min(width, x + w), min(height, y + h)
+            if x2 <= x1 or y2 <= y1:
+                continue
+            gray = cv2.cvtColor(frame[y1:y2, x1:x2], cv2.COLOR_BGR2GRAY)
+            if float(cv2.Laplacian(gray, cv2.CV_64F).var()) < 15:
+                continue
+            embedding = np.asarray(rep.get("embedding") or [], dtype=np.float32)
+            if embedding.size != 512 or float(np.linalg.norm(embedding)) <= 0:
+                continue
+            detections.append((embedding, [x, y, w, h]))
+            boxes.append((x, y, w, h))
         with self.lock:
-            previous = self._last_embedding
-            self._last_embedding = embedding
-        if previous is not None and previous.size == embedding.size:
-            denom = float(np.linalg.norm(previous) * np.linalg.norm(embedding))
-            if denom > 0:
-                distance = 1.0 - float(np.dot(previous, embedding) / denom)
-                if distance < 0.30 and time.time() - self._last_sent < 300:
-                    return None
-        self._last_sent = time.time()
-        return embedding.tolist(), _now()
+            self._face_boxes = boxes
+            self.faces_detected += len(boxes)
+        return detections
 
 
 class Engine:
@@ -501,8 +626,13 @@ class Engine:
         self.last_event_at = {}
         self.gate = ResourceGate(2)
         self.resource_settings = self._normalise_resources(self.store.data.get("resources") or {})
+        self._gpu_configured = False
+        self.gpu_status = {"active": False, "mode": self.resource_settings.get("gpuMode", "auto"),
+                           "devices": [], "message": "Not initialised"}
         self._apply_resources(self.resource_settings, persist=False)
         self.events = LocalEventStore(home)
+        self.gallery_path = Path(home) / "face_gallery.json"
+        self.gallery = _load_gallery(self.gallery_path)
         for legacy in list(self.store.data.get("outbox") or []):
             if isinstance(legacy, dict):
                 self.events.add(legacy)
@@ -660,7 +790,16 @@ class Engine:
         except (TypeError, ValueError):
             interval = 2.0
         interval = max(1.0, min(interval, 30.0))
-        return {"cpuCores": cores, "maxCameraWorkers": workers, "processInterval": interval}
+        gpu_mode = str(raw.get("gpuMode") or "auto").lower()
+        if gpu_mode not in ("auto", "off", "required"):
+            gpu_mode = "auto"
+        try:
+            gpu_memory_mb = int(raw.get("gpuMemoryMb") or 0)
+        except (TypeError, ValueError):
+            gpu_memory_mb = 0
+        gpu_memory_mb = max(0, min(gpu_memory_mb, 65536))
+        return {"cpuCores": cores, "maxCameraWorkers": workers, "processInterval": interval,
+                "gpuMode": gpu_mode, "gpuMemoryMb": gpu_memory_mb}
 
     def _apply_resources(self, settings, persist=True):
         detected = self._detected_system()
@@ -674,19 +813,75 @@ class Engine:
         thread_limit = str(min(cores, total) if cores > 0 else total)
         for key in ("TF_NUM_INTRAOP_THREADS", "TF_NUM_INTEROP_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"):
             os.environ[key] = thread_limit
+        if str(settings.get("gpuMode") or "auto") == "off":
+            os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+        else:
+            os.environ.pop("CUDA_VISIBLE_DEVICES", None)
         self.gate.set_limit(settings.get("maxCameraWorkers") or 2)
         if persist:
             self.store.data["resources"] = dict(settings)
             self.store.save()
 
     def resource_payload(self):
-        return {"detected": self._detected_system(), "settings": dict(self.resource_settings)}
+        return {"detected": self._detected_system(), "settings": dict(self.resource_settings),
+                "gpu": dict(self.gpu_status)}
+
+    def configure_gpu(self):
+        if self._gpu_configured:
+            return
+        self._gpu_configured = True
+        mode = str(self.resource_settings.get("gpuMode") or "auto")
+        if mode == "off":
+            self.gpu_status = {"active": False, "mode": mode, "devices": [], "message": "GPU disabled"}
+            return
+        try:
+            import tensorflow as tf
+            devices = tf.config.list_physical_devices("GPU")
+            if not devices:
+                self.gpu_status = {"active": False, "mode": mode, "devices": [], "message": "No GPU detected"}
+                return
+            limit_mb = int(self.resource_settings.get("gpuMemoryMb") or 0)
+            configured = []
+            for device in devices:
+                try:
+                    if limit_mb > 0:
+                        tf.config.set_logical_device_configuration(
+                            device, [tf.config.LogicalDeviceConfiguration(memory_limit=limit_mb)])
+                    else:
+                        tf.config.experimental.set_memory_growth(device, True)
+                    configured.append(str(device.name))
+                except Exception as exc:  # noqa: BLE001
+                    LOG.warning("Could not configure GPU %s: %s", device, exc)
+            self.gpu_status = {"active": bool(configured), "mode": mode, "devices": configured,
+                               "memoryLimitMb": limit_mb,
+                               "message": "GPU enabled" if configured else "GPU configuration failed"}
+            LOG.info("GPU status: %s", self.gpu_status)
+        except Exception as exc:  # noqa: BLE001
+            self.gpu_status = {"active": False, "mode": mode, "devices": [],
+                               "message": f"GPU unavailable: {type(exc).__name__}"}
+            LOG.warning("GPU unavailable: %s", exc)
 
     def set_resources(self, raw):
         settings = self._normalise_resources(raw or {})
         self.resource_settings = settings
         self._apply_resources(settings, persist=True)
         return self.status()
+
+    def sync_gallery(self):
+        """Download the active worker gallery and swap it atomically."""
+        body = self.bss_call("GET", "/v1/edge/face-gallery", timeout=60)
+        data = body.get("data") or {}
+        if str(data.get("version") or "") != MODEL_VERSION:
+            LOG.warning("Worker gallery model %s does not match client model %s",
+                        data.get("version"), MODEL_VERSION)
+            return False
+        tmp = self.gallery_path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")
+        os.replace(tmp, self.gallery_path)
+        self.gallery = FaceGallery(data)
+        LOG.info("Worker gallery synced: %s workers, version %s",
+                 len({e[1] for e in self.gallery.entries}), self.gallery.version[:12])
+        return True
 
     def refresh_config(self):
         body = self.bss_call("GET", "/v1/edge/config")
@@ -765,6 +960,12 @@ class Engine:
                 LOG.warning("Could not restore camera token for %s: %s", cid, exc)
         if missing_claims:
             self.store.save()
+        gallery_version = str((data.get("face") or {}).get("galleryVersion") or "")
+        if (gallery_version and gallery_version != self.gallery.version) or not self.gallery.ready:
+            try:
+                self.sync_gallery()
+            except BssError as exc:
+                LOG.warning("Worker gallery sync failed: %s", exc)
         return self.status()
 
     def send_allowed(self, worker):
@@ -773,11 +974,15 @@ class Engine:
                     and camera.get("allowedIp") and camera.get("claimedByThisDevice")
                     and schedule_active(camera) and worker.camera_token)
 
-    def send_event(self, worker, embedding, when):
+    def send_event(self, worker, matched_worker, when, distance, face_box=None):
         event = {
             "eventId": str(uuid.uuid4()), "cameraId": worker.camera_id,
             "occurredAt": when.isoformat(), "type": "FACE",
-            "embedding": embedding, "modelVersion": MODEL_VERSION,
+            "bssWorkerId": matched_worker,
+            "matchDistance": round(float(distance), 6),
+            "galleryVersion": self.gallery.version,
+            "modelVersion": MODEL_VERSION,
+            "faceBox": list(face_box or []),
         }
         self.events.add(event)
         self.flush_outbox()
@@ -900,6 +1105,7 @@ class Engine:
     def logout(self):
         for worker in list(self.workers.values()):
             worker.stop()
+        self._clear_gallery()
         self.token = ""
         self.device_id = ""
         self.sites = []
@@ -964,7 +1170,15 @@ class Engine:
         }, timeout=10)
         self.last_heartbeat = _now()
 
+    def _clear_gallery(self):
+        try:
+            self.gallery_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        self.gallery = FaceGallery()
+
     def _deactivate_local(self):
+        self._clear_gallery()
         self.token = ""
         self.device_id = ""
         self.sites = []
@@ -1076,6 +1290,9 @@ class Engine:
             "bssConnected": heartbeat_fresh,
             "lastHeartbeatAt": _iso(self.last_heartbeat),
             "faceModel": {"model": MODEL_NAME, "version": MODEL_VERSION, "detector": DETECTOR_BACKEND},
+            "gallery": {"ready": self.gallery.ready, "version": self.gallery.version,
+                        "workers": len({e[1] for e in self.gallery.entries})},
+            "gpu": dict(self.gpu_status),
             "cameras": cameras,
             "resources": self.resource_payload(),
             "outbox": self.events.count(),
@@ -1289,7 +1506,6 @@ def main():
                         format="%(asctime)s %(levelname)s %(message)s")
     _install_weights(args.home)
     os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
-    os.environ.setdefault("CUDA_VISIBLE_DEVICES", "-1")
     os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS",
                           "rtsp_transport;tcp|rw_timeout;8000000|stimeout;8000000|fflags;nobuffer|flags;low_delay")
     ENGINE = Engine(args.home)

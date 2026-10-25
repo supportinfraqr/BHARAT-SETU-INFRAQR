@@ -42,6 +42,7 @@ _v1_patterns = _v1(
     ("edge/activate/verify-otp", v1_bridge.edge_activate_verify_otp, "v1_edge_activate_verify_otp"),
     ("edge/activate/complete", v1_bridge.edge_activate_complete, "v1_edge_activate_complete"),
     ("edge/config", v1_bridge.edge_config, "v1_edge_config"),
+    ("edge/face-gallery", v1_bridge.edge_face_gallery, "v1_edge_face_gallery"),
     ("edge/cameras", v1_bridge.edge_camera_create, "v1_edge_camera_create"),
     ("edge/cameras/<int:camera_id>/claim", v1_bridge.edge_camera_claim, "v1_edge_camera_claim"),
     ("edge/cameras/<int:camera_id>/setup", v1_bridge.edge_camera_setup, "v1_edge_camera_setup"),

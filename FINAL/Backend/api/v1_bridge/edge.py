@@ -7,6 +7,7 @@ face embeddings and QR events. No video, images or media are accepted here.
 # ruff: noqa: F401,F403
 from .common import *  # noqa: F401,F403
 
+import base64
 import hashlib
 import ipaddress
 import json
@@ -322,6 +323,15 @@ def _schedule_active(camera, when):
     return False
 
 
+def _binding_at(worker, site, occurred_at):
+    """The accepted binding that covered this worker/site at scan time."""
+    return (WorkerContractorBinding.objects
+            .filter(worker=worker, site=site, binding_status="ACCEPTED",
+                    accepted_at__isnull=False, accepted_at__lte=occurred_at)
+            .filter(Q(unbound_at__isnull=True) | Q(unbound_at__gte=occurred_at))
+            .order_by("-accepted_at").first())
+
+
 def _match_worker(embedding, site, model_version):
     if model_version != EDGE_FACE_MODEL_VERSION:
         return None, None, "model_mismatch"
@@ -372,12 +382,12 @@ def _match_worker(embedding, site, model_version):
     return best_id, best_distance, ""
 
 
-def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id):
+def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id, binding=None):
     confidence = round(max(0.0, min(1.0, 1.0 - float(distance))) * 100, 2)
     local_date = occurred_at.astimezone(ZoneInfo(camera.timezone or "Asia/Kolkata")).date()
-    binding = (WorkerContractorBinding.objects
-               .filter(worker=worker, site=site, binding_status="ACCEPTED")
-               .order_by("-id").first())
+    binding = binding or (WorkerContractorBinding.objects
+                          .filter(worker=worker, site=site, binding_status="ACCEPTED")
+                          .order_by("-id").first())
     is_verified = confidence >= 50.0
     remarks = "CCTV edge attendance"
     if confidence < 50.0:
@@ -397,13 +407,18 @@ def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id)
             "remarks": remarks,
         },
     )
-    AttendanceEvent.objects.create(
-        attendance=attendance, worker=worker, site=site,
-        attendance_date=local_date, source="CAMERA", method="face_image",
-        event_type="SIGHTING", at=occurred_at, camera_label=camera.label,
-        confidence=confidence, external_id=str(event_id)[:60],
-        remarks=remarks,
-    )
+    # Every raw detection remains in EdgeEvent. Keep AttendanceEvent to one
+    # sighting per worker/camera/day so full-frame capture cannot bloat history.
+    if not AttendanceEvent.objects.filter(
+            attendance=attendance, worker=worker, camera_label=camera.label,
+            attendance_date=local_date).exists():
+        AttendanceEvent.objects.create(
+            attendance=attendance, worker=worker, site=site,
+            attendance_date=local_date, source="CAMERA", method="face_image",
+            event_type="SIGHTING", at=occurred_at, camera_label=camera.label,
+            confidence=confidence, external_id=str(event_id)[:60],
+            remarks=remarks,
+        )
     return attendance
 
 
@@ -538,6 +553,61 @@ def edge_activate_verify(request):
     )
 
 
+def _gallery_rows(device):
+    """Active bound-worker gallery for one activated device (employer scope)."""
+    bindings = (WorkerContractorBinding.objects
+                .filter(site__employer_id=device.employer_id, binding_status="ACCEPTED")
+                .select_related("worker__worker_identity", "site").order_by("worker_id", "site_id"))
+    workers = {}
+    for binding in bindings:
+        identity = getattr(binding.worker, "worker_identity", None)
+        if identity is None:
+            continue
+        item = workers.setdefault(binding.worker_id, {
+            "worker": binding.worker,
+            "bssWorkerId": str(identity.bss_worker_id or ""),
+            "siteIds": set(),
+            "embeddings": [],
+            "bindingRows": [],
+        })
+        item["siteIds"].add(binding.site_id)
+        item["bindingRows"].append((binding.site_id, binding.updated_at))
+    worker_ids = list(workers)
+    if not worker_ids:
+        return {}
+    rows = (WorkerFaceEmbedding.objects
+            .filter(worker_id__in=worker_ids, model_name=EDGE_FACE_MODEL_NAME,
+                    model_version=EDGE_FACE_MODEL_VERSION)
+            .order_by("worker_id", "id"))
+    for emb in rows:
+        item = workers.get(emb.worker_id)
+        if item is None:
+            continue
+        item["embeddings"].append(emb)
+    for worker_id in list(workers):
+        if not workers[worker_id]["embeddings"]:
+            workers.pop(worker_id, None)
+    return workers
+
+
+def _gallery_version(device, workers=None):
+    workers = workers if workers is not None else _gallery_rows(device)
+    fingerprint = []
+    for worker_id in sorted(workers):
+        item = workers[worker_id]
+        fingerprint.append([
+            worker_id, item["bssWorkerId"], sorted(item["siteIds"]),
+            sorted((str(site_id), str(updated)) for site_id, updated in item["bindingRows"]),
+            sorted((emb.id, emb.photo_id, str(emb.created_at), emb.weights_sha) for emb in item["embeddings"]),
+        ])
+    raw = json.dumps({
+        "model": EDGE_FACE_MODEL_NAME, "version": EDGE_FACE_MODEL_VERSION,
+        "detector": EDGE_FACE_DETECTOR, "weights": EDGE_FACE_WEIGHTS_SHA,
+        "workers": fingerprint,
+    }, sort_keys=True, default=str)
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
 def _config_for(device):
     return {
         "device": _device_payload(device),
@@ -547,9 +617,45 @@ def _config_for(device):
             "detector": EDGE_FACE_DETECTOR,
             "threshold": EDGE_FACE_THRESHOLD,
             "margin": EDGE_FACE_MARGIN,
+            "topk": EDGE_FACE_TOPK,
+            "votes": EDGE_FACE_VOTES,
             "weightsSha": EDGE_FACE_WEIGHTS_SHA,
+            "galleryVersion": _gallery_version(device),
         },
     }
+
+
+@api_view(["GET"])
+@authentication_classes([EdgeTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def edge_face_gallery(request):
+    """Export the active worker embeddings for client-side matching."""
+    device = _edge_device(request)
+    if device is None:
+        return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
+    workers = _gallery_rows(device)
+    version = _gallery_version(device, workers)
+    rows = []
+    for worker_id in sorted(workers):
+        item = workers[worker_id]
+        rows.append({
+            "bssWorkerId": item["bssWorkerId"],
+            "siteIds": sorted(item["siteIds"]),
+            "embeddings": [base64.b64encode(bytes(emb.embedding)).decode("ascii")
+                           for emb in item["embeddings"]],
+        })
+    return Response({"data": {
+        "galleryVersion": version,
+        "model": EDGE_FACE_MODEL_NAME,
+        "version": EDGE_FACE_MODEL_VERSION,
+        "detector": EDGE_FACE_DETECTOR,
+        "weightsSha": EDGE_FACE_WEIGHTS_SHA,
+        "threshold": EDGE_FACE_THRESHOLD,
+        "margin": EDGE_FACE_MARGIN,
+        "topk": EDGE_FACE_TOPK,
+        "votes": EDGE_FACE_VOTES,
+        "workers": rows,
+    }}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
@@ -679,10 +785,40 @@ def edge_events(request):
         method = str(raw.get("type") or raw.get("captureMethod") or "FACE").upper()
         model_version = str(raw.get("modelVersion") or raw.get("embeddingModelVersion") or "").strip()
         embedding = raw.get("embedding")
+        client_worker_ref = str(raw.get("bssWorkerId") or raw.get("workerId") or "").strip().upper()
+        client_match = method == "FACE" and bool(client_worker_ref) and not embedding
         worker = None
         distance = None
         reason = ""
-        if method == "FACE":
+        binding = None
+        if client_match:
+            # 1.4+ client matches locally and sends only metadata. BSS verifies
+            # the worker, binding at event time, model and confidence.
+            if model_version and model_version != EDGE_FACE_MODEL_VERSION:
+                results.append(_event_error(event_id, "model_mismatch", "Client face model does not match BSS."))
+                continue
+            identity = (WorkerIdentity.objects.filter(bss_worker_id=client_worker_ref)
+                        .select_related("user").first())
+            if identity is None or identity.user.role != "worker":
+                results.append(_event_error(event_id, "unknown_worker", "Matched worker was not found."))
+                continue
+            worker = identity.user
+            try:
+                distance = float(raw.get("matchDistance") if raw.get("matchDistance") is not None else raw.get("distance"))
+            except (TypeError, ValueError):
+                distance = None
+            if distance is None or distance < 0:
+                results.append(_event_error(event_id, "invalid_match", "A valid match distance is required."))
+                continue
+            if distance > EDGE_FACE_THRESHOLD:
+                results.append(_event_error(event_id, "below_threshold", "Client match is below the BSS threshold."))
+                continue
+            binding = _binding_at(worker, camera.site, occurred_at)
+            if binding is None:
+                results.append(_event_error(event_id, "worker_not_bound", "Worker was not bound to this site at scan time."))
+                continue
+            reason = "client_match"
+        elif method == "FACE":
             if not isinstance(embedding, list) or not embedding:
                 results.append(_event_error(event_id, "invalid_embedding", "Face embedding is required."))
                 continue
@@ -702,28 +838,29 @@ def edge_events(request):
             worker_id, distance, reason = _match_worker(vector, camera.site, model_version)
             if worker_id is not None:
                 worker = User.objects.filter(pk=worker_id, role="worker").first()
+                binding = _binding_at(worker, camera.site, occurred_at) if worker else None
         elif method == "QR":
             token = str(raw.get("bssWorkerId") or raw.get("payload") or "").strip().upper()
             identity = WorkerIdentity.objects.filter(bss_worker_id=token).select_related("user").first()
             if identity is not None:
                 worker = identity.user
+            binding = _binding_at(worker, camera.site, occurred_at) if worker else None
         else:
             results.append(_event_error(event_id, "unsupported_method", "Only FACE and QR events are supported."))
             continue
         attendance = None
         status_value = "UNKNOWN"
         confidence = None
-        if worker is not None and WorkerContractorBinding.objects.filter(
-                worker=worker, site=camera.site, binding_status="ACCEPTED").exists():
+        if worker is not None and binding is not None:
             if method == "QR":
                 distance = 0.0
             if distance is not None:
                 confidence = round(max(0.0, min(1.0, 1.0 - float(distance))) * 100, 2)
                 attendance = _mark_edge_attendance(worker, camera.site, camera, occurred_at,
-                                                   distance, event_id)
+                                                   distance, event_id, binding=binding)
                 status_value = "ACCEPTED"
         blob = None
-        if method == "FACE":
+        if method == "FACE" and not client_match:
             blob = vector.astype(np.float32).tobytes()
         try:
             EdgeEvent.objects.create(
@@ -731,8 +868,12 @@ def edge_events(request):
                 site=camera.site, occurred_at=occurred_at, capture_method=method,
                 status=status_value, confidence=confidence, match_distance=distance,
                 model_name=EDGE_FACE_MODEL_NAME if method == "FACE" else "QR",
-                model_version=model_version, embedding=blob,
-                details={"reason": reason, "ip": ip, "cameraToken": camera.token_prefix},
+                model_version=model_version or (EDGE_FACE_MODEL_VERSION if method == "FACE" else ""),
+                embedding=blob,
+                details={"reason": reason, "ip": ip, "cameraToken": camera.token_prefix,
+                         "clientMatch": client_match,
+                         "galleryVersion": str(raw.get("galleryVersion") or ""),
+                         "faceBox": raw.get("faceBox") or raw.get("face_box") or None},
                 attendance=attendance,
             )
         except Exception:
@@ -1124,6 +1265,7 @@ __all__ = [
     "edge_activate_complete",
     "edge_activate_verify",
     "edge_config",
+    "edge_face_gallery",
     "edge_camera_create",
     "edge_camera_claim",
     "edge_camera_setup",

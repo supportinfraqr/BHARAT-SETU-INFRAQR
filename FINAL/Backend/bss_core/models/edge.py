@@ -155,6 +155,7 @@ class EdgeEvent(models.Model):
             models.Index(fields=["site", "occurred_at"], name="idx_edge_event_site_time"),
             models.Index(fields=["camera", "occurred_at"], name="idx_edge_event_camera_time"),
             models.Index(fields=["status"], name="idx_edge_event_status"),
+            models.Index(fields=["created_at"], name="idx_edge_event_created"),
         ]
 
     def __str__(self):
