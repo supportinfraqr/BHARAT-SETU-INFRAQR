@@ -167,8 +167,11 @@ fn stop_stale_engine() {
     }
     #[cfg(not(target_os = "windows"))]
     {
+        // PyInstaller one-file mode runs a bootloader process plus a child, and
+        // Linux truncates the process name ("attendance-engine" -> 15 chars), so
+        // `pkill -x` misses it. Match the full command line instead.
         let _ = Command::new("pkill")
-            .args(["-x", "attendance-engine"])
+            .args(["-f", "attendance-engine --port 0"])
             .output();
     }
 }
