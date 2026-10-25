@@ -308,6 +308,69 @@ function renderActivation() {
   qs('deviceName').addEventListener('keydown', event => { if (event.key === 'Enter') qs('activateBtn').click(); });
 }
 
+function openLiveView(camera) {
+  const id = camera.cameraId;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'dialog-backdrop';
+  backdrop.innerHTML = `<div class="dialog live-dialog" role="dialog" aria-modal="true" aria-labelledby="liveTitle">
+    <div class="live-head">
+      <div><h3 id="liveTitle">${esc(camera.label)}</h3><p class="muted">${esc(camera.siteName || 'Local camera')} · ${esc(camera.status || 'CONNECTING')}</p></div>
+      <button type="button" class="live-close" data-live-close aria-label="Close live view">×</button>
+    </div>
+    <div class="live-frame">
+      <img data-live-image alt="${esc(camera.label)} live view" />
+      <div class="live-empty" data-live-empty>Connecting to the camera…</div>
+    </div>
+    <div class="live-foot">
+      <p class="note">Local RTSP preview from this laptop. Attendance upload starts automatically after the employer whitelists this device's public IP.</p>
+      <div class="live-meta"><span>Allowed IP</span><b>${esc(camera.allowedIp || 'Waiting for employer')}</b><span>Whitelisted</span><b>${camera.ipWhitelisted ? 'Yes' : 'No'}</b></div>
+      <p class="note" data-live-status></p>
+    </div>
+  </div>`;
+  let timer = null;
+  let objectUrl = '';
+  let closed = false;
+  const image = backdrop.querySelector('[data-live-image]');
+  const empty = backdrop.querySelector('[data-live-empty]');
+  const status = backdrop.querySelector('[data-live-status]');
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    if (timer) clearTimeout(timer);
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    document.removeEventListener('keydown', onKey);
+    backdrop.remove();
+  };
+  const onKey = event => { if (event.key === 'Escape') close(); };
+  backdrop.addEventListener('click', event => { if (event.target === backdrop) close(); });
+  backdrop.querySelector('[data-live-close]')?.addEventListener('click', close);
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(backdrop);
+  const tick = async () => {
+    if (closed) return;
+    try {
+      const response = await fetch(`${BASE}/snapshot/${id}?t=${Date.now()}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(response.status === 503 ? 'Waiting for the first camera frame…' : `Camera preview failed (${response.status}).`);
+      const blob = await response.blob();
+      if (closed) return;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(blob);
+      image.src = objectUrl;
+      image.style.display = 'block';
+      empty.style.display = 'none';
+      status.textContent = '';
+    } catch (error) {
+      image.style.display = 'none';
+      empty.style.display = 'grid';
+      empty.textContent = error.message;
+      status.textContent = 'Retrying automatically…';
+    } finally {
+      if (!closed) timer = setTimeout(tick, 800);
+    }
+  };
+  void tick();
+}
+
 function cameraCard(camera) {
   const id = camera.cameraId;
   const stateInfo = cameraState(camera);
@@ -317,7 +380,6 @@ function cameraCard(camera) {
       <div class="cam-title"><h3>${esc(camera.label)}</h3>${statusPill(camera)}</div>
       <span class="pill ${stateInfo.cls}">${esc(stateInfo.label)}</span>
     </div>
-    ${canPreview ? `<img class="feed" src="${BASE}/stream/${id}?t=${Date.now()}" alt="${esc(camera.label)} live view" />` : `<div class="feed" style="display:grid;place-items:center;color:#94A3B8;font-size:12px">RTSP not configured</div>`}
     <div class="cam-body">
       <div class="cam-info">
         <div>Camera ID<b class="mono">${esc(camera.uid || '—')}</b></div>
@@ -330,8 +392,9 @@ function cameraCard(camera) {
         <div>Last event<b>${esc(when(camera.lastEventAt))}</b></div>
       </div>
       <p class="note">${camera.sendBlockedReason ? `<span class="${camera.approvalStatus === 'APPROVED' && camera.ipWhitelisted ? 'blocked' : ''}">${esc(camera.sendBlockedReason)}</span>` : 'Attendance is active. Events sync automatically after an internet outage.'}</p>
-      <div class="row" style="margin-top:10px">
-        <button id="remove-${id}" class="btn ghost" type="button">Remove camera</button>
+      <div class="row cam-actions" style="margin-top:10px">
+        <button id="live-${id}" class="btn primary" type="button" ${canPreview ? '' : 'disabled'}>See live</button>
+        <button id="remove-${id}" class="btn danger" type="button">Remove camera</button>
       </div>
     </div>
   </section>`;
@@ -454,7 +517,8 @@ function render() {
 
       <section class="card">
         <div class="cam-title"><h3>Add camera</h3><span class="pill muted">Test before saving</span></div>
-        <p class="muted">Enter all details, test the RTSP connection, then save. Connection details cannot be edited after saving.</p>
+        <p class="muted">Enter all details, test the RTSP connection, then save. Connection details cannot be edited after saving. Saving requires a live BSS server connection so the camera is synced.</p>
+        ${state.bssConnected ? '' : '<p class="note blocked">BSS server connection required to save a camera.</p>'}
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;align-items:end">
           <div><label>Site<select id="newCameraSite">${siteChoices.map(site => `<option value="${esc(site.bssId || site.id)}" ${site.capacity.remaining <= 0 ? 'disabled' : ''} ${firstAvailable && site.id === firstAvailable.id ? 'selected' : ''}>${esc(site.name)} — ${site.capacity.used}/${site.capacity.limit} used (${site.capacity.remaining} left)</option>`).join('')}</select></label></div>
           <div><label>Camera label<input id="newCameraLabel" maxlength="120" placeholder="Main Gate" /></label></div>
@@ -568,10 +632,11 @@ function render() {
 
   for (const camera of cameras) {
     const id = camera.cameraId;
+    qs(`live-${id}`)?.addEventListener('click', () => openLiveView(camera));
     qs(`remove-${id}`)?.addEventListener('click', async () => {
       const confirmed = await showDialog({
         title: 'Remove this camera?',
-        body: `${camera.label} will stop reporting and disappear from the employer dashboard. Past attendance is kept.`,
+        body: `${camera.label} will stop reporting and disappear from the employer dashboard. Past attendance is kept. BSS must be online so the removal stays in sync.`,
         confirmLabel: 'Remove camera',
         danger: true,
       });

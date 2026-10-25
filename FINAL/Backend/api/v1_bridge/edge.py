@@ -623,6 +623,18 @@ def edge_events(request):
     if camera is None or camera.device is None:
         return Response({"error": "Invalid camera."}, status=status.HTTP_401_UNAUTHORIZED)
     device = camera.device
+    # Only a claimed camera that is synced to this active device and approved by
+    # the employer may create attendance marks. Reject the batch before any
+    # event/attendance row is written.
+    if not camera.is_claimed or camera.device_id is None:
+        return Response({"error": "This camera is not synced to an active device."},
+                        status=status.HTTP_403_FORBIDDEN)
+    if camera.approval_status != "APPROVED":
+        return Response({"error": "This camera is not approved by the employer."},
+                        status=status.HTTP_403_FORBIDDEN)
+    if camera.site is None or camera.site.employer_id != device.employer_id:
+        return Response({"error": "This camera is not linked to this employer's site."},
+                        status=status.HTTP_403_FORBIDDEN)
     body = request.data if isinstance(request.data, dict) else {}
     events = body.get("events")
     if not isinstance(events, list) or not events:

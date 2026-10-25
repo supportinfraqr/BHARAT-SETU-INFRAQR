@@ -33,7 +33,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.3.10"
+APP_VERSION = "1.3.11"
 MODEL_NAME = "ArcFace"
 MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
 DETECTOR_BACKEND = "retinaface"
@@ -846,8 +846,13 @@ class Engine:
             raise ValueError("Camera label is required.")
         if not site_bss_id:
             raise ValueError("Select a site for this camera.")
-        body = self.bss_call("POST", "/v1/edge/cameras",
-                             {"label": label, "channel": channel or None, "siteBssId": site_bss_id})
+        try:
+            body = self.bss_call("POST", "/v1/edge/cameras",
+                                 {"label": label, "channel": channel or None, "siteBssId": site_bss_id})
+        except BssError as exc:
+            if exc.status_code == 0:
+                raise ValueError("Camera not saved — BSS server connection is required to sync it.") from exc
+            raise
         camera = body.get("data") or {}
         try:
             cid = int(camera.get("id"))
@@ -871,8 +876,10 @@ class Engine:
         try:
             self.bss_call("DELETE", f"/v1/edge/cameras/{camera_id}/remove", timeout=15)
         except BssError as exc:
+            if exc.status_code == 0:
+                raise ValueError("Camera not removed — BSS server connection is required to sync the removal.") from exc
             if exc.status_code != 404:
-                raise ValueError("Could not remove the camera from BSS. Check the internet connection and try again.")
+                raise ValueError("Camera not removed — BSS rejected the removal. Try again.") from exc
         if worker is not None:
             worker.stop()
         self.workers.pop(camera_id, None)
@@ -1127,6 +1134,25 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"ok": True})
         if path == "/api/test-rtsp":
             return self._json({"data": ENGINE.test_rtsp((self._body() or {}).get("rtsp"))})
+        if path.startswith("/snapshot/"):
+            try:
+                cid = int(unquote(path[len("/snapshot/"):]))
+            except ValueError:
+                return self._json({"error": "Camera not found."}, 404)
+            worker = ENGINE.workers.get(cid)
+            if worker is None:
+                return self._json({"error": "Camera not found."}, 404)
+            jpeg = worker.jpeg()
+            if not jpeg:
+                return self._json({"error": "Waiting for the first camera frame."}, 503)
+            self.send_response(200)
+            self.send_header("Content-Type", "image/jpeg")
+            self.send_header("Content-Length", str(len(jpeg)))
+            self.send_header("Cache-Control", "no-store")
+            self._cors()
+            self.end_headers()
+            self.wfile.write(jpeg)
+            return
         if path.startswith("/stream/"):
             try:
                 cid = int(unquote(path[len("/stream/"):]))

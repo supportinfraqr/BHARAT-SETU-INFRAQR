@@ -194,3 +194,16 @@ input:focus, select:focus { border-color: #93B4E8; box-shadow: 0 0 0 3px rgba(30
 .btn.danger { background:var(--red); color:#fff; border-color:var(--red); }
 
 .engine-log { margin-top:12px; padding:12px; max-height:260px; overflow:auto; background:#0B1220; color:#D7E3F4; border-radius:10px; font-size:10px; line-height:1.5; white-space:pre-wrap; word-break:break-word; }
+
+.live-dialog { width: min(980px, 100%); padding: 0; overflow: hidden; }
+.live-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+.live-head h3 { font-size: 18px; }
+.live-head .muted { margin-top: 2px; }
+.live-close { width: 34px; height: 34px; border: 0; border-radius: 999px; background: var(--bg); color: var(--secondary); font-size: 22px; line-height: 1; cursor: pointer; }
+.live-frame { position: relative; display: grid; place-items: center; min-height: 280px; max-height: 68vh; background: #0B1220; overflow: hidden; }
+.live-frame img { display: none; width: 100%; max-height: 68vh; object-fit: contain; }
+.live-empty { position: absolute; inset: 0; display: grid; place-items: center; padding: 20px; color: #B9C7DA; font-size: 13px; text-align: center; }
+.live-foot { padding: 14px 20px 18px; display: grid; gap: 8px; }
+.live-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 11px; color: var(--muted); }
+.live-meta b { color: var(--ink); }
+.cam-actions { flex-wrap: wrap; }
