@@ -43,6 +43,8 @@ def main():
         "--add-data", add_data,
         "--collect-submodules", "deepface", "--collect-data", "deepface",
         "--copy-metadata", "gdown", "--collect-all", "gdown",
+        "--collect-all", "tf_keras", "--hidden-import", "tf_keras",
+        "--copy-metadata", "tf_keras", "--copy-metadata", "keras",
         "--collect-submodules", "retinaface",
         "--hidden-import", "retinaface",
         str(ENGINE),
