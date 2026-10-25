@@ -747,7 +747,7 @@ def lc_accident_reg(x, s):
     nil = reg.get("nil") is not False
     return [x.F(x.site(), "Register of Accidents maintained", "Present", x.ev.doc_name("ACC"), C, "None", "Maintained.", "maintained"),
             x.F(x.site(), "NIL entry where none", reg.get("entries") or ("NIL" if nil else "Entries present"), x.ev.doc_name("ACC"),
-                C if nil and reg.get("entries") else NV, "Low", "NIL entry recorded." if nil else "Accidents recorded — DeepSeek checks the reports.", "NIL entry")]
+                C if nil and reg.get("entries") else NV, "Low", "NIL entry recorded." if nil else "Accidents recorded — AI checks the reports.", "NIL entry")]
 
 
 @check(184, covers=("mock drill",))

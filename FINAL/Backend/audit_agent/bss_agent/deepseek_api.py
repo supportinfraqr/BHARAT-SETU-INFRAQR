@@ -50,19 +50,45 @@ class DeepSeekTruncated(DeepSeekError):
     """The answer hit max_tokens — the caller should ask for less (e.g. fewer pages)."""
 
 
+PROVIDER_LABELS = {"deepseek": "DeepSeek", "openrouter": "OpenRouter"}
+PROVIDER_BASE_URLS = {
+    "deepseek": "https://api.deepseek.com",
+    "openrouter": "https://openrouter.ai/api/v1",
+}
+
+
 class DeepSeekClient:
+    """OpenAI-compatible client used by the audit agent for DeepSeek or OpenRouter."""
+
     def __init__(self, api_key: str | None = None, cfg_path: Path | None = None, **opts):
         cfg_file = cfg_path or AGENT_ROOT / "config" / "deepseek.json"
         file_cfg = json.loads(cfg_file.read_text(encoding="utf-8")) if cfg_file.exists() else {}
         self.cfg = {**DEFAULTS, **{k: v for k, v in file_cfg.items() if k != "api_key"}, **opts}
         self.cfg["models"] = {**DEFAULTS["models"], **file_cfg.get("models", {}), **opts.get("models", {})}
-        env_base = os.environ.get("DEEPSEEK_BASE_URL")
+
+        provider = str(os.environ.get("BSS_AI_PROVIDER") or "").strip().lower()
+        if not provider:
+            provider = "openrouter" if os.environ.get("OPENROUTER_API_KEY") else "deepseek"
+        self.provider = provider
+        self.origin = provider
+        self.label = str(os.environ.get("BSS_AI_PROVIDER_LABEL") or PROVIDER_LABELS.get(provider) or provider)
+
+        env_base = (os.environ.get("BSS_AI_BASE_URL")
+                    or (os.environ.get("OPENROUTER_BASE_URL") if provider == "openrouter" else "")
+                    or os.environ.get("DEEPSEEK_BASE_URL"))
         if env_base:
             self.cfg["base_url"] = env_base
-        env_model = os.environ.get("DEEPSEEK_MODEL")
+        elif provider in PROVIDER_BASE_URLS:
+            self.cfg["base_url"] = PROVIDER_BASE_URLS[provider]
+        env_model = (os.environ.get("BSS_AI_MODEL")
+                     or (os.environ.get("OPENROUTER_MODEL") if provider == "openrouter" else "")
+                     or os.environ.get("DEEPSEEK_MODEL"))
         if env_model:
             self.cfg["models"] = {role: env_model for role in self.cfg["models"]}
-        self.api_key = (api_key or os.environ.get("DEEPSEEK_API_KEY") or file_cfg.get("api_key") or "").strip()
+        env_key = (os.environ.get("BSS_AI_API_KEY")
+                   or (os.environ.get("OPENROUTER_API_KEY") if provider == "openrouter" else "")
+                   or os.environ.get("DEEPSEEK_API_KEY"))
+        self.api_key = (api_key or env_key or file_cfg.get("api_key") or "").strip()
         if self.api_key.startswith("sk-REPLACE"):
             self.api_key = ""
         env_cache = os.environ.get("DEEPSEEK_CACHE_DIR")
@@ -70,7 +96,8 @@ class DeepSeekClient:
             self.cfg["cache_dir"] = env_cache
         cache = Path(self.cfg["cache_dir"])
         self.cache_dir = cache if cache.is_absolute() else AGENT_ROOT / cache
-        self.usage = {"calls": 0, "cached": 0, "prompt_tokens": 0, "completion_tokens": 0, "errors": 0}
+        self.usage = {"calls": 0, "cached": 0, "prompt_tokens": 0, "completion_tokens": 0, "errors": 0,
+                      "provider": self.label, "models": sorted(set(self.cfg["models"].values()))}
         self.use_cache = True
         self.fatal: str | None = None          # set on 401 / 402: every later call fails fast
         self._lock = threading.Lock()
@@ -128,7 +155,7 @@ class DeepSeekClient:
                 except DeepSeekError:
                     pass                      # bad cached answer -> ask again
         if not self.available:
-            raise DeepSeekError("No DeepSeek API key (set DEEPSEEK_API_KEY or config/deepseek.json).")
+            raise DeepSeekError(f"No {self.label} API key is configured.")
         if self.fatal:
             raise DeepSeekAuthError(self.fatal)
         budget = int(self.cfg.get("session_token_budget") or 0)
@@ -136,6 +163,9 @@ class DeepSeekClient:
             raise DeepSeekError("Session token budget exhausted (config/deepseek.json: session_token_budget).")
         url = self.cfg["base_url"].rstrip("/") + "/chat/completions"
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        if self.provider == "openrouter":
+            headers["HTTP-Referer"] = os.environ.get("BSS_AI_REFERER", "https://login.bharatshramsetu.com")
+            headers["X-Title"] = os.environ.get("BSS_AI_TITLE", "Bharat Shram Setu Audit")
         last = ""
         for attempt in range(self.cfg["max_retries"] + 1):
             t0 = time.time()
@@ -146,10 +176,10 @@ class DeepSeekClient:
                 time.sleep(min(60, 2 ** attempt))
                 continue
             if r.status_code == 401:
-                self.fatal = f"DeepSeek rejected the API key ending …{self.api_key[-4:]} (401) — create a new key at platform.deepseek.com."
+                self.fatal = f"{self.label} rejected the API key ending …{self.api_key[-4:]} (401)."
                 raise DeepSeekAuthError(self.fatal)
             if r.status_code == 402:
-                self.fatal = "DeepSeek account has insufficient balance (402) — top up at platform.deepseek.com."
+                self.fatal = f"{self.label} account has insufficient credit (402)."
                 raise DeepSeekAuthError(self.fatal)
             if r.status_code == 400 and "response_format" in payload and "json" in r.text.lower():
                 payload = {k: v for k, v in payload.items() if k != "response_format"}  # model refuses JSON mode
@@ -159,7 +189,7 @@ class DeepSeekClient:
                 time.sleep(self._retry_after(r, attempt))
                 continue
             if r.status_code != 200:
-                raise DeepSeekError(f"DeepSeek HTTP {r.status_code}: {r.text[:300]}")
+                raise DeepSeekError(f"{self.label} HTTP {r.status_code}: {r.text[:300]}")
             try:
                 body = r.json()
                 choice = body["choices"][0]
@@ -185,7 +215,7 @@ class DeepSeekClient:
             return content
         with self._lock:
             self.usage["errors"] += 1
-        raise DeepSeekError(f"DeepSeek: retries exhausted ({last})")
+        raise DeepSeekError(f"{self.label}: retries exhausted ({last})")
 
     def chat(self, role: str, system: str, user: str | list, *, json_mode=True, max_tokens: int | None = None,
              tag: str = "", validate=None) -> str:
@@ -194,12 +224,13 @@ class DeepSeekClient:
                    "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
-        think = (self.cfg.get("thinking") or {}).get(role)          # "enabled" / "disabled"; absent = model default
-        if think in ("enabled", "disabled"):
-            payload["thinking"] = {"type": think}
-        effort = (self.cfg.get("reasoning_effort") or {}).get(role)  # "low" / "high" / "max"
-        if effort and think != "disabled":
-            payload["reasoning_effort"] = effort
+        if self.provider == "deepseek":
+            think = (self.cfg.get("thinking") or {}).get(role)      # "enabled" / "disabled"; absent = model default
+            if think in ("enabled", "disabled"):
+                payload["thinking"] = {"type": think}
+            effort = (self.cfg.get("reasoning_effort") or {}).get(role)  # "low" / "high" / "max"
+            if effort and think != "disabled":
+                payload["reasoning_effort"] = effort
         return self._post(payload, tag or role, validate)
 
     def chat_json(self, role: str, system: str, user: str | list, **kw) -> dict:
@@ -224,24 +255,25 @@ class DeepSeekClient:
         except requests.RequestException as exc:
             return {"ok": False, "message": f"Cannot reach {base}: {type(exc).__name__}"}
         if r.status_code == 401:
-            return {"ok": False, "message": f"DeepSeek says the key ending …{self.api_key[-4:]} is invalid (401). Create a new key at platform.deepseek.com/api_keys."}
+            return {"ok": False, "message": f"{self.label} says the key ending …{self.api_key[-4:]} is invalid (401)."}
         if r.status_code != 200:
-            return {"ok": False, "message": f"DeepSeek HTTP {r.status_code}: {r.text[:200]}"}
+            return {"ok": False, "message": f"{self.label} HTTP {r.status_code}: {r.text[:200]}"}
         try:
             models = [m.get("id") for m in r.json().get("data", [])]
         except ValueError:
             models = []
         bal = ""
-        try:
-            b = requests.get(base + "/user/balance", headers=h, timeout=30)
-            if b.status_code == 200:
-                j = b.json()
-                infos = j.get("balance_infos") or []
-                bal = ", ".join(f"{x.get('total_balance')} {x.get('currency')}" for x in infos) or ""
-                if j.get("is_available") is False:
-                    return {"ok": False, "message": f"Key is valid but the account balance is not available ({bal or 'no balance'}) — top up.", "models": models}
-        except (requests.RequestException, ValueError):
-            pass
+        if self.provider == "deepseek":
+            try:
+                b = requests.get(base + "/user/balance", headers=h, timeout=30)
+                if b.status_code == 200:
+                    j = b.json()
+                    infos = j.get("balance_infos") or []
+                    bal = ", ".join(f"{x.get('total_balance')} {x.get('currency')}" for x in infos) or ""
+                    if j.get("is_available") is False:
+                        return {"ok": False, "message": f"Key is valid but the account balance is not available ({bal or 'no balance'}) — top up.", "models": models}
+            except (requests.RequestException, ValueError):
+                pass
         missing = [m for m in set(self.cfg["models"].values()) if models and m not in models]
         msg = f"Key …{self.api_key[-4:]} valid · models: {', '.join(models) or 'n/a'}" + (f" · balance {bal}" if bal else "")
         if missing:
@@ -266,7 +298,7 @@ def parse_json(txt: str) -> dict:
             except json.JSONDecodeError:
                 obj = None
     if not isinstance(obj, dict):
-        raise DeepSeekError("DeepSeek did not return a valid JSON object")
+        raise DeepSeekError("The AI provider did not return a valid JSON object")
     return obj
 
 
@@ -283,20 +315,20 @@ def as_str(v) -> str:
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="DeepSeek connectivity test")
+    ap = argparse.ArgumentParser(description="AI provider connectivity test")
     ap.add_argument("--ping", action="store_true")
     ap.add_argument("--image", help="send one image and ask DeepSeek to read it (vision test)")
     a = ap.parse_args(argv)
     c = DeepSeekClient()
     if not c.available:
-        print("No key: set DEEPSEEK_API_KEY or create config/deepseek.json")
+        print(f"No {c.label} key: set BSS_AI_API_KEY / OPENROUTER_API_KEY / DEEPSEEK_API_KEY")
         return 1
     if a.image:
         out = c.chat_json("vision", "Read the document image. Return JSON {\"document\": str, \"text\": str}.",
                           [{"type": "text", "text": "Transcribe this page."}, c.image_block(a.image)], tag="vision-test")
         print(json.dumps(out, indent=2, ensure_ascii=False))
     else:
-        print("DeepSeek replied:", c.ping())
+        print(f"{c.label} replied:", c.ping())
     print("usage:", c.usage)
     return 0
 

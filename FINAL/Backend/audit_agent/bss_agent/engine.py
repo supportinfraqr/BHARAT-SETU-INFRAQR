@@ -44,6 +44,7 @@ class AuditRun:
     mode: str = "rules"                     # rules | deepseek
     llm_usage: dict = field(default_factory=dict)
     issues: list[str] = field(default_factory=list)
+    ai_label: str = "DeepSeek"
 
     def category(self, r: CheckResult) -> str:
         return r.spec.area if r.spec.sheet == "Possible" and r.spec.area in CATEGORY_ORDER else CATEGORY_ORDER[-1]
@@ -87,7 +88,7 @@ def attach_subchecks(r: CheckResult):
             r.subchecks.append({"text": sub, "status": st, "risk": worst_risk(fs), "by": "rules", "observation": obs[:700]})
         else:
             r.subchecks.append({"text": sub, "status": NV, "risk": "Low", "by": "pending",
-                                "observation": "No coded rule for this sub-check — evaluated by the DeepSeek audit stage."})
+                                "observation": "No coded rule for this sub-check — evaluated by the AI audit stage."})
 
 
 def run_rules(ev: Evidence, specs: list[CheckSpec], params: dict, policy: dict) -> list[CheckResult]:
@@ -105,10 +106,10 @@ def run_rules(ev: Evidence, specs: list[CheckSpec], params: dict, policy: dict) 
                     r.note = "No worker or document in scope for this check."
             else:
                 r.findings = [ctx.F(ctx.site(), spec.item, "No coded rule", "bss_agent/checks*.py", NV, "Medium",
-                                    "This catalogue row has no coded rule — it is audited by DeepSeek from the evidence.")]
+                                    "This catalogue row has no coded rule — it is audited by the AI provider from the evidence.")]
         except Exception as exc:  # one broken rule must not stop the audit
             r.findings = [ctx.F(ctx.site(), spec.item, f"Rule error: {type(exc).__name__}: {exc}", "bss_agent/checks*.py", NV, "Medium",
-                                "The rule could not evaluate this evidence; DeepSeek audits the row instead.")]
+                                "The rule could not evaluate this evidence; the AI provider audits the row instead.")]
         r.finalise()
         attach_subchecks(r)
         results.append(r)
@@ -129,13 +130,14 @@ def run_audit(evidence: Evidence, agent_root: Path = AGENT_ROOT, cfg: dict | Non
     run = AuditRun(results, evidence, cfg, params, started, make_report_no(cfg, evidence, started), specs)
     if client is not None and client.available:
         from .auditor import deepseek_audit
-        log(f"  DeepSeek auditing {len(results)} checkpoints and {sum(len(s.subchecks) for s in specs)} sub-checks …")
+        run.ai_label = getattr(client, "label", "DeepSeek")
+        log(f"  {run.ai_label} auditing {len(results)} checkpoints and {sum(len(s.subchecks) for s in specs)} sub-checks …")
         deepseek_audit(run, client, log=log)
         ai = sum(1 for r in run.results if r.verdict_by == "deepseek" or r.cross_check.startswith("Rule check"))
-        answered = sum(1 for r in run.results if not r.cross_check.startswith("DeepSeek gave no verdict"))
+        answered = sum(1 for r in run.results if not r.cross_check.startswith(f"{run.ai_label} gave no verdict"))
         run.mode = "deepseek" if answered == len(run.results) else "partial" if answered else "rules"
         if run.mode != "deepseek":
-            run.issues.append(f"DeepSeek gave verdicts for {answered} of {len(run.results)} rows; the rest use the rule verdict.")
+            run.issues.append(f"{run.ai_label} gave verdicts for {answered} of {len(run.results)} rows; the rest use the rule verdict.")
     else:
         for r in results:
             for sc in r.subchecks:
@@ -161,7 +163,7 @@ def save_json(run: AuditRun, path: Path):
     data = {
         "report_no": run.report_no, "generated": run.started.isoformat(timespec="seconds"), "mode": run.mode,
         "contractor": run.evidence.contractor, "wage_month": run.evidence.month_start.strftime("%Y-%m"),
-        "meta": run.evidence.meta, "llm_usage": run.llm_usage, "issues": run.issues,
+        "meta": run.evidence.meta, "llm_usage": run.llm_usage, "issues": run.issues, "ai_label": run.ai_label,
         "results": [{"id": r.spec.cid, "sheet": r.spec.sheet, "criteria": r.spec.criteria, "area": r.spec.area, "item": r.spec.item,
                      "ref": r.spec.ref, "remarks": r.spec.remarks, "act": r.spec.act, "status": r.status, "risk": r.risk,
                      "summary": r.summary, "verdict_by": r.verdict_by, "cross_check": r.cross_check,

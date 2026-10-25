@@ -115,6 +115,9 @@ def _call_provider(cred, system, prompt, timeout=60):
     else:  # openai / groq / mistral / openrouter / custom (OpenAI-compatible)
         url = f"{base}/chat/completions"
         headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+        if provider == "openrouter":
+            headers["HTTP-Referer"] = "https://login.bharatshramsetu.com"
+            headers["X-Title"] = "Bharat Shram Setu AI Audit"
     resp = requests.post(url, headers=headers, json={
         "model": model, "temperature": 0, "max_tokens": 1500,
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],

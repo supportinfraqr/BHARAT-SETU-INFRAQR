@@ -63,7 +63,7 @@ def run_job(groundtruth_dir: str | Path | None, query_dir: str | Path | None, ou
     out_root.mkdir(parents=True, exist_ok=True)
     client = None if offline else DeepSeekClient(api_key)
     if client is not None and not client.available:
-        log("  ! No DeepSeek key — running offline (rule engine only).")
+        log(f"  ! No {client.label} key — running offline (rule engine only).")
         client = None
     work = out_root / "_work" / uuid.uuid4().hex[:10]
     try:
@@ -102,7 +102,7 @@ def _run(groundtruth_dir, query_dir, out_root: Path, job: dict, client, evidence
         if missing:
             raise JobError(f"Missing system tools: {', '.join(missing)} (install poppler-utils).")
         if client is None:
-            raise JobError("Reading documents needs DeepSeek: set DEEPSEEK_API_KEY (or config/deepseek.json), "
+            raise JobError("Reading documents needs an AI provider: set BSS_AI_API_KEY / OPENROUTER_API_KEY / DEEPSEEK_API_KEY, "
                            "or pass an existing evidence.json with --evidence.")
         chk0 = client.check_key()
         if not chk0["ok"]:
@@ -119,13 +119,13 @@ def _run(groundtruth_dir, query_dir, out_root: Path, job: dict, client, evidence
         n_gt = sum(d.root == "gt" for d in docs)
         log(f"  documents     : {n_gt} ground truth · {len(docs) - n_gt} contractor · "
             f"{sum(len(d.pages) for d in docs)} pages ({sum(1 for d in docs for p in d.pages if p.needs_vision)} read as images)")
-        log(f"  DeepSeek      : {chk0['message']}")
+        log(f"  {client.label:<13}: {chk0['message']}")
         raw = read_all(docs, client, log=log)
         if client.fatal:
             raise JobError(client.fatal)
         read_ok = sum(1 for r in raw["cq"].values() if not r.get("error"))
         if not read_ok:
-            raise JobError("DeepSeek could not read any contractor document: " + "; ".join(raw["errors"][:3]))
+            raise JobError(f"{client.label} could not read any contractor document: " + "; ".join(raw["errors"][:3]))
         data = assemble(docs, raw, job, client)
 
     # Overlay the BSS bound-worker master (written by the BSS backend next to

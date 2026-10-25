@@ -106,14 +106,43 @@ def _parse_period(month, year=""):
             "financial_year": fy, "wage_month": f"{y}-{mo:02d}"}
 
 
+AGENT_PROVIDERS = {"deepseek", "openrouter"}
+
+
 def _active_credential():
     cred = (AiProviderCredential.objects.filter(enabled=True, is_default=True).first()
             or AiProviderCredential.objects.filter(enabled=True).order_by("id").first())
     if cred is None or not cred.has_key:
         raise AuditJobError("No active AI provider is configured in BSS Admin.")
-    if (cred.provider or "").lower() != "deepseek":
-        raise AuditJobError("The audit agent requires the active BSS Admin AI provider to be DeepSeek.")
+    provider = (cred.provider or "").lower()
+    if provider not in AGENT_PROVIDERS:
+        raise AuditJobError("The audit agent supports DeepSeek or OpenRouter as the active AI provider.")
+    if provider == "openrouter" and not str(cred.model or "").strip():
+        raise AuditJobError("OpenRouter needs a model selected in Admin → AI Audit Settings.")
     return cred
+
+
+def _agent_env(cred):
+    """Provider-neutral environment for the vendored audit agent."""
+    from bss_core.models import AI_PROVIDERS
+
+    provider = (cred.provider or "").lower()
+    base = (cred.base_url or AI_PROVIDERS.get(provider, {}).get("baseUrl", "")).rstrip("/")
+    env = {
+        "BSS_AI_PROVIDER": provider,
+        "BSS_AI_PROVIDER_LABEL": AI_PROVIDERS.get(provider, {}).get("label", provider),
+        "BSS_AI_API_KEY": cred.get_api_key(),
+        "BSS_AI_BASE_URL": base,
+    }
+    if provider == "openrouter":
+        env["BSS_AI_MODEL"] = str(cred.model or "").strip()
+        env["BSS_AI_REFERER"] = "https://login.bharatshramsetu.com"
+        env["BSS_AI_TITLE"] = "Bharat Shram Setu Audit"
+    else:
+        env["DEEPSEEK_API_KEY"] = cred.get_api_key()
+        if base:
+            env["DEEPSEEK_BASE_URL"] = base
+    return env
 
 
 def _handoff_fernet():
@@ -126,10 +155,14 @@ def _handoff_fernet():
 
 def _write_runner_request(job, cred):
     """Encrypt the active AI key for the isolated runner (never written plain)."""
+    from bss_core.models import AI_PROVIDERS
+
     payload = json.dumps({
         "apiKey": cred.get_api_key(),
         "baseUrl": cred.base_url or "",
         "model": cred.model or "",
+        "provider": (cred.provider or "").lower(),
+        "providerLabel": AI_PROVIDERS.get((cred.provider or "").lower(), {}).get("label", cred.provider or ""),
     }).encode()
     token = _handoff_fernet().encrypt(payload).decode()
     root = Path(job.job_dir)
@@ -636,12 +669,8 @@ def _run_agent(job, cred):
         "LANG": "C.UTF-8",
         "LC_ALL": "C.UTF-8",
         "PYTHONUNBUFFERED": "1",
-        "DEEPSEEK_API_KEY": cred.get_api_key(),
+        **_agent_env(cred),
     }
-    if cred.base_url:
-        env["DEEPSEEK_BASE_URL"] = cred.base_url
-    # Do not force the BSS Admin model onto every agent role; the agent uses
-    # its supported role-specific models. The active provider/key is what matters.
     cmd = [sys.executable, str(runner), "--groundtruth", str(gt), "--query", str(query),
            "--job", str(root / "job.json"), "--out", str(out)]
     with open(log_path, "w", encoding="utf-8") as log:

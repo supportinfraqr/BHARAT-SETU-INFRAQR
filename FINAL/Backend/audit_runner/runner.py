@@ -255,17 +255,29 @@ def run_one(root: Path, request_path: Path) -> None:
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         log_path = root / "logs" / "agent.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
+        provider = str(request.get("provider") or "deepseek").lower()
         env = {
             "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
             "HOME": "/tmp",
             "LANG": "C.UTF-8",
             "LC_ALL": "C.UTF-8",
             "PYTHONUNBUFFERED": "1",
-            "DEEPSEEK_API_KEY": request["apiKey"],
+            "BSS_AI_PROVIDER": provider,
+            "BSS_AI_PROVIDER_LABEL": str(request.get("providerLabel") or provider),
+            "BSS_AI_API_KEY": request["apiKey"],
             "DEEPSEEK_CACHE_DIR": str(CACHE_DIR),
         }
         if request.get("baseUrl"):
-            env["DEEPSEEK_BASE_URL"] = str(request["baseUrl"])
+            env["BSS_AI_BASE_URL"] = str(request["baseUrl"])
+        if provider != "deepseek" and request.get("model"):
+            env["BSS_AI_MODEL"] = str(request["model"])
+        if provider == "deepseek":
+            env["DEEPSEEK_API_KEY"] = request["apiKey"]
+            if request.get("baseUrl"):
+                env["DEEPSEEK_BASE_URL"] = str(request["baseUrl"])
+        elif provider == "openrouter":
+            env["BSS_AI_REFERER"] = "https://login.bharatshramsetu.com"
+            env["BSS_AI_TITLE"] = "Bharat Shram Setu Audit"
         cmd = [
             sys.executable, str(AGENT_DIR / "run_agent.py"),
             "--groundtruth", str(groundtruth),

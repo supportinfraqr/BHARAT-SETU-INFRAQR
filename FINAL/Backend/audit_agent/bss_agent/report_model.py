@@ -57,6 +57,7 @@ def build(run) -> dict:
     n_gt = sum(1 for d in ev.documents if d["root"] == "gt")
     regs = " · ".join(f"{k} {v}" for k, v in (("PF", m.get("pf_code")), ("ESIC", m.get("esic_code")), ("PTRC", m.get("pt_rc")),
                                                ("LWF", m.get("lwf_code")), ("LIN", m.get("lin"))) if v) or "—"
+    ai_label = getattr(run, "ai_label", "DeepSeek")
     models = ""
     if run.mode == "deepseek":
         models = ", ".join(sorted(set((run.llm_usage or {}).get("models", []) or [])))
@@ -68,9 +69,10 @@ def build(run) -> dict:
         "wage_month": ev.month_start.strftime("%B %Y"), "wage_month_short": ev.month_start.strftime("%b-%Y"),
         "period": f"{ev.month_start:%d %b} – {ev.month_end:%d %b %Y}", "registrations": regs,
         "auditor": run.config["audit"]["auditor"], "classification": run.config["audit"]["classification"],
-        "mode": run.mode, "engine": {"deepseek": "DeepSeek audit (" + (models or "deepseek") + ") with rule-engine cross-check",
-                                     "partial": "DeepSeek audit for part of the rows, rule engine for the rest (see Assurance)"}.get(
-            run.mode, "Rule engine (offline — DeepSeek not used)"), "narrative_source": nar.get("source", "deterministic"),
+        "mode": run.mode, "ai_label": ai_label,
+        "engine": {"deepseek": f"{ai_label} audit (" + (models or ai_label) + ") with rule-engine cross-check",
+                   "partial": f"{ai_label} audit for part of the rows, rule engine for the rest (see Assurance)"}.get(
+            run.mode, "Rule engine (offline — AI provider not used)"), "narrative_source": nar.get("source", "deterministic"),
         "catalogue": run.config["paths"]["catalogue"], "documents": f"{n_cq + n_gt} files ({n_cq} contractor · {n_gt} worker folder)",
         "brand": branding.theme()["brand"],
     }
@@ -140,7 +142,7 @@ def build(run) -> dict:
     actions = nar.get("management_actions") or []
 
     docs = [{"rel": d["rel"], "root": "Contractor" if d["root"] == "cq" else "Worker folder", "type": d["doc_type"], "pages": d["pages"],
-             "read": "Text layer" if d.get("readable") else ("Image → DeepSeek vision" if d["root"] else ""), "error": d.get("error", "")}
+             "read": "Text layer" if d.get("readable") else ("Image → AI vision" if d["root"] else ""), "error": d.get("error", "")}
             for d in ev.documents]
     return {
         "meta": meta, "kpi": kpi, "narrative": {"summary": nar.get("executive_summary", ""), "messages": nar.get("key_messages", []),

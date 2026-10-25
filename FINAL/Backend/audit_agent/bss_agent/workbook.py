@@ -51,7 +51,16 @@ MONEY = '"₹"#,##0'
 
 
 def _by(origin: str) -> str:
-    return "DeepSeek (rule flag overridden)" if "overridden" in str(origin) else "DeepSeek" if str(origin).startswith("deepseek") else "Rules"
+    text = str(origin)
+    if "overridden" in text:
+        base = text.replace(" (overridden)", "")
+        label = {"deepseek": "DeepSeek", "openrouter": "OpenRouter"}.get(base, base.title())
+        return f"{label} (rule flag overridden)"
+    if text.startswith("deepseek"):
+        return "DeepSeek"
+    if text.startswith("openrouter"):
+        return "OpenRouter"
+    return "Rules"
 
 
 @lru_cache(maxsize=None)
@@ -67,6 +76,7 @@ def font(size=9, bold=False, color="1A1A1A", head=False, italic=False):
 class Book:
     def __init__(self, model: dict):
         self.m = model
+        self.ai_label = (model.get("meta") or {}).get("ai_label") or "DeepSeek"
         self.wb = Workbook()
         self.first = True
         self.sc = model["status_colors"]
@@ -292,7 +302,7 @@ def audit_areas(b: Book) -> dict:
             obs = ln["observation"] + (f"\n⚑ {ln['cross_check']}" if ln["cross_check"].startswith("Rule check") else "") + \
                 (f"\nScoping note: {ln['reason']}" if ln["reason"] else "")
             b.row(ws, r, [ln["no"], ln["id"], ln["step"], ln["parameter"], ln["verification"], ln["act"], ln["action"], ln["risk"], ln["status"],
-                          obs, "DeepSeek" if ln["verdict_by"] == "deepseek" else "Rules", ln["rule_status"], flagged],
+                          obs, b.ai_label if ln["verdict_by"] == "deepseek" else "Rules", ln["rule_status"], flagged],
                   status_cols=(8, 11), risk_cols=(7,), center_cols=(0, 1, 6, 10), bold_cols=(0, 1, 2))
             if ln["sheet"] == "Not Possible":
                 ws.cell(r, 2).font = font(9, True, "7B3F99")
@@ -300,7 +310,7 @@ def audit_areas(b: Book) -> dict:
             r += 1
             for s in ln["subchecks"]:
                 b.row(ws, r, ["", "", f"↳ Remark: {s['text']}", "", "", "", "Sub-check", s["risk"], s["status"], s["observation"],
-                              "DeepSeek" if s.get("by") == "deepseek" else "Rules", s.get("rule_status", ""), ""],
+                              b.ai_label if s.get("by") == "deepseek" else "Rules", s.get("rule_status", ""), ""],
                       status_cols=(8, 11), risk_cols=(7,), center_cols=(6, 10), size=8.5)
                 for col in range(1, n + 1):
                     cell = ws.cell(r, col)
@@ -390,7 +400,7 @@ def subchecks(b: Book):
         for ln in a["lines"]:
             for s in ln["subchecks"]:
                 b.row(ws, r, [ln["id"], a["name"], ln["step"], s["text"], s["status"], s["risk"], s["observation"],
-                              "DeepSeek" if s.get("by") == "deepseek" else "Rules"], zebra=i % 2 == 1, status_cols=(4,), risk_cols=(5,), center_cols=(0, 7))
+                              b.ai_label if s.get("by") == "deepseek" else "Rules"], zebra=i % 2 == 1, status_cols=(4,), risk_cols=(5,), center_cols=(0, 7))
                 r += 1
                 i += 1
     b.finish_filter(ws, len(cols))
@@ -398,14 +408,14 @@ def subchecks(b: Book):
 
 def all_checkpoints(b: Book):
     cols = ["ID", "Sheet", "Audit area", "Check area", "Item", "Rulebook ref", "Act", "Remarks / reason", "Status", "Risk", "Result",
-            "Verdict by", "Rule check", "DeepSeek vs rule note"]
+            "Verdict by", "Rule check", f"{b.ai_label} vs rule note"]
     ws = b.sheet("All Checkpoints", "Flat list of every catalogue row", [8, 11, 22, 20, 40, 34, 20, 30, 16, 9, 50, 10, 15, 34])
     r = b.header(ws, 5, cols)
     i = 0
     for a in b.m["areas"]:
         for ln in a["lines"]:
             b.row(ws, r, [ln["id"], ln["sheet"], a["name"], ln["check_area"], ln["step"], ln["ref"], ln["act"], ln["remarks"] or ln["reason"],
-                          ln["status"], ln["risk"], ln["observation"], "DeepSeek" if ln["verdict_by"] == "deepseek" else "Rules", ln["rule_status"],
+                          ln["status"], ln["risk"], ln["observation"], b.ai_label if ln["verdict_by"] == "deepseek" else "Rules", ln["rule_status"],
                           ln["cross_check"]], zebra=i % 2 == 1, status_cols=(8, 12), risk_cols=(9,), center_cols=(0, 1, 11), size=8.5)
             r += 1
             i += 1
@@ -468,9 +478,9 @@ def assurance(b: Book):
     r = 5
     rows = [("Catalogue", m["meta"]["catalogue"]), ("Rows audited", f"{k['total']} of {k['total']} ({k['possible']} Possible + {k['not_possible']} Not Possible)"),
             ("Remarks sub-checks with a verdict", f"{k['subchecks']} of {k['subchecks']}"), ("Verdict engine", m["meta"]["engine"]),
-            ("Narrative", m["narrative"]["source"]), ("Rows with a DeepSeek verdict", str(k["ai_rows"])),
-            ("Rows where DeepSeek differs from the rule check", str(k["differs"])),
-            ("DeepSeek usage", ", ".join(f"{a}: {v}" for a, v in (m["usage"] or {}).items() if a != "models") or "not used")]
+            ("Narrative", m["narrative"]["source"]), (f"Rows with a {b.ai_label} verdict", str(k["ai_rows"])),
+            (f"Rows where {b.ai_label} differs from the rule check", str(k["differs"])),
+            (f"{b.ai_label} usage", ", ".join(f"{a}: {v}" for a, v in (m["usage"] or {}).items() if a != "models") or "not used")]
     for kname, v in rows:
         ws.cell(r, 1, kname).font = font(9.5, True, NAVY)
         ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=5)
@@ -479,7 +489,7 @@ def assurance(b: Book):
             ws.cell(r, col).border = Border(bottom=THIN)
         r += 1
     r += 1
-    b.band(ws, r, 5, "Rows where DeepSeek differs from the rule check — reviewer attention", size=10)
+    b.band(ws, r, 5, f"Rows where {b.ai_label} differs from the rule check — reviewer attention", size=10)
     r += 1
     r = b.header(ws, r, ["ID", "Item", "Rule check", "Final", "Note"], freeze=False, filt=False)
     for d in m["differs"] or [{"id": "—", "item": "No disagreement", "rule": "", "final": "", "note": ""}]:

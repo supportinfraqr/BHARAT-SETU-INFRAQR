@@ -214,7 +214,7 @@ footer .tricolour{margin:-22px -22px 18px;}
     <span class="pill saffron">WAGE MONTH {{ m.meta.wage_month|upper }}</span>
     <span class="pill white">{{ m.kpi.total }} CHECKPOINTS AUDITED</span>
     <span class="pill white">{{ m.kpi.subchecks }} SUB-CHECKS</span>
-    {% if m.meta.mode == 'deepseek' %}<span class="pill green">DEEPSEEK AI AUDIT</span>{% endif %}
+    {% if m.meta.mode == 'deepseek' %}<span class="pill green">{{ m.meta.ai_label|upper }} AI AUDIT</span>{% endif %}
   </div>
   <div class="who">
     <div class="cn">{{ m.meta.contractor }}</div>
@@ -453,21 +453,21 @@ footer .tricolour{margin:-22px -22px 18px;}
         <td class="step"><b>{{ ln.step }}</b><div class="cid">{{ ln.id }}{% if ln.sheet == 'Not Possible' %} · Not-Possible tab{% endif %}{% if ln.act %} · {{ ln.act }}{% endif %}</div></td>
         <td>{{ ln.parameter }}</td><td style="font-size:11.5px">{{ ln.verification }}</td><td class="src">{{ ln.action }}</td>
         <td class="center">{{ risk(ln.risk) }}</td><td>{{ badge(ln.status) }}</td>
-        <td style="font-size:11.8px;min-width:260px">{{ ln.observation }}{% if ln.verdict_by == 'deepseek' %} <span class="ai">· DeepSeek</span>{% endif %}
+        <td style="font-size:11.8px;min-width:260px">{{ ln.observation }}{% if ln.verdict_by == 'deepseek' %} <span class="ai">· {{ m.meta.ai_label }}</span>{% endif %}
           {% if ln.cross_check and ln.cross_check.startswith('Rule check') %}<div class="diff">⚑ {{ ln.cross_check }}</div>{% endif %}
           {% if ln.reason %}<div class="src">Scoping note: {{ ln.reason }}</div>{% endif %}</td>
         <td class="no-print">{% if ln.detail %}<button class="ev-toggle" onclick="toggleRow(this)">{{ ('Flags (' ~ ln.n_flags ~ ')') if ln.n_flags else ('Evidence (' ~ ln.n_findings ~ ')') }}</button>{% endif %}</td>
       </tr>
       {% for s in ln.subchecks %}
       <tr class="subrow" data-status="{{ s.status }}" data-risk="{{ s.risk }}"><td></td><td class="step" colspan="3">↳ Remark: {{ s.text }}</td><td class="src">Sub-check</td>
-        <td class="center">{{ risk(s.risk) }}</td><td>{{ badge(s.status) }}</td><td style="font-size:11.3px">{{ s.observation }}{% if s.by == 'deepseek' %} <span class="ai">· DeepSeek</span>{% endif %}</td><td></td></tr>
+        <td class="center">{{ risk(s.risk) }}</td><td>{{ badge(s.status) }}</td><td style="font-size:11.3px">{{ s.observation }}{% if s.by == 'deepseek' %} <span class="ai">· {{ m.meta.ai_label }}</span>{% endif %}</td><td></td></tr>
       {% endfor %}
       {% if ln.detail %}
       <tr class="detail hidden"><td></td><td colspan="8">
         <table class="mini-table"><thead><tr><th>Worker / entity</th><th>Expected / ground truth</th><th>Found in contractor documents</th><th>Source</th><th>Status</th><th>Risk</th><th>Observation</th></tr></thead>
         <tbody>{% for f in ln.detail %}<tr><td class="name">{{ f.worker }}{% if f.code and f.code != '—' %} <span class="src">({{ f.code }})</span>{% endif %}{% if f.subcheck %}<div class="src">Sub-check: {{ f.subcheck[:80] }}</div>{% endif %}</td>
           <td>{{ f.expected }}</td><td>{{ f.found }}</td><td class="src">{{ f.source }}</td><td>{{ badge(f.status) }}</td><td>{{ risk(f.risk) }}</td>
-          <td>{{ f.observation }}{% if 'overridden' in f.origin %} <span class="ai">· rule flag not upheld by DeepSeek</span>{% elif f.origin.startswith('deepseek') %} <span class="ai">· DeepSeek</span>{% endif %}</td></tr>{% endfor %}</tbody></table>
+          <td>{{ f.observation }}{% if 'overridden' in f.origin %} <span class="ai">· rule flag not upheld by {{ m.meta.ai_label }}</span>{% elif f.origin.startswith('deepseek') or f.origin.startswith('openrouter') %} <span class="ai">· {{ m.meta.ai_label }}</span>{% endif %}</td></tr>{% endfor %}</tbody></table>
         {% if ln.detail_more %}<div class="src" style="margin-top:6px">+{{ ln.detail_more }} more — every finding is in the Excel workbook, sheet “Evidence” (filter by ID {{ ln.id }}).</div>{% elif ln.n_flags and ln.n_flags < ln.n_findings %}<div class="src" style="margin-top:6px">{{ ln.n_findings - ln.n_flags }} compliant finding(s) not shown — see the workbook's Evidence sheet.</div>{% endif %}
       </td></tr>
       {% endif %}
@@ -499,11 +499,11 @@ footer .tricolour{margin:-22px -22px 18px;}
       <tr><td>Rows audited</td><td>{{ m.kpi.total }} of {{ m.kpi.total }} ({{ m.kpi.possible }} Possible + {{ m.kpi.not_possible }} Not Possible)</td></tr>
       <tr><td>Remarks sub-checks with a verdict</td><td>{{ m.kpi.subchecks }} of {{ m.kpi.subchecks }}</td></tr>
       <tr><td>Verdict engine</td><td>{{ m.meta.engine }}</td></tr>
-      <tr><td>Rows with a DeepSeek verdict</td><td>{{ m.kpi.ai_rows }}</td></tr>
-      <tr><td>Rows where DeepSeek differs from the rule check</td><td>{{ m.kpi.differs }}</td></tr>
-      <tr><td>DeepSeek usage</td><td>{% if m.usage %}{% for k,v in m.usage.items() if k != 'models' %}{{ k }}: {{ v }}{% if not loop.last %} · {% endif %}{% endfor %}{% else %}not used{% endif %}</td></tr>
+      <tr><td>Rows with a {{ m.meta.ai_label }} verdict</td><td>{{ m.kpi.ai_rows }}</td></tr>
+      <tr><td>Rows where {{ m.meta.ai_label }} differs from the rule check</td><td>{{ m.kpi.differs }}</td></tr>
+      <tr><td>{{ m.meta.ai_label }} usage</td><td>{% if m.usage %}{% for k,v in m.usage.items() if k != 'models' %}{{ k }}: {{ v }}{% if not loop.last %} · {% endif %}{% endfor %}{% else %}not used{% endif %}</td></tr>
     </table>
-    {% if m.differs %}<h3 class="sub">Rows where DeepSeek differs from the rule check (review recommended)</h3>
+    {% if m.differs %}<h3 class="sub">Rows where {{ m.meta.ai_label }} differs from the rule check (review recommended)</h3>
     <div class="table-wrap"><table><thead><tr><th>ID</th><th>Item</th><th>Rule check</th><th>Final</th><th>Note</th></tr></thead>
       <tbody>{% for d in m.differs %}<tr><td class="idc">{{ d.id }}</td><td>{{ d.item }}</td><td>{{ badge(d.rule) }}</td><td>{{ badge(d.final) }}</td><td style="font-size:11.5px">{{ d.note }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
     {% if m.issues %}<h3 class="sub">Processing notes</h3><ul class="src">{% for i in m.issues %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}

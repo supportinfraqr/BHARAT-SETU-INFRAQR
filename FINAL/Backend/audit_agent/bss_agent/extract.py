@@ -194,7 +194,7 @@ def read_all(docs: list[SourceDoc], client: DeepSeekClient | None, log=print) ->
     """Classify + extract every document. Returns the raw extraction (cached per file by the client)."""
     raw = {"prompt_version": PROMPT_VERSION, "classification": {}, "cq": {}, "gt": {}, "errors": []}
     if not (client and client.available):
-        raw["errors"].append("DeepSeek not available — documents were inventoried but not read.")
+        raw["errors"].append("AI provider not available — documents were inventoried but not read.")
         raw["classification"] = classify_cq(docs, None)
         return raw
     log(f"  classifying {sum(d.root == 'cq' for d in docs)} contractor documents …")
@@ -208,7 +208,7 @@ def read_all(docs: list[SourceDoc], client: DeepSeekClient | None, log=print) ->
             jobs.append(("cq", d, raw["classification"][d.id]["doc_type"]))
         else:
             jobs += [("gt", d, p) for p in d.pages]
-    log(f"  reading {len(jobs)} documents / pages with DeepSeek …")
+    log(f"  reading {len(jobs)} documents / pages with {getattr(client, 'label', 'AI provider')} …")
 
     def run(job):
         kind, d, arg = job

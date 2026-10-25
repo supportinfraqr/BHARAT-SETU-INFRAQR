@@ -92,12 +92,12 @@ def executive_narrative(run, client: DeepSeekClient | None) -> dict:
         out = client.chat_json("narrative", NARRATIVE_SYSTEM, json.dumps(_facts(run), ensure_ascii=False, default=str),
                                max_tokens=12000, tag="narrative")
         if out.get("executive_summary") and isinstance(out.get("key_messages"), list):
-            out["source"] = f"DeepSeek ({client.model('narrative')})"
+            out["source"] = f"{client.label} ({client.model('narrative')})"
             out.setdefault("closing_opinion", base["closing_opinion"])
             acts = out.get("management_actions")
             if not (isinstance(acts, list) and acts and all(isinstance(a, dict) and a.get("title") for a in acts)):
                 out["management_actions"] = base["management_actions"]
             return out
     except DeepSeekError as exc:
-        base["source"] = f"deterministic (DeepSeek failed: {exc})"
+        base["source"] = f"deterministic ({client.label} failed: {exc})"
     return base

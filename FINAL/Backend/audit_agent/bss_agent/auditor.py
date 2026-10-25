@@ -230,8 +230,10 @@ def _match_subchecks(subs: list[dict], ai_subs: list[dict]) -> list[dict | None]
     return out
 
 
-def merge(run, r: CheckResult, ai: dict):
+def merge(run, r: CheckResult, ai: dict, client=None):
     policy = run.config.get("policy", {}).get("final_verdict", "deepseek")
+    ai_label = getattr(client, "label", "DeepSeek")
+    ai_origin = getattr(client, "origin", "deepseek")
     st = _norm_status(ai.get("status")) or r.rule_status
     final = _pick(policy, r.rule_status, st)
     r.status = final
@@ -241,7 +243,7 @@ def merge(run, r: CheckResult, ai: dict):
     if obs and r.verdict_by == "deepseek":
         r.summary = obs
     if st != r.rule_status:
-        r.cross_check = (f"Rule check: {r.rule_status}; DeepSeek: {st}. " + as_str(ai.get("why_differs"))).strip()
+        r.cross_check = (f"Rule check: {r.rule_status}; {ai_label}: {st}. " + as_str(ai.get("why_differs"))).strip()
     # per-worker verdicts
     ai_workers = [w for w in as_list(ai.get("workers")) if isinstance(w, dict)]
     by_code = {as_str(w.get("code")).strip(): w for w in ai_workers if as_str(w.get("code")).strip() not in ("", "—")}
@@ -256,7 +258,7 @@ def merge(run, r: CheckResult, ai: dict):
             if ws and ws != f.status:
                 fs = _pick(policy, f.status, ws)
                 if fs != f.status:
-                    g.status, g.risk, g.origin = fs, _norm_risk(w.get("risk"), fs), "deepseek"
+                    g.status, g.risk, g.origin = fs, _norm_risk(w.get("risk"), fs), ai_origin
                     g.observation = f"{as_str(w.get('observation')) or g.observation} (Rule check said {f.status}: {f.observation})"
             elif ws == f.status and f.status in FAIL and as_str(w.get("observation")):
                 g.observation = as_str(w.get("observation"))
@@ -268,22 +270,22 @@ def merge(run, r: CheckResult, ai: dict):
         ws = _norm_status(w.get("status"))
         if ws and ws in FAIL and policy != "rules":
             new.append(Finding("worker", as_str(w.get("worker") or w.get("code"))[:120], as_str(w.get("code")) or "—", "", r.spec.item,
-                               "See observation", "DeepSeek audit", ws, _norm_risk(w.get("risk"), ws), as_str(w.get("observation")),
-                               origin="deepseek"))
+                               "See observation", f"{ai_label} audit", ws, _norm_risk(w.get("risk"), ws), as_str(w.get("observation")),
+                               origin=ai_origin))
     # DeepSeek cleared the row: rule flags it did not uphold are kept for the record but no longer count as flags
     if r.status not in FAIL and r.verdict_by == "deepseek":
         for g in new:
             if g.is_flag and g.origin == "rule" and not g.subcheck:
-                g.observation = f"Rule check flagged {g.status} ({g.observation}); not upheld by DeepSeek — row judged {r.status}."
-                g.status, g.risk, g.origin = r.status, "None", "deepseek (overridden)"
+                g.observation = f"Rule check flagged {g.status} ({g.observation}); not upheld by {ai_label} — row judged {r.status}."
+                g.status, g.risk, g.origin = r.status, "None", f"{ai_origin} (overridden)"
     r.findings = new
     # sub-checks
     ai_subs = [x for x in as_list(ai.get("subchecks")) if isinstance(x, dict)]
     for sc, a in zip(r.subchecks, _match_subchecks(r.subchecks, ai_subs)):
         if not a:
             if sc["by"] == "pending":
-                sc.update(by="rules", status=NV, observation="DeepSeek returned no verdict for this sub-check — manual review required.")
-                run.issues.append(f"{r.spec.cid}: sub-check '{sc['text'][:60]}' not answered by DeepSeek")
+                sc.update(by="rules", status=NV, observation=f"{ai_label} returned no verdict for this sub-check — manual review required.")
+                run.issues.append(f"{r.spec.cid}: sub-check '{sc['text'][:60]}' not answered by {ai_label}")
             continue
         s2 = _norm_status(a.get("status")) or sc["status"]
         fin = s2 if sc["by"] == "pending" else _pick(policy, sc["status"], s2)
@@ -337,7 +339,7 @@ def deepseek_audit(run, client: DeepSeekClient, log=print):
     groups = worker_groups(run)
     jobs = [(crit, rs, g) for crit, rs in _batches(run) for g in groups]
     if len(groups) > 1:
-        log(f"  {len(run.evidence.workers)} workers → audited in {len(groups)} worker groups ({len(jobs)} DeepSeek calls)")
+        log(f"  {len(run.evidence.workers)} workers → audited in {len(groups)} worker groups ({len(jobs)} {client.label} calls)")
     answers: dict[str, list[dict]] = defaultdict(list)
     failed: dict[str, int] = defaultdict(int)
 
@@ -369,25 +371,25 @@ def deepseek_audit(run, client: DeepSeekClient, log=print):
             for cid in lost:
                 failed[cid] += 1
             if err:
-                run.issues.append(f"DeepSeek audit failed for {err} — rule verdicts used")
+                run.issues.append(f"{client.label} audit failed for {err} — rule verdicts used")
     done = 0
     for r in run.results:
         parts = answers.get(r.spec.cid) or []
         merged = False
         if parts and not failed.get(r.spec.cid):      # every worker group must have answered
             try:
-                merge(run, r, combine(parts, r))
+                merge(run, r, combine(parts, r), client)
                 merged = True
                 done += 1
             except Exception as exc:                # a malformed answer never corrupts the rule verdict
-                run.issues.append(f"{r.spec.cid}: DeepSeek answer could not be applied ({type(exc).__name__}) — rule verdict used")
+                run.issues.append(f"{r.spec.cid}: {client.label} answer could not be applied ({type(exc).__name__}) — rule verdict used")
                 r.status, r.risk, r.summary, r.findings = r.rule_status, r.rule_risk, r.rule_summary, list(r.rule_findings)
                 r.verdict_by = "rules"
         if not merged:
             for sc in r.subchecks:
                 if sc["by"] == "pending":
-                    sc.update(by="rules", status=NV, observation="DeepSeek did not return a verdict — manual review required.")
-            r.cross_check = "DeepSeek gave no verdict for this row" + (" for every worker group" if parts else "") + " — rule verdict used."
+                    sc.update(by="rules", status=NV, observation=f"{client.label} did not return a verdict — manual review required.")
+            r.cross_check = f"{client.label} gave no verdict for this row" + (" for every worker group" if parts else "") + " — rule verdict used."
     run.llm_usage = dict(client.usage)
-    log(f"  DeepSeek verdicts: {done}/{len(run.results)} rows · {sum(1 for r in run.results if r.cross_check.startswith('Rule check'))} "
+    log(f"  {client.label} verdicts: {done}/{len(run.results)} rows · {sum(1 for r in run.results if r.cross_check.startswith('Rule check'))} "
         f"differ from the rule check")

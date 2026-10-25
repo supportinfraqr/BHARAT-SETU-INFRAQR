@@ -14,7 +14,7 @@ Status / risk follow AuditingInstructions.html §07 and §09:
 
 `@check(sno, covers=(...))`: `covers` lists words that identify the Remarks sub-checks a rule
 evaluates itself; findings for a sub-check carry `subcheck`. Sub-checks no rule covers are
-given to DeepSeek (or reported Not Verifiable offline) — none is skipped.
+given to the configured AI provider (or reported Not Verifiable offline) — none is skipped.
 """
 
 from __future__ import annotations

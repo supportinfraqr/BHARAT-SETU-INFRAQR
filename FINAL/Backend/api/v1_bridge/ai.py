@@ -40,6 +40,8 @@ def _apply(cred, body):
     cred.provider = provider
     cred.label = str(body.get("label") or "").strip() if body.get("label") is not None else cred.label
     cred.model = str(body.get("model") or cred.model or "").strip()
+    if provider == "openrouter" and not cred.model:
+        raise ValueError("OpenRouter requires a model id (for example deepseek/deepseek-v4.1-flash or openai/gpt-4o).")
     # Base URL: explicit value wins; else fall back to the provider default.
     if body.get("baseUrl") is not None:
         cred.base_url = str(body.get("baseUrl") or "").strip()

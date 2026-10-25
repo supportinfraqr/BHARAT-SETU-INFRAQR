@@ -248,7 +248,7 @@ def cover_meta(m: dict) -> dict:
         "principal_employer": meta["principal_employer"], "site_short": meta["site_short"], "wage_month": meta["wage_month_short"],
         "wage_month_long": meta["wage_month"].upper(), "checkpoints": k["total"], "score": k["score"], "overall_risk": k["overall_risk"],
         "generated": meta["generated"], "classification": meta["classification"],
-        "engine_pill": "DEEPSEEK AI AUDIT" if meta["mode"] == "deepseek" else "",
+        "engine_pill": f"{meta.get('ai_label', 'AI').upper()} AI AUDIT" if meta["mode"] == "deepseek" else "",
         "subtitle": "Contractor submission audited against worker ground truth — every field, every worker",
         "cover_rows": [("Contractor", meta["contractor"]), ("Principal employer", meta["principal_employer"]),
                        ("Site / location", meta["site"]), ("Wage month audited", meta["wage_month"]),
@@ -453,7 +453,7 @@ def sec_detail_pointer(m) -> list:
               ("All Checkpoints", "flat, filterable list of every checkpoint"),
               ("Worker Matrix · Exposure", "worker-wise parameter matrix and the financial-exposure workings"),
               ("Documents", "every file examined, its document type and how it was read (Annexure B)"),
-              ("Assurance", "coverage, DeepSeek vs rule check, processing notes (Annexure C)")]
+              ("Assurance", "coverage, AI vs rule check, processing notes (Annexure C)")]
     out = [PageBreak()] + _sec("→", "Detailed Audit — Companion Workbook",
                                "This PDF is the management summary. The complete item-level audit is delivered as a branded Excel workbook "
                                "with the same report number.")
@@ -463,7 +463,7 @@ def sec_detail_pointer(m) -> list:
     out.append(_tbl([("Sheet", 0.25), ("What it contains", 0.75)], [[P(f"<b>{safe(a)}</b>", _ps("ws", B, 7.2, 9, INK), raw=True), b] for a, b in sheets],
                     font=7.2))
     out += [Spacer(1, 10), P(f"Audit assurance: {k['total']} of {k['total']} checkpoints and {k['subchecks']} of {k['subchecks']} Remarks "
-                             f"sub-checks have a verdict · verdict engine: {safe(m['meta']['engine'])} · rows where DeepSeek differs from the "
+                             f"sub-checks have a verdict · verdict engine: {safe(m['meta']['engine'])} · rows where {safe(m['meta'].get('ai_label', 'AI'))} differs from the "
                              f"rule check: {k['differs']}.", "small")]
     return out
 
