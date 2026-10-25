@@ -89,6 +89,44 @@ function showMessage(id, text, ok = false) {
   el.textContent = text;
   el.className = `msg ${ok ? 'ok' : 'error'}`;
 }
+function showDialog({ title, body, confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger = false }) {
+  return new Promise(resolve => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'dialog-backdrop';
+    backdrop.innerHTML = `<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+      <div class="dialog-icon ${danger ? 'danger' : ''}">${danger ? '!' : '?'}</div>
+      <h3 id="dialogTitle">${esc(title)}</h3>
+      <p>${esc(body)}</p>
+      <div class="dialog-actions">
+        ${cancelLabel ? `<button type="button" class="btn" data-dialog-cancel>${esc(cancelLabel)}</button>` : ''}
+        <button type="button" class="btn ${danger ? 'danger' : 'primary'}" data-dialog-confirm>${esc(confirmLabel)}</button>
+      </div>
+    </div>`;
+    let settled = false;
+    const close = value => {
+      if (settled) return;
+      settled = true;
+      document.removeEventListener('keydown', onKey);
+      backdrop.remove();
+      resolve(value);
+    };
+    const onKey = event => {
+      if (event.key === 'Escape') close(false);
+      else if (event.key === 'Enter') close(true);
+    };
+    backdrop.addEventListener('click', event => { if (event.target === backdrop) close(false); });
+    backdrop.querySelector('[data-dialog-cancel]')?.addEventListener('click', () => close(false));
+    backdrop.querySelector('[data-dialog-confirm]')?.addEventListener('click', () => close(true));
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(backdrop);
+    requestAnimationFrame(() => backdrop.querySelector('[data-dialog-confirm]')?.focus());
+  });
+}
+
+async function showAlert(title, body) {
+  await showDialog({ title, body, confirmLabel: 'OK', cancelLabel: '' });
+}
+
 function setStep(step) {
   const ids = ['phoneStep', 'otpStep', 'deviceStep'];
   ids.forEach((id, index) => {

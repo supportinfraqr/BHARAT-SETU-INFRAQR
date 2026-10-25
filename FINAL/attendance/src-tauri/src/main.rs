@@ -119,6 +119,9 @@ fn stop_engine(app: &AppHandle) {
     if let Some(mut child) = state.child.lock().ok().and_then(|mut guard| guard.take()) {
         let _ = child.kill();
     }
+    // PyInstaller one-file sidecars run as a bootloader parent plus a child.
+    // Killing only the tracked parent can leave the real engine running.
+    stop_stale_engine();
 }
 
 fn engine_log_path() -> PathBuf {
@@ -152,7 +155,7 @@ fn stop_stale_engine() {
             "attendance-engine.exe",
             "attendance-engine-x86_64-pc-windows-msvc.exe",
         ] {
-            let _ = Command::new("taskkill").args(["/F", "/IM", name]).output();
+            let _ = Command::new("taskkill").args(["/F", "/T", "/IM", name]).output();
         }
         let _ = Command::new("powershell")
             .args([
