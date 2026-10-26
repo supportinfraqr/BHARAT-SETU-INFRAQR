@@ -36,12 +36,16 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.4.3"
+APP_VERSION = "1.5.0"
 MODEL_NAME = "ArcFace"
+MIN_GPU_MEMORY_MB = 1024
+EVENT_COOLDOWN_SECONDS = 60
 MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
 DETECTOR_BACKEND = "retinaface"
 ARCFACE_SHA = "6336979c0c602cae08d1122a66f4dfb862d059bbcd8ef80306aef2b2249b0c93"
 RETINAFACE_SHA = "ecb2393a89da3dd3d6796ad86660e298f62a0c8ae7578d92eb6af14e0bb93adf"
+ARCFACE_ONNX_SHA = "5b8809168bc0786d8ed5ef39db888108ad71fedde88e7fd6171326c115bcaa2a"
+RETINAFACE_ONNX_SHA = "af90c36b8a5faaf8fa103cfd212bcb5c7e2864d4c0d49a9f0d50027b6add264b"
 DEFAULT_BSS = os.environ.get("BSS_EDGE_BASE_URL", "https://login.bharatshramsetu.com")
 PORT = int(os.environ.get("BSS_ENGINE_PORT", "8765"))
 DAY_NAMES = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -349,8 +353,9 @@ class FaceGallery:
         ranked, short = [], None
         for worker_id, distances in by_worker.items():
             distances.sort()
+            required = min(self.votes, len(distances))
             votes = sum(1 for distance in distances[:self.topk] if distance <= self.threshold)
-            if votes >= self.votes:
+            if votes >= required:
                 ranked.append((worker_id, distances[0]))
             elif distances[0] <= self.threshold and short is None:
                 short = distances[0]
@@ -390,7 +395,7 @@ class CameraWorker:
         self._cap = None
         self._thread = None
         self._ai_thread = None
-        self._last_sent = 0.0
+        self._last_sent = {}
         self._last_embedding = None
         self._face_boxes = []
         self.frames_seen = 0
@@ -572,9 +577,14 @@ class CameraWorker:
                 when = _now()
                 for embedding, box in detections:
                     match = self.engine.gallery.match(embedding, site_id)
-                    if match is not None:
-                        matched_worker, distance = match
-                        self.engine.send_event(self, matched_worker, when, distance, box)
+                    if match is None:
+                        continue
+                    matched_worker, distance = match
+                    now_ts = time.time()
+                    if now_ts - float(self._last_sent.get(matched_worker) or 0) < EVENT_COOLDOWN_SECONDS:
+                        continue
+                    self._last_sent[matched_worker] = now_ts
+                    self.engine.send_event(self, matched_worker, when, distance, box)
             except Exception as exc:  # noqa: BLE001
                 LOG.exception("Face processing failed for %s: %s", self.label, exc)
             finally:
@@ -583,7 +593,21 @@ class CameraWorker:
     def _recognise(self, frame):
         """Return every quality face in the frame: [(embedding, [x,y,w,h]), ...]."""
         self.engine.configure_gpu()
-        from deepface import DeepFace
+        backend = self.engine.face_backend
+        if backend is not None and backend.ready:
+            detections = backend.recognise(frame)
+            boxes = [box for _, box in detections]
+            with self.lock:
+                self._face_boxes = boxes
+                self.faces_detected += len(boxes)
+            return detections
+
+        try:
+            import importlib
+            DeepFace = importlib.import_module("deepface").DeepFace
+        except Exception as exc:  # noqa: BLE001
+            LOG.warning("No face backend available: %s", exc)
+            return []
 
         reps = DeepFace.represent(
             img_path=frame, model_name=MODEL_NAME,
@@ -638,6 +662,7 @@ class Engine:
         self.gate = ResourceGate(2)
         self.resource_settings = self._normalise_resources(self.store.data.get("resources") or {})
         self._gpu_configured = False
+        self.face_backend = None
         self.gpu_status = {"active": False, "mode": self.resource_settings.get("gpuMode", "auto"),
                            "devices": [], "message": "Not initialised"}
         self._apply_resources(self.resource_settings, persist=False)
@@ -809,6 +834,8 @@ class Engine:
         except (TypeError, ValueError):
             gpu_memory_mb = 0
         gpu_memory_mb = max(0, min(gpu_memory_mb, 65536))
+        if 0 < gpu_memory_mb < MIN_GPU_MEMORY_MB:
+            gpu_memory_mb = MIN_GPU_MEMORY_MB
         return {"cpuCores": cores, "maxCameraWorkers": workers, "processInterval": interval,
                 "gpuMode": gpu_mode, "gpuMemoryMb": gpu_memory_mb}
 
@@ -842,14 +869,29 @@ class Engine:
             return
         self._gpu_configured = True
         mode = str(self.resource_settings.get("gpuMode") or "auto")
+        model_dir = (Path(os.environ.get("DEEPFACE_HOME") or str(Path.home()))
+                     / ".deepface" / "weights")
+        try:
+            from face_backend import OnnxFaceBackend
+            memory_limit_mb = int(self.resource_settings.get("gpuMemoryMb") or 0)
+            backend = OnnxFaceBackend(model_dir, mode, memory_limit_mb).initialize()
+            self.face_backend = backend
+            self.gpu_status = backend.status()
+            LOG.info("Face backend: %s", self.gpu_status)
+            return
+        except Exception as exc:  # noqa: BLE001
+            self.face_backend = None
+            LOG.warning("ONNX face backend unavailable: %s", exc)
         if mode == "off":
-            self.gpu_status = {"active": False, "mode": mode, "devices": [], "message": "GPU disabled"}
+            self.gpu_status = {"active": False, "mode": mode, "devices": [],
+                               "message": "CPU only", "backend": "TensorFlow"}
             return
         try:
             import tensorflow as tf
             devices = tf.config.list_physical_devices("GPU")
             if not devices:
-                self.gpu_status = {"active": False, "mode": mode, "devices": [], "message": "No GPU detected"}
+                self.gpu_status = {"active": False, "mode": mode, "devices": [],
+                                   "message": "No GPU detected", "backend": "TensorFlow"}
                 return
             limit_mb = int(self.resource_settings.get("gpuMemoryMb") or 0)
             configured = []
@@ -864,12 +906,12 @@ class Engine:
                 except Exception as exc:  # noqa: BLE001
                     LOG.warning("Could not configure GPU %s: %s", device, exc)
             self.gpu_status = {"active": bool(configured), "mode": mode, "devices": configured,
-                               "memoryLimitMb": limit_mb,
+                               "memoryLimitMb": limit_mb, "backend": "TensorFlow",
                                "message": "GPU enabled" if configured else "GPU configuration failed"}
             LOG.info("GPU status: %s", self.gpu_status)
         except Exception as exc:  # noqa: BLE001
             self.gpu_status = {"active": False, "mode": mode, "devices": [],
-                               "message": f"GPU unavailable: {type(exc).__name__}"}
+                               "message": f"GPU unavailable: {type(exc).__name__}", "backend": "TensorFlow"}
             LOG.warning("GPU unavailable: %s", exc)
 
     def set_resources(self, raw):
@@ -1488,9 +1530,12 @@ def _install_weights(home):
         Path(__file__).resolve().parent / "weights",
         Path(__file__).resolve().parent.parent / "face_embedding" / "weights",
     ]
+    expected = {
+        "arcface.onnx": ARCFACE_ONNX_SHA,
+        "retinaface.onnx": RETINAFACE_ONNX_SHA,
+    }
     for source in candidates:
-        if (source / "arcface_weights.h5").exists() and (source / "retinaface.h5").exists():
-            expected = {"arcface_weights.h5": ARCFACE_SHA, "retinaface.h5": RETINAFACE_SHA}
+        if all((source / name).exists() for name in expected):
             for name, digest in expected.items():
                 if _sha256(source / name) != digest:
                     raise SystemExit(f"Model weight checksum mismatch: {name}")

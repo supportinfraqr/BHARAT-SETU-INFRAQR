@@ -35,20 +35,40 @@ def main():
     spec = ROOT / "build-spec"
     for path in (work, dist, spec):
         shutil.rmtree(path, ignore_errors=True)
-    add_data = f"{WEIGHTS}{os.pathsep}weights"
     cmd = [
         sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onefile",
         "--name", "attendance-engine",
         "--distpath", str(dist), "--workpath", str(work), "--specpath", str(spec),
-        "--add-data", add_data,
-        "--collect-submodules", "deepface", "--collect-data", "deepface",
-        "--copy-metadata", "gdown", "--collect-all", "gdown",
-        "--collect-all", "tf_keras", "--hidden-import", "tf_keras",
-        "--copy-metadata", "tf_keras", "--copy-metadata", "keras",
-        "--collect-submodules", "retinaface",
-        "--hidden-import", "retinaface",
+        "--collect-all", "onnxruntime",
+        "--copy-metadata", "onnxruntime",
+        "--hidden-import", "face_backend",
+        "--hidden-import", "retinaface.commons.preprocess",
+        "--hidden-import", "retinaface.commons.postprocess",
+        "--exclude-module", "tensorflow",
+        "--exclude-module", "tf_keras",
+        "--exclude-module", "keras",
+        "--exclude-module", "torch",
+        "--exclude-module", "torchvision",
+        "--exclude-module", "torchaudio",
+        "--exclude-module", "pandas",
+        "--exclude-module", "matplotlib",
+        "--exclude-module", "sympy",
+        "--exclude-module", "lightphe",
+        "--exclude-module", "lightdsa",
+        "--exclude-module", "IPython",
+        "--exclude-module", "jupyter",
         str(ENGINE),
     ]
+    for name in ("arcface.onnx", "retinaface.onnx"):
+        cmd[cmd.index(str(ENGINE)):cmd.index(str(ENGINE))] = [
+            "--add-data", f"{WEIGHTS / name}{os.pathsep}weights",
+        ]
+    if platform.system() == "Linux":
+        try:
+            import nvidia  # noqa: F401
+            cmd[cmd.index(str(ENGINE)):cmd.index(str(ENGINE))] = ["--collect-all", "nvidia"]
+        except Exception:
+            pass
     subprocess.check_call(cmd, cwd=str(ROOT))
     exe = dist / ("attendance-engine.exe" if os.name == "nt" else "attendance-engine")
     if not exe.exists():

@@ -362,9 +362,10 @@ def _match_worker(embedding, site, model_version):
     best_but_short = None
     for worker_id, distances in by_worker.items():
         distances.sort()
+        required = min(EDGE_FACE_VOTES, len(distances))
         votes = sum(1 for distance in distances[:EDGE_FACE_TOPK]
                     if distance <= EDGE_FACE_THRESHOLD)
-        if votes >= EDGE_FACE_VOTES:
+        if votes >= required:
             ranked.append((worker_id, distances[0]))
         elif distances[0] <= EDGE_FACE_THRESHOLD and best_but_short is None:
             best_but_short = distances[0]

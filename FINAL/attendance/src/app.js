@@ -462,7 +462,7 @@ function resourceCard(resources) {
       <div><label>CPU cores to use<input id="resourceCores" type="number" min="0" max="${cores}" value="${esc(settings.cpuCores ?? 0)}" /><span class="note">0 = Automatic — uses all ${esc(cores)} available cores</span></label></div>
       <div><label>Cameras processed at once<input id="resourceWorkers" type="number" min="1" max="16" value="${esc(settings.maxCameraWorkers ?? 2)}" /></label></div>
       <div><label>AI acceleration<select id="resourceGpuMode"><option value="auto" ${settings.gpuMode !== 'off' && settings.gpuMode !== 'required' ? 'selected' : ''}>Automatic (GPU if available)</option><option value="off" ${settings.gpuMode === 'off' ? 'selected' : ''}>CPU only</option><option value="required" ${settings.gpuMode === 'required' ? 'selected' : ''}>Require GPU</option></select></label></div>
-      <div><label>GPU memory limit MB<input id="resourceGpuMemory" type="number" min="0" max="65536" value="${esc(settings.gpuMemoryMb ?? 0)}" /><span class="note">0 = grow as needed</span></label></div>
+      <div><label>GPU memory limit MB<input id="resourceGpuMemory" type="number" min="0" max="65536" value="${esc(settings.gpuMemoryMb ?? 0)}" /><span class="note">0 = grow as needed · minimum 1024 MB when set</span></label></div>
       <button id="saveResourcesBtn" class="btn primary" type="button">Save resources</button>
     </div>
     <p id="resourceMsg" class="note"></p>

@@ -8,3 +8,14 @@ opencv-python==4.14.0.94
 numpy==2.2.6
 requests==2.32.5
 psutil==7.0.0
+
+# ONNX Runtime face backend
+onnxruntime-gpu==1.23.2; sys_platform == "linux"
+onnxruntime-directml==1.23.0; sys_platform == "win32"
+nvidia-cuda-runtime-cu12==12.8.90; sys_platform == "linux"
+nvidia-cublas-cu12==12.8.4.1; sys_platform == "linux"
+nvidia-cudnn-cu12==9.8.0.87; sys_platform == "linux"
+nvidia-curand-cu12==10.3.9.90; sys_platform == "linux"
+nvidia-cufft-cu12==11.3.3.83; sys_platform == "linux"
+nvidia-cuda-nvrtc-cu12==12.8.93; sys_platform == "linux"
+nvidia-nvjitlink-cu12==12.9.86; sys_platform == "linux"
