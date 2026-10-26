@@ -52,7 +52,8 @@ jobs:
       - name: Build Python sidecar
         working-directory: FINAL/attendance
         run: |
-          python build_engine.py
+          set -o pipefail
+          (python build_engine.py 2>&1) | tee sidecar-build.log
           python -c "import shutil; [shutil.rmtree(p, ignore_errors=True) for p in ('build-work','build-dist','build-spec')]"
           python -m pip cache purge || true
 
@@ -97,7 +98,11 @@ jobs:
           printf '%s\n' "$BSS_DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/bss_deploy
           chmod 700 ~/.ssh; chmod 600 ~/.ssh/bss_deploy
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/bss_deploy "$BSS_DEPLOY_USER@$BSS_DEPLOY_HOST" "mkdir -p '$BSS_DEPLOY_PATH/.incoming-$GITHUB_RUN_ID/${{ matrix.artifact }}'"
-          scp -q -o StrictHostKeyChecking=no -i ~/.ssh/bss_deploy tauri-build.log "$BSS_DEPLOY_USER@$BSS_DEPLOY_HOST:$BSS_DEPLOY_PATH/.incoming-$GITHUB_RUN_ID/${{ matrix.artifact }}/tauri-build.log" || true
+          for log in tauri-build.log sidecar-build.log; do
+            if [ -f "$log" ]; then
+              scp -q -o StrictHostKeyChecking=no -i ~/.ssh/bss_deploy "$log" "$BSS_DEPLOY_USER@$BSS_DEPLOY_HOST:$BSS_DEPLOY_PATH/.incoming-$GITHUB_RUN_ID/${{ matrix.artifact }}/$log" || true
+            fi
+          done
 
       - name: Sign Windows installers
         if: runner.os == 'Windows'
