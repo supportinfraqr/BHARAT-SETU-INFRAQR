@@ -40,7 +40,7 @@ def main():
         "--name", "attendance-engine",
         "--distpath", str(dist), "--workpath", str(work), "--specpath", str(spec),
         "--collect-all", "onnxruntime",
-        "--copy-metadata", "onnxruntime",
+        "--copy-metadata", "onnxruntime-directml" if os.name == "nt" else "onnxruntime-gpu",
         "--hidden-import", "face_backend",
         "--hidden-import", "retinaface.commons.preprocess",
         "--hidden-import", "retinaface.commons.postprocess",
