@@ -48,8 +48,8 @@ EDGE_FACE_MODEL_NAME = "ArcFace"
 EDGE_FACE_MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
 EDGE_FACE_DETECTOR = "retinaface"
 EDGE_FACE_WEIGHTS_SHA = "6336979c0c602cae08d1122a66f4dfb862d059bbcd8ef80306aef2b2249b0c93"
-EDGE_FACE_THRESHOLD = 0.6
-EDGE_FACE_MARGIN = 0.08
+EDGE_FACE_THRESHOLD = 0.48
+EDGE_FACE_MARGIN = 0.12
 EDGE_FACE_TOPK = 3
 EDGE_FACE_VOTES = 2
 EDGE_DAY_NAMES = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -389,9 +389,9 @@ def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id,
     binding = binding or (WorkerContractorBinding.objects
                           .filter(worker=worker, site=site, binding_status="ACCEPTED")
                           .order_by("-id").first())
-    is_verified = confidence >= 50.0
+    is_verified = confidence >= 60.0
     remarks = "CCTV edge attendance"
-    if confidence < 50.0:
+    if confidence < 60.0:
         remarks = f"CCTV edge attendance — manual review (confidence {confidence:g}%)"
     attendance, _created = Attendance.objects.update_or_create(
         worker=worker, attendance_date=local_date,
@@ -651,6 +651,8 @@ def _gallery_version(device, workers=None, status=None):
     raw = json.dumps({
         "model": EDGE_FACE_MODEL_NAME, "version": EDGE_FACE_MODEL_VERSION,
         "detector": EDGE_FACE_DETECTOR, "weights": EDGE_FACE_WEIGHTS_SHA,
+        "threshold": EDGE_FACE_THRESHOLD, "margin": EDGE_FACE_MARGIN,
+        "topk": EDGE_FACE_TOPK, "votes": EDGE_FACE_VOTES,
         "workers": fingerprint,
         "workerStatus": [
             [row["bssWorkerId"], row["name"], row["siteIds"], row["embeddingCount"]]

@@ -36,10 +36,12 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.4"
+APP_VERSION = "1.5.5"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 EVENT_COOLDOWN_SECONDS = 60
+MATCH_CONFIRM_FRAMES = 2
+MATCH_CONFIRM_WINDOW = 4.0
 MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
 DETECTOR_BACKEND = "retinaface"
 ARCFACE_SHA = "6336979c0c602cae08d1122a66f4dfb862d059bbcd8ef80306aef2b2249b0c93"
@@ -300,8 +302,8 @@ class FaceGallery:
         self.version = str(payload.get("galleryVersion") or "")
         self.model = str(payload.get("model") or MODEL_NAME)
         self.model_version = str(payload.get("version") or MODEL_VERSION)
-        self.threshold = float(payload.get("threshold") or 0.6)
-        self.margin = float(payload.get("margin") or 0.08)
+        self.threshold = float(payload.get("threshold") or 0.48)
+        self.margin = float(payload.get("margin") or 0.12)
         self.topk = max(1, int(payload.get("topk") or 3))
         self.votes = max(1, int(payload.get("votes") or 2))
         self.weights_sha = str(payload.get("weightsSha") or ARCFACE_SHA)
@@ -419,6 +421,7 @@ class CameraWorker:
         self._thread = None
         self._ai_thread = None
         self._last_sent = {}
+        self._match_streaks = {}
         self._last_embedding = None
         self._face_boxes = []
         self._face_meta = []
@@ -662,6 +665,13 @@ class CameraWorker:
                     self._set_face_meta(index, profile.get("name") or matched_worker,
                                         matched_worker, score, True)
                     now_ts = time.time()
+                    previous = self._match_streaks.get(matched_worker) or {}
+                    count = 1
+                    if previous and now_ts - float(previous.get("last") or 0) <= MATCH_CONFIRM_WINDOW:
+                        count = int(previous.get("count") or 0) + 1
+                    self._match_streaks[matched_worker] = {"count": count, "last": now_ts}
+                    if count < MATCH_CONFIRM_FRAMES:
+                        continue
                     if now_ts - float(self._last_sent.get(matched_worker) or 0) < EVENT_COOLDOWN_SECONDS:
                         continue
                     self._last_sent[matched_worker] = now_ts
