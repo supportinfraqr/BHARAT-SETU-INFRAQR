@@ -94,8 +94,7 @@ jobs:
           BSS_DEPLOY_PATH: ${{ secrets.BSS_DEPLOY_PATH }}
         run: |
           mkdir -p ~/.ssh
-          printf '%s
-' "$BSS_DEPLOY_SSH_KEY" | tr -d '' > ~/.ssh/bss_deploy
+          printf '%s\n' "$BSS_DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/bss_deploy
           chmod 700 ~/.ssh; chmod 600 ~/.ssh/bss_deploy
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/bss_deploy "$BSS_DEPLOY_USER@$BSS_DEPLOY_HOST" "mkdir -p '$BSS_DEPLOY_PATH/.incoming-$GITHUB_RUN_ID/${{ matrix.artifact }}'"
           scp -q -o StrictHostKeyChecking=no -i ~/.ssh/bss_deploy tauri-build.log "$BSS_DEPLOY_USER@$BSS_DEPLOY_HOST:$BSS_DEPLOY_PATH/.incoming-$GITHUB_RUN_ID/${{ matrix.artifact }}/tauri-build.log" || true
