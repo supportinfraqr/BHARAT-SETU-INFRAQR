@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, Download, Monitor, ShieldCheck, Terminal, Wifi } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Download, Monitor, Server, ShieldCheck, Terminal, Wifi } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Download Attendance Client | Bharat Shram Setu',
@@ -9,10 +9,12 @@ export const metadata: Metadata = {
 
 const WINDOWS_DEFAULT = '/downloads/attendance/BSS-Attendance-Windows-Setup.exe';
 const LINUX_DEFAULT = '/downloads/attendance/BSS-Attendance-Linux.AppImage';
+const HEADLESS_DEFAULT = '/downloads/attendance/BSS-Attendance-Headless-Linux-x86_64.tar.gz';
 
 export default function AttendanceDownloadPage() {
   const windowsUrl = process.env.BSS_ATTENDANCE_WINDOWS_URL || WINDOWS_DEFAULT;
   const linuxUrl = process.env.BSS_ATTENDANCE_LINUX_URL || LINUX_DEFAULT;
+  const headlessUrl = process.env.BSS_ATTENDANCE_HEADLESS_URL || HEADLESS_DEFAULT;
   const version = process.env.BSS_ATTENDANCE_VERSION || '1.2.3';
 
   return (
@@ -65,6 +67,30 @@ export default function AttendanceDownloadPage() {
             <p className="mt-2 text-[11px] text-[#64748B]">x86_64 AppImage. If the download does not start, contact BSS support.</p>
           </article>
         </div>
+
+        <article className="mt-4 rounded-2xl border border-[#DBE4F0] bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex gap-4">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#F0FDF4] text-[#0F7B4F]"><Server size={22} /></div>
+              <div>
+                <h2 className="text-lg font-bold text-[#01183A]">Headless Linux server</h2>
+                <p className="mt-1 max-w-2xl text-xs leading-5 text-[#64748B]">
+                  Engine-only package for Ubuntu servers with no desktop session. Run it under systemd, control it with <code className="rounded bg-[#F1F5F9] px-1 py-0.5">bss-attendancectl</code>, and view live cameras through an SSH tunnel.
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <a href={headlessUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#01183A] px-4 text-sm font-bold text-white hover:bg-black">
+                <Download size={16} /> Download headless bundle
+              </a>
+              <Link href="/download/attendance/headless"
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-[#01183A]/20 bg-white px-4 text-sm font-bold text-[#01183A] hover:bg-[#F8FAFC]">
+                Setup guide
+              </Link>
+            </div>
+          </div>
+        </article>
 
         {version && <p className="mt-4 text-xs text-[#64748B]">Current client version: <strong className="text-[#01183A]">{version}</strong></p>}
 

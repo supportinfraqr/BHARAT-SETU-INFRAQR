@@ -50,6 +50,8 @@ def main():
     win_exe = one(win_dir.glob("*.exe"), "Windows setup executable")
     win_msi = optional(win_dir.glob("*.msi"))
     linux_app = one(linux_dir.glob("*.AppImage"), "Linux AppImage")
+    headless = optional(linux_dir.glob("*Headless-Linux-x86_64.tar.gz"))
+    headless_sha = optional(linux_dir.glob("*Headless-Linux-x86_64.tar.gz.sha256"))
     win_sig = Path(str(win_exe) + ".sig")
     linux_sig = Path(str(linux_app) + ".sig")
     if not win_sig.is_file() or not linux_sig.is_file():
@@ -60,6 +62,7 @@ def main():
     win_name = f"BSS-Attendance-{version}-Windows-Setup.exe"
     msi_name = f"BSS-Attendance-{version}-Windows-Setup.msi"
     linux_name = f"BSS-Attendance-{version}-Linux.AppImage"
+    headless_name = f"BSS-Attendance-{version}-Headless-Linux-x86_64.tar.gz"
 
     copies = [
         (win_exe, win_name),
@@ -69,15 +72,24 @@ def main():
     ]
     if win_msi is not None:
         copies.append((win_msi, msi_name))
+    if headless is not None:
+        copies.append((headless, headless_name))
+    if headless_sha is not None:
+        copies.append((headless_sha, f"{headless_name}.sha256"))
     for source, name in copies:
         shutil.copy2(source, updates / name)
 
     keep = {win_name, f"{win_name}.sig", linux_name, f"{linux_name}.sig"}
+    if headless is not None:
+        keep.add(headless_name)
+    if headless_sha is not None:
+        keep.add(f"{headless_name}.sha256")
     if win_msi is not None:
         keep.add(msi_name)
     for pattern in ("BSS-Attendance-*-Windows-Setup.exe", "BSS-Attendance-*-Windows-Setup.exe.sig",
                     "BSS-Attendance-*-Windows-Setup.msi", "BSS-Attendance-*-Linux.AppImage",
-                    "BSS-Attendance-*-Linux.AppImage.sig"):
+                    "BSS-Attendance-*-Linux.AppImage.sig", "BSS-Attendance-*-Headless-Linux-x86_64.tar.gz",
+                    "BSS-Attendance-*-Headless-Linux-x86_64.tar.gz.sha256"):
         for path in updates.glob(pattern):
             if path.name not in keep and path.is_file():
                 path.unlink()
@@ -105,6 +117,13 @@ def main():
     else:
         (root / "BSS-Attendance-Windows-Setup.msi").unlink(missing_ok=True)
     relink(root / "BSS-Attendance-Linux.AppImage", f"updates/{linux_name}")
+    if headless is not None:
+        relink(root / "BSS-Attendance-Headless-Linux-x86_64.tar.gz", f"updates/{headless_name}")
+    else:
+        (root / "BSS-Attendance-Headless-Linux-x86_64.tar.gz").unlink(missing_ok=True)
+    if headless_sha is not None:
+        relink(root / "BSS-Attendance-Headless-Linux-x86_64.tar.gz.sha256",
+               f"updates/{headless_name}.sha256")
 
     shutil.rmtree(incoming, ignore_errors=True)
     print(f"Published {version}")

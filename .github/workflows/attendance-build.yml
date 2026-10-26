@@ -55,6 +55,9 @@ jobs:
         run: |
           set -o pipefail
           (python build_engine.py 2>&1) | tee sidecar-build.log
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            python build_headless.py
+          fi
           python -c "import shutil; [shutil.rmtree(p, ignore_errors=True) for p in ('build-work','build-dist','build-spec')]"
           python -m pip cache purge || true
 
@@ -142,6 +145,7 @@ jobs:
             cp src-tauri/target/release/bundle/appimage/*.AppImage executable/${{ matrix.artifact }}/ || true
             cp src-tauri/target/release/bundle/appimage/*.AppImage.sig executable/${{ matrix.artifact }}/ || true
             cp src-tauri/target/release/bundle/deb/*.deb executable/${{ matrix.artifact }}/ || true
+            cp build-headless/*.tar.gz build-headless/*.sha256 executable/${{ matrix.artifact }}/ || true
           fi
           ls -lh executable/${{ matrix.artifact }}
 
