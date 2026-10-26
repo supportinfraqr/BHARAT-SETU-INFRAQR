@@ -171,6 +171,14 @@ fn write_launcher_settings(app: &AppHandle, settings: &LauncherSettings) -> Resu
     fs::write(&path, text).map_err(|error| format!("Could not save settings: {error}"))
 }
 
+fn data_dir_is_ready(app: &AppHandle) -> bool {
+    let configured = read_launcher_settings(app).data_dir;
+    if !configured.trim().is_empty() {
+        return true;
+    }
+    dir_has_data(&default_data_dir())
+}
+
 fn resolve_initial_data_dir(app: &AppHandle) -> PathBuf {
     let configured = read_launcher_settings(app).data_dir;
     let candidate = PathBuf::from(configured.trim());
@@ -300,6 +308,15 @@ fn set_data_dir(app: AppHandle, path: String, copy_existing: bool) -> Result<Str
     validate_data_dir(&target)?;
     let current = current_data_dir(&app);
     if target == current {
+        let mut settings = read_launcher_settings(&app);
+        settings.data_dir = target.to_string_lossy().to_string();
+        write_launcher_settings(&app, &settings)?;
+        if !app.state::<EngineProcess>().active.load(Ordering::SeqCst) {
+            app.state::<EngineProcess>()
+                .stopping
+                .store(false, Ordering::SeqCst);
+            start_engine(app.clone());
+        }
         return Ok(current.to_string_lossy().to_string());
     }
     let target_has_data = dir_has_data(&target);
@@ -544,7 +561,11 @@ fn main() {
             });
             app.manage(EnginePort(AtomicU16::new(0)));
             app.manage(DataDir(Mutex::new(data_dir)));
-            start_engine(app.handle().clone());
+            if data_dir_is_ready(app.handle()) {
+                start_engine(app.handle().clone());
+            } else {
+                log_engine(app.handle(), "waiting for the user to choose a data folder");
+            }
 
             let open_item =
                 MenuItem::with_id(app, "open", "Open BSS Attendance", true, None::<&str>)?;

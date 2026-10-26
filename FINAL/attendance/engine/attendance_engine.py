@@ -36,7 +36,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.2"
+APP_VERSION = "1.5.3"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 EVENT_COOLDOWN_SECONDS = 60
@@ -306,11 +306,30 @@ class FaceGallery:
         self.votes = max(1, int(payload.get("votes") or 2))
         self.weights_sha = str(payload.get("weightsSha") or ARCFACE_SHA)
         self.entries = []  # (site_id, bss_worker_id, float32 embedding)
+        self.profiles = {}
+        self.worker_status = []
+        for worker in payload.get("workerStatus") or []:
+            worker_id = str(worker.get("bssWorkerId") or "").strip().upper()
+            if not worker_id:
+                continue
+            site_ids = [int(site) for site in (worker.get("siteIds") or []) if str(site).isdigit()]
+            self.worker_status.append({
+                "bssWorkerId": worker_id,
+                "name": str(worker.get("name") or worker_id),
+                "siteIds": site_ids,
+                "embeddingCount": int(worker.get("embeddingCount") or 0),
+                "hasFaceData": bool(worker.get("hasFaceData")),
+            })
         for worker in payload.get("workers") or []:
             worker_id = str(worker.get("bssWorkerId") or "").strip().upper()
             if not worker_id:
                 continue
             site_ids = [int(site) for site in (worker.get("siteIds") or []) if str(site).isdigit()]
+            self.profiles[worker_id] = {
+                "bssWorkerId": worker_id,
+                "name": str(worker.get("name") or ""),
+                "siteIds": site_ids,
+            }
             for encoded in worker.get("embeddings") or []:
                 try:
                     raw = base64.b64decode(str(encoded))
@@ -328,6 +347,10 @@ class FaceGallery:
     @property
     def ready(self):
         return bool(self.entries and self.model_version == MODEL_VERSION)
+
+    def profile(self, worker_id):
+        worker_id = str(worker_id or "").strip().upper()
+        return self.profiles.get(worker_id) or {"bssWorkerId": worker_id, "name": worker_id, "siteIds": []}
 
     def match(self, embedding, site_id):
         if not self.ready:
@@ -398,6 +421,7 @@ class CameraWorker:
         self._last_sent = {}
         self._last_embedding = None
         self._face_boxes = []
+        self._face_meta = []
         self.frames_seen = 0
         self.frames_processed = 0
         self.faces_detected = 0
@@ -514,19 +538,71 @@ class CameraWorker:
                 self.fps = 0.85 * self.fps + 0.15 * (1.0 / elapsed) if self.fps else 1.0 / elapsed
                 self.status = "ONLINE"
 
+    def _set_face_boxes(self, boxes):
+        with self.lock:
+            self._face_boxes = [tuple(box) for box in boxes]
+            self._face_meta = [{
+                "box": list(box), "name": "", "bssWorkerId": "",
+                "matchScore": None, "matched": False, "pending": True,
+            } for box in boxes]
+            self.faces_detected += len(boxes)
+
+    def _set_face_meta(self, index, name, bss_worker_id, score, matched):
+        with self.lock:
+            if 0 <= index < len(self._face_meta):
+                self._face_meta[index].update({
+                    "name": str(name or ""),
+                    "bssWorkerId": str(bss_worker_id or ""),
+                    "matchScore": score,
+                    "matched": bool(matched),
+                    "pending": False,
+                })
+
+    def detection_rows(self):
+        with self.lock:
+            return [dict(item) for item in self._face_meta]
+
     def frame(self):
         with self.lock:
             return None if self._frame is None else self._frame.copy()
 
     def jpeg(self):
         with self.lock:
+            meta = [dict(item) for item in self._face_meta]
             boxes = list(self._face_boxes)
             frame = None if self._frame is None else self._frame.copy()
             raw = self._jpeg
-        if not boxes or frame is None:
+        if frame is None:
             return raw
-        for x, y, w, h in boxes:
-            cv2.rectangle(frame, (int(x), int(y)), (int(x + w), int(y + h)), (60, 190, 100), 2)
+        if not meta:
+            meta = [{"box": list(box), "name": "", "bssWorkerId": "",
+                     "matchScore": None, "matched": False, "pending": True} for box in boxes]
+        if not meta:
+            return raw
+        for item in meta:
+            box = item.get("box") or [0, 0, 0, 0]
+            x, y, w, h = [int(v) for v in box[:4]]
+            matched = bool(item.get("matched"))
+            color = (60, 190, 100) if matched else (130, 140, 155)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
+            name = str(item.get("name") or "Checking").strip()
+            bss_id = str(item.get("bssWorkerId") or "").strip()
+            score = item.get("matchScore")
+            label = name
+            if bss_id:
+                label += f" · {bss_id}"
+            if score is not None:
+                label += f" · {float(score):.0f}%"
+            label = label.encode("ascii", "replace").decode("ascii")
+            if len(label) > 48:
+                label = label[:47] + "…"
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            scale, thickness = 0.45, 1
+            (text_w, text_h), _ = cv2.getTextSize(label, font, scale, thickness)
+            top = max(0, y - text_h - 8)
+            cv2.rectangle(frame, (x, top), (x + text_w + 6, top + text_h + 6), color, -1)
+            cv2.putText(frame, label, (x + 3, top + text_h + 2), font, scale,
+                        (255, 255, 255), thickness, cv2.LINE_AA)
         encoded, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 72])
         return buf.tobytes() if encoded else raw
 
@@ -575,11 +651,16 @@ class CameraWorker:
                 camera = self.engine.bss_cameras.get(self.camera_id) or {}
                 site_id = camera.get("siteId")
                 when = _now()
-                for embedding, box in detections:
+                for index, (embedding, box) in enumerate(detections):
                     match = self.engine.gallery.match(embedding, site_id)
                     if match is None:
+                        self._set_face_meta(index, "Unknown", "", None, False)
                         continue
                     matched_worker, distance = match
+                    profile = self.engine.gallery.profile(matched_worker)
+                    score = round(max(0.0, min(100.0, (1.0 - float(distance)) * 100.0)), 1)
+                    self._set_face_meta(index, profile.get("name") or matched_worker,
+                                        matched_worker, score, True)
                     now_ts = time.time()
                     if now_ts - float(self._last_sent.get(matched_worker) or 0) < EVENT_COOLDOWN_SECONDS:
                         continue
@@ -596,10 +677,7 @@ class CameraWorker:
         backend = self.engine.face_backend
         if backend is not None and backend.ready:
             detections = backend.recognise(frame)
-            boxes = [box for _, box in detections]
-            with self.lock:
-                self._face_boxes = boxes
-                self.faces_detected += len(boxes)
+            self._set_face_boxes([box for _, box in detections])
             return detections
 
         try:
@@ -634,9 +712,7 @@ class CameraWorker:
                 continue
             detections.append((embedding, [x, y, w, h]))
             boxes.append((x, y, w, h))
-        with self.lock:
-            self._face_boxes = boxes
-            self.faces_detected += len(boxes)
+        self._set_face_boxes(boxes)
         return detections
 
 
@@ -1621,7 +1697,8 @@ class Engine:
             "dataDir": str(self.home_dir),
             "faceModel": {"model": MODEL_NAME, "version": MODEL_VERSION, "detector": DETECTOR_BACKEND},
             "gallery": {"ready": self.gallery.ready, "version": self.gallery.version,
-                        "workers": len({e[1] for e in self.gallery.entries})},
+                        "workers": len({e[1] for e in self.gallery.entries}),
+                        "status": self.gallery.worker_status},
             "gpu": resources["gpu"],
             "cameras": cameras,
             "resources": resources,
@@ -1681,6 +1758,15 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"data": ENGINE.resource_payload()})
         if path == "/api/health":
             return self._json({"ok": True})
+        if path.startswith("/api/detections/"):
+            try:
+                cid = int(unquote(path[len("/api/detections/"):]))
+            except ValueError:
+                return self._json({"error": "Camera not found."}, 404)
+            worker = ENGINE.workers.get(cid)
+            if worker is None:
+                return self._json({"error": "Camera not found."}, 404)
+            return self._json({"data": worker.detection_rows()})
         if path == "/api/test-rtsp":
             return self._json({"data": ENGINE.test_rtsp((self._body() or {}).get("rtsp"))})
         if path.startswith("/snapshot/"):

@@ -554,6 +554,51 @@ def edge_activate_verify(request):
     )
 
 
+def _worker_display_name(worker):
+    identity = getattr(worker, "worker_identity", None)
+    name = str(getattr(identity, "name", "") or "").strip()
+    if not name:
+        name = str(getattr(worker, "full_name", "") or "").strip()
+    return name or str(getattr(identity, "bss_worker_id", "") or "").strip()
+
+
+def _worker_status_rows(device):
+    bindings = (WorkerContractorBinding.objects
+                .filter(site__employer_id=device.employer_id, binding_status="ACCEPTED")
+                .select_related("worker__worker_identity", "site").order_by("worker_id", "site_id"))
+    workers = {}
+    for binding in bindings:
+        identity = getattr(binding.worker, "worker_identity", None)
+        if identity is None:
+            continue
+        item = workers.setdefault(binding.worker_id, {
+            "bssWorkerId": str(identity.bss_worker_id or "").strip().upper(),
+            "name": _worker_display_name(binding.worker),
+            "siteIds": set(),
+        })
+        item["siteIds"].add(binding.site_id)
+    counts = {}
+    if workers:
+        rows = (WorkerFaceEmbedding.objects
+                .filter(worker_id__in=list(workers), model_name=EDGE_FACE_MODEL_NAME,
+                        model_version=EDGE_FACE_MODEL_VERSION)
+                .values_list("worker_id", flat=True))
+        for worker_id in rows:
+            counts[worker_id] = counts.get(worker_id, 0) + 1
+    result = []
+    for worker_id in sorted(workers, key=lambda value: (workers[value]["name"].lower(), value)):
+        item = workers[worker_id]
+        count = int(counts.get(worker_id, 0))
+        result.append({
+            "bssWorkerId": item["bssWorkerId"],
+            "name": item["name"],
+            "siteIds": sorted(item["siteIds"]),
+            "embeddingCount": count,
+            "hasFaceData": count > 0,
+        })
+    return result
+
+
 def _gallery_rows(device):
     """Active bound-worker gallery for one activated device (employer scope)."""
     bindings = (WorkerContractorBinding.objects
@@ -567,6 +612,7 @@ def _gallery_rows(device):
         item = workers.setdefault(binding.worker_id, {
             "worker": binding.worker,
             "bssWorkerId": str(identity.bss_worker_id or ""),
+            "name": _worker_display_name(binding.worker),
             "siteIds": set(),
             "embeddings": [],
             "bindingRows": [],
@@ -591,13 +637,14 @@ def _gallery_rows(device):
     return workers
 
 
-def _gallery_version(device, workers=None):
+def _gallery_version(device, workers=None, status=None):
     workers = workers if workers is not None else _gallery_rows(device)
+    status = status if status is not None else _worker_status_rows(device)
     fingerprint = []
     for worker_id in sorted(workers):
         item = workers[worker_id]
         fingerprint.append([
-            worker_id, item["bssWorkerId"], sorted(item["siteIds"]),
+            worker_id, item["bssWorkerId"], item.get("name") or "", sorted(item["siteIds"]),
             sorted((str(site_id), str(updated)) for site_id, updated in item["bindingRows"]),
             sorted((emb.id, emb.photo_id, str(emb.created_at), emb.weights_sha) for emb in item["embeddings"]),
         ])
@@ -605,6 +652,10 @@ def _gallery_version(device, workers=None):
         "model": EDGE_FACE_MODEL_NAME, "version": EDGE_FACE_MODEL_VERSION,
         "detector": EDGE_FACE_DETECTOR, "weights": EDGE_FACE_WEIGHTS_SHA,
         "workers": fingerprint,
+        "workerStatus": [
+            [row["bssWorkerId"], row["name"], row["siteIds"], row["embeddingCount"]]
+            for row in status
+        ],
     }, sort_keys=True, default=str)
     return hashlib.sha256(raw.encode()).hexdigest()
 
@@ -635,12 +686,14 @@ def edge_face_gallery(request):
     if device is None:
         return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
     workers = _gallery_rows(device)
-    version = _gallery_version(device, workers)
+    worker_status = _worker_status_rows(device)
+    version = _gallery_version(device, workers, worker_status)
     rows = []
     for worker_id in sorted(workers):
         item = workers[worker_id]
         rows.append({
             "bssWorkerId": item["bssWorkerId"],
+            "name": item.get("name") or "",
             "siteIds": sorted(item["siteIds"]),
             "embeddings": [base64.b64encode(bytes(emb.embedding)).decode("ascii")
                            for emb in item["embeddings"]],
@@ -656,6 +709,7 @@ def edge_face_gallery(request):
         "topk": EDGE_FACE_TOPK,
         "votes": EDGE_FACE_VOTES,
         "workers": rows,
+        "workerStatus": worker_status,
     }}, status=status.HTTP_200_OK)
 
 

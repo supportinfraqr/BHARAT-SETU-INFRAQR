@@ -14,6 +14,9 @@ let updateBusy = false;
 let engineAttempts = 0;
 let appVersion = '';
 let dataDirPrompted = false;
+let dataSetupChecked = false;
+let dataSetupRequired = false;
+let activeTab = 'overview';
 
 async function loadAppVersion() {
   const bridge = tauri();
@@ -309,6 +312,24 @@ function renderActivation() {
   qs('deviceName').addEventListener('keydown', event => { if (event.key === 'Enter') qs('activateBtn').click(); });
 }
 
+function renderLiveDetections(container, rows) {
+  if (!container) return;
+  if (!rows.length) {
+    container.innerHTML = '<span class="note">No faces detected in the current frame.</span>';
+    return;
+  }
+  container.innerHTML = rows.map(row => {
+    const name = row.pending ? 'Checking…' : (row.name || (row.matched ? row.bssWorkerId : 'Unknown'));
+    const bss = row.bssWorkerId || '';
+    const score = row.matchScore == null ? '' : `${Number(row.matchScore).toFixed(1)}% match`;
+    const cls = row.matched ? 'ok' : row.pending ? 'warn' : 'muted';
+    return `<div class="live-detection ${cls}">
+      <div><b>${esc(name)}</b>${bss ? `<span>${esc(bss)}</span>` : '<span>Unmatched face</span>'}</div>
+      <span>${esc(score || (row.pending ? 'Processing' : 'Unknown'))}</span>
+    </div>`;
+  }).join('');
+}
+
 function openLiveView(camera) {
   const id = camera.cameraId;
   const backdrop = document.createElement('div');
@@ -322,6 +343,7 @@ function openLiveView(camera) {
       <img data-live-image alt="${esc(camera.label)} live view" />
       <div class="live-empty" data-live-empty>Connecting to the camera…</div>
     </div>
+    <div class="live-detections" data-live-detections><span class="note">Waiting for face detection…</span></div>
     <div class="live-foot">
       <p class="note">Local RTSP preview from this laptop. Attendance upload starts automatically after the employer whitelists this device's public IP.</p>
       <div class="live-meta"><span>Allowed IP</span><b>${esc(camera.allowedIp || 'Waiting for employer')}</b><span>Whitelisted</span><b>${camera.ipWhitelisted ? 'Yes' : 'No'}</b></div>
@@ -334,6 +356,7 @@ function openLiveView(camera) {
   const image = backdrop.querySelector('[data-live-image]');
   const empty = backdrop.querySelector('[data-live-empty]');
   const status = backdrop.querySelector('[data-live-status]');
+  const detections = backdrop.querySelector('[data-live-detections]');
   const close = () => {
     if (closed) return;
     closed = true;
@@ -360,6 +383,10 @@ function openLiveView(camera) {
       image.style.display = 'block';
       empty.style.display = 'none';
       status.textContent = '';
+      try {
+        const detectionResponse = await fetch(`${BASE}/api/detections/${id}?t=${Date.now()}`, { cache: 'no-store' });
+        if (detectionResponse.ok) renderLiveDetections(detections, (await detectionResponse.json()).data || []);
+      } catch { /* keep the image running even if detection metadata fails */ }
     } catch (error) {
       image.style.display = 'none';
       empty.style.display = 'grid';
@@ -416,6 +443,26 @@ function localEventRows(events, cameras) {
   }).join('');
 }
 
+function cameraRow(camera) {
+  const id = camera.cameraId;
+  const stateInfo = cameraState(camera);
+  const canPreview = camera.rtspConfigured;
+  return `<tr>
+    <td><b>${esc(camera.label)}</b><span class="table-sub mono">${esc(camera.uid || '—')}</span></td>
+    <td><div class="table-status">${statusPill(camera)}<span class="pill ${stateInfo.cls}">${esc(stateInfo.label)}</span></div></td>
+    <td>${esc(camera.sourceDeviceName || state.deviceName || 'This device')}</td>
+    <td class="mono">${esc(camera.allowedIp || '—')}</td>
+    <td>${esc(camera.rtspConfigured ? 'Configured' : 'No RTSP')}</td>
+    <td>${esc(when(camera.lastEventAt))}</td>
+    <td><div class="table-actions">
+      <button id="live-${id}" class="btn primary" type="button" ${canPreview ? '' : 'disabled'}>See live</button>
+      ${camera.canRemove
+        ? `<button id="remove-${id}" class="btn danger" type="button">Remove</button>`
+        : `<span class="note">Owned by ${esc(camera.sourceDeviceName || 'another device')}</span>`}
+    </div></td>
+  </tr>`;
+}
+
 function siteCapacity(site, cameras) {
   const limit = Math.max(1, Number(site.cameraLimit || 5));
   const used = cameras.length;
@@ -424,7 +471,7 @@ function siteCapacity(site, cameras) {
 
 function siteSection(site, cameras) {
   const capacity = siteCapacity(site, cameras);
-  return `<section class="site-group">
+  return `<section class="site-group" data-panel="cameras">
     <div class="site-head">
       <div>
         <h3>${esc(site.name || 'Employer site')}</h3>
@@ -432,7 +479,10 @@ function siteSection(site, cameras) {
       </div>
       <div class="site-meta"><span class="pill ${capacity.remaining ? 'ok' : 'warn'}">${capacity.remaining ? `${capacity.remaining} slots left` : 'Camera slots full'}</span></div>
     </div>
-    ${cameras.length ? `<div class="grid cams">${cameras.map(cameraCard).join('')}</div>` : '<div class="card empty">No cameras added for this site yet.</div>'}
+    ${cameras.length ? `<div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Camera</th><th>Status</th><th>Owner</th><th>Allowed IP</th><th>RTSP</th><th>Last event</th><th>Actions</th></tr></thead>
+      <tbody>${cameras.map(cameraRow).join('')}</tbody>
+    </table></div>` : '<div class="card empty">No cameras added for this site yet.</div>'}
   </section>`;
 }
 
@@ -649,7 +699,7 @@ function updateStatusLive(current) {
 
 function dataFolderCard(current) {
   const path = current?.dataDir || '—';
-  return `<section class="card">
+  return `<section class="card" data-panel="storage">
     <div class="cam-title"><h3>Data folder</h3><span class="pill muted">Local only</span></div>
     <p class="muted">Activation, the local event database, worker gallery, and model cache are stored here. Changing the folder safely copies the current data and keeps the old folder as a backup.</p>
     <div class="res-list data-path"><div><span>Current folder</span><b>${esc(path)}</b></div></div>
@@ -659,6 +709,41 @@ function dataFolderCard(current) {
     </div>
     <p id="dataDirMsg" class="note"></p>
   </section>`;
+}
+
+function renderDataFolderSetup(info) {
+  const app = qs('app');
+  if (!app) return;
+  app.innerHTML = `<div class="dashboard"><section class="card data-setup">
+    <p class="section-label">First-time setup</p>
+    <h2>Choose the attendance data folder</h2>
+    <p class="muted">BSS Attendance must store activation, the local event database, worker gallery, and model cache in a folder you choose before the engine can start.</p>
+    <div class="res-list data-path" style="margin:14px 0"><div><span>Suggested default</span><b>${esc(info?.path || '')}</b></div></div>
+    <button id="mandatoryDataFolderBtn" class="btn primary" type="button">Choose folder</button>
+    <p id="dataSetupMsg" class="note" style="margin-top:10px">The folder is required. The engine will start after you select it.</p>
+  </section></div>`;
+  qs('mandatoryDataFolderBtn')?.addEventListener('click', async () => {
+    const msg = qs('dataSetupMsg');
+    if (msg) msg.textContent = 'Selecting folder…';
+    await chooseDataFolder(true);
+  });
+}
+
+async function enforceDataFolder() {
+  if (dataSetupChecked) return dataSetupRequired;
+  dataSetupChecked = true;
+  const bridge = tauri();
+  if (!bridge?.core?.invoke) return false;
+  try {
+    const info = await bridge.core.invoke('data_dir_info');
+    if (!info?.configured && !info?.hasData) {
+      dataSetupRequired = true;
+      renderDataFolderSetup(info);
+      return true;
+    }
+  } catch { /* let normal startup continue if launcher state is unavailable */ }
+  dataSetupRequired = false;
+  return false;
 }
 
 async function chooseDataFolder(skipConfirm = false) {
@@ -687,6 +772,8 @@ async function chooseDataFolder(skipConfirm = false) {
   try {
     if (msg) msg.textContent = 'Stopping engine and copying data…';
     await bridge.core.invoke('set_data_dir', { path: selected, copyExisting: true });
+    dataSetupRequired = false;
+    dataSetupChecked = true;
     await refresh();
     showMessage('dataDirMsg', 'Data folder changed. Engine restarted.', true);
   } catch (error) {
@@ -700,6 +787,8 @@ async function chooseDataFolder(skipConfirm = false) {
       if (!useExisting) return;
       try {
         await bridge.core.invoke('set_data_dir', { path: selected, copyExisting: false });
+        dataSetupRequired = false;
+        dataSetupChecked = true;
         await refresh();
         showMessage('dataDirMsg', 'Using the existing data folder.', true);
       } catch (nextError) {
@@ -750,12 +839,95 @@ async function maybePromptDataFolder() {
   } catch { /* folder prompt is optional */ }
 }
 
+const TABS = [
+  ['overview', 'Overview'],
+  ['cameras', 'Cameras'],
+  ['workers', 'Workers'],
+  ['resources', 'Resources'],
+  ['storage', 'Data & backup'],
+];
+
+function tabBar() {
+  return `<nav class="tabbar" aria-label="Client sections">${TABS.map(([id, label]) =>
+    `<button type="button" class="tabbtn ${activeTab === id ? 'active' : ''}" data-tab="${id}">${esc(label)}</button>`
+  ).join('')}</nav>`;
+}
+
+function applyActiveTab() {
+  if (!TABS.some(([id]) => id === activeTab)) activeTab = 'overview';
+  document.querySelectorAll('[data-panel]').forEach(panel => {
+    panel.style.display = panel.dataset.panel === activeTab ? '' : 'none';
+  });
+  document.querySelectorAll('[data-tab]').forEach(button => {
+    button.classList.toggle('active', button.dataset.tab === activeTab);
+  });
+}
+
+function siteNameFor(id) {
+  const site = (state?.sites || []).find(item => Number(item.id) === Number(id));
+  return site?.name || `Site ${id}`;
+}
+
+function overviewPanel() {
+  const workers = state?.gallery?.status || [];
+  const enrolled = workers.filter(worker => worker.hasFaceData).length;
+  const cameras = state?.cameras || [];
+  const active = cameras.filter(camera => camera.sendAllowed).length;
+  const gpu = state?.resources?.gpu || state?.gpu || {};
+  return `<section class="card" data-panel="overview">
+    <div class="cam-title"><h3>Overview</h3><span class="pill muted">Live status</span></div>
+    <div class="res-grid" style="margin-top:12px">
+      <div class="res-panel"><h4>Workers</h4><div class="res-list">
+        <div><span>Bound workers</span><b>${workers.length}</b></div>
+        <div><span>Face data ready</span><b>${enrolled} / ${workers.length}</b></div>
+        <div><span>Missing face data</span><b class="${workers.length && enrolled < workers.length ? 'res-warn' : ''}">${Math.max(0, workers.length - enrolled)}</b></div>
+      </div></div>
+      <div class="res-panel"><h4>Cameras</h4><div class="res-list">
+        <div><span>Configured</span><b>${cameras.length}</b></div>
+        <div><span>Sending attendance</span><b>${active}</b></div>
+        <div><span>Pending events</span><b>${state?.outbox ?? 0}</b></div>
+      </div></div>
+      <div class="res-panel"><h4>GPU</h4><div class="res-list">
+        <div><span>Status</span><b>${esc(gpu.message || gpu.state || 'Not initialized')}</b></div>
+        <div><span>Provider</span><b>${esc(gpu.provider || 'CPU')}</b></div>
+        <div><span>Detected</span><b>${gpu.detected === false ? 'No' : gpu.detected ? 'Yes' : 'Unknown'}</b></div>
+      </div></div>
+    </div>
+  </section>`;
+}
+
+function workerPanel() {
+  const workers = state?.gallery?.status || [];
+  const enrolled = workers.filter(worker => worker.hasFaceData).length;
+  const rows = workers.map(worker => {
+    const count = Number(worker.embeddingCount || 0);
+    const label = count === 0 ? 'Not enrolled' : count < 5 ? `Partial · ${count}` : `Ready · ${count}`;
+    const cls = count === 0 ? 'bad' : count < 5 ? 'warn' : 'ok';
+    const sites = (worker.siteIds || []).map(siteNameFor).join(', ') || '—';
+    return `<tr>
+      <td><b>${esc(worker.name || worker.bssWorkerId)}</b></td>
+      <td class="mono">${esc(worker.bssWorkerId || '—')}</td>
+      <td>${esc(sites)}</td>
+      <td><span class="pill ${cls}">${esc(label)}</span></td>
+      <td>${count ? 'On this device' : 'Enroll face photos in BSS'}</td>
+    </tr>`;
+  }).join('');
+  return `<section class="card" data-panel="workers">
+    <div class="cam-title"><h3>Workers</h3><span class="pill ${workers.length && enrolled === workers.length ? 'ok' : 'warn'}">${enrolled} / ${workers.length} with face data</span></div>
+    <p class="muted">Bound workers received from BSS. A worker needs enrolled face photos before the client can detect them.</p>
+    ${workers.length ? `<div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Worker</th><th>BSS ID</th><th>Site</th><th>Face data</th><th>Client status</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>` : '<p class="empty" style="margin-top:12px">No bound workers found for this employer yet.</p>'}
+  </section>`;
+}
+
 function resourceCard(resources) {
   resources = resources || {};
   const detected = resources.detected || {};
   const settings = resources.settings || {};
   const cores = Number(detected.cpuCores || 1);
-  return `<section class="card">
+  return `<section class="card" data-panel="resources">
     <div class="cam-title"><h3>System resources</h3><span class="pill muted">Display only · 10s refresh</span></div>
     <p class="muted">System-wide usage and the engine's current share. CPU affinity and AI-worker concurrency apply immediately. GPU memory is a best-effort target; RAM and disk are uncapped.</p>
     <div id="resourceLive">${resourceLiveHtml(resources)}</div>
@@ -818,11 +990,15 @@ function render() {
         </div>
       </section>
 
+      ${tabBar()}
+      ${overviewPanel()}
+      ${workerPanel()}
+
       ${resourceCard(state.resources)}
 
       ${dataFolderCard(state)}
 
-      <section class="card">
+      <section class="card" data-panel="cameras">
         <div class="cam-title"><h3>Add camera</h3><span class="pill muted">Test before saving</span></div>
         <p class="muted">Enter all details, test the RTSP connection, then save. Connection details cannot be edited after saving. Saving requires a live BSS server connection so the camera is synced.</p>
         ${state.bssConnected ? '' : '<p class="note blocked">BSS server connection required to save a camera.</p>'}
@@ -839,7 +1015,7 @@ function render() {
         ${!sites.length ? '<p class="note blocked">The employer must create a site before you can add a camera.</p>' : allSitesFull ? '<p class="note blocked">All sites have reached their camera limit. Remove a camera or ask BSS admin to raise the limit.</p>' : ''}
       </section>
 
-      <section class="card">
+      <section class="card" data-panel="overview">
         <div class="cam-title"><h3>Local event log</h3><span class="pill ${state.outbox ? 'warn' : 'ok'}">${esc(state.outbox ? `${state.outbox} waiting to sync` : 'All events synced')}</span></div>
         <p class="muted">Events are stored on this machine when the internet is down and sync automatically when BSS is reachable.</p>
         ${localEventRows(state.localEvents || [], cameras)}
@@ -847,6 +1023,14 @@ function render() {
 
       ${grouped.length ? grouped.map(group => siteSection(group, group.cameras)).join('') : '<div class="card empty">No employer sites are available for this client yet. Ask the employer to create a site.</div>'}
     </div>`;
+
+  document.querySelectorAll('[data-tab]').forEach(button => {
+    button.addEventListener('click', () => {
+      activeTab = button.dataset.tab || 'overview';
+      applyActiveTab();
+    });
+  });
+  applyActiveTab();
 
   let cameraTested = false;
   const testMsg = qs('testCameraMsg');
@@ -958,13 +1142,13 @@ function render() {
 }
 
 async function refresh() {
+  if (await enforceDataFolder()) return;
   try {
     await discoverEngine();
     state = await api('/api/status');
     engineAttempts = 0;
     render();
     startPolling();
-    setTimeout(() => void maybePromptDataFolder(), 1200);
   } catch {
     engineAttempts += 1;
     const conn = qs('conn');
