@@ -40,8 +40,8 @@ jobs:
       - name: Linux Tauri dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgl1 libglib2.0-0 libsm6 libxext6 libxrender1
+          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::ForceIPv4=true install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgl1 libglib2.0-0 libsm6 libxext6 libxrender1
 
       - name: Install engine dependencies
         working-directory: FINAL/attendance/engine
@@ -76,11 +76,29 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.BSS_TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.BSS_TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
+          set -o pipefail
           if [ "${{ runner.os }}" = "Windows" ]; then
-            npm run build -- --bundles nsis,msi
+            (npm run build -- --verbose --bundles nsis 2>&1) | tee tauri-build.log
           else
-            npm run build -- --bundles appimage
+            (npm run build -- --verbose --bundles appimage 2>&1) | tee tauri-build.log
           fi
+
+      - name: Upload Tauri log on failure
+        if: failure()
+        working-directory: FINAL/attendance
+        shell: bash
+        env:
+          BSS_DEPLOY_SSH_KEY: ${{ secrets.BSS_DEPLOY_SSH_KEY }}
+          BSS_DEPLOY_HOST: ${{ secrets.BSS_DEPLOY_HOST }}
+          BSS_DEPLOY_USER: ${{ secrets.BSS_DEPLOY_USER }}
+          BSS_DEPLOY_PATH: ${{ secrets.BSS_DEPLOY_PATH }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s
+' "$BSS_DEPLOY_SSH_KEY" | tr -d '' > ~/.ssh/bss_deploy
+          chmod 700 ~/.ssh; chmod 600 ~/.ssh/bss_deploy
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/bss_deploy "$BSS_DEPLOY_USER@$BSS_DEPLOY_HOST" "mkdir -p '$BSS_DEPLOY_PATH/.incoming-$GITHUB_RUN_ID/${{ matrix.artifact }}'"
+          scp -q -o StrictHostKeyChecking=no -i ~/.ssh/bss_deploy tauri-build.log "$BSS_DEPLOY_USER@$BSS_DEPLOY_HOST:$BSS_DEPLOY_PATH/.incoming-$GITHUB_RUN_ID/${{ matrix.artifact }}/tauri-build.log" || true
 
       - name: Sign Windows installers
         if: runner.os == 'Windows'
@@ -115,8 +133,6 @@ jobs:
           if [ "${{ runner.os }}" = "Windows" ]; then
             cp src-tauri/target/release/bundle/nsis/*.exe executable/${{ matrix.artifact }}/ || true
             cp src-tauri/target/release/bundle/nsis/*.exe.sig executable/${{ matrix.artifact }}/ || true
-            cp src-tauri/target/release/bundle/msi/*.msi executable/${{ matrix.artifact }}/ || true
-            cp src-tauri/target/release/bundle/msi/*.msi.sig executable/${{ matrix.artifact }}/ || true
           else
             cp src-tauri/target/release/bundle/appimage/*.AppImage executable/${{ matrix.artifact }}/ || true
             cp src-tauri/target/release/bundle/appimage/*.AppImage.sig executable/${{ matrix.artifact }}/ || true

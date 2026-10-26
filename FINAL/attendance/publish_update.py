@@ -19,6 +19,11 @@ def one(paths, label):
     return items[0]
 
 
+def optional(paths):
+    items = [p for p in paths if p.is_file()]
+    return items[0] if items else None
+
+
 def relink(stable: Path, target: str):
     try:
         if stable.is_symlink() or stable.exists():
@@ -43,7 +48,7 @@ def main():
     updates.mkdir(parents=True, exist_ok=True)
 
     win_exe = one(win_dir.glob("*.exe"), "Windows setup executable")
-    win_msi = one(win_dir.glob("*.msi"), "Windows MSI")
+    win_msi = optional(win_dir.glob("*.msi"))
     linux_app = one(linux_dir.glob("*.AppImage"), "Linux AppImage")
     win_sig = Path(str(win_exe) + ".sig")
     linux_sig = Path(str(linux_app) + ".sig")
@@ -56,16 +61,20 @@ def main():
     msi_name = f"BSS-Attendance-{version}-Windows-Setup.msi"
     linux_name = f"BSS-Attendance-{version}-Linux.AppImage"
 
-    for source, name in (
+    copies = [
         (win_exe, win_name),
         (win_sig, f"{win_name}.sig"),
-        (win_msi, msi_name),
         (linux_app, linux_name),
         (linux_sig, f"{linux_name}.sig"),
-    ):
+    ]
+    if win_msi is not None:
+        copies.append((win_msi, msi_name))
+    for source, name in copies:
         shutil.copy2(source, updates / name)
 
-    keep = {win_name, f"{win_name}.sig", msi_name, linux_name, f"{linux_name}.sig"}
+    keep = {win_name, f"{win_name}.sig", linux_name, f"{linux_name}.sig"}
+    if win_msi is not None:
+        keep.add(msi_name)
     for pattern in ("BSS-Attendance-*-Windows-Setup.exe", "BSS-Attendance-*-Windows-Setup.exe.sig",
                     "BSS-Attendance-*-Windows-Setup.msi", "BSS-Attendance-*-Linux.AppImage",
                     "BSS-Attendance-*-Linux.AppImage.sig"):
@@ -91,7 +100,10 @@ def main():
     (updates / "latest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
     relink(root / "BSS-Attendance-Windows-Setup.exe", f"updates/{win_name}")
-    relink(root / "BSS-Attendance-Windows-Setup.msi", f"updates/{msi_name}")
+    if win_msi is not None:
+        relink(root / "BSS-Attendance-Windows-Setup.msi", f"updates/{msi_name}")
+    else:
+        (root / "BSS-Attendance-Windows-Setup.msi").unlink(missing_ok=True)
     relink(root / "BSS-Attendance-Linux.AppImage", f"updates/{linux_name}")
 
     shutil.rmtree(incoming, ignore_errors=True)
