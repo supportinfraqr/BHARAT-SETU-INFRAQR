@@ -219,3 +219,5 @@ input:focus, select:focus { border-color: #93B4E8; box-shadow: 0 0 0 3px rgba(30
 .res-gpu-name { color: var(--ink); font-size: 12px; font-weight: 800; margin: 4px 0 2px; }
 
 .res-warn { color: var(--orange); font-weight: 700; }
+
+.data-path b { text-align: left; word-break: break-all; }

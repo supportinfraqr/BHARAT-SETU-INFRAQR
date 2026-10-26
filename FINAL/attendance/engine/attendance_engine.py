@@ -36,7 +36,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.1"
+APP_VERSION = "1.5.2"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 EVENT_COOLDOWN_SECONDS = 60
@@ -658,6 +658,9 @@ class Engine:
                 continue
         self.workers = {}
         self.last_heartbeat = None
+        self.last_heartbeat_source = ""
+        self.last_device_heartbeat = None
+        self.last_device_heartbeat_error = ""
         self.last_event_at = {}
         self.home_dir = Path(home)
         self._metric_prev = {}
@@ -1484,6 +1487,9 @@ class Engine:
             "version": APP_VERSION, "status": "ONLINE",
         }, timeout=10)
         self.last_heartbeat = _now()
+        self.last_heartbeat_source = "device"
+        self.last_device_heartbeat = self.last_heartbeat
+        self.last_device_heartbeat_error = ""
 
     def _clear_gallery(self):
         try:
@@ -1527,6 +1533,7 @@ class Engine:
                 try:
                     self._send_device_heartbeat()
                 except BssError as exc:
+                    self.last_device_heartbeat_error = str(exc)[:240]
                     if exc.status_code == 401:
                         self._deactivate_local()
                     LOG.warning("Device heartbeat failed: %s", exc)
@@ -1545,6 +1552,9 @@ class Engine:
                             worker.status = "AUTH_FAILED"
                             self.store.save()
                         LOG.warning("Heartbeat failed for camera %s: %s", worker.camera_id, exc)
+                    else:
+                        self.last_heartbeat = _now()
+                        self.last_heartbeat_source = "camera"
                 self.flush_outbox()
             except Exception as exc:  # noqa: BLE001
                 LOG.exception("Heartbeat loop error: %s", exc)
@@ -1605,6 +1615,10 @@ class Engine:
             "version": APP_VERSION,
             "bssConnected": heartbeat_fresh,
             "lastHeartbeatAt": _iso(self.last_heartbeat),
+            "lastHeartbeatSource": self.last_heartbeat_source,
+            "lastDeviceHeartbeatAt": _iso(self.last_device_heartbeat),
+            "lastDeviceHeartbeatError": self.last_device_heartbeat_error,
+            "dataDir": str(self.home_dir),
             "faceModel": {"model": MODEL_NAME, "version": MODEL_VERSION, "detector": DETECTOR_BACKEND},
             "gallery": {"ready": self.gallery.ready, "version": self.gallery.version,
                         "workers": len({e[1] for e in self.gallery.entries})},

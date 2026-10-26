@@ -13,6 +13,7 @@ let updateInfo = null;
 let updateBusy = false;
 let engineAttempts = 0;
 let appVersion = '';
+let dataDirPrompted = false;
 
 async function loadAppVersion() {
   const bridge = tauri();
@@ -629,6 +630,126 @@ function resourceLiveHtml(resources) {
   </div>`;
 }
 
+function deviceHeartbeatText(current) {
+  if (current?.lastDeviceHeartbeatAt) return when(current.lastDeviceHeartbeatAt);
+  return current?.lastDeviceHeartbeatError ? 'Failed' : 'Never';
+}
+
+function updateStatusLive(current) {
+  const set = (id, text) => { const el = qs(id); if (el) el.textContent = text; };
+  set('heartbeatAt', when(current?.lastHeartbeatAt));
+  const heartbeat = qs('heartbeatAt');
+  if (heartbeat) heartbeat.title = current?.lastHeartbeatSource || '';
+  const device = qs('deviceHeartbeatAt');
+  if (device) {
+    device.textContent = deviceHeartbeatText(current);
+    device.title = current?.lastDeviceHeartbeatError || '';
+  }
+}
+
+function dataFolderCard(current) {
+  const path = current?.dataDir || '—';
+  return `<section class="card">
+    <div class="cam-title"><h3>Data folder</h3><span class="pill muted">Local only</span></div>
+    <p class="muted">Activation, the local event database, worker gallery, and model cache are stored here. Changing the folder safely copies the current data and keeps the old folder as a backup.</p>
+    <div class="res-list data-path"><div><span>Current folder</span><b>${esc(path)}</b></div></div>
+    <div class="row">
+      <button id="changeDataDirBtn" class="btn" type="button">Change folder</button>
+      <button id="backupDbBtn" class="btn" type="button">Export database backup</button>
+    </div>
+    <p id="dataDirMsg" class="note"></p>
+  </section>`;
+}
+
+async function chooseDataFolder(skipConfirm = false) {
+  const bridge = tauri();
+  if (!bridge?.core?.invoke) {
+    await showAlert('Data folder unavailable', 'Run the installed desktop client to choose a data folder.');
+    return;
+  }
+  let selected = '';
+  try {
+    selected = String(await bridge.core.invoke('choose_data_dir') || '');
+  } catch (error) {
+    await showAlert('Could not open folder picker', error.message || String(error));
+    return;
+  }
+  if (!selected) return;
+  if (!skipConfirm) {
+    const confirmed = await showDialog({
+      title: 'Change data folder?',
+      body: `The current activation, local event database, and worker gallery will be copied to:\n\n${selected}\n\nThe old folder will be kept as a backup, then the engine will restart.`,
+      confirmLabel: 'Copy and restart',
+    });
+    if (!confirmed) return;
+  }
+  const msg = qs('dataDirMsg');
+  try {
+    if (msg) msg.textContent = 'Stopping engine and copying data…';
+    await bridge.core.invoke('set_data_dir', { path: selected, copyExisting: true });
+    await refresh();
+    showMessage('dataDirMsg', 'Data folder changed. Engine restarted.', true);
+  } catch (error) {
+    const text = String(error?.message || error);
+    if (text.includes('TARGET_HAS_DATA')) {
+      const useExisting = await showDialog({
+        title: 'Folder already contains BSS data',
+        body: 'This folder already has BSS Attendance data. Use that data, or choose a different folder. The current folder will not be changed.',
+        confirmLabel: 'Use existing data',
+      });
+      if (!useExisting) return;
+      try {
+        await bridge.core.invoke('set_data_dir', { path: selected, copyExisting: false });
+        await refresh();
+        showMessage('dataDirMsg', 'Using the existing data folder.', true);
+      } catch (nextError) {
+        await showAlert('Could not switch data folder', nextError?.message || String(nextError));
+      }
+    } else {
+      await showAlert('Could not change data folder', text);
+    }
+  }
+}
+
+async function exportDatabaseBackup() {
+  const bridge = tauri();
+  if (!bridge?.core?.invoke) {
+    await showAlert('Backup unavailable', 'Run the installed desktop client to export a database backup.');
+    return;
+  }
+  try {
+    const path = String(await bridge.core.invoke('choose_backup_file') || '');
+    if (!path) return;
+    await bridge.core.invoke('export_data_backup', { path });
+    await showAlert('Backup saved', path);
+  } catch (error) {
+    await showAlert('Backup failed', error?.message || String(error));
+  }
+}
+
+async function maybePromptDataFolder() {
+  if (dataDirPrompted) return;
+  dataDirPrompted = true;
+  const bridge = tauri();
+  if (!bridge?.core?.invoke) return;
+  if (localStorage.getItem('bssDataFolderPrompted') === '1') return;
+  try {
+    const info = await bridge.core.invoke('data_dir_info');
+    if (info?.configured || info?.hasData) {
+      localStorage.setItem('bssDataFolderPrompted', '1');
+      return;
+    }
+    const choose = await showDialog({
+      title: 'Where should attendance data be saved?',
+      body: `BSS Attendance stores activation, the local event database, worker gallery, and model cache on this machine.\n\nDefault folder:\n${info?.path || ''}\n\nChoose a folder, or use the default.`,
+      confirmLabel: 'Choose folder',
+      cancelLabel: 'Use default',
+    });
+    localStorage.setItem('bssDataFolderPrompted', '1');
+    if (choose) await chooseDataFolder(true);
+  } catch { /* folder prompt is optional */ }
+}
+
 function resourceCard(resources) {
   resources = resources || {};
   const detected = resources.detected || {};
@@ -689,7 +810,8 @@ function render() {
         </div>
         <div class="meta">
           <div>Device ID<b class="mono" style="font-size:10px;word-break:break-all">${esc(state.deviceId || '—')}</b></div>
-          <div>Heartbeat<b>${esc(when(state.lastHeartbeatAt))}</b></div>
+          <div>Last BSS contact<b id="heartbeatAt" title="${esc(state.lastHeartbeatSource || '')}">${esc(when(state.lastHeartbeatAt))}</b></div>
+          <div>Device heartbeat<b id="deviceHeartbeatAt" title="${esc(state.lastDeviceHeartbeatError || '')}">${esc(deviceHeartbeatText(state))}</b></div>
           <div>Pending events<b>${esc(state.outbox ?? 0)}</b></div>
           <div>Cameras<b>${cameras.length}</b></div>
           <div>Client version<b>${esc(state.version || '—')}</b></div>
@@ -697,6 +819,8 @@ function render() {
       </section>
 
       ${resourceCard(state.resources)}
+
+      ${dataFolderCard(state)}
 
       <section class="card">
         <div class="cam-title"><h3>Add camera</h3><span class="pill muted">Test before saving</span></div>
@@ -811,6 +935,9 @@ function render() {
     }
   });
 
+  qs('changeDataDirBtn')?.addEventListener('click', () => chooseDataFolder(false));
+  qs('backupDbBtn')?.addEventListener('click', exportDatabaseBackup);
+
   for (const camera of cameras) {
     const id = camera.cameraId;
     qs(`live-${id}`)?.addEventListener('click', () => openLiveView(camera));
@@ -837,6 +964,7 @@ async function refresh() {
     engineAttempts = 0;
     render();
     startPolling();
+    setTimeout(() => void maybePromptDataFolder(), 1200);
   } catch {
     engineAttempts += 1;
     const conn = qs('conn');
@@ -885,6 +1013,7 @@ function startPolling() {
         const conn = qs('conn');
         conn.textContent = state.bssConnected ? 'BSS connected' : 'Connecting to BSS…';
         conn.className = `pill ${state.bssConnected ? 'ok' : 'warn'}`;
+        updateStatusLive(state);
         updateResourceLive(state.resources);
       }
     } catch {
