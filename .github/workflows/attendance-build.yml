@@ -51,6 +51,7 @@ jobs:
 
       - name: Build Python sidecar
         working-directory: FINAL/attendance
+        shell: bash
         run: |
           set -o pipefail
           (python build_engine.py 2>&1) | tee sidecar-build.log
