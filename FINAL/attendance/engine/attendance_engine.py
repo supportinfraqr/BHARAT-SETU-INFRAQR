@@ -36,7 +36,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.0"
+APP_VERSION = "1.5.1"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 EVENT_COOLDOWN_SECONDS = 60
@@ -659,6 +659,10 @@ class Engine:
         self.workers = {}
         self.last_heartbeat = None
         self.last_event_at = {}
+        self.home_dir = Path(home)
+        self._metric_prev = {}
+        self._storage_cache = (0.0, {})
+        self._process = psutil.Process() if psutil is not None else None
         self.gate = ResourceGate(2)
         self.resource_settings = self._normalise_resources(self.store.data.get("resources") or {})
         self._gpu_configured = False
@@ -783,30 +787,183 @@ class Engine:
             pass
         return self.status()
 
+    def _rate(self, key, value, now):
+        previous = self._metric_prev.get(key)
+        self._metric_prev[key] = (now, value)
+        if previous is None or now <= previous[0] or value is None or previous[1] is None:
+            return 0.0
+        if value < previous[1]:
+            return 0.0
+        return round((value - previous[1]) / (now - previous[0]), 1)
+
+    def _engine_storage(self):
+        now = time.time()
+        cached_at, cached = self._storage_cache
+        if cached and now - cached_at < 60:
+            return dict(cached)
+        total = models = 0
+        try:
+            for path in self.home_dir.rglob("*"):
+                try:
+                    if path.is_symlink() or not path.is_file():
+                        continue
+                    size = path.stat().st_size
+                    total += size
+                    rel = path.relative_to(self.home_dir)
+                    if len(rel.parts) >= 3 and rel.parts[0] == ".deepface" and rel.parts[1] == "weights":
+                        models += size
+                except (OSError, ValueError):
+                    continue
+        except OSError:
+            pass
+        data = {
+            "engineStorageMb": round(total / (1024 * 1024), 1),
+            "engineModelMb": round(models / (1024 * 1024), 1),
+            "engineDataMb": round((total - models) / (1024 * 1024), 1),
+        }
+        self._storage_cache = (now, data)
+        return dict(data)
+
     def _detected_system(self):
+        now = time.time()
         cpu_count = (psutil.cpu_count(logical=True) if psutil else os.cpu_count()) or 1
-        cpu_percent = None
-        memory_total = None
-        memory_available = None
-        process_memory = None
-        if psutil is not None:
-            try:
-                cpu_percent = round(float(psutil.cpu_percent(interval=None)), 1)
-                memory = psutil.virtual_memory()
-                memory_total = round(memory.total / (1024 * 1024))
-                memory_available = round(memory.available / (1024 * 1024))
-                process_memory = round(psutil.Process().memory_info().rss / (1024 * 1024))
-            except Exception:
-                pass
-        return {
+        result = {
             "cpuCores": int(cpu_count),
-            "cpuPercent": cpu_percent,
-            "memoryTotalMb": memory_total,
-            "memoryAvailableMb": memory_available,
-            "processMemoryMb": process_memory,
+            "cpuPhysicalCores": None,
+            "cpuPercent": None,
+            "load1": None,
+            "load5": None,
+            "load15": None,
+            "memoryTotalMb": None,
+            "memoryUsedMb": None,
+            "memoryAvailableMb": None,
+            "memoryPercent": None,
+            "swapTotalMb": None,
+            "swapUsedMb": None,
+            "diskTotalMb": None,
+            "diskUsedMb": None,
+            "diskFreeMb": None,
+            "diskPercent": None,
+            "netSentBytes": None,
+            "netRecvBytes": None,
+            "netSentRate": 0.0,
+            "netRecvRate": 0.0,
+            "diskReadBytes": None,
+            "diskWriteBytes": None,
+            "diskReadRate": 0.0,
+            "diskWriteRate": 0.0,
+            "processCpuPercent": None,
+            "processThreads": None,
+            "processMemoryMb": None,
+            "processMemoryPercent": None,
+            "processVmsMb": None,
+            "processUptimeSeconds": None,
+            "processReadBytes": None,
+            "processWriteBytes": None,
+            "processReadRate": 0.0,
+            "processWriteRate": 0.0,
+            "cpuAffinityCores": int(cpu_count),
+            "engineStorageMb": None,
+            "engineModelMb": None,
+            "engineDataMb": None,
             "platform": platform.system(),
             "machine": platform.machine(),
         }
+        if psutil is None:
+            return result
+        try:
+            result["cpuPhysicalCores"] = psutil.cpu_count(logical=False)
+        except Exception:
+            pass
+        try:
+            load = psutil.getloadavg()
+            result["load1"], result["load5"], result["load15"] = (round(float(v), 2) for v in load)
+        except Exception:
+            pass
+        try:
+            result["cpuPercent"] = round(float(psutil.cpu_percent(interval=None)), 1)
+        except Exception:
+            pass
+        try:
+            memory = psutil.virtual_memory()
+            total = round(memory.total / (1024 * 1024))
+            available = round(memory.available / (1024 * 1024))
+            result["memoryTotalMb"] = total
+            result["memoryAvailableMb"] = available
+            result["memoryUsedMb"] = max(0, total - available)
+            result["memoryPercent"] = round((max(0, total - available) / total) * 100, 1) if total else None
+            swap = psutil.swap_memory()
+            result["swapTotalMb"] = round(swap.total / (1024 * 1024))
+            result["swapUsedMb"] = round(swap.used / (1024 * 1024))
+        except Exception:
+            pass
+        try:
+            disk = psutil.disk_usage(str(self.home_dir))
+            total = round(disk.total / (1024 * 1024))
+            used = round(disk.used / (1024 * 1024))
+            result["diskTotalMb"] = total
+            result["diskUsedMb"] = used
+            result["diskFreeMb"] = round(disk.free / (1024 * 1024))
+            result["diskPercent"] = round(disk.percent, 1)
+        except Exception:
+            pass
+        try:
+            net = psutil.net_io_counters()
+            result["netSentBytes"] = int(net.bytes_sent)
+            result["netRecvBytes"] = int(net.bytes_recv)
+            result["netSentRate"] = self._rate("net_sent", net.bytes_sent, now)
+            result["netRecvRate"] = self._rate("net_recv", net.bytes_recv, now)
+        except Exception:
+            pass
+        try:
+            disk_io = psutil.disk_io_counters()
+            if disk_io is not None:
+                result["diskReadBytes"] = int(disk_io.read_bytes)
+                result["diskWriteBytes"] = int(disk_io.write_bytes)
+                result["diskReadRate"] = self._rate("disk_read", disk_io.read_bytes, now)
+                result["diskWriteRate"] = self._rate("disk_write", disk_io.write_bytes, now)
+        except Exception:
+            pass
+        try:
+            process = self._process or psutil.Process()
+            try:
+                result["processCpuPercent"] = round(float(process.cpu_percent(interval=None)), 1)
+            except Exception:
+                pass
+            try:
+                result["processThreads"] = int(process.num_threads())
+            except Exception:
+                pass
+            try:
+                info = process.memory_info()
+                result["processMemoryMb"] = round(info.rss / (1024 * 1024), 1)
+                result["processVmsMb"] = round(info.vms / (1024 * 1024), 1)
+                result["processMemoryPercent"] = round(float(process.memory_percent()), 1)
+            except Exception:
+                pass
+            try:
+                result["processUptimeSeconds"] = int(max(0, now - process.create_time()))
+            except Exception:
+                pass
+            try:
+                io = process.io_counters()
+                if io is not None:
+                    result["processReadBytes"] = int(io.read_bytes)
+                    result["processWriteBytes"] = int(io.write_bytes)
+                    result["processReadRate"] = self._rate("process_read", io.read_bytes, now)
+                    result["processWriteRate"] = self._rate("process_write", io.write_bytes, now)
+            except Exception:
+                pass
+            try:
+                affinity = process.cpu_affinity()
+                if affinity:
+                    result["cpuAffinityCores"] = len(affinity)
+            except Exception:
+                pass
+        except Exception:
+            pass
+        result.update(self._engine_storage())
+        return result
 
     def _normalise_resources(self, raw):
         detected = self._detected_system()
@@ -845,7 +1002,7 @@ class Engine:
         cores = int(settings.get("cpuCores") or 0)
         if psutil is not None:
             try:
-                psutil.Process().cpu_affinity(list(range(min(cores, total) if cores > 0 else total)))
+                (self._process or psutil.Process()).cpu_affinity(list(range(min(cores, total) if cores > 0 else total)))
             except Exception as exc:  # noqa: BLE001
                 LOG.warning("Could not apply CPU affinity: %s", exc)
         thread_limit = str(min(cores, total) if cores > 0 else total)
@@ -860,9 +1017,114 @@ class Engine:
             self.store.data["resources"] = dict(settings)
             self.store.save()
 
+    def _gpu_payload(self):
+        base = dict(self.gpu_status)
+        try:
+            from gpu_telemetry import collect_gpu_telemetry
+            telemetry = collect_gpu_telemetry(os.getpid())
+        except Exception as exc:  # noqa: BLE001
+            telemetry = {
+                "available": False, "detected": None, "source": "NVML",
+                "driver": "", "devices": [],
+                "totals": {"memoryTotalMb": None, "memoryUsedMb": None,
+                            "memoryFreeMb": None, "utilizationPercent": None,
+                            "temperatureC": None, "powerW": None,
+                            "engineProcessMemoryMb": None},
+                "error": f"{type(exc).__name__}: {exc}",
+            }
+        active = bool(base.get("active"))
+        mode = str(base.get("mode") or "auto")
+        provider = str(base.get("provider") or "CPU")
+        detected = telemetry.get("detected")
+        if detected is None and (active or provider == "DirectML"):
+            detected = True
+        if mode == "off":
+            state = "detected_disabled" if detected else ("not_detected" if detected is False else "unknown")
+        elif mode == "required" and not active:
+            state = "required_unavailable"
+        elif active:
+            state = "active"
+        elif detected:
+            state = "detected_unavailable"
+        elif detected is False:
+            state = "not_detected"
+        else:
+            state = "unknown"
+        messages = {
+            "active": f"GPU detected · {provider} active" + ("" if telemetry.get("available") else " · detailed telemetry unavailable"),
+            "detected_disabled": "GPU detected · disabled (CPU only)",
+            "detected_unavailable": "GPU detected · accelerator unavailable, using CPU",
+            "not_detected": "No GPU detected · using CPU",
+            "required_unavailable": "GPU required · unavailable",
+            "unknown": "GPU detection unavailable · using CPU",
+        }
+        totals = telemetry.get("totals") or {}
+        result = dict(base)
+        result.update({
+            "detected": detected,
+            "state": state,
+            "message": messages.get(state, base.get("message") or ""),
+            "provider": provider,
+            "driver": telemetry.get("driver") or "",
+            "telemetryAvailable": bool(telemetry.get("available")),
+            "telemetrySource": telemetry.get("source") or "NVML",
+            "telemetryError": telemetry.get("error") or "",
+            "hardware": telemetry.get("devices") or [],
+            "totals": totals,
+            "memoryTotalMb": totals.get("memoryTotalMb"),
+            "memoryUsedMb": totals.get("memoryUsedMb"),
+            "memoryFreeMb": totals.get("memoryFreeMb"),
+            "utilizationPercent": totals.get("utilizationPercent"),
+            "temperatureC": totals.get("temperatureC"),
+            "powerW": totals.get("powerW"),
+            "engineProcessMemoryMb": totals.get("engineProcessMemoryMb"),
+            "memoryLimitMb": base.get("memoryLimitMb") or 0,
+        })
+        return result
+
     def resource_payload(self):
-        return {"detected": self._detected_system(), "settings": dict(self.resource_settings),
-                "gpu": dict(self.gpu_status)}
+        detected = self._detected_system()
+        settings = dict(self.resource_settings)
+        total_cores = max(1, int(detected.get("cpuCores") or 1))
+        configured_cores = int(settings.get("cpuCores") or 0)
+        effective_cores = int(detected.get("cpuAffinityCores") or total_cores)
+        allocation = {
+            "cpuCores": configured_cores if configured_cores > 0 else total_cores,
+            "cpuCoresConfigured": configured_cores,
+            "cpuCoresEffective": effective_cores,
+            "cpuCoresAutomatic": configured_cores == 0,
+            "maxCameraWorkers": int(settings.get("maxCameraWorkers") or 1),
+            "gpuMemoryMb": int(settings.get("gpuMemoryMb") or 0),
+            "ramLimitMb": None,
+            "diskLimitMb": None,
+        }
+        workers = list(self.workers.values())
+        workload = {
+            "cameras": len(workers),
+            "activeWorkers": sum(1 for worker in workers if worker.mode == "SENDING" and worker.camera_token),
+            "maxWorkers": int(settings.get("maxCameraWorkers") or 1),
+            "processing": int(self.gate.active),
+            "fps": round(sum(float(worker.fps or 0) for worker in workers), 1),
+            "facesNow": sum(len(worker._face_boxes) for worker in workers),
+            "framesProcessed": sum(int(worker.frames_processed or 0) for worker in workers),
+            "facesDetected": sum(int(worker.faces_detected or 0) for worker in workers),
+        }
+        engine = {
+            "pid": os.getpid(),
+            "cpuPercent": detected.get("processCpuPercent"),
+            "threads": detected.get("processThreads"),
+            "memoryMb": detected.get("processMemoryMb"),
+            "memoryPercent": detected.get("processMemoryPercent"),
+            "vmsMb": detected.get("processVmsMb"),
+            "uptimeSeconds": detected.get("processUptimeSeconds"),
+            "diskReadRate": detected.get("processReadRate"),
+            "diskWriteRate": detected.get("processWriteRate"),
+            "storageMb": detected.get("engineStorageMb"),
+            "modelsMb": detected.get("engineModelMb"),
+            "dataMb": detected.get("engineDataMb"),
+        }
+        return {"detected": detected, "settings": settings, "allocation": allocation,
+                "engine": engine, "workload": workload, "gpu": self._gpu_payload()}
 
     def configure_gpu(self):
         if self._gpu_configured:
@@ -1332,6 +1594,7 @@ class Engine:
                                     and allowed and worker.camera_token),
                 "sendBlockedReason": reason,
             })
+        resources = self.resource_payload()
         return {
             "activated": bool(self.token and self.device_id),
             "deviceId": self.device_id,
@@ -1345,9 +1608,9 @@ class Engine:
             "faceModel": {"model": MODEL_NAME, "version": MODEL_VERSION, "detector": DETECTOR_BACKEND},
             "gallery": {"ready": self.gallery.ready, "version": self.gallery.version,
                         "workers": len({e[1] for e in self.gallery.entries})},
-            "gpu": dict(self.gpu_status),
+            "gpu": resources["gpu"],
             "cameras": cameras,
-            "resources": self.resource_payload(),
+            "resources": resources,
             "outbox": self.events.count(),
             "localEvents": self.events.recent(25),
         }

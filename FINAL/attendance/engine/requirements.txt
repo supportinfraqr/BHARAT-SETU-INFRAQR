@@ -19,3 +19,4 @@ nvidia-curand-cu12==10.3.9.90; sys_platform == "linux"
 nvidia-cufft-cu12==11.3.3.83; sys_platform == "linux"
 nvidia-cuda-nvrtc-cu12==12.8.93; sys_platform == "linux"
 nvidia-nvjitlink-cu12==12.9.86; sys_platform == "linux"
+nvidia-ml-py==13.615.71

@@ -435,29 +435,209 @@ function siteSection(site, cameras) {
   </section>`;
 }
 
-function resourceCard(resources) {
+function resourceNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function resourceMb(value) {
+  const number = resourceNumber(value);
+  if (number === null) return '—';
+  if (Math.abs(number) >= 1024) return `${(number / 1024).toFixed(1)} GB`;
+  return `${Math.round(number)} MB`;
+}
+
+function resourceGb(value) {
+  const number = resourceNumber(value);
+  return number === null ? '—' : `${(number / 1024).toFixed(1)} GB`;
+}
+
+function resourcePercent(value) {
+  const number = resourceNumber(value);
+  return number === null ? '—' : `${number.toFixed(1)}%`;
+}
+
+function resourceBitRate(value) {
+  const number = resourceNumber(value);
+  if (number === null) return '—';
+  const bits = number * 8;
+  if (bits >= 1e9) return `${(bits / 1e9).toFixed(1)} Gbps`;
+  if (bits >= 1e6) return `${(bits / 1e6).toFixed(1)} Mbps`;
+  if (bits >= 1e3) return `${(bits / 1e3).toFixed(1)} Kbps`;
+  return `${Math.round(bits)} bps`;
+}
+
+function resourceDataRate(value) {
+  const number = resourceNumber(value);
+  if (number === null) return '—';
+  if (number >= 1e9) return `${(number / 1e9).toFixed(1)} GB/s`;
+  if (number >= 1e6) return `${(number / 1e6).toFixed(1)} MB/s`;
+  if (number >= 1e3) return `${(number / 1e3).toFixed(1)} KB/s`;
+  return `${Math.round(number)} B/s`;
+}
+
+function resourceDuration(value) {
+  const number = resourceNumber(value);
+  if (number === null) return '—';
+  const seconds = Math.max(0, Math.round(number));
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (days) return `${days}d ${hours}h`;
+  if (hours) return `${hours}h ${minutes}m`;
+  if (minutes) return `${minutes}m`;
+  return `${seconds}s`;
+}
+
+function gpuBadge(gpu) {
+  const state = gpu.state || (gpu.active ? 'active' : (gpu.detected ? 'detected_unavailable' : 'unknown'));
+  const labels = {
+    active: 'GPU detected · active',
+    detected_disabled: 'GPU detected · disabled',
+    detected_unavailable: 'GPU detected · unavailable',
+    not_detected: 'No GPU detected',
+    required_unavailable: 'GPU required · unavailable',
+    unknown: 'GPU detection unavailable',
+  };
+  const classes = {
+    active: 'ok', detected_disabled: 'warn', detected_unavailable: 'warn',
+    not_detected: 'muted', required_unavailable: 'bad', unknown: 'muted',
+  };
+  return `<span class="pill ${classes[state] || 'muted'}">${esc(labels[state] || labels.unknown)}</span>`;
+}
+
+function resourceLiveHtml(resources) {
   const detected = resources?.detected || {};
-  const settings = resources?.settings || {};
-  const cores = Number(detected.cpuCores || 1);
-  const cpu = detected.cpuPercent == null ? '—' : `${detected.cpuPercent}%`;
-  const totalRam = detected.memoryTotalMb ? `${(detected.memoryTotalMb / 1024).toFixed(1)} GB` : '—';
-  const freeRam = detected.memoryAvailableMb ? `${(detected.memoryAvailableMb / 1024).toFixed(1)} GB` : '—';
-  const procRam = detected.processMemoryMb ? `${detected.processMemoryMb} MB` : '—';
+  const allocation = resources?.allocation || {};
+  const engine = resources?.engine || {};
+  const workload = resources?.workload || {};
   const gpu = resources?.gpu || {};
-  const gpuText = gpu.active
-    ? `GPU active${gpu.devices?.length ? ` · ${gpu.devices.join(', ')}` : ''}${gpu.memoryLimitMb ? ` · ${gpu.memoryLimitMb} MB limit` : ''}`
-    : `CPU only${gpu.message ? ` · ${gpu.message}` : ''}`;
-  return `<section class="card">
-    <div class="cam-title"><h3>System resources</h3><span class="pill muted">${esc(detected.platform || 'Local system')} · ${esc(detected.machine || '')}</span></div>
-    <p class="muted">All captured frames are processed; if the machine cannot keep up, the oldest unprocessed frames are dropped. CPU affinity and camera concurrency apply immediately. GPU mode changes take effect after the engine restarts.</p>
-    <div class="cam-info" style="margin-bottom:12px">
-      <div>CPU cores<b>${esc(cores)}</b></div>
-      <div>CPU usage<b id="resourceCpu">${esc(cpu)}</b></div>
-      <div>RAM total<b>${esc(totalRam)}</b></div>
-      <div>RAM available<b id="resourceRam">${esc(freeRam)}</b></div>
-      <div>Engine memory<b id="resourceProcess">${esc(procRam)}</b></div>
-      <div>AI processing<b>${esc(gpuText)}</b></div>
+  const totalCores = resourceNumber(detected.cpuCores) ?? 1;
+  const physicalCores = resourceNumber(detected.cpuPhysicalCores);
+  const cpuPercent = resourcePercent(detected.cpuPercent);
+  const load = resourceNumber(detected.load1);
+  const memoryUsed = resourceMb(detected.memoryUsedMb);
+  const memoryTotal = resourceGb(detected.memoryTotalMb);
+  const memoryPercent = resourcePercent(detected.memoryPercent);
+  const diskUsed = resourceGb(detected.diskUsedMb);
+  const diskTotal = resourceGb(detected.diskTotalMb);
+  const diskPercent = resourcePercent(detected.diskPercent);
+  const diskFree = resourceGb(detected.diskFreeMb);
+  const netDown = resourceBitRate(detected.netRecvRate);
+  const netUp = resourceBitRate(detected.netSentRate);
+
+  const configuredCores = resourceNumber(allocation.cpuCoresConfigured) ?? 0;
+  const effectiveCores = resourceNumber(allocation.cpuCoresEffective) ?? totalCores;
+  const allocatedCores = allocation.cpuCoresAutomatic
+    ? `Automatic · ${effectiveCores} of ${totalCores} cores`
+    : `${allocation.cpuCores || configuredCores} of ${totalCores} cores · ${effectiveCores} effective`;
+  const gpuLimit = resourceNumber(allocation.gpuMemoryMb);
+  const engineCpu = resourceNumber(engine.cpuPercent);
+  const engineCoreShare = engineCpu === null ? '—' : `${(engineCpu / 100).toFixed(2)} cores`;
+  const engineThreads = resourceNumber(engine.threads);
+  const engineMemory = resourceMb(engine.memoryMb);
+  const engineMemoryPct = resourcePercent(engine.memoryPercent);
+  const engineStorage = resourceMb(engine.storageMb);
+  const engineData = resourceMb(engine.dataMb);
+  const engineModels = resourceMb(engine.modelsMb);
+  const engineDiskRead = resourceDataRate(engine.diskReadRate);
+  const engineDiskWrite = resourceDataRate(engine.diskWriteRate);
+  const engineUptime = resourceDuration(engine.uptimeSeconds);
+
+  const hardware = Array.isArray(gpu.hardware) ? gpu.hardware : [];
+  const gpuHardware = hardware.map(item => {
+    const name = item.name || `GPU ${item.index ?? ''}`;
+    const memory = (item.memoryUsedMb == null && item.memoryTotalMb == null)
+      ? 'VRAM unavailable'
+      : `${resourceMb(item.memoryUsedMb)} / ${resourceMb(item.memoryTotalMb)}`;
+    const parts = [memory];
+    if (item.utilizationPercent != null) parts.push(`${resourcePercent(item.utilizationPercent)} util`);
+    if (item.temperatureC != null) parts.push(`${resourcePercent(item.temperatureC).replace('%', '°C')}`);
+    if (item.powerW != null) parts.push(`${Number(item.powerW).toFixed(1)} W`);
+    return `<div class="res-gpu-name">${esc(name)}</div><div class="res-sub">${parts.map(esc).join(' · ')}</div>`;
+  }).join('');
+  const gpuTotals = gpu.totals || {};
+  const gpuMemory = gpuTotals.memoryUsedMb == null
+    ? 'VRAM usage unavailable'
+    : `${resourceMb(gpuTotals.memoryUsedMb)} / ${resourceMb(gpuTotals.memoryTotalMb)} · ${resourcePercent(gpuTotals.utilizationPercent)} util`;
+  const engineGpuUsed = resourceNumber(gpu.engineProcessMemoryMb);
+  const engineGpuOver = engineGpuUsed !== null && gpuLimit !== null && engineGpuUsed > gpuLimit;
+  const engineGpu = engineGpuUsed === null
+    ? 'Engine GPU memory unavailable'
+    : `Engine ${resourceMb(engineGpuUsed)}${gpuLimit ? ` · configured target ${resourceMb(gpuLimit)}${engineGpuOver ? ' (target exceeded)' : ''}` : ' · no target'}`;
+  const gpuDetail = gpu.telemetryAvailable === false
+    ? 'Detailed GPU telemetry is unavailable for this provider.'
+    : (gpu.detected === false ? 'No GPU hardware was detected.' : '');
+  const gpuMessage = gpu.message || gpuDetail;
+
+  return `<div class="res-grid">
+    <div class="res-panel">
+      <h4>System</h4>
+      <div class="res-list">
+        <div><span>CPU</span><b>${esc(String(totalCores))} logical${physicalCores ? ` · ${physicalCores} physical` : ''}</b></div>
+        <div><span>CPU load</span><b>${esc(cpuPercent)}${load === null ? '' : ` · ${load.toFixed(2)} load`}</b></div>
+        <div><span>RAM</span><b>${esc(memoryUsed)} / ${esc(memoryTotal)} · ${esc(memoryPercent)}</b></div>
+        <div><span>Swap</span><b>${esc(resourceMb(detected.swapUsedMb))} / ${esc(resourceMb(detected.swapTotalMb))}</b></div>
+        <div><span>Disk</span><b>${esc(diskUsed)} / ${esc(diskTotal)} · ${esc(diskPercent)}</b></div>
+        <div><span>Disk free</span><b>${esc(diskFree)}</b></div>
+        <div><span>Disk I/O</span><b>${esc(resourceDataRate(detected.diskReadRate))} read · ${esc(resourceDataRate(detected.diskWriteRate))} write</b></div>
+        <div><span>Network</span><b>${esc(netDown)} ↓ · ${esc(netUp)} ↑</b></div>
+      </div>
     </div>
+    <div class="res-panel">
+      <h4>Allocated to engine</h4>
+      <div class="res-list">
+        <div><span>CPU</span><b>${esc(allocatedCores)}</b></div>
+        <div><span>AI workers</span><b>${esc(String(allocation.maxCameraWorkers ?? '—'))}</b></div>
+        <div><span>GPU memory target</span><b>${gpuLimit ? esc(resourceMb(gpuLimit)) : 'No target'}</b></div>
+        <div><span>RAM</span><b>No cap</b></div>
+        <div><span>Disk</span><b>No cap</b></div>
+      </div>
+    </div>
+    <div class="res-panel">
+      <h4>Engine usage</h4>
+      <div class="res-list">
+        <div><span>CPU</span><b>${esc(engineCpu === null ? '—' : `${engineCpu.toFixed(1)}% · ${engineCoreShare}`)}</b></div>
+        <div><span>Threads</span><b>${esc(engineThreads === null ? '—' : String(engineThreads))}</b></div>
+        <div><span>RAM</span><b>${esc(engineMemory)} · ${esc(engineMemoryPct)}</b></div>
+        <div><span>Disk data</span><b>${esc(engineStorage)} (${esc(engineData)} data + ${esc(engineModels)} models)</b></div>
+        <div><span>Disk I/O</span><b>${esc(engineDiskRead)} read · ${esc(engineDiskWrite)} write</b></div>
+        <div><span>Uptime</span><b>${esc(engineUptime)}</b></div>
+      </div>
+    </div>
+    <div class="res-panel">
+      <h4>GPU</h4>
+      <div style="margin-bottom:8px">${gpuBadge(gpu)}</div>
+      ${gpuHardware || `<div class="res-sub">${esc(gpuMessage)}</div>`}
+      ${gpuHardware ? `<div class="res-sub">${esc(gpuMemory)}</div>` : ''}
+      <div class="res-sub${engineGpuOver ? ' res-warn' : ''}" style="margin-top:6px">${esc(engineGpu)}</div>
+      ${gpu.driver ? `<div class="res-sub">Driver ${esc(gpu.driver)} · ${esc(gpu.provider || '')}</div>` : ''}
+      ${gpuDetail && gpuHardware ? `<div class="res-sub">${esc(gpuDetail)}</div>` : ''}
+    </div>
+    <div class="res-panel">
+      <h4>Workload</h4>
+      <div class="res-list">
+        <div><span>Cameras</span><b>${esc(String(workload.cameras ?? '—'))}</b></div>
+        <div><span>Active workers</span><b>${esc(String(workload.activeWorkers ?? '—'))} / ${esc(String(workload.maxWorkers ?? '—'))}</b></div>
+        <div><span>Processing now</span><b>${esc(String(workload.processing ?? '—'))}</b></div>
+        <div><span>FPS</span><b>${esc(String(workload.fps ?? '—'))}</b></div>
+        <div><span>Faces now</span><b>${esc(String(workload.facesNow ?? '—'))}</b></div>
+        <div><span>Frames processed</span><b>${esc(String(workload.framesProcessed ?? '—'))}</b></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function resourceCard(resources) {
+  resources = resources || {};
+  const detected = resources.detected || {};
+  const settings = resources.settings || {};
+  const cores = Number(detected.cpuCores || 1);
+  return `<section class="card">
+    <div class="cam-title"><h3>System resources</h3><span class="pill muted">Display only · 10s refresh</span></div>
+    <p class="muted">System-wide usage and the engine's current share. CPU affinity and AI-worker concurrency apply immediately. GPU memory is a best-effort target; RAM and disk are uncapped.</p>
+    <div id="resourceLive">${resourceLiveHtml(resources)}</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;align-items:end">
       <div><label>CPU cores to use<input id="resourceCores" type="number" min="0" max="${cores}" value="${esc(settings.cpuCores ?? 0)}" /><span class="note">0 = Automatic — uses all ${esc(cores)} available cores</span></label></div>
       <div><label>Cameras processed at once<input id="resourceWorkers" type="number" min="1" max="16" value="${esc(settings.maxCameraWorkers ?? 2)}" /></label></div>
@@ -470,12 +650,8 @@ function resourceCard(resources) {
 }
 
 function updateResourceLive(resources) {
-  const detected = resources?.detected || {};
-  const cpu = detected.cpuPercent == null ? '—' : `${detected.cpuPercent}%`;
-  const freeRam = detected.memoryAvailableMb ? `${(detected.memoryAvailableMb / 1024).toFixed(1)} GB` : '—';
-  const procRam = detected.processMemoryMb ? `${detected.processMemoryMb} MB` : '—';
-  const set = (id, text) => { const el = qs(id); if (el) el.textContent = text; };
-  set('resourceCpu', cpu); set('resourceRam', freeRam); set('resourceProcess', procRam);
+  const container = qs('resourceLive');
+  if (container) container.innerHTML = resourceLiveHtml(resources || {});
 }
 
 function render() {
@@ -719,7 +895,7 @@ function startPolling() {
         }
       } catch { /* keep retrying */ }
     }
-  }, 5000);
+  }, 10000);
 }
 
 function tauri() {
