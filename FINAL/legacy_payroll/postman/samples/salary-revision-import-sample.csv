@@ -1,0 +1,4 @@
+employee_code,revision_type,gross_salary,Basic Salary,ctc,auto_approve,auto_implement,remarks,effective_from,epf,pf_on_actuals,esic,lwf,professionalTax,arrears_applicable,arrears_from
+NSS02,annual_hike,50000,20000,,TRUE,TRUE,Annual hike 2026,2026-01-01,TRUE,FALSE,FALSE,TRUE,TRUE,false,
+NAG00003,new_joiner,25000,10000,,TRUE,TRUE,New joiner,2026-05-11,TRUE,TRUE,TRUE,TRUE,TRUE,false,
+EMP004,promotion,60000,24000,,FALSE,FALSE,Promotion with arrears,2026-04-01,,,,,,,true,2026-01-01

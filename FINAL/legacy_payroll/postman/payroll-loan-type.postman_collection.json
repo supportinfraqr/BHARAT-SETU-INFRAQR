@@ -1,0 +1,145 @@
+{
+  "info": {
+    "name": "HRMS Payroll – Loan Type",
+    "description": "Manage Loans modal — loan type CRUD (loanName + perquisiteRate).\n\n**Setup collection variables:**\n| Variable | Example |\n|----------|--------|\n| `hrms` | `http://localhost:3300/` |\n| `org_uuid` | your org UUID |\n| `token_admin` | admin JWT (without Bearer prefix) |\n| `loanTypeId` | auto-set from create/list |\n\n**Recommended order:** 1 Create → 2 List → 3 Get by ID → 4 Update → 5 Delete",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "hrms", "value": "http://localhost:3300/" },
+    { "key": "org_uuid", "value": "" },
+    { "key": "token_admin", "value": "" },
+    { "key": "loanTypeId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1 – Create loan type",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "  const json = pm.response.json();",
+              "  const id = json?.data?._id;",
+              "  if (id) {",
+              "    pm.collectionVariables.set('loanTypeId', id);",
+              "    console.log('loanTypeId saved:', id);",
+              "  }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+          { "key": "org_uuid", "value": "{{org_uuid}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"loanName\": \"Employee Loan\",\n  \"perquisiteRate\": 0\n}"
+        },
+        "url": "{{hrms}}payRoll/loan-types",
+        "description": "Manage Loans modal — new row save.\n\n**Required:** loanName\n**Optional:** perquisiteRate (default 0)"
+      }
+    },
+    {
+      "name": "2 – List loan types",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const json = pm.response.json();",
+              "  const first = json?.data?.loanTypes?.[0];",
+              "  if (first?._id) {",
+              "    pm.collectionVariables.set('loanTypeId', first._id);",
+              "  }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+          { "key": "org_uuid", "value": "{{org_uuid}}" }
+        ],
+        "url": {
+          "raw": "{{hrms}}payRoll/loan-types?search=&includeInactive=false",
+          "host": ["{{hrms}}payRoll"],
+          "path": ["loan-types"],
+          "query": [
+            { "key": "search", "value": "" },
+            { "key": "includeInactive", "value": "false" },
+            { "key": "status", "value": "active", "disabled": true }
+          ]
+        },
+        "description": "Manage Loans table list. Query: search, status, includeInactive=true"
+      }
+    },
+    {
+      "name": "3 – Get loan type by ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+          { "key": "org_uuid", "value": "{{org_uuid}}" }
+        ],
+        "url": "{{hrms}}payRoll/loan-types/{{loanTypeId}}"
+      }
+    },
+    {
+      "name": "4 – Update loan type",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+          { "key": "org_uuid", "value": "{{org_uuid}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"loanName\": \"Employee Loan - 1\",\n  \"perquisiteRate\": 2.5\n}"
+        },
+        "url": "{{hrms}}payRoll/loan-types/{{loanTypeId}}",
+        "description": "Edit pencil icon — loanName and/or perquisiteRate update."
+      }
+    },
+    {
+      "name": "5 – Delete loan type",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+          { "key": "org_uuid", "value": "{{org_uuid}}" }
+        ],
+        "url": "{{hrms}}payRoll/loan-types/{{loanTypeId}}",
+        "description": "Trash icon — hard delete (only if no employee loans linked yet)."
+      }
+    },
+    {
+      "name": "6 – Deactivate loan type (optional)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+          { "key": "org_uuid", "value": "{{org_uuid}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"inactive\"\n}"
+        },
+        "url": "{{hrms}}payRoll/loan-types/{{loanTypeId}}",
+        "description": "Soft disable — use instead of delete when loans exist later."
+      }
+    }
+  ]
+}

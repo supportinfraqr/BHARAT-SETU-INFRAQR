@@ -1,0 +1,405 @@
+{
+  "info": {
+    "name": "HRMS Payroll – Salary Revision Bulk Import",
+    "description": "Bulk Excel/CSV import for salary revisions (creates `SalaryRevision` records + optional auto approve/implement).\n\n**Setup collection variables:**\n| Variable | Example |\n|----------|--------|\n| `hrms` | `http://localhost:3300/` |\n| `org_uuid` | your org UUID |\n| `token_admin` | admin JWT |\n| `importBatchId` | auto-set from preview |\n| `revisionId` | auto-set from confirm or list |\n| `employeeId` | MongoDB employee _id |\n\n**Sample CSV:** `postman/samples/salary-revision-import-sample.csv`\n\n**CSV columns:**\n`employee_code, revision_type, base_salary, gross_salary, ctc, effective_from, arrears_applicable, arrears_from, remarks, auto_approve, auto_implement`\n\n**revision_type:** `annual_hike` | `new_joiner` | `promotion` | `increment` | `adjustment`\n\n**Recommended order:**\n1. Preview → 2. Confirm → 3. List revisions (UI table)\n\n**auto_approve / auto_implement:**\n- `true, true` → migration: direct `implemented` + employee salary updated\n- `false, false` → `pending`: use folder 4 to approve + implement manually",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "hrms", "value": "http://localhost:3300/" },
+    { "key": "org_uuid", "value": "" },
+    { "key": "token_admin", "value": "" },
+    { "key": "importBatchId", "value": "" },
+    { "key": "revisionId", "value": "" },
+    { "key": "employeeId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1 – Setup (optional)",
+      "item": [
+        {
+          "name": "1.1 Get org salary components",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" }
+            ],
+            "url": "{{hrms}}payRoll/salaryComponents",
+            "description": "base_salary se gross/CTC org rules se calculate hoga."
+          }
+        },
+        {
+          "name": "1.2 List salary revisions (before import)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const first = json?.data?.data?.[0];",
+                  "  if (first?._id) {",
+                  "    pm.collectionVariables.set('revisionId', first._id);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" }
+            ],
+            "url": {
+              "raw": "{{hrms}}payRoll/revision?page=1&limit=20",
+              "host": ["{{hrms}}payRoll"],
+              "path": ["revision"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "status", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Salary revision UI table — same data source."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 – Bulk import (preview → confirm)",
+      "item": [
+        {
+          "name": "2.1 Preview salary revision import",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const batchId = json?.data?.importBatchId;",
+                  "  if (batchId) {",
+                  "    pm.collectionVariables.set('importBatchId', batchId);",
+                  "    console.log('importBatchId saved:', batchId);",
+                  "  }",
+                  "  const firstValid = (json?.data?.preview || []).find((r) => r.valid);",
+                  "  if (firstValid?.employeeId) {",
+                  "    pm.collectionVariables.set('employeeId', firstValid.employeeId);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "description": "Select postman/samples/salary-revision-import-sample.csv",
+                  "type": "file",
+                  "src": "postman/samples/salary-revision-import-sample.csv"
+                }
+              ]
+            },
+            "url": "{{hrms}}payRoll/import/salary-revision/preview",
+            "description": "Upload CSV/Excel. Response: preview rows with oldSalary, newSalary, incrementAmount, plannedStatus.\n\nReplace employee codes in sample CSV with real customId/uniqueId before upload."
+          }
+        },
+        {
+          "name": "2.2 Confirm salary revision import",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const first = json?.data?.applied?.[0];",
+                  "  if (first?.revisionId) {",
+                  "    pm.collectionVariables.set('revisionId', first.revisionId);",
+                  "    console.log('revisionId saved:', first.revisionId);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"importBatchId\": \"{{importBatchId}}\"\n}"
+            },
+            "url": "{{hrms}}payRoll/import/salary-revision/confirm",
+            "description": "Creates SalaryRevision per valid row. auto_approve/auto_implement flags from CSV apply here."
+          }
+        },
+        {
+          "name": "2.3 Get confirmed import batch",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" }
+            ],
+            "url": {
+              "raw": "{{hrms}}payRoll/import/salary-revision?importBatchId={{importBatchId}}",
+              "host": ["{{hrms}}payRoll"],
+              "path": ["import", "salary-revision"],
+              "query": [{ "key": "importBatchId", "value": "{{importBatchId}}" }]
+            },
+            "description": "Import batch audit — rows, summary (revisionsCreated, approved, implemented, failed)."
+          }
+        },
+        {
+          "name": "2.4 Cancel draft (optional)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" }
+            ],
+            "url": "{{hrms}}payRoll/import/salary-revision/{{importBatchId}}",
+            "description": "Sirf `draft` status batch cancel hota hai. Confirm se pehle use karo."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 – Verify revisions (UI table)",
+      "item": [
+        {
+          "name": "3.1 List all revisions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  const first = json?.data?.data?.[0];",
+                  "  if (first?._id) {",
+                  "    pm.collectionVariables.set('revisionId', first._id);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" }
+            ],
+            "url": {
+              "raw": "{{hrms}}payRoll/revision?page=1&limit=20",
+              "host": ["{{hrms}}payRoll"],
+              "path": ["revision"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "Screenshot wali table — TYPE, CURRENT CTC, NEW CTC, INCREMENT, EFFECTIVE FROM, STATUS."
+          }
+        },
+        {
+          "name": "3.2 List revisions by status",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" }
+            ],
+            "url": {
+              "raw": "{{hrms}}payRoll/revision?status=implemented&page=1&limit=20",
+              "host": ["{{hrms}}payRoll"],
+              "path": ["revision"],
+              "query": [
+                { "key": "status", "value": "implemented" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "status: pending | approved | rejected | implemented"
+          }
+        },
+        {
+          "name": "3.3 Get revision by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" }
+            ],
+            "url": "{{hrms}}payRoll/revision/{{revisionId}}",
+            "description": "View action — single revision detail."
+          }
+        },
+        {
+          "name": "3.4 Employee revision history",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" }
+            ],
+            "url": "{{hrms}}payRoll/revision/employee/{{employeeId}}"
+          }
+        },
+        {
+          "name": "3.5 Verify employee payrollInfo",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" }
+            ],
+            "url": "{{hrms}}payRoll/employee/{{employeeId}}/payrollInfo",
+            "description": "implemented revisions ke baad updated salary yahan dikhegi."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 – Manual approve / implement (pending rows)",
+      "description": "Jab CSV mein auto_approve=false, auto_implement=false ho — ya sirf approve karna ho.",
+      "item": [
+        {
+          "name": "4.1 Approve revision",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\",\n  \"comments\": \"Approved via Postman\"\n}"
+            },
+            "url": "{{hrms}}payRoll/revision/{{revisionId}}/approve"
+          }
+        },
+        {
+          "name": "4.2 Implement revision",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": "{{hrms}}payRoll/revision/{{revisionId}}/implement",
+            "description": "Employee payrollInfo update + arrears (if applicable)."
+          }
+        },
+        {
+          "name": "4.3 Reject revision",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"rejected\",\n  \"comments\": \"Rejected via Postman\"\n}"
+            },
+            "url": "{{hrms}}payRoll/revision/{{revisionId}}/approve"
+          }
+        },
+        {
+          "name": "4.4 Delete pending revision",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" }
+            ],
+            "url": "{{hrms}}payRoll/revision/{{revisionId}}",
+            "description": "Sirf pending ya rejected revisions delete ho sakti hain."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 – Single revision create (reference)",
+      "description": "Bulk import ke bina ek employee ke liye — UI form jaisa.",
+      "item": [
+        {
+          "name": "5.1 Salary structure preview (calculate)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" }
+            ],
+            "url": {
+              "raw": "{{hrms}}payRoll/employee/{{employeeId}}/salary-structure-preview?baseSalary=25000",
+              "host": ["{{hrms}}payRoll"],
+              "path": ["employee", "{{employeeId}}", "salary-structure-preview"],
+              "query": [{ "key": "baseSalary", "value": "25000" }]
+            },
+            "description": "baseSalary se gross/CTC calculate — revision form ke liye."
+          }
+        },
+        {
+          "name": "5.2 Create single salary revision",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json?.data?._id;",
+                  "  if (id) pm.collectionVariables.set('revisionId', id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_admin}}" },
+              { "key": "org_uuid", "value": "{{org_uuid}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{employeeId}}\",\n  \"revisionType\": \"annual_hike\",\n  \"effectiveFrom\": \"2026-01-01\",\n  \"newSalary\": {\n    \"basicSalary\": 25000,\n    \"grossSalary\": 45000,\n    \"ctc\": 638160\n  },\n  \"arrearsApplicable\": false,\n  \"remarks\": \"Single revision via API\"\n}"
+            },
+            "url": "{{hrms}}payRoll/revision/create"
+          }
+        }
+      ]
+    }
+  ]
+}

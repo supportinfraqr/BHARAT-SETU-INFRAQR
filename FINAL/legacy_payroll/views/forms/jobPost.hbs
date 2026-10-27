@@ -1,0 +1,427 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <title>Job Application</title>
+    <script>
+        function openPopup() {
+            document.getElementById('popupModal').style.display = 'flex';
+        }
+
+        function closePopup() {
+            document.getElementById('popupModal').style.display = 'none';
+        }
+        // window.onload = function () {
+        //     const job = {
+        //         skills: ["Angular", "TypeScript", "REST APIs"],
+        //         description: "Develop and maintain scalable web applications. Collaborate with cross-functional teams to design and implement software solutions.",
+        //         responsibilities: [
+        //             "Write clean, efficient, and maintainable code.",
+        //             "Debug and troubleshoot software issues.",
+        //             "Participate in code reviews and follow best practices."
+        //         ],
+        //         qualifications: [
+        //             "Proficiency in Angular, TypeScript, and REST APIs.",
+        //             "Strong problem-solving skills."
+        //         ]
+        //     };
+
+        //     // Render Skills
+        //     const skillsContainer = document.getElementById("skills-container");
+        //     job.skills.forEach(skill => {
+        //         const span = document.createElement("span");
+        //         span.className = "bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm";
+        //         span.textContent = skill;
+        //         skillsContainer.appendChild(span);
+        //     });
+
+        //     // Render Job Description
+        //     document.getElementById("job-description").textContent = job.description;
+
+        //     // Render Responsibilities
+        //     const responsibilitiesList = document.getElementById("responsibilities-list");
+        //     job.responsibilities.forEach(responsibility => {
+        //         const li = document.createElement("li");
+        //         li.textContent = responsibility;
+        //         responsibilitiesList.appendChild(li);
+        //     });
+
+        //     // Render Qualifications
+        //     const qualificationsList = document.getElementById("qualifications-list");
+        //     job.qualifications.forEach(qualification => {
+        //         const li = document.createElement("li");
+        //         li.textContent = qualification;
+        //         qualificationsList.appendChild(li);
+        //     });
+        // };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const jobId = urlParams.get('jobId');
+        const org_uuid = urlParams.get('org_uuid');
+
+        const apiRoot = window.location.origin;
+
+        function fillTextList(elementId, value) {
+            const list = document.getElementById(elementId);
+            list.innerHTML = "";
+            const lines = String(value || "")
+                .split(/\r?\n/)
+                .map(line => line.replace(/^[-•]\s*/, "").trim())
+                .filter(Boolean);
+            if (!lines.length) {
+                return;
+            }
+            lines.forEach(line => {
+                const item = document.createElement("li");
+                item.textContent = line;
+                list.appendChild(item);
+            });
+        }
+
+        async function fetchJobData() {
+            try {
+                const response = await fetch(`${apiRoot}/recruitment/getJobForPost/${jobId}?org_uuid=${org_uuid}`);
+                const data = await response.json();
+                const jobDetails = document.getElementById("jobDetails");
+                if (data.status === "success") {
+                    document.getElementById("job-title").textContent = data.data.title;
+                    const locationName = data.data.location?.organizationName || "";
+                    const locationCity = data.data.location?.organizationAddress?.city || "";
+                    const selectedLocation = locationName && locationCity
+                        ? `${locationName}, ${locationCity}`
+                        : (locationName || locationCity || "Not provided");
+                    document.getElementById("company-name").textContent = locationCity
+                        ? `${data.data.location?.organizationName || ""}, ${locationCity}`
+                        : (data.data.location?.organizationName || "");
+                    document.getElementById("job-description").textContent = data.data.description;
+                    document.getElementById("job-location").textContent = selectedLocation;
+                    document.getElementById("job-experience").textContent = data.data.experienceLevel;
+                    fillTextList("responsibilities-list", data.data.responsibilities);
+                    fillTextList("requirements-list", data.data.requirements);
+                    fillTextList("qualifications-list", data.data.education);
+                    document.getElementById("job-salary").textContent = `${data.data.salaryRange.min} - ${data.data.salaryRange.max}`;
+
+                    const skillsContainer = document.getElementById("skills-container");
+                    skillsContainer.innerHTML = "";
+                    data.data.skills.forEach(skill => {
+                        const span = document.createElement("span");
+                        span.className = "bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm";
+                        span.textContent = skill;
+                        skillsContainer.appendChild(span);
+                    });
+                } else {
+                    jobDetails.innerHTML = `<p>${data.message}</p>`;
+                }
+            } catch (error) {
+                document.getElementById("jobDetails").innerHTML = "<p>Error fetching job details.</p>";
+            }
+        }
+
+        function openPopup() {
+            document.getElementById('popupModal').style.display = 'flex';
+        }
+
+        function closePopup() {
+            document.getElementById('popupModal').style.display = 'none';
+        }
+
+        async function submitForm() {
+            const name = document.getElementById("popup-name").value;
+            const email = document.getElementById("popup-email").value;
+            const phone = document.getElementById("popup-phone").value;
+            let skills = document.getElementById("popup-skills").value;
+            skills = skills.split(",").map(skill => skill.trim());
+            const resume = document.getElementById("popup-resume").files[0];
+
+            const formData = new FormData();
+            formData.append("fullName", name);
+            formData.append("email", email);
+            formData.append("phone", phone);
+            formData.append("appliedFor", jobId);
+            formData.append("skills", skills);
+            formData.append("file", resume);
+
+            try {
+                const response = await fetch(`${apiRoot}/recruitment/createCandidate?org_uuid=${org_uuid}`, {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await response.json();
+                alert(data.message);
+                closePopup();
+            } catch (error) {
+                alert("Failed to submit application.");
+            }
+        }
+
+        window.onload = fetchJobData;
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: auto;
+
+        }
+
+        .job-card {
+            width: 80%;
+
+            max-width: 1000px;
+
+            background: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+
+            padding: 30px;
+
+        }
+
+        .job-header {
+            display: flex;
+            align-items: center;
+
+            justify-content: flex-start;
+            background: #f3f4f6;
+            padding: 20px;
+            border-radius: 10px 10px 0 0;
+            gap: 15px;
+        }
+
+        .job-logo {
+            width: 50px;
+            height: 50px;
+            background: #ccc;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .job-info {
+            flex-grow: 1;
+        }
+
+        .apply-btn {
+            margin-left: auto;
+        }
+
+        .apply-btn {
+            background: #4f46e5;
+            color: white;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .apply-btn:hover {
+            background: #4338ca;
+        }
+
+        .popup-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .popup-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin: 10px 0;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .p-7 {
+            padding: 1.75rem;
+        }
+
+        .text-gray-800 {
+            color: #2d3748;
+        }
+
+        .text-gray-700 {
+            color: #4a5568;
+        }
+
+        .text-gray-600 {
+            color: #718096;
+        }
+
+        .font-semibold {
+            font-weight: 600;
+        }
+
+        .bg-red-100 {
+            background-color: #fee2e2;
+        }
+
+        .text-red-600 {
+            color: #dc2626;
+        }
+
+        .px-3 {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+
+        .py-1 {
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+        }
+
+        .rounded-full {
+            border-radius: 9999px;
+        }
+
+        .text-sm {
+            font-size: 0.875rem;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .gap-2 {
+            gap: 0.5rem;
+        }
+
+        .mt-2 {
+            margin-top: 0.5rem;
+        }
+
+        .mt-4 {
+            margin-top: 1rem;
+        }
+
+        .list-disc {
+            list-style-type: disc;
+        }
+
+        .list-inside {
+            list-style-position: inside;
+        }
+
+        .flex-wrap {
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="job-card" id="jobDetails">
+        <div class="job-header">
+            <div class="job-logo">JD</div>
+            <div class="job-info">
+                <h2 id="job-title">Loading...</h2>
+                <p>at <span id="company-name">Loading...</span></p>
+                <!-- <p id="posted-by">Loading...</p> -->
+            </div>
+            <button class="apply-btn" onclick="openPopup()">Apply to this job</button>
+        </div>
+
+        <div class="p-7">
+            <div class="job-details">
+                <p><strong>Experience:</strong> <span id="job-experience">Loading...</span> |
+                    <strong>Salary:</strong> <span id="job-salary">Loading...</span> |
+                    <strong>Location:</strong> <span id="job-location">Loading...</span>
+                </p>
+            </div>
+            <div>
+                <h3 class="text-gray-800 font-semibold">Skills</h3>
+                <div class="flex gap-2 mt-2 flex-wrap" id="skills-container"></div>
+            </div>
+
+            <div class="mt-4 text-gray-700">
+                <h3 class="text-gray-800 font-semibold">Job Description</h3>
+                <p id="job-description">Loading...</p>
+
+                <h4 class="mt-4 text-gray-800 font-semibold">Responsibilities:</h4>
+                <ul class="list-disc list-inside mt-2 text-gray-600" id="responsibilities-list"></ul>
+
+                <h4 class="mt-4 text-gray-800 font-semibold">Requirements:</h4>
+                <ul class="list-disc list-inside mt-2 text-gray-600" id="requirements-list"></ul>
+
+                <h4 class="mt-4 text-gray-800 font-semibold">Qualifications:</h4>
+                <ul class="list-disc list-inside mt-2 text-gray-600" id="qualifications-list"></ul>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="popupModal" class="popup-modal">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2>Upload your resume</h2>
+                <button class="close-btn" onclick="closePopup()">&times;</button>
+            </div>
+            <p>Submit your details to apply for this job.</p>
+            <div class="form-group">
+                <label for="popup-name">Full Name</label>
+                <input type="text" id="popup-name" placeholder="Enter your full name">
+            </div>
+            <div class="form-group">
+                <label for="popup-email">Email</label>
+                <input type="email" id="popup-email" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label for="popup-phone">Phone Number</label>
+                <input type="tel" id="popup-phone" placeholder="Enter your phone number">
+            </div>
+            <div class="form-group">
+                <label for="popup-resume">Upload Resume</label>
+                <input type="file" id="popup-resume" accept=".pdf,.doc,.docx">
+            </div>
+            <div class="form-group">
+                <label for="popup-skills">Skills (comma seperated)</label>
+                <input type="text" id="popup-skills" placeholder="Enter your skills seperated by comma">
+            </div>
+            <button class="apply-btn" onclick="submitForm()" style="margin-top: 10px;">Submit</button>
+        </div>
+    </div>
+</body>
+
+</html>

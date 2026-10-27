@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <title>Upload Documents</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 400px;
+        }
+
+        h2 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .file-list {
+            margin: 10px 0;
+            list-style: none;
+            padding: 0;
+            font-size: 14px;
+            color: #555;
+            text-align: left;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f9f9f9;
+            padding: 8px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 5px;
+            background: #ddd;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .progress {
+            height: 5px;
+            background: green;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .remove-btn {
+            background: red;
+            color: white;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="formContainer">
+        <div class="container">
+            <h2>Upload Your Documents</h2>
+            <p id="message" style="color: green;"></p>
+
+            <input type="file" id="fileInput" name="file">
+            <button id="addFile">Add File</button>
+
+            <ul class="file-list" id="fileList"></ul>
+
+            <button id="uploadButton">Upload Files</button>
+
+            <div class="progress-bar">
+                <div class="progress" id="progressBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const org_uuid = urlParams.get("org_uuid");
+            const candidateId = urlParams.get("candidateId");
+            const apiRoot = window.location.origin;
+
+            if (!org_uuid || !candidateId) {
+                alert("Missing organization ID or candidate ID in URL!");
+                return;
+            }
+
+            const uploadButton = document.getElementById("uploadButton");
+            const progressBar = document.getElementById("progressBar");
+            const message = document.getElementById("message");
+            const fileList = document.getElementById("fileList");
+            const fileInput = document.getElementById("fileInput");
+            const formContainer = document.querySelector(".container");
+
+            // We'll not use the old static input UI
+            document.getElementById("fileInput").style.display = "none";
+            document.getElementById("addFile").style.display = "none";
+            document.getElementById("fileList").style.display = "none";
+
+            const dynamicUploadSection = document.createElement("div");
+            dynamicUploadSection.id = "dynamicUploadSection";
+            formContainer.insertBefore(dynamicUploadSection, uploadButton);
+
+            const selectedFilesMap = {}; // { docName: File }
+
+            // Call GET API to load documentBox list
+            async function fetchDocumentBoxes() {
+                try {
+                    const response = await fetch(`${apiRoot}/recruitment/getCandidateDocuments/${org_uuid}/${candidateId}`);
+                    const result = await response.json();
+
+                    if (response.ok && Array.isArray(result.data)) {
+                        result.data.forEach(doc => {
+                            createDocumentInput(doc.name);
+                        });
+                    } else {
+                        message.innerText = "No documents required to upload.";
+                        message.style.color = "red";
+                    }
+                } catch (err) {
+                    console.error("Error fetching document list:", err);
+                    message.innerText = "Failed to load document list.";
+                    message.style.color = "red";
+                }
+            }
+
+            // Create UI input for a document
+            function createDocumentInput(docName) {
+                const wrapper = document.createElement("div");
+                wrapper.style.marginBottom = "15px";
+
+                const label = document.createElement("label");
+                label.textContent = docName;
+                label.style.display = "block";
+                label.style.marginBottom = "5px";
+                label.style.fontWeight = "bold";
+
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "*/*";
+                input.dataset.docName = docName;
+
+                input.addEventListener("change", () => {
+                    selectedFilesMap[docName] = input.files[0];
+                });
+
+                wrapper.appendChild(label);
+                wrapper.appendChild(input);
+                dynamicUploadSection.appendChild(wrapper);
+            }
+
+            // Upload button click
+            uploadButton.addEventListener("click", async function () {
+                const formData = new FormData();
+                const docNames = Object.keys(selectedFilesMap);
+
+                if (docNames.length === 0) {
+                    message.innerText = "No files selected!";
+                    message.style.color = "red";
+                    return;
+                }
+
+                // Append files and their corresponding document names
+                docNames.forEach(docName => {
+                    if (selectedFilesMap[docName]) {
+                        formData.append("documentNames[]", docName);
+                        formData.append("files", selectedFilesMap[docName]);
+                    }
+                });
+
+                // Debug: Log FormData contents
+                for (let [key, value] of formData.entries()) {
+                    console.log(`${key}:`, value.name || value);
+                }
+
+                // Show progress bar
+                document.querySelector(".progress-bar").style.display = "block";
+                progressBar.style.width = "0%";
+
+                try {
+                    // Simulate progress (optional, as actual progress depends on server response)
+                    let progress = 0;
+                    const progressInterval = setInterval(() => {
+                        progress += 10;
+                        progressBar.style.width = `${progress}%`;
+                        if (progress >= 90) clearInterval(progressInterval);
+                    }, 200);
+
+                    const response = await fetch(`${apiRoot}/recruitment/uploadCandidateDocuments/${org_uuid}/${candidateId}`, {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    clearInterval(progressInterval); // Clear progress simulation
+                    progressBar.style.width = "100%";
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        message.innerText = result.message || "Files uploaded successfully!";
+                        message.style.color = "green";
+                        // Optionally clear inputs after successful upload
+                        dynamicUploadSection.innerHTML = '';
+                        await fetchDocumentBoxes(); // Refresh document list
+                    } else {
+                        message.innerText = result.message || "Error uploading files!";
+                        message.style.color = "red";
+                    }
+                } catch (error) {
+                    console.error("Upload Error:", error);
+                    message.innerText = "Error uploading files!";
+                    message.style.color = "red";
+                    progressBar.style.width = "0%";
+                } finally {
+                    // Hide progress bar after a short delay
+                    setTimeout(() => {
+                        document.querySelector(".progress-bar").style.display = "none";
+                    }, 1000);
+                }
+            });
+
+            // Call the GET API to load document types
+            await fetchDocumentBoxes();
+        });
+    </script>
+
+</body>
