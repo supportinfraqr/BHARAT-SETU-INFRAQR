@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, Download, Monitor, Server, ShieldCheck, Terminal, Wifi } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Download, Monitor, Network, Server, ShieldCheck, Terminal, Wifi } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Download Attendance Client | Bharat Shram Setu',
@@ -87,6 +87,28 @@ export default function AttendanceDownloadPage() {
               <Link href="/download/attendance/headless"
                 className="inline-flex h-11 items-center justify-center rounded-xl border border-[#01183A]/20 bg-white px-4 text-sm font-bold text-[#01183A] hover:bg-[#F8FAFC]">
                 Setup guide
+              </Link>
+            </div>
+          </div>
+        </article>
+
+        <article className="mt-4 rounded-2xl border border-[#DBE4F0] bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex gap-4">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#1D4ED8]"><Network size={22} /></div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-lg font-bold text-[#01183A]">Cloud engine + local cameras</h2>
+                  <span className="rounded-full bg-[#F1F5F9] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#64748B]">Client-managed tunnel</span>
+                </div>
+                <p className="mt-1 max-w-2xl text-xs leading-5 text-[#64748B]">
+                  Running the engine on AWS, Azure, or BigRock while the cameras stay on the client LAN requires a client-managed site-to-cloud tunnel. The client owns the site gateway, VPN, cloud VM, keys, firewall, and bandwidth; BSS handles the engine and BSS integration.
+                </p>
+              </div>
+            </div>
+            <div className="shrink-0">
+              <Link href="/download/attendance/site-tunnel" className="inline-flex h-11 items-center justify-center rounded-xl border border-[#01183A]/20 bg-white px-4 text-sm font-bold text-[#01183A] hover:bg-[#F8FAFC]">
+                Read the tunnel guide
               </Link>
             </div>
           </div>

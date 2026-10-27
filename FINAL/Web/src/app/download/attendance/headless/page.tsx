@@ -84,6 +84,12 @@ export default function HeadlessAttendancePage() {
         </section>
 
         <section className="mt-6 rounded-2xl border border-[#DBE4F0] bg-white p-6">
+          <h2 className="text-base font-bold text-[#01183A]">Cameras on a local network?</h2>
+          <p className="mt-2 text-sm leading-6 text-[#475569]">If the attendance engine runs in the cloud but the cameras stay on the client’s local network, the client must provide a site-to-cloud tunnel. This is a client-managed deployment.</p>
+          <Link href="/download/attendance/site-tunnel" className="mt-4 inline-flex h-10 items-center rounded-xl bg-[#01183A] px-4 text-sm font-bold text-white hover:bg-black">Read the site-tunnel guide</Link>
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-[#DBE4F0] bg-white p-6">
           <h2 className="text-base font-bold text-[#01183A]">Security</h2>
           <ul className="mt-3 space-y-2 text-sm leading-6 text-[#475569]">
             <li>Never expose port <code className="rounded bg-[#F1F5F9] px-1">8765</code> to the internet.</li>
