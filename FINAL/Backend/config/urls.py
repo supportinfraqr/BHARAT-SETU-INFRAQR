@@ -345,6 +345,8 @@ _v1_mutations = _v1(
 
 urlpatterns += _v1_patterns
 urlpatterns += _v1_mutations
+# Payroll engine (port of FINAL/legacy_payroll) — see payroll_engine/INTEGRATION.md
+urlpatterns += [path("v1/payroll-engine/", include("payroll_engine.urls"))]
 
 # DigiLocker also under /v1/ so the Next.js server (which reaches Django via the
 # public /v1/ proxy) can drive the OAuth + document-fetch flow with the worker's

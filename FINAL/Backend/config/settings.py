@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     # local apps
     "bss_core",
     "api",
+    "payroll_engine",
 ]
 
 MIDDLEWARE = [
