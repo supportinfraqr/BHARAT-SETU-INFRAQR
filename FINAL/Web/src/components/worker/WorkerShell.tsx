@@ -19,7 +19,7 @@ const groups = [
   { key:'nav.rozgar', href:'/worker/rozgar', icon:Briefcase },
   { key:'nav.bindingRequests', href:'/worker/binding', icon:Handshake },
   { key:'nav.work', icon:CheckSquare, items:[['nav.attendance','/worker/Attendance'],['nav.leave','/worker/Leave'],['nav.skills','/worker/Skills'],['nav.holidays','/worker/Holidays']] },
-  { key:'nav.records', icon:FileText, items:[['nav.profile','/worker/Profile'],['nav.documents','/worker/Documents'],['nav.issuedLetters','/worker/IssuedLetters'],['nav.employmentHistory','/worker/EmploymentHistory'],['nav.complianceWelfare','/worker/Compliance'],['nav.earnings','/worker/Earnings'],['nav.benefits','/worker/Benefits']] },
+  { key:'nav.records', icon:FileText, items:[['nav.profile','/worker/Profile'],['nav.documents','/worker/Documents'],['nav.issuedLetters','/worker/IssuedLetters'],['nav.employmentHistory','/worker/EmploymentHistory'],['nav.complianceWelfare','/worker/Compliance'],['nav.earnings','/worker/Earnings'],['nav.myPayroll','/worker/Payroll'],['nav.benefits','/worker/Benefits']] },
   { key:'nav.qrIdentity', icon:ScanLine, items:[['nav.idCard','/worker/idcard']] },
   { key:'nav.grievances', icon:MessageSquareText, items:[['nav.grievances','/worker/grievances'],['Contact BSS','/worker/contact']] },
 ] as const;
