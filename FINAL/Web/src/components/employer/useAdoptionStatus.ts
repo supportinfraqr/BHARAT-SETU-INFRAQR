@@ -11,7 +11,7 @@ export type AdoptionStatus = {
   costSheet: { required: boolean; scope: string };
 };
 
-export function useAdoptionStatus(enabled = true) {
+export function useAdoptionStatus(enabled = true, reloadKey = "") {
   const [status, setStatus] = useState<AdoptionStatus | null>(null);
   const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState('');
@@ -27,6 +27,6 @@ export function useAdoptionStatus(enabled = true) {
     finally { setLoading(false); }
   }, [enabled]);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
-  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => { void reload(); }, [reload, reloadKey]);
   return { status, loading, error, reload };
 }
