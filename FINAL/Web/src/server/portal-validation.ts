@@ -249,10 +249,7 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
     const state = typeof body.state === 'string' ? body.state.trim() : '';
     if (location.length > 200 || state.length > 120) fail('Site location is too long.');
     const startDate = typeof body.startDate === 'string' ? body.startDate.trim() : '';
-    const endDate = typeof body.endDate === 'string' ? body.endDate.trim() : '';
     if (startDate && !isoDate.test(startDate)) fail('Enter a valid start date.');
-    if (endDate && !isoDate.test(endDate)) fail('Enter a valid end date.');
-    if (startDate && endDate && startDate > endDate) fail('End date cannot be before the start date.');
     if (body.status && !['Active', 'Planned'].includes(String(body.status))) fail('Select a valid site status.');
   }
   if (role === 'Employer' && resource === 'approvals' && method === 'PATCH') {

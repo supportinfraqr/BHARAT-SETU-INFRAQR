@@ -471,7 +471,6 @@ export type EmployerSite = {
   state: string;
   jurisdiction?: 'state' | 'central';
   startDate: string;
-  endDate: string;
   status: 'Active' | 'Planned' | 'Completed';
   contractorIds: string[];
   workers: number;

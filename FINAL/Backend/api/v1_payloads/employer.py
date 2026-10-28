@@ -192,7 +192,6 @@ def _employer_sites(user):
             "maxCctvCameras": int(getattr(s, "max_cctv_cameras", 5) or 5),
             "jurisdiction": _d(s.jurisdiction) or "state",
             "startDate": _dts(s.site_start_date) or "",
-            "endDate": _dts(s.expected_end_date) or "",
             "status": _d(s.site_status) or ("Active" if s.attendance_enabled else "Planned"),
             "contractorIds": list(cids), "workers": wcount,
             "pastContractors": _site_past_contractors(s, user, set(cids)),

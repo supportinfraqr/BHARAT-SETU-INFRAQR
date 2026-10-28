@@ -32,7 +32,6 @@ export const SECTIONS: SiteSection[] = [
       { name: 'required_automation', label: 'Required Automation' },
       { name: 'assign_color', label: 'Site Colour' },
       { name: 'site_start_date', label: 'Site Start Date', type: 'date' },
-      { name: 'expected_end_date', label: 'Expected End Date', type: 'date' },
       { name: 'actual_start_date', label: 'Actual Start Date', type: 'date' },
       { name: 'actual_completion_date', label: 'Actual Completion Date', type: 'date' },
     ],

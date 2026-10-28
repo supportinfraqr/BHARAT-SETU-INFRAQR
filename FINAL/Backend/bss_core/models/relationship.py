@@ -87,7 +87,6 @@ class Site(models.Model):
     erp_site_code = models.CharField(max_length=120, blank=True)
     site_status = models.CharField(max_length=40, blank=True)
     site_start_date = models.DateField(null=True, blank=True)
-    expected_end_date = models.DateField(null=True, blank=True)
     actual_start_date = models.DateField(null=True, blank=True)
     actual_completion_date = models.DateField(null=True, blank=True)
 

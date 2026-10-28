@@ -387,8 +387,6 @@ def _handle_site(user, body, method):
         site.site_status = str(body.get("status") or "").strip()
     if body.get("startDate") is not None:
         site.site_start_date = _parse_date(body.get("startDate"))
-    if body.get("endDate") is not None:
-        site.expected_end_date = _parse_date(body.get("endDate"))
 
     if created and not (str(site.site_name or "").strip()
                         and str(site.state or "").strip()
