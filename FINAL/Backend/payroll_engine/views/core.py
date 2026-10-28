@@ -125,6 +125,20 @@ def update_employee_exit(ctx, employeeId):
     return send_response(200, True, "Employee exit updated", emp.to_dict())
 
 
+def _worker_owns_file(employee, key):
+    """Workers may only open uploads referenced by their own claims or TDS declaration."""
+    import json
+
+    from ..models import ClaimsDeclaration, EmployeeTDS
+
+    if employee is None:
+        return False
+    needle = f"/v1/payroll-engine/files/{key}"
+    docs = [*ClaimsDeclaration.objects.filter(org=employee.org, employee=employee),
+            *EmployeeTDS.objects.filter(org=employee.org, employee=employee)]
+    return any(needle in json.dumps(doc.to_dict(), default=str) for doc in docs)
+
+
 @payroll_view(["GET"], access="any")
 def serve_file(ctx, key):
     """Authenticated download of a payroll attachment (scoped to the caller's org)."""
@@ -136,6 +150,8 @@ def serve_file(ctx, key):
 
     org_id = str(key).split("/", 1)[0]
     if ctx.org is None or str(ctx.org.pk) != org_id:
+        raise PayrollError("File not found", 404)
+    if ctx.is_employee and not _worker_owns_file(ctx.employee, key):
         raise PayrollError("File not found", 404)
     handle, name = open_file(key)
     content_type = mimetypes.guess_type(name)[0] or "application/octet-stream"

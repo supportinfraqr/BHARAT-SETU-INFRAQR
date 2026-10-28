@@ -11,7 +11,8 @@ Here ``@payroll_view`` gives each view a ``PayrollContext`` with the same pieces
 * ``ctx.org``       — owning BSS user (contractor / employer). Admins pick an org
                       via the ``X-Payroll-Org`` header or ``?orgId=`` query param.
 * ``ctx.user``      — acting user (employer-staff already resolved to employer by
-                      BSS auth; the real actor is ``ctx.actor``).
+                      BSS auth; the real actor is ``ctx.actor``). Staff need the
+                      ``payroll`` permission (none of the current staff roles has it).
 * ``ctx.employee``  — for worker (self-service) requests, their PayrollEmployee.
 * ``ctx.is_hr`` / ``ctx.is_employee`` — role gates.
 """
@@ -150,6 +151,11 @@ def payroll_view(methods, access="hr"):
                 return send_response(403, False, "This payroll endpoint is for employees only")
             if access == "any" and role not in bss_adapter.HR_ROLES and role != "worker":
                 return send_response(403, False, "Payroll is not available for this role")
+            # Employer-staff (medical / safety / gate-pass officers) authenticate AS
+            # their employer; without an explicit "payroll" grant they get no payroll.
+            staff_perms = getattr(request._request, "staff_permissions", None)
+            if staff_perms is not None and "payroll" not in staff_perms:
+                return send_response(403, False, "You do not have permission for payroll.")
             actor = getattr(request._request, "actor", None) or user
             ctx = PayrollContext(request=request, user=user, actor=actor, role=role)
             try:

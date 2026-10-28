@@ -101,7 +101,12 @@ export const pe = {
     window.open(url, '_blank', 'noopener');
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   },
-  fileUrl: (url: string) => url.replace(/^\/v1\/payroll-engine\//, '/api/payroll-engine/'),
+  /** Stored upload URL -> proxied link. Links can't send X-Payroll-Org, so admins carry the org as ?orgId=. */
+  fileUrl: (url: string) => {
+    const proxied = url.replace(/^\/v1\/payroll-engine\//, '/api/payroll-engine/');
+    if (!activeOrg || !proxied.startsWith('/api/payroll-engine/')) return proxied;
+    return `${proxied}${proxied.includes('?') ? '&' : '?'}orgId=${encodeURIComponent(activeOrg)}`;
+  },
 };
 
 export function saveBlob(blob: Blob, filename: string): void {

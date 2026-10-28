@@ -226,7 +226,20 @@ def process_payroll_core(org, body, ctx=None):
                              year=normalized_year, pay_status="processed",
                              processed_date=timezone.now())
             pc.apply_calculation_to_run(run, calc)
-            run.save()
+            # Legacy relied on the unique {employeeId, month, year} index: a concurrent run
+            # (HR click + auto-payroll cron, double submit) failed on save. Lock the employee
+            # row and re-check so a second request cannot create a duplicate run (and push a
+            # second TDS ledger entry / loan repayment).
+            with transaction.atomic():
+                PayrollEmployee.objects.select_for_update().filter(pk=emp.pk).first()
+                duplicate = PayrollRun.objects.filter(
+                    org=org, employee=emp, month=normalized_month, year=normalized_year).exists()
+                if not duplicate:
+                    run.save()
+            if duplicate:
+                errors.append({"employeeId": str(emp.pk), "name": _name(emp),
+                               "error": "Payroll already processed"})
+                continue
 
             if calc["tdsAmount"] > 0:
                 with transaction.atomic():

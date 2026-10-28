@@ -94,6 +94,16 @@ class TdsCalculateTests(TdsApiBase):
         self.assertEqual(rec["taxPayable"]["total"], 67080)
         self.assertEqual(rec["monthlyTDS"] > 0, True)
 
+    def test_salary_exemptions_set_is_schema_cast(self):
+        # $set 'itDeclaration.salaryExemptions' is cast by Mongoose: unknown keys dropped, numbers cast.
+        res = self.calc(salaryExemptions={"childrenCount": "2", "gratuityReceived": 1000, "bogus": 5})
+        self.assertEqual(res.status_code, 200, res.content)
+        stored = EmployeeTDS.objects.get(employee=self.emp).it_declaration["salaryExemptions"]
+        self.assertEqual(stored["childrenCount"], 2)
+        self.assertEqual(stored["gratuityReceived"], 1000)
+        self.assertNotIn("bogus", stored)
+        self.assertEqual(self.calc(salaryExemptions={"childrenCount": "abc", "vrsReceived": 1}).status_code, 500)
+
     def test_errors_and_access(self):
         res = self.hr.post(BASE + "tds/calculate/00000000-0000-0000-0000-000000000000",
                            {"financialYear": FY}, format="json")

@@ -12,7 +12,7 @@
 import { useMemo, useState } from 'react';
 import { CheckCircle2, ChevronDown, ChevronRight, Download, Eye, FileText, PlayCircle, RefreshCw, Search, X } from 'lucide-react';
 import { pe } from '@/lib/payroll-engine/api';
-import type { ModuleProps } from '@/lib/payroll-engine/types';
+import type { ModuleProps, PayrollEmployee } from '@/lib/payroll-engine/types';
 import {
   Async, Badge, Btn, DataTable, EmployeePicker, Empty, Field, Kpi, MONTHS, PeriodPicker, Section, Select, Tabs, TextInput, Toggle,
   employeeName, fmtDate, fmtDateTime, money, num, useAction, useEmployees, useLoad, type Column, type Notify,
@@ -47,7 +47,7 @@ export default function PayRuns({ notify, navigate, params }: ModuleProps) {
       { key: 'history', label: 'Payroll history' },
       { key: 'records', label: 'Payroll records' },
     ]} />
-    {tab === 'run' && <RunTab period={period} setPeriod={setPeriod} employeeFilter={employeeFilter} clearEmployee={() => setEmployeeFilter('')}
+    {tab === 'run' && <RunTab period={period} setPeriod={setPeriod} employeeFilter={employeeFilter} clearEmployee={() => setEmployeeFilter('')} initialStatus={params.status}
       notify={notify} onOpen={setDetailId} version={version} bump={bump} navigate={navigate} />}
     {tab === 'history' && <HistoryTab onOpenPeriod={openPeriod} onOpen={setDetailId} version={version} />}
     {tab === 'records' && <RecordsTab employeeId={employeeFilter} setEmployeeId={setEmployeeFilter} onOpen={setDetailId} version={version} />}
@@ -123,25 +123,29 @@ function employeeColumns(opts: { onOpen: (id: string) => void; onPayslip?: (id: 
   ];
 }
 
-function RunTab({ period, setPeriod, employeeFilter, clearEmployee, notify, onOpen, version, bump, navigate }: {
-  period: { month: string; year: number }; setPeriod: (p: { month: string; year: number }) => void;
+function RunTab({ period, setPeriod, employeeFilter, clearEmployee, notify, onOpen, version, bump, navigate, initialStatus }: {
+  period: { month: string; year: number }; setPeriod: (p: { month: string; year: number }) => void; initialStatus?: string;
   employeeFilter: string; clearEmployee: () => void; notify: Notify; onOpen: (id: string) => void; version: number; bump: () => void;
   navigate: ModuleProps['navigate'];
 }) {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-  const [payStatus, setPayStatus] = useState('');
+  const [payStatus, setPayStatus] = useState(initialStatus && (STATUS_ORDER as string[]).includes(initialStatus) ? initialStatus : '');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(50);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [dialog, setDialog] = useState<null | { kind: 'process' } | { kind: 'status'; status: PayStatus } | { kind: 'payslip'; id: string }>(null);
   const { busy, run } = useAction(notify);
 
+  // One employee: narrow server-side by their display code (customId || uniqueId — what the
+  // engine searches), then match the exact id client-side (the page size is capped at 200).
+  const filterEmp = useLoad(() => (employeeFilter ? pe.get<PayrollEmployee>(`employees/${employeeFilter}`) : Promise.resolve(null)), [employeeFilter]);
+  const filterCode = filterEmp.data ? filterEmp.data.customId || filterEmp.data.uniqueId : '';
   const query = employeeFilter
-    ? { month: period.month, year: period.year, payStatus, page: 1, limit: 200 }
+    ? { month: period.month, year: period.year, search: filterCode, payStatus, page: 1, limit: 200 }
     : { month: period.month, year: period.year, search, payStatus, page, limit };
   const state = useLoad(() => pe.get<PayRunMonthlyData>('getPayRunMonthlyData', query),
-    [period.month, period.year, search, payStatus, page, limit, employeeFilter, version]);
+    [period.month, period.year, search, payStatus, page, limit, employeeFilter, filterCode, version]);
 
   const rows = useMemo(() => {
     const all = state.data?.employees ?? [];

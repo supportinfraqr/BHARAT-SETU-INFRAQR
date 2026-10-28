@@ -4,6 +4,7 @@ GET / POST endpoints are ``access="any"`` (employees call them for their own row
 is scoped to themselves via ``get_employee``). Status / verify / approve PUTs are HR-only.
 """
 
+import math
 import uuid
 
 from django.db import transaction
@@ -13,9 +14,42 @@ from .. import bss_adapter
 from ..context import PayrollError, by_method, get_employee, payroll_view, send_response
 from ..models.base import iso, new_subdoc_id
 from ..services.audit_log import log_payroll_action
-from ..services.jsmath import js_truthy
+from ..services.financial_year import _to_instant
+from ..services.jsmath import clean, js_str, js_truthy, to_number
+from ..services.loan_helper import js_iso
 
 BODY_ONLY = object()
+
+
+def _cast_number(value, path):
+    """Mongoose ``Number`` cast of a sub-document field on save: numeric strings become
+    numbers, ``''`` -> null, anything else unparsable -> CastError (legacy 500)."""
+    if value is None:
+        return value
+    if isinstance(value, bool):
+        return 1 if value else 0
+    if isinstance(value, (int, float)):
+        return clean(float(value))
+    if isinstance(value, str) and value.strip() == "":
+        return None
+    n = to_number(value) if not isinstance(value, (dict, list)) else float("nan")
+    if not math.isfinite(n):
+        raise PayrollError(f'ClaimsDeclaration validation failed: {path}: Cast to Number failed for '
+                           f'value "{js_str(value)}" (type {type(value).__name__}) at path '
+                           f'"{path.rsplit(".", 1)[-1]}"', 500)
+    return clean(n)
+
+
+def _cast_date(value, path):
+    """Mongoose ``Date`` cast -> stored ISO string (``null``/``''`` -> null)."""
+    if value is None or value == "":
+        return None
+    inst = _to_instant(value)
+    if inst is None:
+        raise PayrollError(f'ClaimsDeclaration validation failed: {path}: Cast to date failed for '
+                           f'value "{js_str(value)}" (type {type(value).__name__}) at path '
+                           f'"{path.rsplit(".", 1)[-1]}"', 500)
+    return js_iso(inst)
 
 
 def _valid_uuid(value):
@@ -92,9 +126,12 @@ def create_or_update_flexible_plan(ctx, employeeId):
     with transaction.atomic():
         claim = _get_or_new(ctx, emp)
         item = {"_id": new_subdoc_id()}
+        index = len(claim.flexible_benefit_plan or [])
         for key in ("componentId", "componentName", "amount", "month"):
             if key in body:
                 item[key] = body[key]
+        if "amount" in item:
+            item["amount"] = _cast_number(item["amount"], f"flexibleBenefitPlan.{index}.amount")
         item["status"] = "pending"
         claim.flexible_benefit_plan = list(claim.flexible_benefit_plan or []) + [item]
         claim.save()
@@ -120,7 +157,8 @@ def update_flexible_plan_status(ctx, employeeId, planId):
             raise PayrollError("Flexible plan not found", 404)
         plan["status"] = status
         if "amount" in body:
-            plan["amount"] = body["amount"]
+            index = claim.flexible_benefit_plan.index(plan)
+            plan["amount"] = _cast_number(body["amount"], f"flexibleBenefitPlan.{index}.amount")
         claim.save()
     _audit(ctx, claim, emp, "claim_rejected" if status == "rejected" else "claim_approved",
            f"Flexible plan {planId} -> {status}")
@@ -147,10 +185,14 @@ def submit_reimbursement_claim(ctx, employeeId):
     emp = _employee_for(ctx, employeeId, True)
     with transaction.atomic():
         claim = _get_or_new(ctx, emp)
+        index = len(claim.reimbursements or [])
         item = {
             "_id": new_subdoc_id(), "name": body["name"], "type": body["type"],
-            "claimDate": body.get("claimDate") or iso(timezone.now()),
-            "claimedAmount": body["claimedAmount"], "approvedAmount": 0,
+            "claimDate": _cast_date(body.get("claimDate"), f"reimbursements.{index}.claimDate")
+            if body.get("claimDate") else iso(timezone.now()),
+            "claimedAmount": _cast_number(body["claimedAmount"],
+                                          f"reimbursements.{index}.claimedAmount"),
+            "approvedAmount": 0,
             "proofUrl": body.get("proofUrl") or "", "attachmentUrls": [], "status": "pending",
         }
         claim.reimbursements = list(claim.reimbursements or []) + [item]
@@ -177,7 +219,9 @@ def update_reimbursement_status(ctx, employeeId, claimId):
             raise PayrollError("Reimbursement claim not found", 404)
         item["status"] = status
         if "approvedAmount" in body:
-            item["approvedAmount"] = body["approvedAmount"]
+            index = claim.reimbursements.index(item)
+            item["approvedAmount"] = _cast_number(body["approvedAmount"],
+                                                  f"reimbursements.{index}.approvedAmount")
         claim.save()
     _audit(ctx, claim, emp, "claim_rejected" if status == "rejected" else "claim_approved",
            f"Reimbursement {claimId} -> {status}")
@@ -204,8 +248,11 @@ def save_income_tax_declaration(ctx, employeeId):
     emp = _employee_for(ctx, employeeId, True)
     with transaction.atomic():
         claim = _get_or_new(ctx, emp)
+        index = len(claim.income_tax_declarations or [])
         item = {"_id": new_subdoc_id(), "section": body["section"], "subSection": body.get("subSection") or "",
-                "amountDeclared": body["amountDeclared"], "amountApproved": 0}
+                "amountDeclared": _cast_number(body["amountDeclared"],
+                                               f"incomeTaxDeclarations.{index}.amountDeclared"),
+                "amountApproved": 0}
         claim.income_tax_declarations = list(claim.income_tax_declarations or []) + [item]
         claim.save()
     _audit(ctx, claim, emp, "claim_approved", f"Income tax declaration submitted: {body['section']} (pending)")
@@ -226,7 +273,9 @@ def update_income_tax_declaration(ctx, employeeId, declarationId):
         if item is None:
             raise PayrollError("Declaration not found", 404)
         if "amountApproved" in body:
-            item["amountApproved"] = body["amountApproved"]
+            index = claim.income_tax_declarations.index(item)
+            item["amountApproved"] = _cast_number(body["amountApproved"],
+                                                  f"incomeTaxDeclarations.{index}.amountApproved")
         else:
             item.pop("amountApproved", None)  # legacy assigned undefined
         claim.save()

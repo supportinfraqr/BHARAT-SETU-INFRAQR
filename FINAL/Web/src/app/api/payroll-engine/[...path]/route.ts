@@ -21,7 +21,10 @@ type Context = { params: Promise<{ path: string[] }> };
 const MAX_BODY_BYTES = 25 * 1024 * 1024;
 const FORWARDED_RESPONSE_HEADERS = ['content-type', 'content-disposition', 'content-length'];
 
-function upstreamPath(path: string[], request: Request): string {
+function upstreamPath(path: string[], request: Request): string | null {
+  // `.` / `..` survive encodeURIComponent and fetch() would resolve them, letting
+  // `/api/payroll-engine/..%2F..` reach any other /v1 endpoint. Reject them.
+  if (path.some(segment => segment === '' || segment === '.' || segment === '..')) return null;
   const safe = path.map(segment => encodeURIComponent(segment)).join('/');
   const search = new URL(request.url).search;
   return `/v1/payroll-engine/${safe}${search}`;
@@ -49,11 +52,16 @@ async function proxy(request: Request, context: Context): Promise<Response> {
       body = buffer;
     } else if (method === 'DELETE') {
       const text = await request.text();
+      if (text.length > MAX_BODY_BYTES) return NextResponse.json({ status: false, success: false, message: 'Request body is too large.' }, { status: 413 });
       if (text) { headers['Content-Type'] = 'application/json'; body = text; }
     }
 
-    const upstream = await upstreamStream(config.apiBaseUrl, upstreamPath(path, request), session, { method, headers, body });
-    const out = new Headers({ 'Cache-Control': 'private, no-store' });
+    const target = upstreamPath(path, request);
+    if (!target) return NextResponse.json({ status: false, success: false, message: 'Not found' }, { status: 404 });
+    const upstream = await upstreamStream(config.apiBaseUrl, target, session, { method, headers, body });
+    // nosniff: uploaded attachments are served on the app origin; never let a
+    // browser sniff one into HTML.
+    const out = new Headers({ 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' });
     for (const name of FORWARDED_RESPONSE_HEADERS) {
       const value = upstream.headers.get(name);
       if (value) out.set(name, value);
