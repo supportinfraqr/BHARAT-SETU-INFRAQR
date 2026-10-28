@@ -404,6 +404,7 @@ def _attendance_events(a):
             "source": e.source,
             "sourceLabel": ATTENDANCE_SOURCE_LABEL.get(e.source, e.source),
             "method": e.method or "",
+            "methodLabel": ATTENDANCE_VERIFY_LABEL.get(e.method, e.method or ""),
             "type": e.event_type,
             "typeLabel": _ATT_EVENT_TYPE_LABEL.get(e.event_type, e.event_type),
             "at": _dts(e.at) if e.at else "",
@@ -428,6 +429,13 @@ def attendance_detail(a):
     camera details) shared by the worker and contractor attendance views."""
     raw = _d(a.status)
     capture = _d(a.capture_method)
+    events = _attendance_events(a)
+    first_event = next((e for e in events if e.get("source") != "SHEET"),
+                       events[0] if events else None)
+    source_label = (_d(first_event.get("sourceLabel")) if first_event else
+                    ATTENDANCE_SOURCE_LABEL.get(capture, capture))
+    verification_label = (_d(first_event.get("methodLabel")) if first_event else
+                          ATTENDANCE_VERIFY_LABEL.get(_d(a.verification_type), _d(a.verification_type)))
 
     def clock(value):
         if not value:
@@ -447,9 +455,9 @@ def attendance_detail(a):
         "id": str(a.id),
         "date": _dts(a.attendance_date),
         "statusCode": raw,
-        "source": ATTENDANCE_SOURCE_LABEL.get(capture, capture),
-        "method": ATTENDANCE_SOURCE_LABEL.get(capture, capture),
-        "verification": ATTENDANCE_VERIFY_LABEL.get(_d(a.verification_type), _d(a.verification_type)),
+        "source": source_label,
+        "method": source_label,
+        "verification": verification_label,
         "site": a.site.site_name if a.site else "",
         "siteId": a.site_id,
         "checkIn": clock(a.check_in_time),
@@ -468,7 +476,7 @@ def attendance_detail(a):
         "matchStatus": ("Verified" if a.is_verified
                         else ("Manual intervention required" if a.confidence_pct is not None else "")),
         "nextAction": "OUT" if _d(a.last_punch_type) == "IN" else "IN",
-        "events": _attendance_events(a),
+        "events": events,
         "sources": _attendance_source_summary(a),
         "remarks": a.remarks or "",
     }

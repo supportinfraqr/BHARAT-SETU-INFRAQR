@@ -36,7 +36,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.13"
+APP_VERSION = "1.5.14"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 PRESENCE_GAP_SECONDS = 10
@@ -678,17 +678,22 @@ class CameraWorker:
                     box = [int(x), int(y), int(w), int(h)]
             except Exception:
                 box = None
-        self._set_qr_meta(bss_worker_id, box, now_ts)
+        profile = self.engine.gallery.profile(bss_worker_id)
+        worker_name = str(profile.get("name") or "").strip()
+        if worker_name.upper() == bss_worker_id.upper():
+            worker_name = ""
+        self._set_qr_meta(bss_worker_id, box, now_ts, worker_name)
         if now_ts - float(self._last_qr.get(bss_worker_id) or 0) < QR_COOLDOWN_SECONDS:
             return
         self._last_qr[bss_worker_id] = now_ts
         self.engine.send_qr_event(self, bss_worker_id, when)
 
-    def _set_qr_meta(self, bss_worker_id, box, seen_at):
+    def _set_qr_meta(self, bss_worker_id, box, seen_at, worker_name=""):
         with self.lock:
             self._qr_meta = [{
                 "box": list(box or [0, 0, 0, 0]),
-                "name": "QR scan",
+                "name": worker_name or "QR scan",
+                "workerName": str(worker_name or ""),
                 "bssWorkerId": str(bss_worker_id or ""),
                 "matchScore": 100.0,
                 "matched": True,
@@ -759,7 +764,9 @@ class CameraWorker:
             color = (0, 165, 255)
             cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
             bss_id = str(item.get("bssWorkerId") or "").strip()
-            label = f"QR | {bss_id}" if bss_id else "QR scan"
+            worker_name = str(item.get("workerName") or "").strip()
+            label = (f"QR | {worker_name}" if worker_name
+                     else (f"QR | {bss_id}" if bss_id else "QR scan"))
             label = label.encode("ascii", "replace").decode("ascii")
             font = cv2.FONT_HERSHEY_SIMPLEX
             scale, thickness = 0.45, 1

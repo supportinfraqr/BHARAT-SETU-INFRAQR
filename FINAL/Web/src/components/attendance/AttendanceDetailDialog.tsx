@@ -198,7 +198,7 @@ export default function AttendanceDetailDialog({ record, onClose, subtitle }: {
                       <div className="flex items-center gap-2">
                         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isOut ? 'bg-bss-interactive-blue' : 'bg-bss-green'}`} />
                         <span className="font-bold text-bss-text-primary">{ev.typeLabel || ev.type}</span>
-                        <span className="text-bss-text-muted truncate">· {ev.sourceLabel || ev.source}{ev.method ? ` (${ev.method})` : ''}</span>
+                        <span className="text-bss-text-muted truncate">· {ev.sourceLabel || ev.source}{(ev.methodLabel || ev.method) ? ` · ${ev.methodLabel || ev.method}` : ''}</span>
                         <span className="ml-auto font-semibold text-bss-text-primary flex-shrink-0">{time}{endTime ? ` – ${endTime}` : ''}{duration}</span>
                       </div>
                       {(ev.address || coords) && (
