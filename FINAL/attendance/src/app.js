@@ -665,6 +665,10 @@ function resourceLiveHtml(resources) {
       ${gpuHardware ? `<div class="res-sub">${esc(gpuMemory)}</div>` : ''}
       <div class="res-sub${engineGpuOver ? ' res-warn' : ''}" style="margin-top:6px">${esc(engineGpu)}</div>
       ${gpu.driver ? `<div class="res-sub">Driver ${esc(gpu.driver)} · ${esc(gpu.provider || '')}</div>` : ''}
+      ${Array.isArray(gpu.availableProviders) && gpu.availableProviders.length ? `<div class="res-sub">ORT providers: ${esc(gpu.availableProviders.join(', '))}</div>` : ''}
+      ${gpu.requestedProvider ? `<div class="res-sub">Requested: ${esc(gpu.requestedProvider)}</div>` : ''}
+      ${gpu.directmlDll ? `<div class="res-sub">DirectML.dll: ${gpu.directmlDllPresent ? 'found' : 'missing'}</div>` : ''}
+      ${gpu.providerError ? `<div class="res-sub res-warn">${esc(gpu.providerError)}</div>` : ''}
       ${gpuDetail && gpuHardware ? `<div class="res-sub">${esc(gpuDetail)}</div>` : ''}
     </div>
     <div class="res-panel">
@@ -962,6 +966,7 @@ function resourceCard(resources) {
       <button id="saveResourcesBtn" class="btn primary" type="button">Save resources</button>
     </div>
     <p id="resourceMsg" class="note"></p>
+    ${resources?.gpu?.state === 'required_unavailable' ? '<button id="useCpuFallbackBtn" class="btn" type="button" style="margin-top:8px">Use CPU fallback</button><span class="note" style="margin-left:8px">GPU is required but unavailable. Switch to Automatic to keep face processing running on CPU.</span>' : ''}
   </section>`;
 }
 
@@ -1373,6 +1378,12 @@ function render() {
     } catch (error) {
       if (msg) { msg.textContent = error.message; msg.style.color = '#DC2626'; }
     }
+  });
+
+  qs('useCpuFallbackBtn')?.addEventListener('click', () => {
+    const mode = qs('resourceGpuMode');
+    if (mode) mode.value = 'auto';
+    qs('saveResourcesBtn')?.click();
   });
 
   qs('changeDataDirBtn')?.addEventListener('click', () => chooseDataFolder(false));

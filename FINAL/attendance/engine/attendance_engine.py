@@ -36,7 +36,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.11"
+APP_VERSION = "1.5.12"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 PRESENCE_GAP_SECONDS = 10
@@ -1401,6 +1401,11 @@ class Engine:
             "state": state,
             "message": messages.get(state, base.get("message") or ""),
             "provider": provider,
+            "requestedProvider": base.get("requestedProvider") or provider,
+            "availableProviders": list(base.get("availableProviders") or []),
+            "directmlDll": base.get("directmlDll") or "",
+            "directmlDllPresent": bool(base.get("directmlDllPresent")),
+            "providerError": base.get("providerError") or "",
             "driver": telemetry.get("driver") or "",
             "telemetryAvailable": bool(telemetry.get("available")),
             "telemetrySource": telemetry.get("source") or "NVML",

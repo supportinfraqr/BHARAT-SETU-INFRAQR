@@ -29,14 +29,27 @@ def _prepare_runtime():
     return ort
 
 
-def _make_session(ort, path, providers):
+def _make_session(ort, path, providers, errors=None):
     options = ort.SessionOptions()
     options.log_severity_level = 3
     options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
     try:
         return ort.InferenceSession(str(path), sess_options=options, providers=providers)
-    except Exception:
+    except Exception as exc:
+        if errors is not None:
+            errors.append(f"{Path(path).name}: {type(exc).__name__}: {exc}")
         return ort.InferenceSession(str(path), sess_options=options, providers=["CPUExecutionProvider"])
+
+
+def _directml_dll_path():
+    """Return (path, exists) for the DirectML runtime bundled with onnxruntime."""
+    try:
+        import onnxruntime
+        capi = Path(onnxruntime.__file__).resolve().parent / "capi"
+    except Exception:
+        return "", False
+    candidate = capi / "DirectML.dll"
+    return str(candidate), candidate.is_file()
 
 
 def _providers_for(ort, mode, memory_limit_mb=0):
@@ -70,6 +83,11 @@ class OnnxFaceBackend:
         self.message = "Not initialised"
         self.version = ""
         self.ready = False
+        self.available_providers = []
+        self.requested_provider = ""
+        self.directml_dll = ""
+        self.directml_dll_present = False
+        self.provider_error = ""
 
     def initialize(self):
         if self.ready:
@@ -80,10 +98,14 @@ class OnnxFaceBackend:
             raise FileNotFoundError("ONNX face models are missing.")
         ort = _prepare_runtime()
         self.version = str(ort.__version__)
+        self.available_providers = list(ort.get_available_providers())
+        self.directml_dll, self.directml_dll_present = _directml_dll_path()
         providers, requested = _providers_for(ort, self.mode, self.memory_limit_mb)
+        self.requested_provider = requested
+        errors = []
         started = time.time()
-        self.retina = _make_session(ort, retina_path, providers)
-        self.arcface = _make_session(ort, arcface_path, providers)
+        self.retina = _make_session(ort, retina_path, providers, errors)
+        self.arcface = _make_session(ort, arcface_path, providers, errors)
         self.retina_input = self.retina.get_inputs()[0].name
         self.arcface_input = self.arcface.get_inputs()[0].name
         active_providers = set(self.retina.get_providers()) | set(self.arcface.get_providers())
@@ -94,12 +116,26 @@ class OnnxFaceBackend:
         else:
             self.device = "CPU"
         self.active = self.device != "CPU"
+        if self.mode != "off" and self.device == "CPU":
+            if "DmlExecutionProvider" not in self.available_providers:
+                self.provider_error = (
+                    "DmlExecutionProvider not available"
+                    + (f" (available: {', '.join(self.available_providers)})"
+                       if self.available_providers else "")
+                )
+            elif requested == "DirectML":
+                self.provider_error = "; ".join(errors) or "DirectML session fell back to CPU"
+            elif "CUDAExecutionProvider" not in self.available_providers:
+                self.provider_error = "No GPU execution provider in this ONNX Runtime build"
+            else:
+                self.provider_error = "; ".join(errors) or f"{requested} session fell back to CPU"
         if self.mode == "off":
             self.message = f"ONNX Runtime {self.version} · CPU"
         elif self.active:
             self.message = f"ONNX Runtime {self.version} · {self.device}"
         else:
-            self.message = f"ONNX Runtime {self.version} · CPU · {requested} unavailable"
+            detail = "DirectML unavailable" if requested == "DirectML" else f"{requested} unavailable"
+            self.message = f"ONNX Runtime {self.version} · CPU · {detail}"
         self._warmup()
         self.ready = True
         self.elapsed = time.time() - started
@@ -245,6 +281,11 @@ class OnnxFaceBackend:
             "message": self.message,
             "backend": "ONNX Runtime",
             "provider": self.device,
+            "requestedProvider": self.requested_provider,
+            "availableProviders": self.available_providers,
+            "directmlDll": self.directml_dll,
+            "directmlDllPresent": self.directml_dll_present,
+            "providerError": self.provider_error,
             "version": self.version,
             "memoryLimitMb": self.memory_limit_mb,
         }

@@ -243,11 +243,16 @@ def cmd_gpu(args):
         ["Detected", "Yes" if gpu.get("detected") else "No" if gpu.get("detected") is False else "Unknown"],
         ["State", gpu.get("state")],
         ["Provider", gpu.get("provider")],
+        ["Requested", gpu.get("requestedProvider")],
+        ["Providers", ", ".join(gpu.get("availableProviders") or [])],
+        ["DirectML DLL", gpu.get("directmlDll") or "—"],
+        ["DirectML DLL found", "Yes" if gpu.get("directmlDllPresent") else "No"],
         ["Driver", gpu.get("driver")],
         ["Memory", f"{gpu.get('memoryUsedMb', '—')} / {gpu.get('memoryTotalMb', '—')} MB"],
         ["Engine memory", f"{gpu.get('engineProcessMemoryMb', '—')} MB"],
         ["Limit", f"{gpu.get('memoryLimitMb', 0)} MB"],
         ["Message", gpu.get("message")],
+        ["Provider error", gpu.get("providerError")],
     ]
     _table(["Field", "Value"], rows)
 

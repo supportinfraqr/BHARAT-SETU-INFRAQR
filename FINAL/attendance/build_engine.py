@@ -12,6 +12,35 @@ ENGINE = ROOT / "engine" / "attendance_engine.py"
 WEIGHTS = ROOT / "face_embedding" / "weights"
 
 
+def _windows_directml_binaries():
+    """Explicitly include the DirectML runtime from the installed wheel.
+
+    PyInstaller's collect_all usually finds it, but a missing DirectML.dll
+    silently falls back to CPU on Windows. Fail the build instead.
+    """
+    if os.name != "nt":
+        return []
+    try:
+        import onnxruntime
+        providers = list(onnxruntime.get_available_providers())
+        print(f"onnxruntime {onnxruntime.__version__} providers: {providers}")
+        if "DmlExecutionProvider" not in providers:
+            raise SystemExit(
+                "Windows build has no DmlExecutionProvider. "
+                "onnxruntime-directml is missing or overridden by onnxruntime CPU."
+            )
+        capi = Path(onnxruntime.__file__).resolve().parent / "capi"
+    except SystemExit:
+        raise
+    except Exception as exc:
+        raise SystemExit(f"Could not inspect onnxruntime: {type(exc).__name__}: {exc}")
+    dll = capi / "DirectML.dll"
+    if not dll.is_file():
+        raise SystemExit(f"DirectML.dll not found in {capi}")
+    print(f"packaging DirectML runtime: {dll}")
+    return ["--add-binary", f"{dll}{os.pathsep}onnxruntime/capi"]
+
+
 def target_triple():
     env = os.environ.get("TAURI_ENV_TARGET_TRIPLE") or os.environ.get("TARGET")
     if env:
@@ -65,6 +94,9 @@ def main():
         cmd[cmd.index(str(ENGINE)):cmd.index(str(ENGINE))] = [
             "--add-data", f"{WEIGHTS / name}{os.pathsep}weights",
         ]
+    directml = _windows_directml_binaries()
+    if directml:
+        cmd[cmd.index(str(ENGINE)):cmd.index(str(ENGINE))] = directml
     if platform.system() == "Linux":
         try:
             import nvidia  # noqa: F401
