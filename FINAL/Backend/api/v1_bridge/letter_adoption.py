@@ -20,17 +20,46 @@ def _hex(value) -> str:
     return s if _HEX_RE.match(s) else ""
 
 
-def _catalog():
+def _employer_site_states(user):
+    """The jurisdiction heads this employer actually operates in.
+
+    Central-jurisdiction sites use the Central catalog; state sites use their
+    own state's catalog. Blank / legacy "All India" templates are not offered.
+    """
+    from bss_core.models import Site
+    states = set()
+    for site in Site.objects.filter(employer=user).only("state", "jurisdiction"):
+        if str(getattr(site, "jurisdiction", "state") or "state").lower() == "central":
+            states.add("Central")
+        else:
+            value = str(site.state or "").strip()
+            if value:
+                states.add(value)
+    return sorted(states)
+
+
+def _catalog_for_employer(user):
+    from django.db.models import Q
     from bss_core.models import LetterTemplate
+    states = _employer_site_states(user)
+    if not states:
+        return []
+    scope = Q()
+    for state in states:
+        scope |= Q(state__iexact=state)
     qs = (LetterTemplate.objects
-          .filter(letter_type="APPOINTMENT", is_active=True)
+          .filter(scope, letter_type="APPOINTMENT", is_active=True)
           .exclude(html="")
           .order_by("state", "name"))
     return [{"id": t.id, "name": payloads._d(t.name), "state": payloads._d(t.state)}
             for t in qs]
 
 
-def _template_html(template_id) -> str:
+def _catalog_ids_for_employer(user):
+    return {row["id"] for row in _catalog_for_employer(user)}
+
+
+def _template_html(template_id, user=None) -> str:
     from bss_core import letter_brand
     from bss_core.models import LetterTemplate
     raw = str(template_id or "").strip()
@@ -40,6 +69,8 @@ def _template_html(template_id) -> str:
          .filter(id=int(raw), letter_type="APPOINTMENT", is_active=True)
          .exclude(html="").first())
     if t is None:
+        return ""
+    if user is not None and t.id not in _catalog_ids_for_employer(user):
         return ""
     return letter_brand.ensure_letter_html(t.html, "APPOINTMENT", state=t.state or "")
 
@@ -72,9 +103,9 @@ def _adoption_payload(a):
 def employer_letter_adoption(request):
     """Employer appointment-letter adoption + customisation. Employers only.
 
-    GET    → ``{adoption, catalog, baseHtml}`` (the adopted base template's HTML
-             for preview); ``?templateId=X`` → ``{html}`` for previewing a
-             candidate catalog template.
+    GET    → ``{adoption, catalog, siteStates, baseHtml}`` where the catalog is
+             limited to the employer's site states / Central jurisdiction;
+             ``?templateId=X`` → ``{html}`` for previewing a candidate template.
     POST   → adopt/update ``{baseTemplateId, textColor, headingColor, logoUrl,
              brandName, footerText}``.
     DELETE → remove the adoption (a fresh adoption can then be made).
@@ -89,7 +120,7 @@ def employer_letter_adoption(request):
             employer=user, letter_type="APPOINTMENT").update(is_active=False)
         log_audit(user, "DELETE", "employer_letter_adoption", user.id,
                   after={"summary": "Appointment letter adoption removed"})
-        return Response({"adoption": None, "catalog": _catalog()}, status=status.HTTP_200_OK)
+        return Response({"adoption": None, "catalog": _catalog_for_employer(user), "siteStates": _employer_site_states(user)}, status=status.HTTP_200_OK)
 
     if request.method == "POST":
         body = request.data if isinstance(request.data, dict) else {}
@@ -103,6 +134,10 @@ def employer_letter_adoption(request):
         if template is None:
             return Response({"error": "That appointment letter template is not available."},
                             status=status.HTTP_404_NOT_FOUND)
+        if template.id not in _catalog_ids_for_employer(user):
+            return Response({
+                "error": "That template is not available for your site's state or Central jurisdiction."
+            }, status=status.HTTP_400_BAD_REQUEST)
         EmployerLetterAdoption.objects.update_or_create(
             employer=user, letter_type="APPOINTMENT",
             defaults={
@@ -122,15 +157,17 @@ def employer_letter_adoption(request):
 
     preview_id = request.query_params.get("templateId")
     if preview_id is not None:
-        return Response({"html": _template_html(preview_id)}, status=status.HTTP_200_OK)
+        return Response({"html": _template_html(preview_id, user)}, status=status.HTTP_200_OK)
 
     adoption = (EmployerLetterAdoption.objects
                 .filter(employer=user, letter_type="APPOINTMENT", is_active=True)
                 .select_related("base_template").first())
     base_html = ""
     if adoption is not None and adoption.base_template_id:
-        base_html = _template_html(adoption.base_template_id)
-    return Response({"adoption": _adoption_payload(adoption), "catalog": _catalog(),
+        base_html = _template_html(adoption.base_template_id, user)
+    return Response({"adoption": _adoption_payload(adoption),
+                     "catalog": _catalog_for_employer(user),
+                     "siteStates": _employer_site_states(user),
                      "baseHtml": base_html}, status=status.HTTP_200_OK)
 
 

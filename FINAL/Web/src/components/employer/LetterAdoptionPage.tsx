@@ -122,6 +122,7 @@ const input = 'w-full h-10 rounded-lg border border-bss-border px-3 text-sm bg-w
 
 export default function LetterAdoptionPage() {
   const [catalog, setCatalog] = useState<CatalogRow[]>([]);
+  const [siteStates, setSiteStates] = useState<string[]>([]);
   const [adoption, setAdoption] = useState<Adoption | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -144,9 +145,10 @@ export default function LetterAdoptionPage() {
     setLoading(true); setError('');
     try {
       const res = await fetch('/api/employer/letter-adoption', { cache: 'no-store' });
-      const body = await res.json().catch(() => ({})) as { adoption?: Adoption | null; catalog?: CatalogRow[]; error?: string };
+      const body = await res.json().catch(() => ({})) as { adoption?: Adoption | null; catalog?: CatalogRow[]; siteStates?: string[]; error?: string };
       if (!res.ok) throw new Error(body.error || 'Could not load the adoption.');
       setCatalog(body.catalog ?? []);
+      setSiteStates(body.siteStates ?? []);
       setAdoption(body.adoption ?? null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not load the adoption.');
@@ -238,7 +240,7 @@ export default function LetterAdoptionPage() {
         <div>
           <p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Letters</p>
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-bss-text-primary mt-1">Appointment Letter Adoption</h1>
-          <p className="text-sm text-bss-text-muted mt-1">Adopt an appointment-letter template, then edit it in the studio — the letter <strong className="text-bss-text-primary">body is locked</strong>; change the header, add clauses and the footer. Contractors at your sites issue it as-is.</p>
+          <p className="text-sm text-bss-text-muted mt-1">Adopt an appointment-letter template for your site jurisdiction, then edit it in the studio — the letter <strong className="text-bss-text-primary">body is locked</strong>; change the header, add clauses and the footer. Contractors at your sites issue it as-is.</p>{siteStates.length ? <p className="text-[11px] font-semibold text-bss-text-secondary mt-1">Showing templates for: {siteStates.map(s => s === 'Central' ? 'Central' : s).join(', ')}</p> : null}
         </div>
         <button type="button" onClick={() => void load()} disabled={loading} className="h-10 px-3.5 rounded-lg border border-bss-border bg-white text-xs font-semibold text-bss-text-secondary flex items-center gap-1.5 hover:bg-bss-bg disabled:opacity-60"><RefreshCw size={14} className={loading ? 'animate-spin' : ''}/>Reload</button>
       </header>
@@ -288,7 +290,7 @@ export default function LetterAdoptionPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <h3 className="text-sm font-semibold text-bss-text-primary truncate">{row.name}</h3>
-                        <span className="inline-block mt-1 text-[10px] font-mono bg-bss-bg text-bss-text-secondary rounded px-1.5 py-0.5">{row.state || 'Central'}</span>
+                        <span className="inline-block mt-1 text-[10px] font-mono bg-bss-bg text-bss-text-secondary rounded px-1.5 py-0.5">{row.state || '—'}</span>
                       </div>
                       {isCurrent && <span className="inline-flex items-center gap-1 text-[10px] font-bold text-bss-green bg-bss-soft-green rounded-full px-2 py-0.5 shrink-0"><CheckCircle2 size={11}/>Adopted</span>}
                     </div>
@@ -297,7 +299,7 @@ export default function LetterAdoptionPage() {
                     </button>
                   </article>;
                 })}
-                {!filtered.length && <p className="text-sm text-bss-text-muted py-6 col-span-full">No templates match “{query}”.</p>}
+                {!filtered.length && <p className="text-sm text-bss-text-muted py-6 col-span-full">{catalog.length ? `No templates match “${query}”.` : `No appointment-letter templates are available for ${siteStates.length ? siteStates.join(', ') : 'your sites'}. Ask BSS Admin to publish one for this jurisdiction.`}</p>}
               </div>
             </section>
           </>}
@@ -314,7 +316,7 @@ export default function LetterAdoptionPage() {
               <label className="text-xs font-semibold text-bss-text-primary flex-1 min-w-[220px]">Base template <span className="text-bss-error">*</span>
                 <select value={draft.baseTemplateId} onChange={e => void pickTemplate(e.target.value)} className={`${input} mt-1`}>
                   <option value="">Select a template…</option>
-                  {catalog.map(c => <option key={c.id} value={c.id}>{c.name}{c.state ? ` — ${c.state}` : ' — Central'}</option>)}
+                  {catalog.map(c => <option key={c.id} value={c.id}>{c.name}{c.state ? ` — ${c.state}` : ''}</option>)}
                 </select>
               </label>
               <div className="text-xs font-semibold text-bss-text-primary">Logo
