@@ -315,7 +315,7 @@ function renderActivation() {
 function renderLiveDetections(container, rows) {
   if (!container) return;
   if (!rows.length) {
-    container.innerHTML = '<span class="note">No faces detected in the current frame.</span>';
+    container.innerHTML = '<span class="note">No faces or QR codes detected in the current frame.</span>';
     return;
   }
   container.innerHTML = rows.map(row => {
@@ -343,7 +343,7 @@ function openLiveView(camera) {
       <img data-live-image alt="${esc(camera.label)} live view" />
       <div class="live-empty" data-live-empty>Connecting to the camera…</div>
     </div>
-    <div class="live-detections" data-live-detections><span class="note">Waiting for face detection…</span></div>
+    <div class="live-detections" data-live-detections><span class="note">Waiting for face or QR detection…</span></div>
     <div class="live-foot">
       <p class="note">Local RTSP preview from this laptop. Attendance upload starts automatically after the employer whitelists this device's public IP.</p>
       <div class="live-meta"><span>Allowed IP</span><b>${esc(camera.allowedIp || 'Waiting for employer')}</b><span>Whitelisted</span><b>${camera.ipWhitelisted ? 'Yes' : 'No'}</b></div>

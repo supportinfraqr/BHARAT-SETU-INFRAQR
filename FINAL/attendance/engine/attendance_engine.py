@@ -36,7 +36,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.10"
+APP_VERSION = "1.5.11"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 PRESENCE_GAP_SECONDS = 10
@@ -453,6 +453,7 @@ class CameraWorker:
         self._qr_detector = cv2.QRCodeDetector()
         self._last_qr = {}
         self._last_qr_scan = 0.0
+        self._qr_meta = []
         self._last_embedding = None
         self._face_boxes = []
         self._face_meta = []
@@ -649,7 +650,7 @@ class CameraWorker:
             return
         self._last_qr_scan = now_ts
         try:
-            text, _points, _straight = self._qr_detector.detectAndDecode(frame)
+            text, points, _straight = self._qr_detector.detectAndDecode(frame)
         except Exception:
             return
         text = str(text or "").strip()
@@ -668,31 +669,63 @@ class CameraWorker:
         bss_worker_id = str(payload.get("bssId") or "").strip().upper()
         if not bss_worker_id:
             return
+        box = None
+        if points is not None:
+            try:
+                corners = np.asarray(points, dtype=np.float32).reshape(-1, 2)
+                x, y, w, h = cv2.boundingRect(corners.astype(np.int32))
+                if w > 0 and h > 0:
+                    box = [int(x), int(y), int(w), int(h)]
+            except Exception:
+                box = None
+        self._set_qr_meta(bss_worker_id, box, now_ts)
         if now_ts - float(self._last_qr.get(bss_worker_id) or 0) < QR_COOLDOWN_SECONDS:
             return
         self._last_qr[bss_worker_id] = now_ts
         self.engine.send_qr_event(self, bss_worker_id, when)
 
-    def detection_rows(self):
+    def _set_qr_meta(self, bss_worker_id, box, seen_at):
         with self.lock:
-            return [dict(item) for item in self._face_meta]
+            self._qr_meta = [{
+                "box": list(box or [0, 0, 0, 0]),
+                "name": "QR scan",
+                "bssWorkerId": str(bss_worker_id or ""),
+                "matchScore": 100.0,
+                "matched": True,
+                "pending": False,
+                "qr": True,
+                "seenAt": float(seen_at),
+            }]
+
+    def detection_rows(self):
+        now_ts = time.time()
+        with self.lock:
+            rows = [dict(item) for item in self._face_meta]
+            rows.extend(
+                dict(item) for item in self._qr_meta
+                if now_ts - float(item.get("seenAt") or 0) <= 10.0
+            )
+        return rows
 
     def frame(self):
         with self.lock:
             return None if self._frame is None else self._frame.copy()
 
     def jpeg(self):
+        now_ts = time.time()
         with self.lock:
             meta = [dict(item) for item in self._face_meta]
+            qr_meta = [dict(item) for item in self._qr_meta
+                       if now_ts - float(item.get("seenAt") or 0) <= 10.0]
             boxes = list(self._face_boxes)
             frame = None if self._frame is None else self._frame.copy()
             raw = self._jpeg
         if frame is None:
             return raw
-        if not meta:
+        if not meta and boxes:
             meta = [{"box": list(box), "name": "", "bssWorkerId": "",
                      "matchScore": None, "matched": False, "pending": True} for box in boxes]
-        if not meta:
+        if not meta and not qr_meta:
             return raw
         for item in meta:
             box = item.get("box") or [0, 0, 0, 0]
@@ -711,6 +744,23 @@ class CameraWorker:
             label = label.encode("ascii", "replace").decode("ascii")
             if len(label) > 48:
                 label = label[:47] + "…"
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            scale, thickness = 0.45, 1
+            (text_w, text_h), _ = cv2.getTextSize(label, font, scale, thickness)
+            top = max(0, y - text_h - 8)
+            cv2.rectangle(frame, (x, top), (x + text_w + 6, top + text_h + 6), color, -1)
+            cv2.putText(frame, label, (x + 3, top + text_h + 2), font, scale,
+                        (255, 255, 255), thickness, cv2.LINE_AA)
+        for item in qr_meta:
+            box = item.get("box") or [0, 0, 0, 0]
+            x, y, w, h = [int(v) for v in box[:4]]
+            if w <= 0 or h <= 0:
+                continue
+            color = (0, 165, 255)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
+            bss_id = str(item.get("bssWorkerId") or "").strip()
+            label = f"QR | {bss_id}" if bss_id else "QR scan"
+            label = label.encode("ascii", "replace").decode("ascii")
             font = cv2.FONT_HERSHEY_SIMPLEX
             scale, thickness = 0.45, 1
             (text_w, text_h), _ = cv2.getTextSize(label, font, scale, thickness)
@@ -753,6 +803,13 @@ class CameraWorker:
                 attendance_mode = "FACE"
             if attendance_mode != "FACE":
                 self.close_presence_sessions("camera_mode")
+            # QR is independent of the face/GPU pipeline. Scan before the GPU
+            # gate so a CPU-only machine (or "Require GPU" with no provider)
+            # still records QR attendance.
+            if attendance_mode in ("QR", "BOTH"):
+                self._scan_qr(frame, _now())
+            if attendance_mode == "QR":
+                continue
             if attendance_mode in ("FACE", "BOTH") and not self.engine.gallery.ready:
                 if attendance_mode == "FACE":
                     time.sleep(1)
@@ -775,8 +832,6 @@ class CameraWorker:
                 site_id = camera.get("siteId")
                 when = _now()
                 frame_ts = time.time()
-                if attendance_mode in ("QR", "BOTH"):
-                    self._scan_qr(frame, when)
                 if attendance_mode == "QR" or not self.engine.gallery.ready:
                     continue
                 detections = self._recognise(frame)
