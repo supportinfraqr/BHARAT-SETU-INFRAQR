@@ -246,7 +246,10 @@ def get_loan_types(ctx):
         qs = qs.filter(status=str(status).lower())
     elif not include_inactive:
         qs = qs.filter(status="active")
-    rows = [x.to_dict() for x in qs.order_by("loan_name")]
+    # sort({loanName: 1}): Mongo compares strings by code point (case-sensitive); a SQL
+    # ORDER BY would use the database collation, so sort in Python.
+    rows = sorted((x.to_dict() for x in qs.order_by("created_at", "id")),
+                  key=lambda r: r.get("loanName") or "")
     if search:
         term = str(search).strip().lower()
         rows = [r for r in rows if term in str(r.get("loanName") or "").lower()]

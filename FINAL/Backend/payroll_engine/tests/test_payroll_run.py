@@ -504,6 +504,33 @@ class PayrollRunApiTests(PayrollWorld):
         self.assertEqual(self.hr.delete(BASE + f"deletePayrollRun/{r0.pk}").status_code, 404)
         self.assertTrue(PayrollAuditLog.objects.filter(action="payroll_deleted").exists())
 
+    def test_concurrent_process_does_not_duplicate_run_or_tds(self):
+        """Legacy's unique {employeeId, month, year} index rejected a concurrent second run;
+        a run committed by another request while this one calculates must not be duplicated
+        (nor its TDS ledger entry pushed twice)."""
+        from unittest import mock
+
+        self.configure()
+        e0 = self.emps[0]
+        EmployeeTDS.objects.create(org=self.org, employee=e0, financial_year="2025-26",
+                                   monthly_tds=1000)
+        real = pc.calculate_employee_salary_improved
+
+        def racing(emp, *args, **kwargs):
+            calc = real(emp, *args, **kwargs)
+            # the concurrent request finishes first
+            PayrollRun.objects.create(org=self.org, employee=emp, month="Dec", year=2025,
+                                      pay_status="processed")
+            return calc
+
+        with mock.patch.object(pc, "calculate_employee_salary_improved", side_effect=racing):
+            data = self.process(employeeIds=[str(e0.pk)]).json()["data"]
+        self.assertEqual((data["successful"], data["failed"]), (0, 1), data)
+        self.assertEqual(data["errors"][0]["error"], "Payroll already processed")
+        self.assertEqual(PayrollRun.objects.filter(employee=e0, month="Dec", year=2025).count(), 1)
+        tds = EmployeeTDS.objects.get(employee=e0)
+        self.assertEqual((tds.total_tds_deducted, tds.monthly_deductions), (0, []))
+
 
 # =========================================================================== dependencies
 

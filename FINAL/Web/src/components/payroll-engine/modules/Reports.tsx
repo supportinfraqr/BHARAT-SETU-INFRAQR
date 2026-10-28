@@ -97,6 +97,12 @@ const REPORTS = [
 ];
 
 const thisMonth = (): string => MONTHS[new Date().getMonth()];
+type Period = { month: string; year: number };
+/** Period passed by other modules (e.g. Pay Runs / Dashboard "Reports" links), else the current month. */
+function initialPeriod(params: Record<string, string>): Period {
+  const month = params.month && (MONTHS as readonly string[]).includes(params.month) ? params.month : thisMonth();
+  return { month, year: Number(params.year) || new Date().getFullYear() };
+}
 
 function useExport(notify: Notify) {
   const [busy, setBusy] = useState(false);
@@ -126,8 +132,8 @@ const identitySpecs = <T extends { name: string; employeeCode: string }>(): Spec
 // Summary
 // ---------------------------------------------------------------------------
 
-function SummaryReport({ notify }: { notify: Notify }) {
-  const [period, setPeriod] = useState({ month: thisMonth(), year: new Date().getFullYear() });
+function SummaryReport({ notify, initial }: { notify: Notify; initial: Period }) {
+  const [period, setPeriod] = useState(initial);
   const state = useLoad(() => pe.get<SummaryData>('reports/summary', period), [period.month, period.year]);
   const ex = useExport(notify);
   const s = state.data?.summary;
@@ -301,8 +307,8 @@ const bonusSpecs: Spec<BonusRow>[] = [...identitySpecs<BonusRow>(),
   { label: 'Percentage', value: r => r.percentage, kind: 'pct' }, { label: 'Amount', value: r => r.amount, kind: 'money', total: true },
 ];
 
-function StatutoryReport({ notify }: { notify: Notify }) {
-  const [period, setPeriod] = useState({ month: thisMonth(), year: new Date().getFullYear() });
+function StatutoryReport({ notify, initial }: { notify: Notify; initial: Period }) {
+  const [period, setPeriod] = useState(initial);
   const [tab, setTab] = useState('epf');
   const state = useLoad(() => pe.get<StatutoryData>('reports/statutory', period), [period.month, period.year]);
   const ex = useExport(notify);
@@ -513,14 +519,15 @@ function VarianceReport({ notify }: { notify: Notify }) {
 // ---------------------------------------------------------------------------
 
 export default function Reports({ notify, params }: ModuleProps) {
+  const [period] = useState(() => initialPeriod(params));
   const [tab, setTab] = useState(params.report && REPORTS.some(r => r.key === params.report) ? params.report : params.employeeId ? 'ytd' : 'summary');
   return <div className="space-y-4">
     <div className="bg-white border border-gray-200 rounded-2xl px-3 pt-2">
       <Tabs tabs={REPORTS} active={tab} onChange={setTab} />
     </div>
-    {tab === 'summary' && <SummaryReport notify={notify} />}
+    {tab === 'summary' && <SummaryReport notify={notify} initial={period} />}
     {tab === 'ytd' && <YtdReport notify={notify} initialEmployee={params.employeeId ?? ''} />}
-    {tab === 'statutory' && <StatutoryReport notify={notify} />}
+    {tab === 'statutory' && <StatutoryReport notify={notify} initial={period} />}
     {tab === 'tds' && <TdsReport notify={notify} />}
     {tab === 'ctc' && <CtcReport notify={notify} />}
     {tab === 'variance' && <VarianceReport notify={notify} />}

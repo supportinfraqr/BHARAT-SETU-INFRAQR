@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { Download, ExternalLink, Printer } from 'lucide-react';
 import { pe } from '@/lib/payroll-engine/api';
-import { Async, Btn, Field, FormGrid, Modal, Row, Select, TextInput, isoDate, money, num, useAction, useLoad, type Notify } from '../../ui';
+import { Async, Btn, Field, Modal, Row, Select, TextInput, isoDate, money, num, useAction, useLoad, type Notify } from '../../ui';
 import type { BulkStatusResult, PayLine, PayStatus, PaymentMode, Payslip } from './types';
 
 export const STATUS_LABEL: Record<PayStatus, string> = {
@@ -30,7 +30,8 @@ export function openPayslipPdf(payrollId: string) {
 
 /**
  * Change pay status of one payroll (updatePayrollStatus/:id) or many (updatePayrollStatusBulk).
- * Body: payStatus, remarks / rejectionReason, paidOn (+ paymentMode, transactionId for the payment record).
+ * Body: payStatus, remarks / rejectionReason, paidOn — the only fields the legacy endpoints read
+ * (payment mode / transaction id are not stored on a payroll run).
  */
 export function StatusModal({ payrollIds, initialStatus, notify, onClose, onDone, label }: {
   payrollIds: string[]; initialStatus?: PayStatus; notify: Notify; onClose: () => void; onDone: () => void; label?: string;
@@ -39,19 +40,13 @@ export function StatusModal({ payrollIds, initialStatus, notify, onClose, onDone
   const [status, setStatus] = useState<PayStatus>(initialStatus ?? 'approved');
   const [remarks, setRemarks] = useState('');
   const [paidOn, setPaidOn] = useState(isoDate(new Date()));
-  const [paymentMode, setPaymentMode] = useState<PaymentMode>('bank_transfer');
-  const [transactionId, setTransactionId] = useState('');
   const bulk = payrollIds.length > 1;
 
   const submit = async () => {
     const body: Record<string, unknown> = { payStatus: status };
     if (status === 'rejected') { body.rejectionReason = remarks || undefined; body.remarks = remarks || undefined; }
     if (status === 'on_hold' && remarks) body.remarks = remarks;
-    if (status === 'paid') {
-      body.paidOn = paidOn || undefined;
-      body.paymentMode = paymentMode;
-      if (transactionId) body.transactionId = transactionId;
-    }
+    if (status === 'paid') body.paidOn = paidOn || undefined;
     if (bulk) {
       const out = await run(() => pe.put<BulkStatusResult>('updatePayrollStatusBulk', { payrollIds, ...body }));
       if (out) {
@@ -70,11 +65,7 @@ export function StatusModal({ payrollIds, initialStatus, notify, onClose, onDone
       <Field label="New status">
         <Select value={status} onChange={v => setStatus(v as PayStatus)} options={SETTABLE_STATUSES.map(s => ({ value: s, label: STATUS_LABEL[s] }))} />
       </Field>
-      {status === 'paid' && <FormGrid cols={2}>
-        <Field label="Paid on"><TextInput type="date" value={paidOn} onChange={setPaidOn} /></Field>
-        <Field label="Payment mode"><Select value={paymentMode} onChange={v => setPaymentMode(v as PaymentMode)} options={PAYMENT_MODES} /></Field>
-        <Field label="Transaction / UTR / cheque no." className="md:col-span-2"><TextInput value={transactionId} onChange={setTransactionId} placeholder="Optional" /></Field>
-      </FormGrid>}
+      {status === 'paid' && <Field label="Paid on" hint="Defaults to today when empty"><TextInput type="date" value={paidOn} onChange={setPaidOn} /></Field>}
       {(status === 'rejected' || status === 'on_hold') && <Field label={status === 'rejected' ? 'Rejection reason' : 'Hold remarks'} hint={status === 'rejected' ? 'Defaults to "Rejected" when empty.' : undefined}>
         <textarea className="w-full min-h-20 rounded-lg border border-gray-300 px-3 py-2 text-sm" value={remarks} onChange={e => setRemarks(e.target.value)} aria-label="Remarks" />
       </Field>}

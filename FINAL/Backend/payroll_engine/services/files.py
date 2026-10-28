@@ -13,15 +13,20 @@ from django.core.files.storage import default_storage
 
 from ..context import PayrollError
 
-ALLOWED_MIME_TYPES = {
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-excel",
-    "text/csv",
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-    "image/gif",
+# Allowed MIME type -> the extension a stored file gets. The extension decides the
+# Content-Type the file is served back with, so it must come from the validated
+# MIME type, never from the client's filename (``evil.html`` sent as image/png
+# would otherwise be served as text/html on the web app's origin).
+EXTENSIONS = {
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+    "application/vnd.ms-excel": ".xls",
+    "text/csv": ".csv",
+    "application/pdf": ".pdf",
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/gif": ".gif",
 }
+ALLOWED_MIME_TYPES = set(EXTENSIONS)
 MAX_BYTES = 10 * 1024 * 1024
 ROOT = "payroll_engine"
 
@@ -39,8 +44,10 @@ def save_upload(org_id, uploaded, folder="uploads"):
     """Persist one uploaded file; returns the legacy attachment dict."""
     validate_upload(uploaded)
     _, ext = os.path.splitext(uploaded.name or "")
+    if not (uploaded.content_type == "application/vnd.ms-excel" and ext.lower() == ".csv"):
+        ext = EXTENSIONS[uploaded.content_type]
     safe_folder = "".join(c for c in str(folder) if c.isalnum() or c in "-_") or "uploads"
-    key = f"{ROOT}/{org_id}/{safe_folder}/{uuid.uuid4().hex}{ext.lower()[:10]}"
+    key = f"{ROOT}/{org_id}/{safe_folder}/{uuid.uuid4().hex}{ext.lower()}"
     stored = default_storage.save(key, uploaded)
     return {
         "url": f"/v1/payroll-engine/files/{stored[len(ROOT) + 1:]}",

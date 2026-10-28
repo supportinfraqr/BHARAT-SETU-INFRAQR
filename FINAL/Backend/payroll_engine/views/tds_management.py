@@ -1833,10 +1833,23 @@ def _set_tds_fields(record, values):
         if key in ("organizationId", "employeeId"):
             continue
         if "." in key:  # dotted path inside a JSON column ('itDeclaration.salaryExemptions')
+            from ..models.base import Obj
+
             head, sub = key.split(".", 1)
             attr = _TDS_ATTRS[head]
             current = dict(getattr(record, attr) or {})
-            current[sub] = _jsonify(value)
+            stored = _jsonify(value)
+            node = record.JSON_SCHEMAS.get(attr)
+            sub_node = node.fields.get(sub) if isinstance(node, Obj) else None
+            if isinstance(sub_node, Obj) and isinstance(stored, dict):
+                # Mongoose casts the $set value against the nested schema: unknown keys
+                # dropped, Number leaves cast ("2" -> 2, "" -> null, "abc" -> CastError).
+                stored = _strict(stored, sub_node)
+                for k, spec in sub_node.fields.items():
+                    if (k in stored and stored[k] is not None and isinstance(spec, (int, float))
+                            and not isinstance(spec, bool)):
+                        stored[k] = None if stored[k] == "" else _cast_number(stored[k], f"{key}.{k}")
+            current[sub] = stored
             setattr(record, attr, current)
             continue
         attr = _TDS_ATTRS[key]
