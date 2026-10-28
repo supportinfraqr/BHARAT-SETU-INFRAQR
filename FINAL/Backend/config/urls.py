@@ -50,6 +50,7 @@ _v1_patterns = _v1(
     ("edge/cameras/<int:camera_id>/remove", v1_bridge.edge_camera_remove, "v1_edge_camera_remove"),
     ("edge/cameras/<int:camera_id>/takeover-otp", v1_bridge.edge_camera_takeover_otp, "v1_edge_camera_takeover_otp"),
     ("edge/cameras/<int:camera_id>/rotate", v1_bridge.edge_camera_rotate, "v1_edge_camera_rotate"),
+    ("edge/cameras/<int:camera_id>/attendance-mode", v1_bridge.edge_camera_attendance_mode, "v1_edge_camera_attendance_mode"),
     ("edge/cameras/<int:camera_id>/manual-enroll", v1_bridge.edge_manual_enroll, "v1_edge_manual_enroll"),
     ("edge/device-heartbeat", v1_bridge.edge_device_heartbeat, "v1_edge_device_heartbeat"),
     ("edge/heartbeat", v1_bridge.edge_heartbeat, "v1_edge_heartbeat"),

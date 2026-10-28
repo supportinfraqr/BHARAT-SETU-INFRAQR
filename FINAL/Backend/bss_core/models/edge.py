@@ -89,6 +89,8 @@ class EdgeCamera(models.Model):
     timezone = models.CharField(max_length=64, default="Asia/Kolkata")
     schedule_enabled = models.BooleanField(default=False)
     capture_windows = models.JSONField(default=list, blank=True)
+    ATTENDANCE_MODES = [("FACE", "Face only"), ("QR", "QR only"), ("BOTH", "Face + QR")]
+    attendance_mode = models.CharField(max_length=10, choices=ATTENDANCE_MODES, default="FACE")
     token_hash = models.CharField(max_length=64, db_index=True, blank=True)
     token_prefix = models.CharField(max_length=16, blank=True)
     is_claimed = models.BooleanField(default=False)

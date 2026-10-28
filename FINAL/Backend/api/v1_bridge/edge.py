@@ -196,6 +196,7 @@ def _camera_payload(camera, device=None):
         "scheduleEnabled": bool(camera.schedule_enabled),
         "windows": camera.capture_windows or [],
         "mode": camera.last_mode,
+        "attendanceMode": camera.attendance_mode or "FACE",
         "status": camera.last_status,
         "approvalStatus": camera.approval_status,
         "ipWhitelisted": bool(camera.allowed_ip),
@@ -442,17 +443,20 @@ def _presence_info(raw, occurred_at):
 
 
 def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id,
-                          binding=None, presence=None):
+                          binding=None, presence=None, method="FACE"):
     presence = presence or {}
-    confidence = round(max(0.0, min(1.0, 1.0 - float(distance))) * 100, 2)
+    is_qr = str(method or "FACE").upper() == "QR"
+    confidence = 100.0 if is_qr else round(max(0.0, min(1.0, 1.0 - float(distance))) * 100, 2)
     presence_started_at = presence.get("startedAt") or occurred_at
     local_date = presence_started_at.astimezone(ZoneInfo(camera.timezone or "Asia/Kolkata")).date()
     binding = binding or (WorkerContractorBinding.objects
                           .filter(worker=worker, site=site, binding_status="ACCEPTED")
                           .order_by("-id").first())
-    is_verified = confidence >= 60.0
-    remarks = "CCTV edge attendance"
-    if confidence < 60.0:
+    source = "QR" if is_qr else "CAMERA"
+    event_method = "qr_worker" if is_qr else "face_image"
+    is_verified = True if is_qr else confidence >= 60.0
+    remarks = "QR attendance via edge camera" if is_qr else "CCTV edge attendance"
+    if not is_qr and confidence < 60.0:
         remarks = f"CCTV edge attendance — manual review (confidence {confidence:g}%)"
     attendance, _created = Attendance.objects.update_or_create(
         worker=worker, attendance_date=local_date,
@@ -460,8 +464,8 @@ def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id,
             "site": site,
             "contractor": binding.contractor if binding else None,
             "status": "PRESENT",
-            "capture_method": "CAMERA",
-            "verification_type": "face_image",
+            "capture_method": source,
+            "verification_type": event_method,
             "is_verified": is_verified,
             "confidence_pct": confidence,
             "camera_label": camera.label,
@@ -475,12 +479,12 @@ def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id,
         # event creates it; the end event fills the duration and end time.
         external_id = f"presence:{session_id}"[:60]
         event = (AttendanceEvent.objects
-                 .filter(worker=worker, source="CAMERA", external_id=external_id)
+                 .filter(worker=worker, source=source, external_id=external_id)
                  .order_by("-id").first())
         if event is None:
             event = AttendanceEvent(
                 attendance=attendance, worker=worker, site=site,
-                attendance_date=local_date, source="CAMERA", method="face_image",
+                attendance_date=local_date, source=source, method=event_method,
                 event_type="SIGHTING", at=presence_started_at, camera_label=camera.label,
                 confidence=confidence, external_id=external_id,
                 remarks=remarks,
@@ -509,7 +513,7 @@ def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id,
                 attendance_date=local_date).exists():
             AttendanceEvent.objects.create(
                 attendance=attendance, worker=worker, site=site,
-                attendance_date=local_date, source="CAMERA", method="face_image",
+                attendance_date=local_date, source=source, method=event_method,
                 event_type="SIGHTING", at=occurred_at, camera_label=camera.label,
                 confidence=confidence, external_id=str(event_id)[:60],
                 remarks=remarks,
@@ -1150,6 +1154,13 @@ def edge_events(request):
             results.append({"eventId": event_id, "status": "DUPLICATE", "code": "duplicate"})
             continue
         method = str(raw.get("type") or raw.get("captureMethod") or "FACE").upper()
+        attendance_mode = str(camera.attendance_mode or "FACE").upper()
+        if method == "FACE" and attendance_mode == "QR":
+            results.append(_event_error(event_id, "face_disabled", "Face attendance is disabled for this camera."))
+            continue
+        if method == "QR" and attendance_mode == "FACE":
+            results.append(_event_error(event_id, "qr_disabled", "QR attendance is disabled for this camera."))
+            continue
         model_version = str(raw.get("modelVersion") or raw.get("embeddingModelVersion") or "").strip()
         embedding = raw.get("embedding")
         client_worker_ref = str(raw.get("bssWorkerId") or raw.get("workerId") or "").strip().upper()
@@ -1227,7 +1238,7 @@ def edge_events(request):
                 confidence = round(max(0.0, min(1.0, 1.0 - float(distance))) * 100, 2)
                 attendance = _mark_edge_attendance(worker, camera.site, camera, occurred_at,
                                                    distance, event_id, binding=binding,
-                                                   presence=presence)
+                                                   presence=presence, method=method)
                 status_value = "ACCEPTED"
         blob = None
         if method == "FACE" and not client_match:
@@ -1307,6 +1318,29 @@ def edge_camera_create(request):
         channel=int(channel) if str(channel or "").isdigit() else None,
     )
     return Response({"data": _camera_payload(camera, device)}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+@authentication_classes([EdgeCameraAuthentication])
+@permission_classes([IsAuthenticated])
+def edge_camera_attendance_mode(request, camera_id):
+    """Set a camera's attendance mode from the client, synced to BSS."""
+    camera = _edge_camera(request)
+    if camera is None or int(camera.id) != int(camera_id):
+        return Response({"error": "Invalid camera."}, status=status.HTTP_401_UNAUTHORIZED)
+    mode = str((request.data or {}).get("mode") or "").strip().upper()
+    if mode not in ("FACE", "QR", "BOTH"):
+        return Response({"error": "mode must be FACE, QR or BOTH."}, status=status.HTTP_400_BAD_REQUEST)
+    if not camera.is_claimed or camera.device_id is None:
+        return Response({"error": "This camera is not synced to an active device."},
+                        status=status.HTTP_403_FORBIDDEN)
+    if camera.approval_status != "APPROVED":
+        return Response({"error": "This camera is not approved by the employer."},
+                        status=status.HTTP_403_FORBIDDEN)
+    camera.attendance_mode = mode
+    camera.save(update_fields=["attendance_mode", "updated_at"])
+    return Response({"data": {"cameraId": camera.id, "attendanceMode": mode}},
+                    status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
@@ -1653,6 +1687,7 @@ __all__ = [
     "edge_camera_remove",
     "edge_camera_takeover_otp",
     "edge_camera_rotate",
+    "edge_camera_attendance_mode",
     "edge_device_heartbeat",
     "edge_heartbeat",
     "edge_events",

@@ -25,6 +25,7 @@ type CameraRow = {
   lastSeenIp: string;
   lastEventAt: string | null;
   mode: string;
+  attendanceMode: 'FACE' | 'QR' | 'BOTH';
   status: string;
 };
 type DeviceBrief = {
@@ -127,6 +128,7 @@ function CameraCard({ camera, onSaved }: { camera: CameraRow; onSaved: (message:
         <div className="flex flex-wrap items-center gap-2">
           <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${status.className}`}>{status.label}</span>
           {camera.ipWhitelisted && <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-bss-bg text-bss-text-muted">{MODE_LABEL[camera.mode] || camera.mode}</span>}
+          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-bss-blue-tint text-bss-interactive-blue">{camera.attendanceMode === 'BOTH' ? 'Face + QR' : camera.attendanceMode === 'QR' ? 'QR only' : 'Face only'}</span>
         </div>
       </div>
       <div className="p-4 space-y-4">

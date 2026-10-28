@@ -122,13 +122,15 @@ def cmd_workers(args):
     sites = {int(site.get("id")): site.get("name") for site in status.get("sites") or [] if str(site.get("id", "")).isdigit()}
     rows = []
     for worker in workers:
-        count = int(worker.get("embeddingCount") or 0)
-        state = "Ready" if count >= 5 else ("Partial" if count else "Not enrolled")
+        manual = int(worker.get("manualCount") or 0)
+        self_count = int(worker.get("selfCount") or 0)
+        source = str(worker.get("matchSource") or "SELF").upper()
+        state = "Ready" if (manual if source == "MANUAL" else self_count) else f"No {source.lower()} vectors"
         site_names = ", ".join(str(sites.get(site_id, f"Site {site_id}")) for site_id in worker.get("siteIds") or [])
-        rows.append([worker.get("name") or worker.get("bssWorkerId"), worker.get("bssWorkerId"), site_names, count, state])
+        rows.append([worker.get("name") or worker.get("bssWorkerId"), worker.get("bssWorkerId"), site_names, manual, self_count, source, state])
     if args.json:
         return _print(args, workers)
-    _table(["Worker", "BSS ID", "Site", "Embeddings", "Face data"], rows or [["No bound workers", "", "", "", ""]])
+    _table(["Worker", "BSS ID", "Site", "Manual", "Self", "Source", "Status"], rows or [["No bound workers", "", "", "", "", "", ""]])
 
 
 def cmd_cameras(args):
@@ -137,13 +139,13 @@ def cmd_cameras(args):
     for camera in status.get("cameras") or []:
         rows.append([
             camera.get("cameraId"), camera.get("label"), camera.get("status"),
-            camera.get("sourceDeviceName"), camera.get("allowedIp"),
-            "Yes" if camera.get("rtspConfigured") else "No",
+            camera.get("attendanceMode") or "FACE", camera.get("sourceDeviceName"),
+            camera.get("allowedIp"), "Yes" if camera.get("rtspConfigured") else "No",
             "Yes" if camera.get("sendAllowed") else "No",
         ])
     if args.json:
         return _print(args, status.get("cameras") or [])
-    _table(["ID", "Camera", "Status", "Owner", "Allowed IP", "RTSP", "Sending"], rows or [["—", "No cameras", "", "", "", "", ""]])
+    _table(["ID", "Camera", "Status", "Attendance", "Owner", "Allowed IP", "RTSP", "Sending"], rows or [["—", "No cameras", "", "", "", "", "", ""]])
 
 
 def cmd_events(args):
@@ -177,6 +179,34 @@ def cmd_camera_add(args):
 
 def cmd_camera_mode(args):
     _print(args, _request(args, "POST", f"/api/cameras/{args.camera_id}/mode", {"mode": args.mode.upper()}).get("data"))
+
+
+def cmd_camera_attendance_mode(args):
+    _print(args, _request(args, "POST", f"/api/cameras/{args.camera_id}/attendance-mode", {"mode": args.mode.upper()}).get("data"))
+
+
+def cmd_worker_source(args):
+    _print(args, _request(args, "POST", f"/api/workers/{args.bss_worker_id}/face-source", {"source": args.source.upper()}).get("data"))
+
+
+def cmd_worker_enroll(args):
+    started = _request(args, "POST", f"/api/cameras/{args.camera_id}/manual-enroll/start",
+                       {"bssWorkerId": args.bss_worker_id}).get("data") or {}
+    capture_id = started.get("captureId")
+    if not capture_id:
+        raise RuntimeError("Manual enrollment could not start.")
+    try:
+        captured = _request(args, "POST", f"/api/cameras/{args.camera_id}/manual-enroll/capture-one",
+                            {"captureId": capture_id, "slot": 1}).get("data") or {}
+        result = _request(args, "POST", f"/api/cameras/{args.camera_id}/manual-enroll/confirm",
+                          {"captureId": capture_id, "confirmMismatch": bool(args.confirm_mismatch)}).get("data") or {}
+        if result.get("requiresConfirmation") and not args.confirm_mismatch:
+            raise RuntimeError("The captured face matches another worker. Re-run with --confirm-mismatch if the worker is correct.")
+        _print(args, {"capture": captured, "result": result})
+    except Exception:
+        _request(args, "POST", f"/api/cameras/{args.camera_id}/manual-enroll/cancel",
+                 {"captureId": capture_id})
+        raise
 
 
 def cmd_camera_claim(args):
@@ -325,10 +355,15 @@ def build_parser():
     add = camera.add_parser("add"); add.add_argument("--label", required=True); add.add_argument("--site", required=True); add.add_argument("--rtsp", required=True); add.add_argument("--channel", type=int); add.set_defaults(func=cmd_camera_add)
     test = camera.add_parser("test"); test.add_argument("--rtsp", required=True); test.set_defaults(func=cmd_camera_test)
     mode = camera.add_parser("mode"); mode.add_argument("camera_id", type=int); mode.add_argument("mode", choices=["LIVE", "SENDING"]); mode.set_defaults(func=cmd_camera_mode)
+    attendance_mode = camera.add_parser("attendance-mode"); attendance_mode.add_argument("camera_id", type=int); attendance_mode.add_argument("mode", choices=["FACE", "QR", "BOTH"]); attendance_mode.set_defaults(func=cmd_camera_attendance_mode)
     claim = camera.add_parser("claim"); claim.add_argument("camera_id", type=int); claim.add_argument("--otp"); claim.set_defaults(func=cmd_camera_claim)
     takeover = camera.add_parser("takeover-otp"); takeover.add_argument("camera_id", type=int); takeover.set_defaults(func=cmd_camera_takeover_otp)
     detections = camera.add_parser("detections"); detections.add_argument("camera_id", type=int); detections.set_defaults(func=cmd_detections)
     snapshot = camera.add_parser("snapshot"); snapshot.add_argument("camera_id", type=int); snapshot.add_argument("--output", required=True); snapshot.set_defaults(func=cmd_snapshot)
+
+    worker = sub.add_parser("worker").add_subparsers(dest="action", required=True)
+    source = worker.add_parser("source"); source.add_argument("bss_worker_id"); source.add_argument("source", choices=["MANUAL", "SELF"]); source.set_defaults(func=cmd_worker_source)
+    enroll = worker.add_parser("enroll"); enroll.add_argument("bss_worker_id"); enroll.add_argument("--camera", dest="camera_id", type=int, required=True); enroll.add_argument("--confirm-mismatch", action="store_true"); enroll.set_defaults(func=cmd_worker_enroll)
 
     resources = sub.add_parser("resources").add_subparsers(dest="action", required=True)
     resources.add_parser("get").set_defaults(func=cmd_resources)

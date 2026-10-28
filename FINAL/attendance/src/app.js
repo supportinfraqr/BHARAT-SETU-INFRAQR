@@ -453,6 +453,7 @@ function cameraRow(camera) {
     <td>${esc(camera.sourceDeviceName || state.deviceName || 'This device')}</td>
     <td class="mono">${esc(camera.allowedIp || '—')}</td>
     <td>${esc(camera.rtspConfigured ? 'Configured' : 'No RTSP')}</td>
+    <td><select data-attendance-mode="${id}" ${state?.bssConnected ? '' : 'disabled'} aria-label="Attendance mode"><option value="FACE" ${(camera.attendanceMode || 'FACE') === 'FACE' ? 'selected' : ''}>Face</option><option value="QR" ${camera.attendanceMode === 'QR' ? 'selected' : ''}>QR</option><option value="BOTH" ${camera.attendanceMode === 'BOTH' ? 'selected' : ''}>Face + QR</option></select></td>
     <td>${esc(when(camera.lastEventAt))}</td>
     <td><div class="table-actions">
       <button id="live-${id}" class="btn primary" type="button" ${canPreview ? '' : 'disabled'}>See live</button>
@@ -480,7 +481,7 @@ function siteSection(site, cameras) {
       <div class="site-meta"><span class="pill ${capacity.remaining ? 'ok' : 'warn'}">${capacity.remaining ? `${capacity.remaining} slots left` : 'Camera slots full'}</span></div>
     </div>
     ${cameras.length ? `<div class="table-wrap"><table class="data-table">
-      <thead><tr><th>Camera</th><th>Status</th><th>Owner</th><th>Allowed IP</th><th>RTSP</th><th>Last event</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Camera</th><th>Status</th><th>Owner</th><th>Allowed IP</th><th>RTSP</th><th>Attendance mode</th><th>Last event</th><th>Actions</th></tr></thead>
       <tbody>${cameras.map(cameraRow).join('')}</tbody>
     </table></div>` : '<div class="card empty">No cameras added for this site yet.</div>'}
   </section>`;
@@ -1380,6 +1381,26 @@ function render() {
   for (const camera of cameras) {
     const id = camera.cameraId;
     qs(`live-${id}`)?.addEventListener('click', () => openLiveView(camera));
+    const modeSelect = document.querySelector(`[data-attendance-mode="${id}"]`);
+    modeSelect?.addEventListener('change', async () => {
+      const previous = camera.attendanceMode || 'FACE';
+      const next = modeSelect.value;
+      if (!state?.bssConnected) {
+        modeSelect.value = previous;
+        await showAlert('BSS connection required', 'Camera attendance mode must be synced to BSS.');
+        return;
+      }
+      modeSelect.disabled = true;
+      try {
+        await api(`/api/cameras/${id}/attendance-mode`, { method: 'POST', body: JSON.stringify({ mode: next }) });
+        state = await api('/api/status');
+        render();
+      } catch (error) {
+        modeSelect.value = previous;
+        modeSelect.disabled = false;
+        await showAlert('Could not change attendance mode', error.message || String(error));
+      }
+    });
     qs(`remove-${id}`)?.addEventListener('click', async () => {
       const confirmed = await showDialog({
         title: 'Remove this camera?',

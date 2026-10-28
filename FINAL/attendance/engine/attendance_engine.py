@@ -36,10 +36,12 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.9"
+APP_VERSION = "1.5.10"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 PRESENCE_GAP_SECONDS = 10
+QR_COOLDOWN_SECONDS = 60
+QR_SCAN_INTERVAL = 0.6
 MANUAL_ENROLL_FRAMES = 1
 MANUAL_ENROLL_INTERVAL = 0.7
 MANUAL_ENROLL_TIMEOUT = 30
@@ -448,6 +450,9 @@ class CameraWorker:
         self._ai_thread = None
         self._match_streaks = {}
         self._presence = {}
+        self._qr_detector = cv2.QRCodeDetector()
+        self._last_qr = {}
+        self._last_qr_scan = 0.0
         self._last_embedding = None
         self._face_boxes = []
         self._face_meta = []
@@ -638,6 +643,36 @@ class CameraWorker:
         for matched_worker in list(self._presence.keys()):
             self._close_presence(matched_worker, reason)
 
+    def _scan_qr(self, frame, when):
+        now_ts = time.time()
+        if now_ts - self._last_qr_scan < QR_SCAN_INTERVAL:
+            return
+        self._last_qr_scan = now_ts
+        try:
+            text, _points, _straight = self._qr_detector.detectAndDecode(frame)
+        except Exception:
+            return
+        text = str(text or "").strip()
+        if not text:
+            return
+        try:
+            payload = json.loads(text)
+        except (TypeError, ValueError):
+            return
+        if not isinstance(payload, dict):
+            return
+        if str(payload.get("type") or "").upper() != "BSS_WORKER":
+            return
+        if str(payload.get("issuer") or "") != "Bharat Shram Setu":
+            return
+        bss_worker_id = str(payload.get("bssId") or "").strip().upper()
+        if not bss_worker_id:
+            return
+        if now_ts - float(self._last_qr.get(bss_worker_id) or 0) < QR_COOLDOWN_SECONDS:
+            return
+        self._last_qr[bss_worker_id] = now_ts
+        self.engine.send_qr_event(self, bss_worker_id, when)
+
     def detection_rows(self):
         with self.lock:
             return [dict(item) for item in self._face_meta]
@@ -712,27 +747,39 @@ class CameraWorker:
                 self.close_presence_sessions("not_sendable")
                 time.sleep(2)
                 continue
-            if not self.engine.gallery.ready:
-                time.sleep(1)
-                continue
-            self.engine.configure_gpu()
-            if (str(self.engine.resource_settings.get("gpuMode") or "auto") == "required"
-                    and not self.engine.gpu_status.get("active")):
-                if self.status != "GPU_REQUIRED_UNAVAILABLE":
-                    self.status = "GPU_REQUIRED_UNAVAILABLE"
-                time.sleep(5)
-                continue
+            camera = self.engine.bss_cameras.get(self.camera_id) or {}
+            attendance_mode = str(camera.get("attendanceMode") or "FACE").upper()
+            if attendance_mode not in ("FACE", "QR", "BOTH"):
+                attendance_mode = "FACE"
+            if attendance_mode != "FACE":
+                self.close_presence_sessions("camera_mode")
+            if attendance_mode in ("FACE", "BOTH") and not self.engine.gallery.ready:
+                if attendance_mode == "FACE":
+                    time.sleep(1)
+                    continue
+            if attendance_mode in ("FACE", "BOTH"):
+                self.engine.configure_gpu()
+                if (str(self.engine.resource_settings.get("gpuMode") or "auto") == "required"
+                        and not self.engine.gpu_status.get("active")):
+                    if self.status != "GPU_REQUIRED_UNAVAILABLE":
+                        self.status = "GPU_REQUIRED_UNAVAILABLE"
+                    time.sleep(5)
+                    continue
             if not self.engine.gate.acquire():
                 time.sleep(0.05)
                 continue
             try:
                 with self.lock:
                     self.frames_processed += 1
-                detections = self._recognise(frame)
                 camera = self.engine.bss_cameras.get(self.camera_id) or {}
                 site_id = camera.get("siteId")
                 when = _now()
                 frame_ts = time.time()
+                if attendance_mode in ("QR", "BOTH"):
+                    self._scan_qr(frame, when)
+                if attendance_mode == "QR" or not self.engine.gallery.ready:
+                    continue
+                detections = self._recognise(frame)
                 seen_workers = set()
                 for index, (embedding, box) in enumerate(detections):
                     match = self.engine.gallery.match(embedding, site_id)
@@ -1695,6 +1742,34 @@ class Engine:
             LOG.warning("Gallery sync after source change failed: %s", exc)
         return body.get("data") or {}
 
+    def send_qr_event(self, worker, bss_worker_id, when):
+        event = {
+            "eventId": str(uuid.uuid4()), "cameraId": worker.camera_id,
+            "occurredAt": when.isoformat(), "type": "QR",
+            "bssWorkerId": str(bss_worker_id).upper(),
+            "galleryVersion": self.gallery.version,
+        }
+        self.events.add(event)
+        self.flush_outbox()
+
+    def set_camera_attendance_mode(self, camera_id, mode):
+        mode = str(mode or "").strip().upper()
+        if mode not in ("FACE", "QR", "BOTH"):
+            raise ValueError("mode must be FACE, QR or BOTH.")
+        worker = self.workers.get(int(camera_id))
+        if worker is None or not worker.camera_token:
+            raise ValueError("Camera is not available.")
+        body = self.bss_call("POST", f"/v1/edge/cameras/{int(camera_id)}/attendance-mode",
+                             {"mode": mode}, timeout=20, camera_token=worker.camera_token)
+        data = body.get("data") or {}
+        camera = self.bss_cameras.setdefault(int(camera_id), {})
+        camera["attendanceMode"] = mode
+        self.store.data.setdefault("bssCameras", {})[str(int(camera_id))] = camera
+        self.store.save()
+        if mode != "FACE":
+            worker.close_presence_sessions("attendance_mode")
+        return data
+
     def send_allowed(self, worker):
         camera = self.bss_cameras.get(worker.camera_id) or {}
         return bool(camera.get("approvalStatus") == "APPROVED"
@@ -2005,6 +2080,7 @@ class Engine:
                 **worker.snapshot(),
                 "allowedIp": bss.get("allowedIp") or "",
                 "scheduleEnabled": bool(bss.get("scheduleEnabled")),
+                "attendanceMode": bss.get("attendanceMode") or "FACE",
                 "schedule": schedule_text(bss) if bss else "Not synced",
                 "uid": bss.get("uid") or "",
                 "channel": bss.get("channel"),
@@ -2197,6 +2273,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "Camera connection details cannot be edited after saving."}, 403)
                 if action == "mode":
                     return self._json({"data": ENGINE.set_mode(cid, body.get("mode"))})
+                if action == "attendance-mode":
+                    return self._json({"data": ENGINE.set_camera_attendance_mode(cid, body.get("mode"))})
                 if action == "claim":
                     try:
                         return self._json({"data": ENGINE.claim(cid, body.get("otp"))})

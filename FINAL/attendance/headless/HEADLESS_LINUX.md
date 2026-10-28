@@ -166,6 +166,16 @@ After approval and IP allowlisting in BSS, enable sending:
 bss-attendancectl camera mode 1 SENDING
 ```
 
+Set what the camera is allowed to use for attendance:
+
+```bash
+bss-attendancectl camera attendance-mode 1 FACE   # face recognition only
+bss-attendancectl camera attendance-mode 1 QR     # worker QR only
+bss-attendancectl camera attendance-mode 1 BOTH   # face and QR
+```
+
+The setting is saved to BSS and synced to every client. The camera must be online and BSS must be reachable.
+
 List cameras:
 
 ```bash
@@ -202,8 +212,24 @@ The table shows:
 - number of enrolled embeddings
 - whether face data is ready
 
-A worker with zero embeddings cannot be detected. Enroll five face photos in
-the BSS worker profile. The client gallery syncs from BSS automatically.
+A worker with zero active vectors cannot be detected. Worker self-enrollment uses
+five profile photos in BSS; manual client enrollment uses one camera photo.
+
+Select the active matching source:
+
+```bash
+bss-attendancectl worker source BSSW... MANUAL
+bss-attendancectl worker source BSSW... SELF
+```
+
+Capture one manual enrollment photo from a camera:
+
+```bash
+bss-attendancectl worker enroll BSSW... --camera 1
+```
+
+The command requires exactly one face in the camera frame. Use
+`--confirm-mismatch` only after reviewing a wrong-worker warning.
 
 Check gallery status:
 
@@ -377,6 +403,11 @@ The CLI uses these local endpoints:
 | POST | `/api/resources` | save resource settings |
 | POST | `/api/cameras` | add camera |
 | POST | `/api/cameras/{id}/mode` | set LIVE/SENDING |
+| POST | `/api/cameras/{id}/attendance-mode` | set FACE/QR/BOTH |
+| POST | `/api/workers/{bssId}/face-source` | set MANUAL/SELF source |
+| POST | `/api/cameras/{id}/manual-enroll/start` | start one-photo enrollment |
+| POST | `/api/cameras/{id}/manual-enroll/capture-one` | capture the enrollment photo |
+| POST | `/api/cameras/{id}/manual-enroll/confirm` | sync embeddings to BSS |
 | POST | `/api/cameras/{id}/claim` | claim camera |
 | POST | `/api/cameras/{id}/takeover-otp` | request takeover OTP |
 | POST | `/api/cameras/{id}/test` | test RTSP |
