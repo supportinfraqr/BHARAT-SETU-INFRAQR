@@ -775,6 +775,78 @@ def _employer_payroll(user):
     }
 
 
+def _employer_face_coverage(user):
+    """Manual/self face-vector coverage for workers bound to this employer."""
+    from bss_core.models import WorkerFaceEmbedding
+
+    bindings = (WorkerContractorBinding.objects
+                .filter(site__employer=user, binding_status="ACCEPTED")
+                .select_related("worker__worker_identity"))
+    workers = {}
+    for binding in bindings:
+        worker = binding.worker
+        identity = getattr(worker, "worker_identity", None)
+        if identity is None:
+            continue
+        item = workers.setdefault(worker.id, {
+            "bssWorkerId": str(identity.bss_worker_id or "").strip().upper(),
+            "name": _d(identity.name) or _d(worker.full_name) or _d(identity.bss_worker_id),
+            "siteIds": set(),
+            "matchSource": str(getattr(identity, "face_match_source", "SELF") or "SELF").upper(),
+            "manualCount": 0,
+            "selfCount": 0,
+            "lastManualCaptureAt": "",
+        })
+        item["siteIds"].add(binding.site_id)
+    if workers:
+        rows = (WorkerFaceEmbedding.objects
+                .filter(worker_id__in=list(workers), model_name="ArcFace",
+                        model_version="deepface-0.0.101-tf-2.21.0")
+                .values_list("worker_id", "source", "captured_at", "created_at"))
+        for worker_id, source, captured_at, created_at in rows:
+            item = workers.get(worker_id)
+            if item is None:
+                continue
+            if source == "CLIENT_MANUAL":
+                item["manualCount"] += 1
+                stamp = captured_at or created_at
+                if stamp:
+                    value = _dts(stamp)
+                    if not item["lastManualCaptureAt"] or value > item["lastManualCaptureAt"]:
+                        item["lastManualCaptureAt"] = value
+            else:
+                item["selfCount"] += 1
+    rows = []
+    for item in workers.values():
+        total = item["manualCount"] + item["selfCount"]
+        rows.append({
+            **item,
+            "siteIds": sorted(item["siteIds"]),
+            "totalCount": total,
+            "hasManual": item["manualCount"] > 0,
+            "hasSelf": item["selfCount"] > 0,
+            "hasFaceData": total > 0,
+        })
+    rows.sort(key=lambda item: (item["name"].lower(), item["bssWorkerId"]))
+    manual = [row for row in rows if row["hasManual"]]
+    self_rows = [row for row in rows if row["hasSelf"]]
+    return {
+        "totalWorkers": len(rows),
+        "manualWorkers": len(manual),
+        "selfWorkers": len(self_rows),
+        "bothWorkers": sum(1 for row in rows if row["hasManual"] and row["hasSelf"]),
+        "manualOnly": sum(1 for row in rows if row["hasManual"] and not row["hasSelf"]),
+        "selfOnly": sum(1 for row in rows if row["hasSelf"] and not row["hasManual"]),
+        "noFaceData": sum(1 for row in rows if not row["hasFaceData"]),
+        "manualVectors": sum(row["manualCount"] for row in rows),
+        "selfVectors": sum(row["selfCount"] for row in rows),
+        "activeManual": sum(1 for row in rows if row["matchSource"] == "MANUAL"),
+        "activeSelf": sum(1 for row in rows if row["matchSource"] != "MANUAL"),
+        "manualInactive": sum(1 for row in rows if row["hasManual"] and row["matchSource"] != "MANUAL"),
+        "workers": rows,
+    }
+
+
 def build_employer_portal(user):
     default_site = _default_site_info(getattr(user, "employer_profile", None))
     if default_site is None:
@@ -785,6 +857,7 @@ def build_employer_portal(user):
     return {
         "identity": _employer_identity(user),
         "stats": _employer_stats(user),
+        "faceCoverage": _employer_face_coverage(user),
         "sites": _employer_sites(user),
         "defaultSite": default_site,
         "contractors": _employer_contractors(user),
@@ -823,6 +896,7 @@ __all__ = [
     "_employer_grievances",
     "_employer_identity",
     "_employer_labour_compliance",
+    "_employer_face_coverage",
     "_employer_payroll",
     "_employer_permission_roles",
     "_employer_profile_sections",

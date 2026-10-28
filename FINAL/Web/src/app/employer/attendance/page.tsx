@@ -6,6 +6,7 @@ import { useEmployer } from '@/contexts/EmployerContext';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import AttendanceDetailDialog from '@/components/attendance/AttendanceDetailDialog';
 import type { AttendanceRecord } from '@/types/portal';
+import { cameraPresenceText } from '@/lib/attendance';
 
 type AttendanceRow = {
   id: string; date: string; worker?: string; bssId?: string; site: string;
@@ -13,7 +14,7 @@ type AttendanceRow = {
   verification?: string; checkIn?: string; checkOut?: string; singleMark?: boolean;
   camera?: string; cameraArea?: string; confidence?: number | null; matchStatus?: string;
   geofenceOk?: boolean | null; distanceM?: number | null; accuracyM?: number | null; gpsAddress?: string; remarks?: string;
-  events?: Array<{ source: string; sourceLabel?: string; type: string; typeLabel?: string; at: string }>;
+  events?: AttendanceRecord['events'];
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -75,6 +76,7 @@ export default function EmployerAttendancePage() {
     { id: 'out', header: 'Out', value: r => r.checkOut || '—', render: r => r.checkOut || '—' },
     { id: 'status', header: 'Status', value: r => STATUS_LABEL[r.statusCode || r.status || ''] ?? (r.statusCode || r.status || '—'), render: r => <span className={(r.statusCode || r.status) === 'PRESENT' ? 'text-bss-green' : (r.statusCode || r.status) === 'ABSENT' ? 'text-bss-error' : 'text-bss-orange'}>{STATUS_LABEL[r.statusCode || r.status || ''] ?? (r.statusCode || r.status || '—')}</span> },
     { id: 'source', header: 'Source', value: r => r.source || r.capture || '', render: r => <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-bss-blue-tint text-bss-interactive-blue">{r.source || r.capture}</span> },
+    { id: 'cameraPresence', header: 'Camera presence', value: r => cameraPresenceText(r.events) || '—', render: r => { const text = cameraPresenceText(r.events); return text ? <span className="text-[11px] font-semibold text-bss-text-primary">{text}</span> : <span className="text-bss-text-muted">—</span>; } },
     { id: 'view', header: '', value: () => '', render: r => <button type="button" onClick={() => setRecSelected(r)} className="text-[11px] font-bold text-[#01183A] hover:underline">Details</button> },
   ];
 

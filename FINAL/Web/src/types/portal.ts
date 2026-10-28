@@ -715,6 +715,26 @@ export type EmployerPortalData = {
     complianceScore: number;
     pendingApprovals: number;
   };
+  faceCoverage?: {
+    totalWorkers: number;
+    manualWorkers: number;
+    selfWorkers: number;
+    bothWorkers: number;
+    manualOnly: number;
+    selfOnly: number;
+    noFaceData: number;
+    manualVectors: number;
+    selfVectors: number;
+    activeManual: number;
+    activeSelf: number;
+    manualInactive: number;
+    workers: Array<{
+      bssWorkerId: string; name: string; siteIds: number[]; matchSource: string;
+      manualCount: number; selfCount: number; totalCount: number;
+      hasManual: boolean; hasSelf: boolean; hasFaceData: boolean;
+      lastManualCaptureAt: string;
+    }>;
+  };
   sites: EmployerSite[];
   defaultSite?: { id: string; name: string; bssId: string } | null;
   contractors: EmployerContractor[];

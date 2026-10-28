@@ -21,7 +21,7 @@ import uuid
 from datetime import datetime, time as dt_time, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote, quote
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
@@ -36,10 +36,13 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.5"
+APP_VERSION = "1.5.6"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
-EVENT_COOLDOWN_SECONDS = 60
+PRESENCE_GAP_SECONDS = 10
+MANUAL_ENROLL_FRAMES = 5
+MANUAL_ENROLL_INTERVAL = 0.7
+MANUAL_ENROLL_TIMEOUT = 30
 MATCH_CONFIRM_FRAMES = 2
 MATCH_CONFIRM_WINDOW = 4.0
 MODEL_VERSION = "deepface-0.0.101-tf-2.21.0"
@@ -307,7 +310,7 @@ class FaceGallery:
         self.topk = max(1, int(payload.get("topk") or 3))
         self.votes = max(1, int(payload.get("votes") or 2))
         self.weights_sha = str(payload.get("weightsSha") or ARCFACE_SHA)
-        self.entries = []  # (site_id, bss_worker_id, float32 embedding)
+        self.entries = []  # (site_id, bss_worker_id, source, float32 embedding)
         self.profiles = {}
         self.worker_status = []
         for worker in payload.get("workerStatus") or []:
@@ -319,32 +322,50 @@ class FaceGallery:
                 "bssWorkerId": worker_id,
                 "name": str(worker.get("name") or worker_id),
                 "siteIds": site_ids,
+                "matchSource": str(worker.get("matchSource") or "SELF").upper(),
+                "manualCount": int(worker.get("manualCount") or 0),
+                "selfCount": int(worker.get("selfCount") or 0),
                 "embeddingCount": int(worker.get("embeddingCount") or 0),
+                "hasManual": bool(worker.get("hasManual")),
+                "hasSelf": bool(worker.get("hasSelf")),
                 "hasFaceData": bool(worker.get("hasFaceData")),
+                "lastManualCaptureAt": str(worker.get("lastManualCaptureAt") or ""),
             })
         for worker in payload.get("workers") or []:
             worker_id = str(worker.get("bssWorkerId") or "").strip().upper()
             if not worker_id:
                 continue
             site_ids = [int(site) for site in (worker.get("siteIds") or []) if str(site).isdigit()]
+            match_source = str(worker.get("matchSource") or "SELF").upper()
             self.profiles[worker_id] = {
                 "bssWorkerId": worker_id,
                 "name": str(worker.get("name") or ""),
                 "siteIds": site_ids,
+                "matchSource": match_source,
+                "manualCount": int(worker.get("manualCount") or 0),
+                "selfCount": int(worker.get("selfCount") or 0),
             }
-            for encoded in worker.get("embeddings") or []:
-                try:
-                    raw = base64.b64decode(str(encoded))
-                    vector = np.frombuffer(raw, dtype=np.float32)
-                except Exception:
-                    continue
-                if vector.size != 512:
-                    continue
-                norm = float(np.linalg.norm(vector))
-                if norm <= 0:
-                    continue
-                for site_id in site_ids:
-                    self.entries.append((site_id, worker_id, vector / norm))
+            groups = []
+            if worker.get("manualEmbeddings") is not None or worker.get("selfEmbeddings") is not None:
+                groups.append(("MANUAL", worker.get("manualEmbeddings") or []))
+                groups.append(("SELF", worker.get("selfEmbeddings") or []))
+            else:
+                # Compatibility with pre-source gallery payloads.
+                groups.append(("SELF", worker.get("embeddings") or []))
+            for source, vectors in groups:
+                for encoded in vectors:
+                    try:
+                        raw = base64.b64decode(str(encoded))
+                        vector = np.frombuffer(raw, dtype=np.float32)
+                    except Exception:
+                        continue
+                    if vector.size != 512:
+                        continue
+                    norm = float(np.linalg.norm(vector))
+                    if norm <= 0:
+                        continue
+                    for site_id in site_ids:
+                        self.entries.append((site_id, worker_id, source, vector / norm))
 
     @property
     def ready(self):
@@ -367,8 +388,13 @@ class FaceGallery:
             return None
         vector = vector / norm
         by_worker = {}
-        for entry_site, worker_id, stored in self.entries:
+        for entry_site, worker_id, source, stored in self.entries:
             if entry_site != site_id:
+                continue
+            preferred = str((self.profiles.get(worker_id) or {}).get("matchSource") or "SELF").upper()
+            if preferred == "MANUAL" and source != "MANUAL":
+                continue
+            if preferred != "MANUAL" and source != "SELF":
                 continue
             denom = float(np.linalg.norm(stored))
             if denom <= 0:
@@ -420,8 +446,8 @@ class CameraWorker:
         self._cap = None
         self._thread = None
         self._ai_thread = None
-        self._last_sent = {}
         self._match_streaks = {}
+        self._presence = {}
         self._last_embedding = None
         self._face_boxes = []
         self._face_meta = []
@@ -465,6 +491,8 @@ class CameraWorker:
         mode = str(mode or "").upper()
         if mode not in ("LIVE", "SENDING"):
             raise ValueError("Mode must be LIVE or SENDING.")
+        if self.mode == "SENDING" and mode != "SENDING":
+            self.close_presence_sessions("mode_changed")
         with self.lock:
             self.mode = mode
         self.engine.local_camera(self.camera_id)["mode"] = mode
@@ -484,6 +512,7 @@ class CameraWorker:
         self._thread.start()
 
     def stop(self):
+        self.close_presence_sessions("camera_stopped")
         self._running = False
         if self._thread:
             self._thread.join(timeout=3)
@@ -561,6 +590,54 @@ class CameraWorker:
                     "pending": False,
                 })
 
+    def _send_presence(self, matched_worker, session, phase, when, distance, face_box=None):
+        presence = {
+            "sessionId": session["sessionId"],
+            "presencePhase": phase,
+            "presenceStartedAt": _iso(session["startedAt"]),
+        }
+        if phase == "END":
+            presence["presenceEndedAt"] = _iso(session["lastSeenAt"])
+            presence["dwellSeconds"] = int(max(0, round(session["lastSeenTs"] - session["startedTs"])))
+        else:
+            presence["dwellSeconds"] = 0
+        self.engine.send_event(self, matched_worker, when, distance, face_box, presence=presence)
+
+    def _open_presence(self, matched_worker, when, now_ts, distance, face_box=None):
+        session = {
+            "sessionId": str(uuid.uuid4()),
+            "startedAt": when,
+            "startedTs": now_ts,
+            "lastSeenAt": when,
+            "lastSeenTs": now_ts,
+            "lastDistance": float(distance),
+        }
+        self._presence[matched_worker] = session
+        self._send_presence(matched_worker, session, "START", when, distance, face_box)
+
+    def _touch_presence(self, matched_worker, when, now_ts, distance):
+        session = self._presence.get(matched_worker)
+        if session is None:
+            return False
+        session["lastSeenAt"] = when
+        session["lastSeenTs"] = now_ts
+        session["lastDistance"] = float(distance)
+        return True
+
+    def _close_presence(self, matched_worker, reason="gap"):
+        session = self._presence.pop(matched_worker, None)
+        if session is None:
+            return
+        duration = int(max(0, round(session["lastSeenTs"] - session["startedTs"])))
+        self._send_presence(matched_worker, session, "END", session["lastSeenAt"],
+                            session["lastDistance"])
+        LOG.info("Camera %s presence closed for %s after %ss (%s)",
+                 self.label, matched_worker, duration, reason)
+
+    def close_presence_sessions(self, reason="stopped"):
+        for matched_worker in list(self._presence.keys()):
+            self._close_presence(matched_worker, reason)
+
     def detection_rows(self):
         with self.lock:
             return [dict(item) for item in self._face_meta]
@@ -632,6 +709,7 @@ class CameraWorker:
                 time.sleep(0.02)
                 continue
             if not self.engine.send_allowed(self):
+                self.close_presence_sessions("not_sendable")
                 time.sleep(2)
                 continue
             if not self.engine.gallery.ready:
@@ -654,6 +732,8 @@ class CameraWorker:
                 camera = self.engine.bss_cameras.get(self.camera_id) or {}
                 site_id = camera.get("siteId")
                 when = _now()
+                frame_ts = time.time()
+                seen_workers = set()
                 for index, (embedding, box) in enumerate(detections):
                     match = self.engine.gallery.match(embedding, site_id)
                     if match is None:
@@ -664,18 +744,26 @@ class CameraWorker:
                     score = round(max(0.0, min(100.0, (1.0 - float(distance)) * 100.0)), 1)
                     self._set_face_meta(index, profile.get("name") or matched_worker,
                                         matched_worker, score, True)
-                    now_ts = time.time()
+                    # Keep an already-open session alive even if the worker
+                    # briefly drops below the two-frame confirmation streak.
+                    if self._touch_presence(matched_worker, when, frame_ts, distance):
+                        seen_workers.add(matched_worker)
+                        continue
                     previous = self._match_streaks.get(matched_worker) or {}
                     count = 1
-                    if previous and now_ts - float(previous.get("last") or 0) <= MATCH_CONFIRM_WINDOW:
+                    if previous and frame_ts - float(previous.get("last") or 0) <= MATCH_CONFIRM_WINDOW:
                         count = int(previous.get("count") or 0) + 1
-                    self._match_streaks[matched_worker] = {"count": count, "last": now_ts}
+                    self._match_streaks[matched_worker] = {"count": count, "last": frame_ts}
                     if count < MATCH_CONFIRM_FRAMES:
                         continue
-                    if now_ts - float(self._last_sent.get(matched_worker) or 0) < EVENT_COOLDOWN_SECONDS:
+                    self._open_presence(matched_worker, when, frame_ts, distance, box)
+                    seen_workers.add(matched_worker)
+                for matched_worker in list(self._presence.keys()):
+                    session = self._presence.get(matched_worker)
+                    if matched_worker in seen_workers or session is None:
                         continue
-                    self._last_sent[matched_worker] = now_ts
-                    self.engine.send_event(self, matched_worker, when, distance, box)
+                    if frame_ts - float(session["lastSeenTs"]) >= PRESENCE_GAP_SECONDS:
+                        self._close_presence(matched_worker, "gap")
             except Exception as exc:  # noqa: BLE001
                 LOG.exception("Face processing failed for %s: %s", self.label, exc)
             finally:
@@ -725,6 +813,75 @@ class CameraWorker:
         self._set_face_boxes(boxes)
         return detections
 
+    def capture_manual_frames(self, count=MANUAL_ENROLL_FRAMES):
+        """Capture distinct single-face frames for manual enrollment."""
+        if not self.rtsp:
+            raise ValueError("This camera has no RTSP stream.")
+        if not self.engine.gallery.ready and not self.engine.face_backend:
+            # The face backend can still be initialised below; this guard only
+            # avoids entering a long wait when the model stack is unavailable.
+            self.engine.configure_gpu()
+        if not self._running:
+            self.start()
+        deadline = time.time() + MANUAL_ENROLL_TIMEOUT
+        captured, hashes = [], set()
+        while len(captured) < count and time.time() < deadline:
+            if not self.engine.gate.acquire():
+                time.sleep(0.1)
+                continue
+            try:
+                frame = self.frame()
+                if frame is None:
+                    time.sleep(0.15)
+                    continue
+                detections = self._recognise(frame)
+                if len(detections) != 1:
+                    time.sleep(0.15)
+                    continue
+                embedding, box = detections[0]
+                x, y, w, h = [int(v) for v in (box or [0, 0, 0, 0])[:4]]
+                if min(w, h) < 60:
+                    time.sleep(0.15)
+                    continue
+                digest = hashlib.sha256(frame.tobytes()).hexdigest()
+                if digest in hashes:
+                    time.sleep(0.15)
+                    continue
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                blur = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+                if blur < 15:
+                    time.sleep(0.15)
+                    continue
+                preview_frame = frame
+                max_width = 420
+                if preview_frame.shape[1] > max_width:
+                    scale = max_width / float(preview_frame.shape[1])
+                    preview_frame = cv2.resize(preview_frame, (max_width, max(1, int(preview_frame.shape[0] * scale))))
+                encoded, buf = cv2.imencode(".jpg", preview_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 82])
+                if not encoded:
+                    time.sleep(0.15)
+                    continue
+                vector = np.asarray(embedding, dtype=np.float32)
+                norm = float(np.linalg.norm(vector))
+                if vector.size != 512 or norm <= 0:
+                    time.sleep(0.15)
+                    continue
+                hashes.add(digest)
+                captured.append({
+                    "vector": vector / norm,
+                    "preview": "data:image/jpeg;base64," + base64.b64encode(buf.tobytes()).decode("ascii"),
+                    "quality": {"width": w, "height": h, "blur": round(blur, 1)},
+                })
+            finally:
+                self.engine.gate.release()
+            time.sleep(MANUAL_ENROLL_INTERVAL)
+        if len(captured) < count:
+            raise ValueError(
+                f"Only {len(captured)} of {count} clear single-face frames were captured. "
+                "Ask the worker to face the camera and try again."
+            )
+        return captured
+
 
 class Engine:
     def __init__(self, home):
@@ -756,6 +913,8 @@ class Engine:
         self.resource_settings = self._normalise_resources(self.store.data.get("resources") or {})
         self._gpu_configured = False
         self.face_backend = None
+        self._manual_captures = {}
+        self._manual_capture_lock = threading.Lock()
         self.gpu_status = {"active": False, "mode": self.resource_settings.get("gpuMode", "auto"),
                            "devices": [], "message": "Not initialised"}
         self._apply_resources(self.resource_settings, persist=False)
@@ -1372,13 +1531,118 @@ class Engine:
                 LOG.warning("Worker gallery sync failed: %s", exc)
         return self.status()
 
+    def capture_manual_enrollment(self, camera_id, bss_worker_id):
+        worker = self.workers.get(int(camera_id))
+        if worker is None:
+            raise ValueError("Camera not found.")
+        camera = self.bss_cameras.get(int(camera_id)) or {}
+        if camera.get("approvalStatus") != "APPROVED":
+            raise ValueError("This camera is waiting for employer approval.")
+        if not camera.get("claimedByThisDevice") or not worker.camera_token:
+            raise ValueError("This camera is not synced to this device.")
+        bss_worker_id = str(bss_worker_id or "").strip().upper()
+        if not bss_worker_id:
+            raise ValueError("Select a worker.")
+        captured = worker.capture_manual_frames(MANUAL_ENROLL_FRAMES)
+        warning = None
+        try:
+            for item in captured:
+                match = self.gallery.match(item["vector"], camera.get("siteId"))
+                if match is None:
+                    continue
+                matched_worker, distance = match
+                if str(matched_worker).upper() != bss_worker_id:
+                    profile = self.gallery.profile(matched_worker)
+                    warning = {
+                        "type": "other_worker",
+                        "bssWorkerId": str(matched_worker),
+                        "name": profile.get("name") or str(matched_worker),
+                        "confidence": round(max(0.0, min(100.0, (1.0 - float(distance)) * 100.0)), 1),
+                    }
+                    break
+        except Exception:  # noqa: BLE001 - warning is advisory
+            warning = None
+        capture_id = uuid.uuid4().hex
+        now = _now()
+        with self._manual_capture_lock:
+            cutoff = time.time() - 300
+            for key in [key for key, value in self._manual_captures.items() if value.get("createdTs", 0) < cutoff]:
+                self._manual_captures.pop(key, None)
+            self._manual_captures[capture_id] = {
+                "cameraId": int(camera_id), "bssWorkerId": bss_worker_id,
+                "vectors": [item["vector"] for item in captured],
+                "quality": [item["quality"] for item in captured],
+                "capturedAt": now.isoformat(), "createdTs": time.time(),
+            }
+        return {
+            "captureId": capture_id,
+            "previews": [item["preview"] for item in captured],
+            "quality": [item["quality"] for item in captured],
+            "warning": warning,
+        }
+
+    def confirm_manual_enrollment(self, camera_id, capture_id, confirm_mismatch=False):
+        with self._manual_capture_lock:
+            pending = self._manual_captures.get(str(capture_id))
+            if pending is None or pending.get("cameraId") != int(camera_id):
+                raise ValueError("This capture has expired. Capture the 5 photos again.")
+        worker = self.workers.get(int(camera_id))
+        if worker is None or not worker.camera_token:
+            raise ValueError("Camera is not available.")
+        payload = {
+            "bssWorkerId": pending["bssWorkerId"],
+            "embeddings": [base64.b64encode(vector.astype(np.float32).tobytes()).decode("ascii")
+                           for vector in pending["vectors"]],
+            "model": MODEL_NAME,
+            "version": MODEL_VERSION,
+            "detector": DETECTOR_BACKEND,
+            "weightsSha": ARCFACE_SHA,
+            "capturedAt": pending["capturedAt"],
+            "quality": pending["quality"],
+            "confirmMismatch": bool(confirm_mismatch),
+        }
+        try:
+            body = self.bss_call("POST", f"/v1/edge/cameras/{int(camera_id)}/manual-enroll",
+                                 payload, timeout=60, camera_token=worker.camera_token)
+        except BssError as exc:
+            if exc.status_code == 409 and exc.body.get("requiresConfirmation"):
+                return {"requiresConfirmation": True, **exc.body}
+            raise
+        with self._manual_capture_lock:
+            self._manual_captures.pop(str(capture_id), None)
+        data = body.get("data") or {}
+        try:
+            self.sync_gallery()
+        except BssError as exc:
+            LOG.warning("Gallery sync after manual enrollment failed: %s", exc)
+        return {"data": data}
+
+    def cancel_manual_enrollment(self, camera_id, capture_id):
+        with self._manual_capture_lock:
+            pending = self._manual_captures.get(str(capture_id))
+            if pending is not None and pending.get("cameraId") == int(camera_id):
+                self._manual_captures.pop(str(capture_id), None)
+        return {"cancelled": True}
+
+    def set_worker_face_source(self, bss_worker_id, source):
+        source = str(source or "").strip().upper()
+        if source not in ("MANUAL", "SELF"):
+            raise ValueError("source must be MANUAL or SELF.")
+        body = self.bss_call("PATCH", f"/v1/edge/workers/{quote(str(bss_worker_id).strip().upper())}/face-source",
+                             {"source": source}, timeout=20)
+        try:
+            self.sync_gallery()
+        except BssError as exc:
+            LOG.warning("Gallery sync after source change failed: %s", exc)
+        return body.get("data") or {}
+
     def send_allowed(self, worker):
         camera = self.bss_cameras.get(worker.camera_id) or {}
         return bool(camera.get("approvalStatus") == "APPROVED"
                     and camera.get("allowedIp") and camera.get("claimedByThisDevice")
                     and schedule_active(camera) and worker.camera_token)
 
-    def send_event(self, worker, matched_worker, when, distance, face_box=None):
+    def send_event(self, worker, matched_worker, when, distance, face_box=None, presence=None):
         event = {
             "eventId": str(uuid.uuid4()), "cameraId": worker.camera_id,
             "occurredAt": when.isoformat(), "type": "FACE",
@@ -1388,6 +1652,8 @@ class Engine:
             "modelVersion": MODEL_VERSION,
             "faceBox": list(face_box or []),
         }
+        if presence:
+            event.update({key: value for key, value in presence.items() if value is not None})
         self.events.add(event)
         self.flush_outbox()
 
@@ -1505,6 +1771,17 @@ class Engine:
         worker.set_rtsp(rtsp)
         self.store.save()
         return self.status()
+
+    def shutdown(self):
+        for worker in list(self.workers.values()):
+            try:
+                worker.stop()
+            except Exception:  # noqa: BLE001
+                LOG.exception("Could not stop camera %s during shutdown", worker.label)
+        try:
+            self.flush_outbox()
+        except Exception:  # noqa: BLE001
+            LOG.exception("Could not flush pending presence events during shutdown")
 
     def logout(self):
         for worker in list(self.workers.values()):
@@ -1864,10 +2141,30 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"data": ENGINE.takeover_otp(cid)})
                 if action == "test":
                     return self._json({"data": ENGINE.test_rtsp(body.get("rtsp"))})
+                if action == "manual-enroll":
+                    operation = parts[2] if len(parts) > 2 else ""
+                    if operation == "capture":
+                        return self._json({"data": ENGINE.capture_manual_enrollment(cid, body.get("bssWorkerId"))})
+                    if operation == "confirm":
+                        return self._json({"data": ENGINE.confirm_manual_enrollment(
+                            cid, body.get("captureId"), bool(body.get("confirmMismatch")))}, 201)
+                    if operation == "cancel":
+                        return self._json({"data": ENGINE.cancel_manual_enrollment(cid, body.get("captureId"))})
+            if path.startswith("/api/workers/"):
+                parts = path[len("/api/workers/"):].split("/")
+                if len(parts) >= 2 and parts[1] == "face-source":
+                    return self._json({"data": ENGINE.set_worker_face_source(
+                        unquote(parts[0]), body.get("source"))})
             if path == "/api/logout":
                 return self._json({"data": ENGINE.logout()})
             return self._json({"error": "Not found."}, 404)
-        except (BssError, ValueError) as exc:
+        except BssError as exc:
+            payload = {"error": str(exc)}
+            if isinstance(exc.body, dict):
+                payload.update(exc.body)
+            code = exc.status_code if 400 <= int(exc.status_code or 0) < 600 else 400
+            return self._json(payload, code)
+        except ValueError as exc:
             return self._json({"error": str(exc)}, 400)
         except Exception as exc:  # noqa: BLE001
             LOG.exception("API error: %s", exc)
@@ -1956,6 +2253,7 @@ def main():
         pass
     finally:
         server.server_close()
+        ENGINE.shutdown()
         ENGINE._stop.set()
 
 

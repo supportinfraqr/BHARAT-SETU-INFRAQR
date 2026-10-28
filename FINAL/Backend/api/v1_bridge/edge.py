@@ -11,6 +11,7 @@ import base64
 import hashlib
 import ipaddress
 import json
+import logging
 import os
 import re
 import secrets
@@ -54,6 +55,8 @@ EDGE_FACE_TOPK = 3
 EDGE_FACE_VOTES = 2
 EDGE_DAY_NAMES = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 EDGE_DEVICE_ONLINE_WINDOW = timedelta(seconds=90)
+
+LOG = logging.getLogger(__name__)
 
 
 class EdgeTokenAuthentication(BaseAuthentication):
@@ -340,11 +343,20 @@ def _match_worker(embedding, site, model_version):
                       .values_list("worker_id", flat=True))
     if not worker_ids:
         return None, None, "no_workers"
+    preferences = dict(WorkerIdentity.objects
+                       .filter(user_id__in=worker_ids)
+                       .values_list("user_id", "face_match_source"))
     rows = (WorkerFaceEmbedding.objects
-            .filter(worker_id__in=worker_ids)
-            .values_list("worker_id", "embedding"))
+            .filter(worker_id__in=worker_ids, model_name=EDGE_FACE_MODEL_NAME,
+                    model_version=EDGE_FACE_MODEL_VERSION)
+            .values_list("worker_id", "source", "embedding"))
     by_worker = {}
-    for worker_id, blob in rows:
+    for worker_id, source, blob in rows:
+        preferred = preferences.get(worker_id, "SELF")
+        if preferred == "MANUAL" and source != "CLIENT_MANUAL":
+            continue
+        if preferred != "MANUAL" and source != "WORKER_SELF":
+            continue
         try:
             vector = np.frombuffer(bytes(blob), dtype=np.float32)
         except Exception:
@@ -383,9 +395,58 @@ def _match_worker(embedding, site, model_version):
     return best_id, best_distance, ""
 
 
-def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id, binding=None):
+def _presence_info(raw, occurred_at):
+    """Validate and normalise optional camera-presence fields from the client."""
+    session_id = str(raw.get("sessionId") or raw.get("session_id") or "").strip()[:60]
+    phase = str(raw.get("presencePhase") or raw.get("presence_phase") or "").strip().upper()
+    started_raw = raw.get("presenceStartedAt") or raw.get("presence_started_at")
+    ended_raw = raw.get("presenceEndedAt") or raw.get("presence_ended_at")
+    dwell_raw = raw.get("dwellSeconds") if raw.get("dwellSeconds") is not None else raw.get("dwell_seconds")
+    if not any([session_id, phase, started_raw, ended_raw, dwell_raw is not None]):
+        return None, ""
+    if not session_id:
+        return None, "A presence sessionId is required."
+    if phase and phase not in ("START", "END"):
+        return None, "presencePhase must be START or END."
+    started_at = _parse_dt(started_raw)
+    ended_at = _parse_dt(ended_raw)
+    try:
+        dwell_seconds = int(dwell_raw) if dwell_raw not in (None, "") else None
+    except (TypeError, ValueError):
+        return None, "dwellSeconds must be a whole number."
+    if not phase:
+        phase = "END" if ended_at is not None else "START"
+    if phase == "START":
+        started_at = started_at or occurred_at
+        ended_at = None
+        dwell_seconds = 0
+    else:
+        ended_at = ended_at or occurred_at
+        if started_at is None:
+            if dwell_seconds is None:
+                return None, "presenceStartedAt is required for a presence end."
+            started_at = ended_at - timedelta(seconds=max(0, dwell_seconds))
+        if dwell_seconds is None:
+            dwell_seconds = int(max(0, (ended_at - started_at).total_seconds()))
+        if dwell_seconds < 0 or dwell_seconds > 7 * 24 * 3600:
+            return None, "dwellSeconds is outside the allowed range."
+        if ended_at < started_at:
+            return None, "presenceEndedAt cannot be before presenceStartedAt."
+    return {
+        "sessionId": session_id,
+        "phase": phase,
+        "startedAt": started_at,
+        "endedAt": ended_at,
+        "dwellSeconds": max(0, int(dwell_seconds or 0)),
+    }, ""
+
+
+def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id,
+                          binding=None, presence=None):
+    presence = presence or {}
     confidence = round(max(0.0, min(1.0, 1.0 - float(distance))) * 100, 2)
-    local_date = occurred_at.astimezone(ZoneInfo(camera.timezone or "Asia/Kolkata")).date()
+    presence_started_at = presence.get("startedAt") or occurred_at
+    local_date = presence_started_at.astimezone(ZoneInfo(camera.timezone or "Asia/Kolkata")).date()
     binding = binding or (WorkerContractorBinding.objects
                           .filter(worker=worker, site=site, binding_status="ACCEPTED")
                           .order_by("-id").first())
@@ -408,18 +469,51 @@ def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id,
             "remarks": remarks,
         },
     )
-    # Every raw detection remains in EdgeEvent. Keep AttendanceEvent to one
-    # sighting per worker/camera/day so full-frame capture cannot bloat history.
-    if not AttendanceEvent.objects.filter(
-            attendance=attendance, worker=worker, camera_label=camera.label,
-            attendance_date=local_date).exists():
-        AttendanceEvent.objects.create(
-            attendance=attendance, worker=worker, site=site,
-            attendance_date=local_date, source="CAMERA", method="face_image",
-            event_type="SIGHTING", at=occurred_at, camera_label=camera.label,
-            confidence=confidence, external_id=str(event_id)[:60],
-            remarks=remarks,
-        )
+    session_id = str(presence.get("sessionId") or "").strip()
+    if session_id:
+        # One AttendanceEvent per continuous camera presence session. The start
+        # event creates it; the end event fills the duration and end time.
+        external_id = f"presence:{session_id}"[:60]
+        event = (AttendanceEvent.objects
+                 .filter(worker=worker, source="CAMERA", external_id=external_id)
+                 .order_by("-id").first())
+        if event is None:
+            event = AttendanceEvent(
+                attendance=attendance, worker=worker, site=site,
+                attendance_date=local_date, source="CAMERA", method="face_image",
+                event_type="SIGHTING", at=presence_started_at, camera_label=camera.label,
+                confidence=confidence, external_id=external_id,
+                remarks=remarks,
+            )
+        event.attendance = attendance
+        event.site = site
+        event.attendance_date = local_date
+        event.camera_label = camera.label
+        event.camera_area = camera.label
+        event.confidence = confidence
+        event.remarks = remarks
+        ended_at = presence.get("endedAt")
+        if ended_at is not None:
+            event.ended_at = ended_at
+        dwell_seconds = presence.get("dwellSeconds")
+        if dwell_seconds is not None:
+            event.duration_seconds = max(0, int(dwell_seconds))
+        event.meta = {**(event.meta or {}), "sessionId": session_id,
+                      "presencePhase": presence.get("phase") or ""}
+        event.save()
+    else:
+        # Backward-compatible path for 1.5.5 and older clients: one sighting
+        # per worker/camera/day, with no duration.
+        if not AttendanceEvent.objects.filter(
+                attendance=attendance, worker=worker, camera_label=camera.label,
+                attendance_date=local_date).exists():
+            AttendanceEvent.objects.create(
+                attendance=attendance, worker=worker, site=site,
+                attendance_date=local_date, source="CAMERA", method="face_image",
+                event_type="SIGHTING", at=occurred_at, camera_label=camera.label,
+                confidence=confidence, external_id=str(event_id)[:60],
+                remarks=remarks,
+            )
     return attendance
 
 
@@ -575,26 +669,44 @@ def _worker_status_rows(device):
             "bssWorkerId": str(identity.bss_worker_id or "").strip().upper(),
             "name": _worker_display_name(binding.worker),
             "siteIds": set(),
+            "matchSource": str(getattr(identity, "face_match_source", "SELF") or "SELF"),
         })
         item["siteIds"].add(binding.site_id)
     counts = {}
+    last_manual = {}
     if workers:
         rows = (WorkerFaceEmbedding.objects
                 .filter(worker_id__in=list(workers), model_name=EDGE_FACE_MODEL_NAME,
                         model_version=EDGE_FACE_MODEL_VERSION)
-                .values_list("worker_id", flat=True))
-        for worker_id in rows:
-            counts[worker_id] = counts.get(worker_id, 0) + 1
+                .values_list("worker_id", "source", "captured_at", "created_at"))
+        for worker_id, source, captured_at, created_at in rows:
+            bucket = counts.setdefault(worker_id, {"manual": 0, "self": 0})
+            if source == "CLIENT_MANUAL":
+                bucket["manual"] += 1
+                stamp = captured_at or created_at
+                if stamp and (worker_id not in last_manual or stamp > last_manual[worker_id]):
+                    last_manual[worker_id] = stamp
+            else:
+                bucket["self"] += 1
     result = []
     for worker_id in sorted(workers, key=lambda value: (workers[value]["name"].lower(), value)):
         item = workers[worker_id]
-        count = int(counts.get(worker_id, 0))
+        counts_for_worker = counts.get(worker_id) or {"manual": 0, "self": 0}
+        manual_count = int(counts_for_worker["manual"])
+        self_count = int(counts_for_worker["self"])
+        total_count = manual_count + self_count
         result.append({
             "bssWorkerId": item["bssWorkerId"],
             "name": item["name"],
             "siteIds": sorted(item["siteIds"]),
-            "embeddingCount": count,
-            "hasFaceData": count > 0,
+            "matchSource": item.get("matchSource") or "SELF",
+            "manualCount": manual_count,
+            "selfCount": self_count,
+            "embeddingCount": total_count,
+            "hasManual": manual_count > 0,
+            "hasSelf": self_count > 0,
+            "hasFaceData": total_count > 0,
+            "lastManualCaptureAt": last_manual[worker_id].isoformat() if worker_id in last_manual else "",
         })
     return result
 
@@ -614,7 +726,10 @@ def _gallery_rows(device):
             "bssWorkerId": str(identity.bss_worker_id or ""),
             "name": _worker_display_name(binding.worker),
             "siteIds": set(),
+            "matchSource": str(getattr(identity, "face_match_source", "SELF") or "SELF"),
             "embeddings": [],
+            "manualEmbeddings": [],
+            "selfEmbeddings": [],
             "bindingRows": [],
         })
         item["siteIds"].add(binding.site_id)
@@ -631,6 +746,10 @@ def _gallery_rows(device):
         if item is None:
             continue
         item["embeddings"].append(emb)
+        if emb.source == "CLIENT_MANUAL":
+            item["manualEmbeddings"].append(emb)
+        else:
+            item["selfEmbeddings"].append(emb)
     for worker_id in list(workers):
         if not workers[worker_id]["embeddings"]:
             workers.pop(worker_id, None)
@@ -646,7 +765,9 @@ def _gallery_version(device, workers=None, status=None):
         fingerprint.append([
             worker_id, item["bssWorkerId"], item.get("name") or "", sorted(item["siteIds"]),
             sorted((str(site_id), str(updated)) for site_id, updated in item["bindingRows"]),
-            sorted((emb.id, emb.photo_id, str(emb.created_at), emb.weights_sha) for emb in item["embeddings"]),
+            item.get("matchSource") or "SELF",
+            sorted((emb.id, emb.photo_id, emb.source, str(emb.created_at), emb.weights_sha)
+                   for emb in item["embeddings"]),
         ])
     raw = json.dumps({
         "model": EDGE_FACE_MODEL_NAME, "version": EDGE_FACE_MODEL_VERSION,
@@ -655,7 +776,9 @@ def _gallery_version(device, workers=None, status=None):
         "topk": EDGE_FACE_TOPK, "votes": EDGE_FACE_VOTES,
         "workers": fingerprint,
         "workerStatus": [
-            [row["bssWorkerId"], row["name"], row["siteIds"], row["embeddingCount"]]
+            [row["bssWorkerId"], row["name"], row["siteIds"], row["matchSource"],
+             row["manualCount"], row["selfCount"], row["embeddingCount"],
+             row["lastManualCaptureAt"]]
             for row in status
         ],
     }, sort_keys=True, default=str)
@@ -697,6 +820,13 @@ def edge_face_gallery(request):
             "bssWorkerId": item["bssWorkerId"],
             "name": item.get("name") or "",
             "siteIds": sorted(item["siteIds"]),
+            "matchSource": item.get("matchSource") or "SELF",
+            "manualCount": len(item["manualEmbeddings"]),
+            "selfCount": len(item["selfEmbeddings"]),
+            "manualEmbeddings": [base64.b64encode(bytes(emb.embedding)).decode("ascii")
+                                 for emb in item["manualEmbeddings"]],
+            "selfEmbeddings": [base64.b64encode(bytes(emb.embedding)).decode("ascii")
+                               for emb in item["selfEmbeddings"]],
             "embeddings": [base64.b64encode(bytes(emb.embedding)).decode("ascii")
                            for emb in item["embeddings"]],
         })
@@ -712,6 +842,173 @@ def edge_face_gallery(request):
         "votes": EDGE_FACE_VOTES,
         "workers": rows,
         "workerStatus": worker_status,
+    }}, status=status.HTTP_200_OK)
+
+
+def _manual_embedding(value):
+    """Decode one base64 float32 client embedding and return its unit vector."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("Each embedding must be a non-empty base64 string.")
+    try:
+        raw = base64.b64decode(value, validate=True)
+        vector = np.frombuffer(raw, dtype=np.float32)
+    except Exception as exc:
+        raise ValueError("One or more embeddings could not be decoded.") from exc
+    if vector.size != 512:
+        raise ValueError("Each face embedding must contain 512 float32 values.")
+    if not np.all(np.isfinite(vector)):
+        raise ValueError("Face embeddings contain invalid numeric values.")
+    norm = float(np.linalg.norm(vector))
+    if norm <= 0:
+        raise ValueError("Face embedding has zero magnitude.")
+    return vector / norm
+
+
+def _manual_worker(device, bss_worker_id, site):
+    identity = (WorkerIdentity.objects.filter(bss_worker_id=bss_worker_id)
+                .select_related("user").first())
+    if identity is None or identity.user.role != "worker":
+        return None, None
+    bound = (WorkerContractorBinding.objects
+             .filter(worker=identity.user, site=site, binding_status="ACCEPTED")
+             .exists())
+    if not bound:
+        return identity, None
+    return identity, identity.user
+
+
+@api_view(["POST"])
+@authentication_classes([EdgeCameraAuthentication])
+@permission_classes([IsAuthenticated])
+def edge_manual_enroll(request, camera_id):
+    """Store five client-camera face vectors as the preferred worker enrollment."""
+    camera = _edge_camera(request)
+    if camera is None or camera.device is None or int(camera.id) != int(camera_id):
+        return Response({"error": "Invalid camera."}, status=status.HTTP_401_UNAUTHORIZED)
+    if not camera.is_claimed or camera.device_id is None:
+        return Response({"error": "This camera is not synced to an active device."},
+                        status=status.HTTP_403_FORBIDDEN)
+    if camera.approval_status != "APPROVED":
+        return Response({"error": "This camera is not approved by the employer."},
+                        status=status.HTTP_403_FORBIDDEN)
+    if camera.site is None or camera.site.employer_id != camera.device.employer_id:
+        return Response({"error": "This camera is not linked to this employer's site."},
+                        status=status.HTTP_403_FORBIDDEN)
+    body = request.data if isinstance(request.data, dict) else {}
+    bss_worker_id = str(body.get("bssWorkerId") or body.get("bss_worker_id") or "").strip().upper()
+    raw_embeddings = body.get("embeddings")
+    if not bss_worker_id:
+        return Response({"error": "Select a worker before enrolling."}, status=status.HTTP_400_BAD_REQUEST)
+    if not isinstance(raw_embeddings, list) or len(raw_embeddings) != 5:
+        return Response({"error": "Exactly 5 face embeddings are required."}, status=status.HTTP_400_BAD_REQUEST)
+    if str(body.get("model") or EDGE_FACE_MODEL_NAME) != EDGE_FACE_MODEL_NAME:
+        return Response({"error": "Client face model does not match BSS."}, status=status.HTTP_400_BAD_REQUEST)
+    if str(body.get("version") or EDGE_FACE_MODEL_VERSION) != EDGE_FACE_MODEL_VERSION:
+        return Response({"error": "Client face model version does not match BSS."}, status=status.HTTP_400_BAD_REQUEST)
+    if str(body.get("detector") or EDGE_FACE_DETECTOR) != EDGE_FACE_DETECTOR:
+        return Response({"error": "Client face detector does not match BSS."}, status=status.HTTP_400_BAD_REQUEST)
+    if str(body.get("weightsSha") or EDGE_FACE_WEIGHTS_SHA) != EDGE_FACE_WEIGHTS_SHA:
+        return Response({"error": "Client face weights do not match BSS."}, status=status.HTTP_400_BAD_REQUEST)
+    captured_at = _parse_dt(body.get("capturedAt")) or timezone.now()
+    try:
+        vectors = [_manual_embedding(item) for item in raw_embeddings]
+    except ValueError as exc:
+        return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    # Reject identical vectors; five captures should be five distinct frames.
+    digests = [hashlib.sha256(vector.astype(np.float32).tobytes()).hexdigest() for vector in vectors]
+    if len(set(digests)) != len(digests):
+        return Response({"error": "The five captures are identical. Retake the photos."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    identity, worker = _manual_worker(camera.device, bss_worker_id, camera.site)
+    if identity is None:
+        return Response({"error": "Worker was not found."}, status=status.HTTP_404_NOT_FOUND)
+    if worker is None:
+        return Response({"error": "Worker is not bound to this camera's site."},
+                        status=status.HTTP_403_FORBIDDEN)
+    # Compare against the existing active gallery. A strong match for another
+    # worker requires explicit operator confirmation.
+    mismatches = []
+    for vector in vectors:
+        matched_id, distance, _reason = _match_worker(vector, camera.site, EDGE_FACE_MODEL_VERSION)
+        if matched_id is not None and int(matched_id) != int(worker.id):
+            other = User.objects.filter(pk=matched_id).select_related("worker_identity").first()
+            other_identity = getattr(other, "worker_identity", None) if other else None
+            mismatches.append({
+                "bssWorkerId": str(getattr(other_identity, "bss_worker_id", "") or ""),
+                "name": _worker_display_name(other) if other else "",
+                "confidence": round(max(0.0, min(1.0, 1.0 - float(distance))) * 100, 1),
+            })
+    if mismatches and not bool(body.get("confirmMismatch")):
+        return Response({
+            "error": "The captured face matches another worker. Confirm the selected worker to continue.",
+            "code": "wrong_worker",
+            "requiresConfirmation": True,
+            "matches": mismatches[:3],
+        }, status=status.HTTP_409_CONFLICT)
+    qualities = body.get("quality") if isinstance(body.get("quality"), list) else []
+    try:
+        with transaction.atomic():
+            WorkerFaceEmbedding.objects.filter(worker=worker, source="CLIENT_MANUAL").delete()
+            for index, vector in enumerate(vectors):
+                quality = qualities[index] if index < len(qualities) else {}
+                if not isinstance(quality, dict):
+                    quality = {}
+                WorkerFaceEmbedding.objects.create(
+                    worker=worker, photo=None, source="CLIENT_MANUAL",
+                    camera=camera, device=camera.device, slot=index + 1,
+                    captured_at=captured_at, meta={"quality": quality},
+                    model_name=EDGE_FACE_MODEL_NAME, model_version=EDGE_FACE_MODEL_VERSION,
+                    detector_backend=EDGE_FACE_DETECTOR,
+                    embedding=vector.astype(np.float32).tobytes(), dim=512,
+                    weights_sha=EDGE_FACE_WEIGHTS_SHA,
+                )
+            identity.face_match_source = "MANUAL"
+            identity.save(update_fields=["face_match_source", "updated_at"])
+    except Exception as exc:  # noqa: BLE001
+        LOG.exception("Manual face enrollment failed: %s", exc)
+        return Response({"error": "Manual face enrollment could not be saved."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    status_row = next((row for row in _worker_status_rows(camera.device)
+                       if row["bssWorkerId"] == bss_worker_id), None)
+    return Response({"data": {
+        "bssWorkerId": bss_worker_id,
+        "manualCount": status_row["manualCount"] if status_row else 5,
+        "selfCount": status_row["selfCount"] if status_row else 0,
+        "matchSource": "MANUAL",
+        "galleryVersion": _gallery_version(camera.device),
+    }}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["PATCH"])
+@authentication_classes([EdgeTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def edge_worker_face_source(request, bss_worker_id):
+    """Switch one worker between MANUAL and SELF matching sources."""
+    device = _edge_device(request)
+    if device is None:
+        return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
+    source = str((request.data or {}).get("source") or "").strip().upper()
+    if source not in ("MANUAL", "SELF"):
+        return Response({"error": "source must be MANUAL or SELF."}, status=status.HTTP_400_BAD_REQUEST)
+    identity = (WorkerIdentity.objects.filter(bss_worker_id=str(bss_worker_id).strip().upper())
+                .select_related("user").first())
+    if identity is None:
+        return Response({"error": "Worker was not found."}, status=status.HTTP_404_NOT_FOUND)
+    if not WorkerContractorBinding.objects.filter(
+            worker=identity.user, site__employer_id=device.employer_id,
+            binding_status="ACCEPTED").exists():
+        return Response({"error": "Worker is not bound to this employer."},
+                        status=status.HTTP_403_FORBIDDEN)
+    identity.face_match_source = source
+    identity.save(update_fields=["face_match_source", "updated_at"])
+    row = next((item for item in _worker_status_rows(device)
+                if item["bssWorkerId"] == str(bss_worker_id).strip().upper()), None)
+    return Response({"data": {
+        "bssWorkerId": str(bss_worker_id).strip().upper(),
+        "matchSource": source,
+        "manualCount": row["manualCount"] if row else 0,
+        "selfCount": row["selfCount"] if row else 0,
+        "galleryVersion": _gallery_version(device),
     }}, status=status.HTTP_200_OK)
 
 
@@ -827,9 +1124,22 @@ def edge_events(request):
         if occurred_at is None:
             results.append(_event_error(event_id, "invalid_time", "occurredAt is invalid."))
             continue
-        if not _schedule_active(camera, occurred_at):
-            results.append(_event_error(event_id, "outside_schedule", "This camera is outside its capture window."))
+        presence, presence_error = _presence_info(raw, occurred_at)
+        if presence_error:
+            results.append(_event_error(event_id, "invalid_presence", presence_error))
             continue
+        is_presence_end = bool(presence and presence["phase"] == "END")
+        if not _schedule_active(camera, occurred_at):
+            # A presence session may finish just after the capture window.
+            # Accept its end event when the session already exists so the
+            # measured duration is not lost.
+            session_external_id = (f"presence:{presence['sessionId']}"[:60]
+                                   if presence else "")
+            if not (is_presence_end and session_external_id
+                    and AttendanceEvent.objects.filter(
+                        source="CAMERA", external_id=session_external_id).exists()):
+                results.append(_event_error(event_id, "outside_schedule", "This camera is outside its capture window."))
+                continue
         if not ip or ip != str(camera.allowed_ip):
             record_ip_mismatch(camera, ip, occurred_at)
             results.append({**_event_error(event_id, "ip_not_allowed", "Data is arriving from a different IP."),
@@ -870,7 +1180,8 @@ def edge_events(request):
             if distance > EDGE_FACE_THRESHOLD:
                 results.append(_event_error(event_id, "below_threshold", "Client match is below the BSS threshold."))
                 continue
-            binding = _binding_at(worker, camera.site, occurred_at)
+            binding_at = presence["startedAt"] if is_presence_end else occurred_at
+            binding = _binding_at(worker, camera.site, binding_at)
             if binding is None:
                 results.append(_event_error(event_id, "worker_not_bound", "Worker was not bound to this site at scan time."))
                 continue
@@ -895,7 +1206,8 @@ def edge_events(request):
             worker_id, distance, reason = _match_worker(vector, camera.site, model_version)
             if worker_id is not None:
                 worker = User.objects.filter(pk=worker_id, role="worker").first()
-                binding = _binding_at(worker, camera.site, occurred_at) if worker else None
+                binding_at = presence["startedAt"] if is_presence_end else occurred_at
+                binding = _binding_at(worker, camera.site, binding_at) if worker else None
         elif method == "QR":
             token = str(raw.get("bssWorkerId") or raw.get("payload") or "").strip().upper()
             identity = WorkerIdentity.objects.filter(bss_worker_id=token).select_related("user").first()
@@ -914,7 +1226,8 @@ def edge_events(request):
             if distance is not None:
                 confidence = round(max(0.0, min(1.0, 1.0 - float(distance))) * 100, 2)
                 attendance = _mark_edge_attendance(worker, camera.site, camera, occurred_at,
-                                                   distance, event_id, binding=binding)
+                                                   distance, event_id, binding=binding,
+                                                   presence=presence)
                 status_value = "ACCEPTED"
         blob = None
         if method == "FACE" and not client_match:
@@ -930,7 +1243,14 @@ def edge_events(request):
                 details={"reason": reason, "ip": ip, "cameraToken": camera.token_prefix,
                          "clientMatch": client_match,
                          "galleryVersion": str(raw.get("galleryVersion") or ""),
-                         "faceBox": raw.get("faceBox") or raw.get("face_box") or None},
+                         "faceBox": raw.get("faceBox") or raw.get("face_box") or None,
+                         "presencePhase": presence.get("phase") if presence else "",
+                         "sessionId": presence.get("sessionId") if presence else "",
+                         "dwellSeconds": presence.get("dwellSeconds") if presence else None,
+                         "presenceStartedAt": (presence["startedAt"].isoformat()
+                                               if presence else ""),
+                         "presenceEndedAt": (presence["endedAt"].isoformat()
+                                             if presence and presence.get("endedAt") else "")},
                 attendance=attendance,
             )
         except Exception:
@@ -942,7 +1262,9 @@ def edge_events(request):
         camera.save(update_fields=["last_event_at", "last_seen_at", "last_seen_ip", "updated_at"])
         results.append({"eventId": event_id, "status": status_value,
                         "matched": worker is not None, "confidence": confidence,
-                        "reason": reason})
+                        "reason": reason,
+                        "sessionId": presence.get("sessionId") if presence else "",
+                        "dwellSeconds": presence.get("dwellSeconds") if presence else None})
     return Response({"data": {"results": results}}, status=status.HTTP_200_OK)
 
 
@@ -1323,6 +1645,8 @@ __all__ = [
     "edge_activate_verify",
     "edge_config",
     "edge_face_gallery",
+    "edge_manual_enroll",
+    "edge_worker_face_source",
     "edge_camera_create",
     "edge_camera_claim",
     "edge_camera_setup",

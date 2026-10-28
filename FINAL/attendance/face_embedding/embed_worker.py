@@ -107,9 +107,9 @@ def _upsert(conn, photo_id, user_id, embedding, weights_sha):
         cur.execute(
             """
             INSERT INTO worker_face_embedding
-                (worker_id, photo_id, model_name, model_version, detector_backend,
+                (worker_id, photo_id, source, model_name, model_version, detector_backend,
                  embedding, dim, weights_sha, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+            VALUES (%s, %s, 'WORKER_SELF', %s, %s, %s, %s, %s, %s, NOW())
             ON CONFLICT (photo_id, model_name, model_version)
             DO UPDATE SET embedding = EXCLUDED.embedding,
                           detector_backend = EXCLUDED.detector_backend,

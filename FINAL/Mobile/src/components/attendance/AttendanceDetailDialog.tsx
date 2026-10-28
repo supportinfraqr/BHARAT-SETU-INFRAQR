@@ -2,6 +2,7 @@
 
 import { Building2, CheckCircle2, Clock, Info, MapPin, X } from 'lucide-react';
 import { formatDate } from '@/lib/date';
+import { cameraPresence, formatDuration } from '@/lib/attendance';
 import type { AttendanceRecord } from '@/types/portal';
 
 type AttendanceRecordWithLeave = AttendanceRecord & { leaveType?: string; leaveStatus?: string };
@@ -47,6 +48,7 @@ export default function AttendanceDetailDialog({ record, onClose, subtitle }: {
   subtitle?: string;
 }) {
   const allEvents = record.events ?? [];
+  const cameraRows = cameraPresence(allEvents);
   const timedEvents = allEvents.filter(e => e.source !== 'SHEET');
   const hasSheet = allEvents.some(e => e.source === 'SHEET');
   const firstEvent = timedEvents[0] ?? allEvents[0];
@@ -160,6 +162,24 @@ export default function AttendanceDetailDialog({ record, onClose, subtitle }: {
             </div>
           )}
 
+          {cameraRows.length > 0 && (
+            <div className="rounded-2xl border border-bss-border overflow-hidden">
+              <div className="px-3 py-2 bg-bss-bg border-b border-bss-border">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted">CCTV presence · time in front of camera</span>
+              </div>
+              <div className="divide-y divide-bss-border">
+                {cameraRows.map(row => (
+                  <div key={row.camera} className="px-3 py-2.5 flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold text-bss-text-primary truncate">{row.camera}</span>
+                    <span className="text-xs font-bold text-bss-text-primary shrink-0">
+                      {row.sessions} session{row.sessions === 1 ? '' : 's'} · {formatDuration(row.durationSeconds)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {timedEvents.length > 0 && (
             <div className="rounded-2xl border border-bss-border overflow-hidden">
               <div className="px-3 py-2 bg-bss-bg border-b border-bss-border flex items-center justify-between">
@@ -171,6 +191,7 @@ export default function AttendanceDetailDialog({ record, onClose, subtitle }: {
                   const isOut = ev.type === 'OUT';
                   const time = ev.at ? new Date(ev.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
                   const endTime = ev.endedAt ? new Date(ev.endedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
+                  const duration = ev.durationSeconds != null && ev.durationSeconds > 0 ? ` · ${formatDuration(ev.durationSeconds)}` : '';
                   const coords = fmtCoord(ev.gpsLat, ev.gpsLong);
                   return (
                     <li key={i} className="px-3 py-2.5 text-[11px] space-y-1">
@@ -178,7 +199,7 @@ export default function AttendanceDetailDialog({ record, onClose, subtitle }: {
                         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isOut ? 'bg-bss-interactive-blue' : 'bg-bss-green'}`} />
                         <span className="font-bold text-bss-text-primary">{ev.typeLabel || ev.type}</span>
                         <span className="text-bss-text-muted truncate">· {ev.sourceLabel || ev.source}{ev.method ? ` (${ev.method})` : ''}</span>
-                        <span className="ml-auto font-semibold text-bss-text-primary flex-shrink-0">{time}{endTime ? ` – ${endTime}` : ''}{ev.durationSeconds != null ? ` · ${Math.round(ev.durationSeconds / 60)} min` : ''}</span>
+                        <span className="ml-auto font-semibold text-bss-text-primary flex-shrink-0">{time}{endTime ? ` – ${endTime}` : ''}{duration}</span>
                       </div>
                       {(ev.address || coords) && (
                         <div className="pl-4 text-bss-text-secondary flex items-start gap-1.5">

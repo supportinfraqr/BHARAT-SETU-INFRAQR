@@ -5,6 +5,7 @@ import { CalendarDays, CheckCircle2, Download, FileSpreadsheet, Upload, X } from
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import AttendanceDetailDialog from '@/components/attendance/AttendanceDetailDialog';
 import type { AttendanceRecord } from '@/types/portal';
+import { cameraPresenceText } from '@/lib/attendance';
 import { useContractor } from '@/contexts/ContractorContext';
 
 type AttendanceRow = {
@@ -13,7 +14,7 @@ type AttendanceRow = {
   verification?: string; checkIn?: string; checkOut?: string; singleMark?: boolean;
   camera?: string; cameraArea?: string; confidence?: number | null; matchStatus?: string;
   geofenceOk?: boolean | null; distanceM?: number | null; accuracyM?: number | null; gpsAddress?: string; remarks?: string;
-  events?: Array<{ source: string; sourceLabel?: string; type: string; typeLabel?: string; at: string }>;
+  events?: AttendanceRecord['events'];
 };
 type UploadResult = { created: number; updated: number; workers: number; rows: number; unknown: string[]; site: string; start: string; end: string };
 
@@ -120,6 +121,7 @@ export default function ContractorAttendancePage() {
     { id: 'out', header: 'Out', value: r => r.checkOut || '—', render: r => r.checkOut || '—' },
     { id: 'status', header: 'Status', value: r => STATUS_LABEL[r.statusCode || r.status || ''] ?? (r.statusCode || r.status || '—'), render: r => { const s = r.statusCode || r.status; return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${s === 'PRESENT' ? 'bg-bss-soft-green text-bss-green' : s === 'ABSENT' ? 'bg-bss-soft-orange text-bss-error' : 'bg-bss-soft-orange text-bss-orange'}`}>{s === 'PRESENT' ? <CheckCircle2 size={11}/> : s === 'ABSENT' ? <X size={11}/> : null}{STATUS_LABEL[s || ''] ?? (s || '—')}</span>; } },
     { id: 'source', header: 'Source', value: r => r.source || r.capture || '', render: r => <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-bss-blue-tint text-bss-interactive-blue">{r.source || r.capture}</span> },
+    { id: 'cameraPresence', header: 'Camera presence', value: r => cameraPresenceText(r.events) || '—', render: r => { const text = cameraPresenceText(r.events); return text ? <span className="text-[11px] font-semibold text-bss-text-primary">{text}</span> : <span className="text-bss-text-muted">—</span>; } },
     { id: 'view', header: '', value: () => '', render: r => <button type="button" onClick={() => setRecSelected(r)} className="text-[11px] font-semibold text-bss-interactive-blue hover:underline">Details</button> },
   ];
 

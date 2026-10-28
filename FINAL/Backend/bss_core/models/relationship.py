@@ -746,7 +746,7 @@ class ContractorJob(models.Model):
                                    limit_choices_to={"role": "contractor"})
     site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True, related_name="jobs")
     job_title = models.CharField(max_length=120)
-    job_description = models.CharField(max_length=500, blank=True)
+    job_description = models.TextField(blank=True)
     wage_offered = models.CharField(max_length=60, blank=True)
     # --- Job posting details (BSS_Feature_Comparison.xlsx, Contractor > Rozgar Setu) ---
     designation = models.CharField(max_length=120, blank=True)

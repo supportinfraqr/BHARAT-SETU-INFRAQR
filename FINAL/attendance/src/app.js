@@ -871,6 +871,12 @@ function siteNameFor(id) {
 function overviewPanel() {
   const workers = state?.gallery?.status || [];
   const enrolled = workers.filter(worker => worker.hasFaceData).length;
+  const manualReady = workers.filter(worker => Number(worker.manualCount || 0) > 0).length;
+  const selfReady = workers.filter(worker => Number(worker.selfCount || 0) > 0).length;
+  const activeManual = workers.filter(worker => worker.matchSource === 'MANUAL').length;
+  const activeSelf = workers.filter(worker => worker.matchSource !== 'MANUAL').length;
+  const manualInactive = workers.filter(worker => Number(worker.manualCount || 0) > 0 && worker.matchSource !== 'MANUAL').length;
+  const manualWorkers = workers.filter(worker => Number(worker.manualCount || 0) > 0);
   const cameras = state?.cameras || [];
   const active = cameras.filter(camera => camera.sendAllowed).length;
   const gpu = state?.resources?.gpu || state?.gpu || {};
@@ -880,7 +886,11 @@ function overviewPanel() {
       <div class="res-panel"><h4>Workers</h4><div class="res-list">
         <div><span>Bound workers</span><b>${workers.length}</b></div>
         <div><span>Face data ready</span><b>${enrolled} / ${workers.length}</b></div>
-        <div><span>Missing face data</span><b class="${workers.length && enrolled < workers.length ? 'res-warn' : ''}">${Math.max(0, workers.length - enrolled)}</b></div>
+        <div><span>Manual camera data</span><b>${manualReady}</b></div>
+        <div><span>Self-enrolled data</span><b>${selfReady}</b></div>
+        <div><span>Active source · Manual</span><b>${activeManual}</b></div>
+        <div><span>Active source · Self</span><b>${activeSelf}</b></div>
+        <div><span>Manual stored but inactive</span><b class="${manualInactive ? 'res-warn' : ''}">${manualInactive}</b></div>
       </div></div>
       <div class="res-panel"><h4>Cameras</h4><div class="res-list">
         <div><span>Configured</span><b>${cameras.length}</b></div>
@@ -893,6 +903,9 @@ function overviewPanel() {
         <div><span>Detected</span><b>${gpu.detected === false ? 'No' : gpu.detected ? 'Yes' : 'Unknown'}</b></div>
       </div></div>
     </div>
+    <div class="res-panel" style="margin-top:12px"><h4>Workers with manual camera embeddings</h4>
+      ${manualWorkers.length ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>Worker</th><th>BSS ID</th><th>Manual</th><th>Self</th><th>Active source</th></tr></thead><tbody>${manualWorkers.map(worker => `<tr><td><b>${esc(worker.name || worker.bssWorkerId)}</b></td><td class="mono">${esc(worker.bssWorkerId || '—')}</td><td>${esc(String(worker.manualCount || 0))}</td><td>${esc(String(worker.selfCount || 0))}</td><td><span class="pill ${worker.matchSource === 'MANUAL' ? 'ok' : 'warn'}">${esc(worker.matchSource || 'SELF')}</span></td></tr>`).join('')}</tbody></table></div>` : '<p class="empty" style="margin-top:10px">No worker has manual camera embeddings yet.</p>'}
+    </div>
   </section>`;
 }
 
@@ -900,23 +913,32 @@ function workerPanel() {
   const workers = state?.gallery?.status || [];
   const enrolled = workers.filter(worker => worker.hasFaceData).length;
   const rows = workers.map(worker => {
-    const count = Number(worker.embeddingCount || 0);
-    const label = count === 0 ? 'Not enrolled' : count < 5 ? `Partial · ${count}` : `Ready · ${count}`;
-    const cls = count === 0 ? 'bad' : count < 5 ? 'warn' : 'ok';
+    const manual = Number(worker.manualCount || 0);
+    const self = Number(worker.selfCount || 0);
+    const count = Number(worker.embeddingCount || manual + self);
+    const source = worker.matchSource === 'MANUAL' ? 'MANUAL' : 'SELF';
+    const activeCount = source === 'MANUAL' ? manual : self;
+    const label = activeCount ? `Ready · ${activeCount} ${source.toLowerCase()}` : `No ${source.toLowerCase()} vectors`;
+    const cls = activeCount ? 'ok' : 'bad';
     const sites = (worker.siteIds || []).map(siteNameFor).join(', ') || '—';
+    const missing = activeCount === 0;
     return `<tr>
       <td><b>${esc(worker.name || worker.bssWorkerId)}</b></td>
       <td class="mono">${esc(worker.bssWorkerId || '—')}</td>
       <td>${esc(sites)}</td>
-      <td><span class="pill ${cls}">${esc(label)}</span></td>
-      <td>${count ? 'On this device' : 'Enroll face photos in BSS'}</td>
+      <td><span class="pill ${manual ? 'ok' : 'muted'}">${manual ? `Manual · ${manual}` : 'Manual · —'}</span></td>
+      <td><span class="pill ${self ? 'ok' : 'muted'}">${self ? `Self · ${self}` : 'Self · —'}</span></td>
+      <td><span class="pill ${cls}">${esc(label)}</span>${missing ? '<span class="note blocked" style="display:block;margin-top:4px">No manual vectors</span>' : ''}</td>
+      <td><select data-worker-source="${esc(worker.bssWorkerId || '')}" data-previous-source="${source}" class="source-select"><option value="MANUAL" ${source === 'MANUAL' ? 'selected' : ''}>Manual</option><option value="SELF" ${source === 'SELF' ? 'selected' : ''}>Self</option></select></td>
+      <td class="muted">${esc(worker.lastManualCaptureAt ? when(worker.lastManualCaptureAt) : '—')}</td>
+      <td><button type="button" class="btn" data-manual-enroll="${esc(worker.bssWorkerId || '')}" ${state?.bssConnected ? '' : 'disabled'}>Manual enroll</button></td>
     </tr>`;
   }).join('');
   return `<section class="card" data-panel="workers">
     <div class="cam-title"><h3>Workers</h3><span class="pill ${workers.length && enrolled === workers.length ? 'ok' : 'warn'}">${enrolled} / ${workers.length} with face data</span></div>
-    <p class="muted">Bound workers received from BSS. A worker needs enrolled face photos before the client can detect them.</p>
+    <p class="muted">Manual embeddings come from this site camera and are preferred when selected. Self embeddings come from the worker profile in BSS. Only the selected source is used for matching.</p>
     ${workers.length ? `<div class="table-wrap"><table class="data-table">
-      <thead><tr><th>Worker</th><th>BSS ID</th><th>Site</th><th>Face data</th><th>Client status</th></tr></thead>
+      <thead><tr><th>Worker</th><th>BSS ID</th><th>Site</th><th>Manual</th><th>Self</th><th>Face data</th><th>Matching source</th><th>Last manual</th><th>Action</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>` : '<p class="empty" style="margin-top:12px">No bound workers found for this employer yet.</p>'}
   </section>`;
@@ -945,6 +967,146 @@ function resourceCard(resources) {
 function updateResourceLive(resources) {
   const container = qs('resourceLive');
   if (container) container.innerHTML = resourceLiveHtml(resources || {});
+}
+
+function openManualEnrollment(workerId) {
+  const worker = (state?.gallery?.status || []).find(item => String(item.bssWorkerId) === String(workerId));
+  if (!worker) { void showAlert('Worker not found', 'Refresh the client and try again.'); return; }
+  if (!state?.bssConnected) { void showAlert('BSS connection required', 'Manual enrollment must be saved to BSS. Reconnect and try again.'); return; }
+  const siteIds = new Set((worker.siteIds || []).map(Number));
+  const cameras = (state.cameras || []).filter(camera =>
+    camera.approvalStatus === 'APPROVED' && camera.rtspConfigured && siteIds.has(Number(camera.siteId)));
+  if (!cameras.length) {
+    void showAlert('No camera available', 'This worker has no approved camera on their site. Add or approve a camera first.');
+    return;
+  }
+  const backdrop = document.createElement('div');
+  backdrop.className = 'dialog-backdrop';
+  let cameraId = cameras[0].cameraId;
+  let captureId = '';
+  let previewTimer = null;
+  const close = () => {
+    if (previewTimer) clearInterval(previewTimer);
+    backdrop.remove();
+  };
+  backdrop.innerHTML = `<div class="dialog" style="max-width:760px;width:min(760px,94vw);text-align:left">
+    <div class="cam-title"><div><h3>Manual enrollment</h3><p class="muted" style="margin:4px 0 0">${esc(worker.name || worker.bssWorkerId)} · ${esc(worker.bssWorkerId || '')}</p></div><span class="pill warn">5 photos</span></div>
+    <label style="display:block;margin-top:14px">Camera<select id="manualEnrollCamera">${cameras.map(camera => `<option value="${esc(camera.cameraId)}">${esc(camera.label)} · ${esc(camera.siteName || siteNameFor(camera.siteId))}</option>`).join('')}</select></label>
+    <div style="margin-top:12px;background:#0b1220;border-radius:12px;overflow:hidden;min-height:240px;display:grid;place-items:center">
+      <img id="manualEnrollPreview" alt="Selected camera preview" style="width:100%;max-height:320px;object-fit:contain;display:block" />
+    </div>
+    <p class="note" id="manualEnrollMsg" style="margin-top:10px">Only this worker should be in front of the camera. The client will take 5 distinct photos and send embeddings only — no images leave this device.</p>
+    <div id="manualEnrollWarning"></div>
+    <div id="manualEnrollPreviews" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px"></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <button type="button" class="btn" id="manualEnrollCancel">Cancel</button>
+      <button type="button" class="btn" id="manualEnrollRetake" disabled>Retake</button>
+      <button type="button" class="btn primary" id="manualEnrollCapture">Capture 5 photos</button>
+      <button type="button" class="btn primary" id="manualEnrollConfirm" disabled>Confirm & sync</button>
+    </div>
+  </div>`;
+  document.body.appendChild(backdrop);
+  const preview = backdrop.querySelector('#manualEnrollPreview');
+  const cameraSelect = backdrop.querySelector('#manualEnrollCamera');
+  const msg = backdrop.querySelector('#manualEnrollMsg');
+  const warning = backdrop.querySelector('#manualEnrollWarning');
+  const previews = backdrop.querySelector('#manualEnrollPreviews');
+  const captureBtn = backdrop.querySelector('#manualEnrollCapture');
+  const confirmBtn = backdrop.querySelector('#manualEnrollConfirm');
+  const retakeBtn = backdrop.querySelector('#manualEnrollRetake');
+  const refreshPreview = () => {
+    const stamp = Date.now();
+    preview.src = `${BASE}/snapshot/${cameraId}?t=${stamp}`;
+    preview.onerror = () => { msg.textContent = 'Waiting for the camera frame…'; };
+    preview.onload = () => { if (!captureId) msg.textContent = 'Ready. Ask the worker to face the camera, then capture 5 photos.'; };
+  };
+  const setBusy = busy => {
+    captureBtn.disabled = busy;
+    confirmBtn.disabled = busy || !captureId;
+    retakeBtn.disabled = busy || !captureId;
+    cameraSelect.disabled = busy;
+  };
+  previewTimer = setInterval(refreshPreview, 1000);
+  refreshPreview();
+  cameraSelect.addEventListener('change', () => {
+    cameraId = Number(cameraSelect.value);
+    captureId = '';
+    previews.innerHTML = '';
+    warning.innerHTML = '';
+    confirmBtn.disabled = true;
+    retakeBtn.disabled = true;
+    refreshPreview();
+  });
+  backdrop.querySelector('#manualEnrollCancel').addEventListener('click', close);
+  backdrop.addEventListener('click', event => { if (event.target === backdrop) close(); });
+  retakeBtn.addEventListener('click', () => {
+    captureId = '';
+    previews.innerHTML = '';
+    warning.innerHTML = '';
+    msg.textContent = 'Ready. Ask the worker to face the camera, then capture 5 photos.';
+    confirmBtn.disabled = true;
+    retakeBtn.disabled = true;
+  });
+  captureBtn.addEventListener('click', async () => {
+    setBusy(true);
+    msg.textContent = 'Capturing 5 distinct face frames… Keep the worker facing the camera.';
+    msg.style.color = '';
+    warning.innerHTML = '';
+    try {
+      const result = await api(`/api/cameras/${cameraId}/manual-enroll/capture`, {
+        method: 'POST', body: JSON.stringify({ bssWorkerId: worker.bssWorkerId }),
+      });
+      captureId = result.captureId;
+      previews.innerHTML = (result.previews || []).map((src, index) => `<img src="${src}" alt="Manual capture ${index + 1}" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;border:1px solid #d8dee9" />`).join('');
+      if (result.warning) {
+        warning.innerHTML = `<p class="note blocked" style="margin-top:10px">The face looks like <b>${esc(result.warning.name || result.warning.bssWorkerId)}</b> (${esc(String(result.warning.confidence || ''))}% match), not the selected worker. Check carefully before confirming.</p>`;
+      }
+      msg.textContent = '5 photos captured. Review the previews, then confirm to sync embeddings to BSS.';
+      msg.style.color = '#14843C';
+      confirmBtn.disabled = false;
+      retakeBtn.disabled = false;
+    } catch (error) {
+      msg.textContent = error.message || String(error);
+      msg.style.color = '#C2410C';
+    } finally {
+      setBusy(false);
+    }
+  });
+  confirmBtn.addEventListener('click', async () => {
+    if (!captureId) return;
+    setBusy(true);
+    msg.textContent = 'Saving manual embeddings to BSS…';
+    try {
+      let result = await api(`/api/cameras/${cameraId}/manual-enroll/confirm`, {
+        method: 'POST', body: JSON.stringify({ captureId, confirmMismatch: false }),
+      });
+      if (result?.requiresConfirmation) {
+        const first = (result.matches || [])[0];
+        const proceed = await showDialog({
+          title: 'Confirm the selected worker',
+          body: `The captured face matches ${first ? `${first.name || first.bssWorkerId} (${first.confidence}%)` : 'another worker'}, not ${worker.name || worker.bssWorkerId}. Save these embeddings for the selected worker anyway?`,
+          confirmLabel: 'Save anyway', cancelLabel: 'Go back', danger: true,
+        });
+        if (!proceed) {
+          msg.textContent = 'Not saved. Check the worker selection or retake the photos.';
+          setBusy(false);
+          return;
+        }
+        result = await api(`/api/cameras/${cameraId}/manual-enroll/confirm`, {
+          method: 'POST', body: JSON.stringify({ captureId, confirmMismatch: true }),
+        });
+      }
+      captureId = '';
+      close();
+      state = await api('/api/status');
+      render();
+      await showAlert('Manual enrollment saved', `${worker.name || worker.bssWorkerId} now has manual camera embeddings. The manual source is selected for this worker.`);
+    } catch (error) {
+      msg.textContent = error.message || String(error);
+      msg.style.color = '#C2410C';
+      setBusy(false);
+    }
+  });
 }
 
 function render() {
@@ -1139,6 +1301,37 @@ function render() {
       } catch (error) { await showAlert('Could not remove camera', error.message); }
     });
   }
+
+  document.querySelectorAll('[data-manual-enroll]').forEach(button => {
+    button.addEventListener('click', () => openManualEnrollment(button.dataset.manualEnroll));
+  });
+  document.querySelectorAll('[data-worker-source]').forEach(select => {
+    select.addEventListener('change', async () => {
+      const workerId = select.dataset.workerSource;
+      const source = select.value;
+      if (!state?.bssConnected) {
+        select.value = select.dataset.previousSource || 'SELF';
+        await showAlert('BSS connection required', 'Matching source changes must be saved to BSS.');
+        return;
+      }
+      select.disabled = true;
+      try {
+        const result = await api(`/api/workers/${encodeURIComponent(workerId)}/face-source`, {
+          method: 'POST', body: JSON.stringify({ source }),
+        });
+        state = await api('/api/status');
+        render();
+        const count = source === 'MANUAL' ? Number(result?.manualCount || 0) : Number(result?.selfCount || 0);
+        if (!count) {
+          await showAlert('No vectors for this source', `${workerId} has no ${source.toLowerCase()} embeddings. The worker will not match until vectors are enrolled or the other source is selected.`);
+        }
+      } catch (error) {
+        select.value = select.dataset.previousSource || 'SELF';
+        select.disabled = false;
+        await showAlert('Could not change matching source', error.message || String(error));
+      }
+    });
+  });
 }
 
 async function refresh() {
@@ -1189,6 +1382,7 @@ function startPolling() {
         sites: (value?.sites || []).map(site => [site.id, site.bssId, site.name]),
         cameras: (value?.cameras || []).map(camera => [camera.cameraId, camera.approvalStatus, camera.status, camera.rtspConfigured, camera.sendAllowed, camera.cameraOnline, camera.ipWhitelisted, camera.canRemove, camera.sourceDeviceName]),
         outbox: value?.outbox,
+        gallery: (value?.gallery?.status || []).map(worker => [worker.bssWorkerId, worker.matchSource, worker.manualCount, worker.selfCount, worker.embeddingCount, worker.lastManualCaptureAt]),
         localEvents: (value?.localEvents || []).map(event => [event.eventId, event.syncStatus]),
       });
       state = fresh;

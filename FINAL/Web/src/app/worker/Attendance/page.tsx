@@ -27,6 +27,7 @@ import {
 import { fieldClass, ModuleShell } from '@/components/worker/ModuleShell';
 import PageHero from '@/components/portal/PageHero';
 import type { AttendanceRecord } from '@/types/portal';
+import { cameraPresenceText } from '@/lib/attendance';
 import { useWorker } from '@/contexts/WorkerContext';
 import EnterpriseDataTable, { DataColumn } from '@/components/worker/EnterpriseDataTable';
 
@@ -685,6 +686,7 @@ const attendanceColumns: DataColumn<AttendanceRow>[] = [
   },
   { id: 'shift', header: 'Shift', value: (r) => r.shift ?? 'Not applicable' },
   { id: 'site', header: 'Site', value: (r) => r.site },
+  { id: 'cameraPresence', header: 'Camera presence', value: (r) => cameraPresenceText(r.events) || '—', render: (r) => { const text = cameraPresenceText(r.events); return text ? <span className="text-[11px] font-semibold text-bss-text-primary">{text}</span> : <span className="text-bss-text-muted">—</span>; } },
   { id: 'checkIn', header: 'Check-in', value: (r) => r.checkIn ?? '—' },
   { id: 'checkOut', header: 'Check-out', value: (r) => r.checkOut ?? '—' },
   { id: 'status', header: 'Status', value: (r) => r.status ?? r.statusCode ?? '—' }

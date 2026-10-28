@@ -163,10 +163,22 @@ class EdgeEvent(models.Model):
 
 
 class WorkerFaceEmbedding(models.Model):
-    """One face embedding generated from a stored worker enrolment photo."""
+    """One face vector from worker self-enrollment or a client CCTV camera."""
+
+    SOURCE = [("WORKER_SELF", "Worker self-enrollment"),
+              ("CLIENT_MANUAL", "Client camera manual enrollment")]
 
     worker = models.ForeignKey(User, on_delete=models.CASCADE, related_name="face_embeddings")
-    photo = models.ForeignKey(WorkerFacePhoto, on_delete=models.CASCADE, related_name="embeddings")
+    photo = models.ForeignKey(WorkerFacePhoto, on_delete=models.CASCADE, null=True, blank=True,
+                              related_name="embeddings")
+    source = models.CharField(max_length=20, choices=SOURCE, default="WORKER_SELF")
+    camera = models.ForeignKey(EdgeCamera, on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name="face_embeddings")
+    device = models.ForeignKey(EdgeDevice, on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name="face_embeddings")
+    slot = models.PositiveSmallIntegerField(null=True, blank=True)
+    captured_at = models.DateTimeField(null=True, blank=True)
+    meta = models.JSONField(default=dict, blank=True)
     model_name = models.CharField(max_length=40, default="ArcFace")
     model_version = models.CharField(max_length=80, blank=True)
     detector_backend = models.CharField(max_length=40, default="retinaface")
@@ -181,6 +193,7 @@ class WorkerFaceEmbedding(models.Model):
                                                name="uq_worker_face_embedding_photo_model")]
         indexes = [
             models.Index(fields=["worker"], name="idx_worker_face_emb_worker"),
+            models.Index(fields=["worker", "source"], name="idx_worker_face_emb_source"),
             models.Index(fields=["model_name", "model_version"], name="idx_worker_face_emb_model"),
         ]
 

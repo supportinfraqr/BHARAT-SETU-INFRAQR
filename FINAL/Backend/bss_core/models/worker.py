@@ -34,6 +34,8 @@ class WorkerIdentity(models.Model):
     religion = models.CharField(max_length=40, blank=True)
     caste = models.CharField(max_length=40, blank=True)
     photo = models.CharField(max_length=255, blank=True)
+    FACE_MATCH_SOURCE = [("SELF", "Self-enrolled photos"), ("MANUAL", "Client camera enrollment")]
+    face_match_source = models.CharField(max_length=10, choices=FACE_MATCH_SOURCE, default="SELF")
     pan = models.CharField(max_length=20, blank=True)
     pan_verified = models.BooleanField(default=False)
     # PAN holder name (read from the fetched DigiLocker PAN PDF) and whether it
