@@ -13,7 +13,7 @@ export type LiveFeed = {
   data: Partial<LiveData> | null; loading: boolean; error: string; updatedAt: string; reload: () => Promise<void>;
 };
 
-export function useLiveFeed(): LiveFeed {
+export function useLiveFeed(options: { siteId?: string; intervalMs?: number } = {}): LiveFeed {
   const [data, setData] = useState<Partial<LiveData> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -23,6 +23,7 @@ export function useLiveFeed(): LiveFeed {
     setLoading(true); setError('');
     try {
       const q = new URLSearchParams({ tab: 'live', period: 'live' });
+      if (options.siteId) q.set('siteId', options.siteId);
       const response = await fetch(`/api/employer/analytics?${q}`, { cache: 'no-store' });
       const body = await response.json().catch(() => ({})) as { data?: Partial<LiveData>; error?: string };
       if (!response.ok || !body.data) throw new Error(body.error || 'Live feed could not be loaded.');
@@ -31,14 +32,14 @@ export function useLiveFeed(): LiveFeed {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Live feed could not be loaded.');
     } finally { setLoading(false); }
-  }, []);
+  }, [options.siteId]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
   useEffect(() => { void reload(); }, [reload]);
   useEffect(() => {
-    const id = setInterval(() => { void reload(); }, 30000);
+    const id = setInterval(() => { void reload(); }, options.intervalMs ?? 30000);
     return () => clearInterval(id);
-  }, [reload]);
+  }, [reload, options.intervalMs]);
 
   return { data, loading, error, updatedAt, reload };
 }
