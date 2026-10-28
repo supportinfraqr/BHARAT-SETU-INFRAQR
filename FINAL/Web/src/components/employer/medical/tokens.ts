@@ -20,7 +20,7 @@ const ph = '…………';
 
 export const SYSTEM_TOKENS: TokenDef[] = [
   // Worker / self
-  { token: 'self.name', label: 'Worker name', category: 'Worker', source: 'DB · worker.name', example: 'Ramesh Kumar' },
+  { token: 'self.name', label: 'Worker name', category: 'Worker', source: 'DB · worker.name', example: 'Worker name' },
   { token: 'self.bssId', label: 'Worker BSS ID', category: 'Worker', source: 'DB · worker.bss_worker_id', example: 'BSSW328JR7MC3H7' },
   { token: 'self.aadhaar', label: 'Aadhaar (masked)', category: 'Worker', source: 'DB · worker.aadhaar', example: 'XXXX XXXX 1234' },
   { token: 'self.mobile', label: 'Mobile', category: 'Worker', source: 'DB · worker.mobile', example: '+91 98765 43210' },

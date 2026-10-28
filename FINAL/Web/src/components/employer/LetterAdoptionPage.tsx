@@ -40,16 +40,16 @@ const logoToToken = (html: string) => html
   .replace(DEFAULT_SRC_RE, 'src="{{logoUrl}}"');
 
 const SAMPLE: Record<string, string> = {
-  letterTitle: 'Appointment Letter', refNo: 'BSSA7KQ2M9X4RTP', issueDate: '01/09/2026',
-  workerName: 'Ramesh Kumar', workerBssId: 'BSSW7KQ2M9X4RTP', fatherName: 'Suresh Kumar',
-  dob: '05/05/1995', gender: 'M', mobile: '9876543210', address: 'Village X, Pune, Maharashtra',
-  designation: 'Mason', department: 'Civil Works', doj: '12/06/2026', wage: '₹25,000',
-  ctc: '₹29,850', costSheetName: 'Maharashtra Construction — Skilled Grade A',
-  costSheetCode: 'BSS-CS-78A9B2', contractorName: 'BuildWell Contractors Pvt Ltd',
-  contractorBssId: 'BSSC3HJ8NPQ6VW', contractorAddress: 'Plot 4, MIDC, Pune',
-  employerName: 'Adani Infra Pvt Ltd', employerBssId: 'BSSE9F2C7YTR4A',
-  siteName: 'Demo Metro Site', siteAddress: 'Sector 21, Navi Mumbai, Maharashtra',
-  salaryBreakdownTable: '<table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0;border:1px solid #9aa4b2"><thead><tr style="background:#F0F4FA;color:#073B67"><th style="border:1px solid #9aa4b2;padding:5px">Component</th><th style="border:1px solid #9aa4b2;padding:5px">Monthly (₹)</th><th style="border:1px solid #9aa4b2;padding:5px">Annual (₹)</th></tr></thead><tbody><tr><td style="border:1px solid #9aa4b2;padding:5px">Basic</td><td style="border:1px solid #9aa4b2;padding:5px">12,500</td><td style="border:1px solid #9aa4b2;padding:5px">1,50,000</td></tr></tbody></table>',
+  letterTitle: 'Appointment Letter', refNo: 'BSSA0000000000', issueDate: 'DD/MM/YYYY',
+  workerName: 'Worker Name', workerBssId: 'BSS Worker ID', fatherName: "Father's Name",
+  dob: 'DD/MM/YYYY', gender: '—', mobile: 'Mobile Number', address: 'Worker Address',
+  designation: 'Designation', department: 'Department', doj: 'DD/MM/YYYY', wage: '₹—',
+  ctc: '₹—', costSheetName: 'Cost Sheet Name',
+  costSheetCode: 'Cost Sheet Code', contractorName: 'Contractor / Service Provider',
+  contractorBssId: 'Contractor BSS ID', contractorAddress: 'Contractor Address',
+  employerName: 'Principal Employer', employerBssId: 'Employer BSS ID',
+  siteName: 'Project Site', siteAddress: 'Site Address',
+  salaryBreakdownTable: '<table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0;border:1px solid #9aa4b2"><thead><tr style="background:#F0F4FA;color:#073B67"><th style="border:1px solid #9aa4b2;padding:5px">Component</th><th style="border:1px solid #9aa4b2;padding:5px">Monthly (₹)</th><th style="border:1px solid #9aa4b2;padding:5px">Annual (₹)</th></tr></thead><tbody><tr><td style="border:1px solid #9aa4b2;padding:5px">Basic</td><td style="border:1px solid #9aa4b2;padding:5px">—</td><td style="border:1px solid #9aa4b2;padding:5px">—</td></tr></tbody></table>',
   costSheetSection: '', formXVTable: '',
 };
 

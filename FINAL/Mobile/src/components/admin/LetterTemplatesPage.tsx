@@ -78,18 +78,18 @@ const BLANK_STARTER_HTML = `<!doctype html><html><head><meta charset="utf-8"/><s
 
 // Sample values used only for the live preview (not saved).
 const SAMPLE: Record<string, string> = {
-  letterTitle: 'Appointment Letter', refNo: 'BSSA7KQ2M9X4RTP', issueDate: '01/09/2026',
-  workerName: 'Ramesh Kumar', workerBssId: 'BSSW7KQ2M9X4RTP', fatherName: 'Suresh Kumar',
-  dob: '05/05/1995', gender: 'M', mobile: '9876543210', address: 'Village X, Pune, Maharashtra',
-  designation: 'Mason', department: 'Civil Works', doj: '12/06/2026', relievingDate: '25/09/2026',
-  identificationMarks: 'Mole on right forearm', wage: '₹25,000',
-  costSheetCode: 'BSS-CS-78A9B2', costSheetName: 'Maharashtra Construction — Skilled Grade A',
-  costSheetCategory: 'Skilled', costSheetGrade: 'Grade A', ctc: '₹29,850',
-  epfEmployer: '₹1,950', esicEmployer: '₹813', netTakeHome: '₹22,400',
-  contractorName: 'BuildWell Contractors Pvt Ltd', contractorBssId: 'BSSC3HJ8NPQ6VW',
-  contractorAddress: 'Plot 4, MIDC, Pune', employerName: 'Adani Infra Pvt Ltd',
-  employerBssId: 'BSSE9F2C7YTR4A',
-  siteName: 'Demo Metro Site', siteAddress: 'Sector 21, Navi Mumbai, Maharashtra',
+  letterTitle: 'Appointment Letter', refNo: 'BSSA0000000000', issueDate: 'DD/MM/YYYY',
+  workerName: 'Worker Name', workerBssId: 'BSS Worker ID', fatherName: "Father's Name",
+  dob: 'DD/MM/YYYY', gender: '—', mobile: 'Mobile Number', address: 'Worker Address',
+  designation: 'Designation', department: 'Department', doj: 'DD/MM/YYYY', relievingDate: 'DD/MM/YYYY',
+  identificationMarks: 'Identification Marks', wage: '₹—',
+  costSheetCode: 'Cost Sheet Code', costSheetName: 'Cost Sheet Name',
+  costSheetCategory: 'Category', costSheetGrade: 'Grade', ctc: '₹—',
+  epfEmployer: '₹—', esicEmployer: '₹—', netTakeHome: '₹—',
+  contractorName: 'Contractor / Service Provider', contractorBssId: 'Contractor BSS ID',
+  contractorAddress: 'Contractor Address', employerName: 'Principal Employer',
+  employerBssId: 'Employer BSS ID',
+  siteName: 'Project Site', siteAddress: 'Site Address',
   formXVTable: `
     <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:11px;text-align:center;border:1px solid #334155;">
       <thead>
@@ -165,9 +165,9 @@ const SAMPLE: Record<string, string> = {
   employmentGridTable: `
     <table style="width:100%;border-collapse:collapse;margin:10px 0;font-size:12.5px;">
       <tbody>
-        <tr><td style="border:1px solid #94a3b8;padding:6px 10px;background:#F0F4FA;color:#073B67;font-weight:600;width:35%;">Contractor / Service Provider</td><td style="border:1px solid #94a3b8;padding:6px 10px;">BuildWell Contractors Pvt Ltd (BSSC3HJ8NPQ6VW)</td></tr>
-        <tr><td style="border:1px solid #94a3b8;padding:6px 10px;background:#F0F4FA;color:#073B67;font-weight:600;">Principal Employer</td><td style="border:1px solid #94a3b8;padding:6px 10px;">Adani Infra Pvt Ltd (BSSE9F2C7YTR4A)</td></tr>
-        <tr><td style="border:1px solid #94a3b8;padding:6px 10px;background:#F0F4FA;color:#073B67;font-weight:600;">Project Site & Address</td><td style="border:1px solid #94a3b8;padding:6px 10px;">Demo Metro Site, Sector 21, Navi Mumbai, Maharashtra</td></tr>
+        <tr><td style="border:1px solid #94a3b8;padding:6px 10px;background:#F0F4FA;color:#073B67;font-weight:600;width:35%;">Contractor / Service Provider</td><td style="border:1px solid #94a3b8;padding:6px 10px;">Contractor / Service Provider Name (Contractor BSS ID)</td></tr>
+        <tr><td style="border:1px solid #94a3b8;padding:6px 10px;background:#F0F4FA;color:#073B67;font-weight:600;">Principal Employer</td><td style="border:1px solid #94a3b8;padding:6px 10px;">Principal Employer Name (Employer BSS ID)</td></tr>
+        <tr><td style="border:1px solid #94a3b8;padding:6px 10px;background:#F0F4FA;color:#073B67;font-weight:600;">Project Site & Address</td><td style="border:1px solid #94a3b8;padding:6px 10px;">Project Site Name, Site Address</td></tr>
       </tbody>
     </table>
   `,
