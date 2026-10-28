@@ -75,6 +75,8 @@ def employer_worker_kyc(request):
         aadhaar_doc = doc_map.get("AADHAR") or doc_map.get("WM01")
         pan_doc = doc_map.get("PAN") or doc_map.get("WM02")
         bank_doc = doc_map.get("BANK")
+        uan_doc = doc_map.get("UAN")
+        esic_doc = doc_map.get("ESIC")
         rows.append({
             "id": worker_id,
             "name": payloads._d(wi.name if wi else ""),
@@ -105,7 +107,7 @@ def employer_worker_kyc(request):
                 "fileName": payloads._d(doc.file_name),
                 "uploadedAt": payloads._dts(doc.uploaded_at) if doc.uploaded_at else "",
                 "hasFile": bool(doc.file or doc.file_path),
-            } for doc in (aadhaar_doc, pan_doc, bank_doc) if doc is not None],
+            } for doc in (aadhaar_doc, pan_doc, uan_doc, esic_doc, bank_doc) if doc is not None],
         })
     rows.sort(key=lambda row: (row["name"].lower(), row["bssId"]))
     return Response({"rows": rows}, status=status.HTTP_200_OK)
