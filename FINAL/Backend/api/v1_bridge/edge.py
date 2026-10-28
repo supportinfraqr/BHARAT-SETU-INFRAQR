@@ -459,21 +459,23 @@ def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id,
     remarks = "QR attendance via edge camera" if is_qr else "CCTV edge attendance"
     if not is_qr and confidence < 60.0:
         remarks = f"CCTV edge attendance — manual review (confidence {confidence:g}%)"
-    attendance, _created = Attendance.objects.update_or_create(
-        worker=worker, attendance_date=local_date,
-        defaults={
-            "site": site,
-            "contractor": binding.contractor if binding else None,
-            "status": "PRESENT",
-            "capture_method": source,
-            "verification_type": event_method,
-            "is_verified": is_verified,
-            "confidence_pct": confidence,
-            "camera_label": camera.label,
-            "camera_area": camera.label,
-            "remarks": remarks,
-        },
-    )
+    attendance = (Attendance.objects
+                  .filter(worker=worker, attendance_date=local_date)
+                  .order_by("id").first())
+    if attendance is None:
+        attendance = Attendance.objects.create(
+            worker=worker, attendance_date=local_date,
+            site=site,
+            contractor=binding.contractor if binding else None,
+            status="PRESENT",
+            capture_method=source,
+            verification_type=event_method,
+            is_verified=is_verified,
+            confidence_pct=confidence,
+            camera_label=camera.label,
+            camera_area=camera.label,
+            remarks=remarks,
+        )
     session_id = str(presence.get("sessionId") or "").strip()
     if session_id:
         # One AttendanceEvent per continuous camera presence session. The start

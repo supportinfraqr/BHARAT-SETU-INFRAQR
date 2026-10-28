@@ -189,6 +189,7 @@ def _employer_sites(user):
             "id": str(s.id), "name": _d(s.site_name),
             "location": _d(s.location) or _d(s.city),
             "state": _d(s.state),
+            "isMine": _site_is_mine(s),
             "maxCctvCameras": int(getattr(s, "max_cctv_cameras", 5) or 5),
             "jurisdiction": _d(s.jurisdiction) or "state",
             "startDate": _dts(s.site_start_date) or "",

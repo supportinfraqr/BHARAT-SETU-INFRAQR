@@ -43,7 +43,7 @@ export default function EmployerLiveAttendancePage() {
     const row = workers.find(worker => worker.bssId === event.bssId);
     setSelected(row ?? {
       worker: event.worker, bssId: event.bssId, site: event.site, contractor: '',
-      status: event.type === 'IN' || event.type === 'SIGHTING' ? 'on_site' : 'checked_out',
+      status: event.type === 'IN' ? 'on_site' : event.type === 'OUT' ? 'checked_out' : 'on_camera',
       lastSource: event.source, lastType: event.type, lastAt: event.at,
     });
   };

@@ -156,9 +156,9 @@ def _live(user, site_id, contractor_id):
     atts = list(Attendance.objects.filter(worker_id__in=bound_ids, attendance_date=today)
                 .select_related("site"))
     by_worker = {a.worker_id: a for a in atts}
-    on_site_ids = {a.worker_id for a in atts if (a.last_punch_type or "IN") == "IN"}
+    on_site_ids = {a.worker_id for a in atts if str(a.last_punch_type or "").upper() == "IN"}
     present_ids = set(by_worker.keys())
-    out_ids = {a.worker_id for a in atts if (a.last_punch_type or "") == "OUT"}
+    out_ids = {a.worker_id for a in atts if str(a.last_punch_type or "").upper() == "OUT"}
 
     sites = Site.objects.filter(employer=user)
     if site_id:
@@ -197,15 +197,21 @@ def _live(user, site_id, contractor_id):
                       .select_related("worker", "site").order_by("at"))
     last_event = {}
     punch_count = {}
+    camera_seen_ids = set()
     for e in events_all:
         last_event[e.worker_id] = e
-        punch_count[e.worker_id] = punch_count.get(e.worker_id, 0) + 1
+        if e.event_type in ("IN", "OUT"):
+            punch_count[e.worker_id] = punch_count.get(e.worker_id, 0) + 1
+        elif e.event_type == "SIGHTING" and e.source in ("CAMERA", "QR"):
+            camera_seen_ids.add(e.worker_id)
 
     def status_of(wid):
         if wid in on_site_ids:
             return "on_site"
         if wid in out_ids:
             return "checked_out"
+        if wid in camera_seen_ids:
+            return "on_camera"
         return "not_arrived"
 
     def worker_row(b):

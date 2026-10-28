@@ -45,7 +45,7 @@ export function useLiveFeed(options: { siteId?: string; intervalMs?: number } = 
 }
 
 type LiveEvent = LiveData['recentEvents'][number];
-const eventToRow = (e: LiveEvent): WorkerRow => ({ worker: e.worker, bssId: e.bssId, site: e.site, contractor: '', status: e.type === 'IN' ? 'on_site' : 'checked_out', lastSource: e.source, lastType: e.type, lastAt: e.at });
+const eventToRow = (e: LiveEvent): WorkerRow => ({ worker: e.worker, bssId: e.bssId, site: e.site, contractor: '', status: e.type === 'IN' ? 'on_site' : e.type === 'OUT' ? 'checked_out' : 'on_camera', lastSource: e.source, lastType: e.type, lastAt: e.at });
 const hhmm = (v?: string) => (v ? new Date(v).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '');
 
 export function LivePulse({ feed, onWorker }: { feed: LiveFeed; onWorker: (w: WorkerRow) => void }) {

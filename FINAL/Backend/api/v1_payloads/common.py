@@ -147,6 +147,13 @@ _SITE_SCALAR_FIELDS = tuple(
     and f.name not in ("id", "site_qr_token", "created_at", "updated_at", "employer",
                         "agreement_file")
 )
+
+
+def _site_is_mine(site):
+    """True when the employer explicitly marked the site as a mine site."""
+    return bool(site is not None and getattr(site, "is_mine_site", False))
+
+
 CATEGORY_MAP = {
     "INFO": "info", "APPROVAL": "approval", "WARNING": "warning",
     "GRIEVANCE": "grievance", "COMPLIANCE": "compliance", "PAYROLL": "payroll",
@@ -411,6 +418,7 @@ __all__ = [
     "_GRIEVANCE_UI_STATUS",
     "_RH_STATUS",
     "_SITE_SCALAR_FIELDS",
+    "_site_is_mine",
     "_STATES",
     "_WORKER_BINDING_STATUS",
     "_bss_contractor_code",

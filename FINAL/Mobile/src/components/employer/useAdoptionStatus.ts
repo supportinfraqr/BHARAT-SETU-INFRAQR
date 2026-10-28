@@ -6,7 +6,7 @@ export type AdoptionStatus = {
   complete: boolean;
   siteCount: number;
   appointmentLetter: { adopted: boolean; templateName?: string };
-  medical: { complete: boolean; states: Array<{ state:string; required:boolean; adopted:boolean; templateName?:string }> };
+  medical: { complete: boolean; states: Array<{ state:string; required:boolean; adopted:boolean; mineRequired?:boolean; templateName?:string }> };
   registers: { complete: boolean; states: Array<{ state:string; required:boolean; adopted:boolean; adoptedCount:number; total:number }> };
   costSheet: { required: boolean; scope: string };
 };

@@ -57,8 +57,9 @@ export default function AttendanceDetailDialog({ record, onClose, subtitle }: {
   const detailAddress = firstEvent?.address || record.gpsAddress || '';
   const detailCoords = fmtCoord(firstEvent?.gpsLat ?? record.gpsLat, firstEvent?.gpsLong ?? record.gpsLong);
   const detailRemarks = firstEvent?.remarks || record.remarks || '';
-  const inPremises = !!record.events?.length && record.events[record.events.length - 1].type === 'IN';
-  const premisesSince = inPremises ? record.events![record.events!.length - 1].at : '';
+  const lastPunch = [...(record.events ?? [])].reverse().find(e => e.type === 'IN' || e.type === 'OUT');
+  const inPremises = lastPunch?.type === 'IN';
+  const premisesSince = lastPunch?.type === 'IN' ? lastPunch.at : '';
 
   return (
     <div className="fixed inset-0 z-[120] grid place-items-center bg-bss-navy/40 backdrop-blur-sm p-4" onClick={onClose}>

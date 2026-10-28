@@ -18,10 +18,11 @@ export type EmployerAnalyticsHandle = {
 };
 
 type Series = { label: string; value: number };
-export type WorkerRow = { worker: string; bssId: string; site: string; siteId?: number; contractor: string; status: 'on_site' | 'checked_out' | 'not_arrived'; checkIn?: string; checkOut?: string; lastSource?: string; lastType?: string; lastAt?: string; punches?: number };
+export type WorkerRow = { worker: string; bssId: string; site: string; siteId?: number; contractor: string; status: 'on_site' | 'checked_out' | 'on_camera' | 'not_arrived'; checkIn?: string; checkOut?: string; lastSource?: string; lastType?: string; lastAt?: string; punches?: number };
 export const STATUS_META: Record<WorkerRow['status'], { label: string; cls: string }> = {
   on_site: { label: 'On site', cls: 'bg-bss-soft-green text-bss-green' },
   checked_out: { label: 'Checked out', cls: 'bg-bss-blue-tint text-bss-interactive-blue' },
+  on_camera: { label: 'On camera', cls: 'bg-bss-blue-tint text-bss-interactive-blue' },
   not_arrived: { label: 'Not arrived', cls: 'bg-bss-soft-orange text-bss-orange' },
 };
 const E_ATT_STATUS: Record<string, string> = { PRESENT: 'Present', ABSENT: 'Absent', LEAVE: 'Leave', HOLIDAY: 'Holiday', HALF_DAY: 'Half Day', LATE: 'Late', EXPECTED: 'Expected' };
@@ -294,8 +295,8 @@ function StatGrid({ items }: { items: Array<{ label: string; value: string | num
 }
 
 type WKey = 'worker' | 'site' | 'contractor' | 'checkIn' | 'status';
-const STATUS_RANK: Record<WorkerRow['status'], number> = { on_site: 0, checked_out: 1, not_arrived: 2 };
-const STATUS_DOT: Record<WorkerRow['status'], string> = { on_site: BSS.green, checked_out: BSS.blue, not_arrived: BSS.orange };
+const STATUS_RANK: Record<WorkerRow['status'], number> = { on_site: 0, on_camera: 1, checked_out: 2, not_arrived: 3 };
+const STATUS_DOT: Record<WorkerRow['status'], string> = { on_site: BSS.green, on_camera: BSS.blue, checked_out: BSS.blue, not_arrived: BSS.orange };
 
 export function WorkersTable({ workers, onWorker, pageSize = 10 }: { workers: WorkerRow[]; onWorker: (w: WorkerRow) => void; pageSize?: number }) {
   const [q, setQ] = useState('');
@@ -305,6 +306,7 @@ export function WorkersTable({ workers, onWorker, pageSize = 10 }: { workers: Wo
     all: workers.length,
     on_site: workers.filter(w => w.status === 'on_site').length,
     checked_out: workers.filter(w => w.status === 'checked_out').length,
+    on_camera: workers.filter(w => w.status === 'on_camera').length,
     not_arrived: workers.filter(w => w.status === 'not_arrived').length,
   };
   const filtered = useMemo(() => workers.filter(w =>
@@ -322,6 +324,7 @@ export function WorkersTable({ workers, onWorker, pageSize = 10 }: { workers: Wo
     { value: 'all', label: 'All', count: counts.all },
     { value: 'on_site', label: 'On site', count: counts.on_site, dot: BSS.green },
     { value: 'checked_out', label: 'Checked out', count: counts.checked_out, dot: BSS.blue },
+    { value: 'on_camera', label: 'On camera', count: counts.on_camera, dot: BSS.blue },
     { value: 'not_arrived', label: 'Not arrived', count: counts.not_arrived, dot: BSS.orange },
   ];
   return <div className="space-y-3">
@@ -564,7 +567,7 @@ function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n
         { label: 'Present today', value: data.today?.present ?? 0 },
         { label: 'Checked out', value: data.today?.checkedOut ?? 0, tone: 'text-bss-interactive-blue' },
         { label: 'Not arrived', value: data.today?.notArrived ?? 0, tone: 'text-bss-orange' },
-        { label: 'Punches today', value: (data.recentEvents ?? []).length },
+        { label: 'Punches today', value: (data.workers ?? []).reduce((n, w) => n + (w.punches ?? 0), 0) },
       ]}/>
       <div className="grid lg:grid-cols-3 gap-5">
         <Card title="Today's snapshot" subtitle="Real-time attendance ratio" accent={BSS.green}>
@@ -597,7 +600,7 @@ function TabBody({ tab, data, inr }: { tab: string; data: AnalyticsData; inr: (n
               ? <ol className="space-y-1 max-h-[520px] overflow-y-auto pr-1">{data.recentEvents.map((e, i) => <li key={i} className="relative pl-6">
                   <span className="absolute left-[5px] top-0 bottom-0 border-l-2 border-dashed border-[#DBE3EF]" aria-hidden />
                   <span className="absolute left-0 top-3.5 w-3 h-3 rounded-full ring-2 ring-white" style={{ background: e.type === 'IN' ? BSS.green : BSS.blue }} />
-                  <button type="button" onClick={() => setDrill({ worker: e.worker, bssId: e.bssId, site: e.site, contractor: '', status: e.type === 'IN' ? 'on_site' : 'checked_out', lastSource: e.source, lastType: e.type, lastAt: e.at })} className="w-full py-2 px-2 flex items-start justify-between gap-2 text-xs text-left hover:bg-[#F2F6FC] rounded-xl transition-colors">
+                  <button type="button" onClick={() => setDrill({ worker: e.worker, bssId: e.bssId, site: e.site, contractor: '', status: e.type === 'IN' ? 'on_site' : e.type === 'OUT' ? 'checked_out' : 'on_camera', lastSource: e.source, lastType: e.type, lastAt: e.at })} className="w-full py-2 px-2 flex items-start justify-between gap-2 text-xs text-left hover:bg-[#F2F6FC] rounded-xl transition-colors">
                     <span className="min-w-0">
                       <strong className="block text-[#01183A] truncate">{e.worker}</strong>
                       <span className="block text-[10px] text-bss-text-muted truncate"><span className="font-mono">{e.bssId}</span> · {e.site}</span>

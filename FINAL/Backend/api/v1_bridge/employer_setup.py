@@ -6,7 +6,7 @@ from .common import *
 
 def _site_heads(user):
     from bss_core.models import Site
-    rows = list(Site.objects.filter(employer=user).only("id", "state", "jurisdiction"))
+    rows = list(Site.objects.filter(employer=user).only("id", "state", "jurisdiction", "is_mine_site"))
     state_heads = sorted({
         (str(s.state or "").strip() if str(getattr(s, "jurisdiction", "state") or "state").lower() != "central"
          else "Central")
@@ -17,7 +17,11 @@ def _site_heads(user):
         (str(s.state or "").strip() or "Central")
         for s in rows
     })
-    return rows, state_heads, medical_heads
+    mine_medical_heads = sorted({
+        (str(s.state or "").strip() or "Central")
+        for s in rows if _site_is_mine(s)
+    })
+    return rows, state_heads, medical_heads, mine_medical_heads
 
 
 @api_view(["GET"])
@@ -34,7 +38,7 @@ def employer_adoption_status(request):
                                   "registers": {"complete": True, "states": []}}},
                         status=status.HTTP_200_OK)
 
-    sites, state_heads, medical_heads = _site_heads(request.user)
+    sites, state_heads, medical_heads, mine_medical_heads = _site_heads(request.user)
     adoption = (EmployerLetterAdoption.objects
                 .filter(employer=request.user, letter_type="APPOINTMENT", is_active=True,
                         base_template__isnull=False, base_template__is_active=True)
@@ -48,14 +52,27 @@ def employer_adoption_status(request):
 
     medical_states = []
     for state in medical_heads:
-        tpl = (MedicalFormTemplate.objects.filter(state=state, form_type="VIII", status="frozen").first()
-               or MedicalFormTemplate.objects.filter(state="Central", form_type="VIII", status="frozen").first())
-        adopted = bool(tpl and EmployerMedicalFormAdoption.objects.filter(
-            employer=request.user, template=tpl, is_active=True).exists())
+        forms = []
+        form_types = ("VIII", "IX") if state in mine_medical_heads else ("VIII",)
+        for form_type in form_types:
+            tpl = (MedicalFormTemplate.objects.filter(state=state, form_type=form_type, status="frozen").first()
+                   or MedicalFormTemplate.objects.filter(state="Central", form_type=form_type, status="frozen").first())
+            adopted = bool(tpl and EmployerMedicalFormAdoption.objects.filter(
+                employer=request.user, template=tpl, is_active=True).exists())
+            forms.append({
+                "formType": form_type, "required": tpl is not None, "adopted": adopted,
+                "templateId": tpl.id if tpl else None,
+                "templateName": payloads._d(tpl.name) if tpl else "",
+            })
+        required = any(row["required"] for row in forms)
+        adopted = all(row["adopted"] for row in forms if row["required"])
+        primary = next((row for row in forms if row["required"]), forms[0] if forms else {})
         medical_states.append({
-            "state": state, "required": tpl is not None, "adopted": adopted,
-            "templateId": tpl.id if tpl else None,
-            "templateName": payloads._d(tpl.name) if tpl else "",
+            "state": state, "required": required, "adopted": adopted,
+            "mineRequired": state in mine_medical_heads,
+            "templateId": primary.get("templateId"),
+            "templateName": primary.get("templateName", ""),
+            "forms": forms,
         })
     medical_complete = all(row["adopted"] for row in medical_states if row["required"])
 

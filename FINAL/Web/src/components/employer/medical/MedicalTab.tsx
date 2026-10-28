@@ -24,7 +24,10 @@ import { BTN_ACCENT, BTN_GHOST, BTN_PRIMARY, BTN_SM, Field, FormFrame, INPUT, Kp
 type MedStatus = 'Valid' | 'Due Soon' | 'Expired' | 'Not examined';
 type Row = { worker: EmployerWorker; site?: EmployerSite; state: string; exam?: MedicalExam; exams: MedicalExam[]; status: MedStatus; days: number | null; form?: FormDispatch; forms?: Partial<Record<'VIII' | 'IX', FormDispatch>> };
 
-function formFor(row: Row, type: 'VIII' | 'IX') { return row.forms?.[type] ?? (type === 'VIII' ? row.form : undefined); }
+function formFor(row: Row, type: 'VIII' | 'IX') {
+  if (type === 'IX' && !row.site?.isMine) return undefined;
+  return row.forms?.[type] ?? (type === 'VIII' ? row.form : undefined);
+}
 function examFor(row: Row, type: 'VIII' | 'IX') { return row.exams.find(e => e.formType === type); }
 const PAGE = 12;
 
@@ -162,12 +165,12 @@ export default function MedicalTab() {
           <div><h3 className="text-sm font-bold text-[#01183A]">Health forms issued by BSS</h3>
             <p className="text-[11px] text-bss-text-muted">Medical forms are state specific. Adopt the published Form-VIII / Form-IX for your states in <b>Medical Form Adoption</b>.</p></div>
         </div>
-        <Pill tone="blue">{employer.sites.filter(s => !!formBySite.get(String(s.id))?.VIII).length} / {employer.sites.length} sites ready</Pill>
+        <Pill tone="blue">{employer.sites.filter(s => { const fm = formBySite.get(String(s.id)); return !!fm?.VIII && (!s.isMine || !!fm?.IX); }).length} / {employer.sites.length} sites ready</Pill>
       </header>
       <div className="p-4 grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
         {employer.sites.map(s => {
           const fm = formBySite.get(String(s.id));
-          const required = fm?.VIII;
+          const required = Boolean(fm?.VIII && (!s.isMine || fm?.IX));
           return <div key={s.id} className={`relative rounded-2xl border p-3.5 ${required ? 'border-[#BFE3CB] bg-[#EAF5EE]/50' : 'border-dashed border-[#DBE3EF] bg-[#F2F6FC]/50'}`}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0"><p className="text-xs font-extrabold text-[#01183A] truncate">{s.name}</p>
@@ -176,15 +179,15 @@ export default function MedicalTab() {
             </div>
             <p className="mt-2 text-[10px] text-bss-text-secondary">{normaliseState(s.state)}</p>
             <div className="mt-2 space-y-1.5">
-              {(['VIII', 'IX'] as const).map(ft => {
+              {(['VIII', 'IX'] as const).filter(ft => ft === 'VIII' || !!s.isMine).map(ft => {
                 const form = fm?.[ft];
                 return <div key={ft} className="rounded-xl border border-[#DBE3EF] bg-white/70 px-2.5 py-2">
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-[#01183A]">Form-{ft}{ft === 'IX' ? ' · mines (optional)' : ''}</p>
+                      <p className="text-[11px] font-bold text-[#01183A]">Form-{ft}{ft === 'IX' ? ' · mines (required)' : ''}</p>
                       <p className="text-[10px] text-bss-text-muted">
                         {form ? <>v{form.version} · received {fmtDate(form.sentAt)}{form.reAdoptAvailable ? ' · new version available' : ''}</>
-                          : ft === 'IX' ? 'Not adopted — optional' : 'Not adopted — required'}
+                          : ft === 'IX' ? 'Not adopted — required' : 'Not adopted — required'}
                       </p>
                     </div>
                     {form
@@ -196,7 +199,7 @@ export default function MedicalTab() {
             </div>
             {fm?.VIII?.note && <p className="mt-1 text-[10px] italic text-bss-text-muted line-clamp-2">“{fm.VIII.note}”</p>}
             {(fm?.VIII?.reAdoptAvailable || fm?.IX?.reAdoptAvailable) && <p className="mt-1 text-[10px] font-semibold text-[#C94D18]">New version available — re-adopt in Medical Form Adoption.</p>}
-            {!required && <p className="mt-1.5 text-[10px] text-bss-text-muted">Adopt <b>Form-VIII</b> in Medical Form Adoption to record examinations. Form-IX (mines) is optional.</p>}
+            {!required && <p className="mt-1.5 text-[10px] text-bss-text-muted">Adopt {s.isMine ? <><b>Form-VIII</b> and <b>Form-IX</b></> : <b>Form-VIII</b>} in Medical Form Adoption to record examinations.</p>}
           </div>;
         })}
       </div>
@@ -258,7 +261,7 @@ export default function MedicalTab() {
                         const ex = examFor(r, ft);
                         return ex
                           ? <button key={ft} type="button" onClick={() => setCert({ row: r, exam: ex })} className={`${BTN_SM} bg-[#EEF2FB] text-[#1E3A8A] hover:bg-[#1E3A8A] hover:text-white`}><FileCheck2 size={12} /> Form-{ft} certificate</button>
-                          : <button key={ft} type="button" onClick={() => setRecording({ row: r, formType: ft })} className={`${BTN_SM} border border-[#DBE3EF] bg-white text-[#01183A] hover:border-[#1E3A8A]/40`}><Stethoscope size={12} /> Record Form-{ft}{ft === 'IX' ? ' (optional)' : ''}</button>;
+                          : <button key={ft} type="button" onClick={() => setRecording({ row: r, formType: ft })} className={`${BTN_SM} border border-[#DBE3EF] bg-white text-[#01183A] hover:border-[#1E3A8A]/40`}><Stethoscope size={12} /> Record Form-{ft}{ft === 'IX' ? ' (mines)' : ''}</button>;
                       })}
                     </div>
                     <button type="button" onClick={() => void viewGatePass(r)} disabled={!hasGatePass} title={hasGatePass ? undefined : 'No gate pass yet — complete Medical, Health & Safety and Compliance first'} className={`${BTN_SM} border border-[#DBE3EF] bg-white text-[#01183A] hover:border-[#1E3A8A]/40 disabled:opacity-40 disabled:cursor-not-allowed`}><Eye size={12} /> View Gate Pass</button>
@@ -408,7 +411,7 @@ function ExamModal({ row, company, initialFormType, onClose, onSaved, onError }:
       <div className="rounded-2xl border border-[#BFE3CB] bg-[#EAF5EE]/60 p-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-[11px] text-[#14532D] flex items-center gap-2"><FileText size={14} className="shrink-0" />Certificate will be generated on the <b>{row.state}</b> Form-{exam.formType} v{formFor(row, exam.formType)?.version ?? row.form?.version} adopted by BSS.</p>
         <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#01183A]">Form
-          {(['VIII', 'IX'] as const).map(f => { const available = !!formFor(row, f); return <button key={f} type="button" disabled={!available} title={available ? undefined : `Form-${f} is not adopted for ${row.state}`} onClick={() => switchFormType(f)} className={`${BTN_SM} ${exam.formType === f ? 'bg-[#01183A] text-white' : 'bg-white border border-[#DBE3EF] text-[#01183A]'} disabled:opacity-40 disabled:cursor-not-allowed`}>Form-{f}{f === 'VIII' ? ' · factory' : ' · mines (optional)'}</button>; })}
+          {(['VIII', 'IX'] as const).map(f => { const available = !!formFor(row, f); return <button key={f} type="button" disabled={!available} title={available ? undefined : `Form-${f} is not adopted for ${row.state}`} onClick={() => switchFormType(f)} className={`${BTN_SM} ${exam.formType === f ? 'bg-[#01183A] text-white' : 'bg-white border border-[#DBE3EF] text-[#01183A]'} disabled:opacity-40 disabled:cursor-not-allowed`}>Form-{f}{f === 'VIII' ? ' · factory' : ' · mines'}</button>; })}
         </div>
       </div>
 

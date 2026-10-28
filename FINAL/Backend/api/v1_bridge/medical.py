@@ -376,7 +376,9 @@ def employer_medical_adoption(request):
             EmployerMedicalFormAdoption.objects.filter(employer=request.user, template=tpl).delete()
         return Response({"ok": True, "adopted": adopt}, status=status.HTTP_200_OK)
 
-    states = sorted({(s.state or "").strip() for s in Site.objects.filter(employer=request.user)} - {"", "Central"})
+    sites = list(Site.objects.filter(employer=request.user))
+    states = sorted({(s.state or "").strip() for s in sites} - {"", "Central"})
+    mine_states = {(s.state or "").strip() for s in sites if _site_is_mine(s)}
     adoption_rows = list(EmployerMedicalFormAdoption.objects
                          .filter(employer=request.user, is_active=True)
                          .select_related("template"))
@@ -384,6 +386,8 @@ def employer_medical_adoption(request):
     rows, seen = [], set()
     for st in states:
         for ft in ("VIII", "IX"):
+            if ft == "IX" and st not in mine_states:
+                continue
             tpl = (MedicalFormTemplate.objects.filter(state=st, form_type=ft, status="frozen").first()
                    or MedicalFormTemplate.objects.filter(state=_CENTRAL, form_type=ft, status="frozen").first())
             if tpl is None or tpl.id in seen:
@@ -402,6 +406,8 @@ def employer_medical_adoption(request):
     for a in adoption_rows:
         tpl = a.template
         if tpl is None or tpl.id in seen or tpl.status != "frozen":
+            continue
+        if tpl.form_type == "IX" and (a.state or tpl.state) not in mine_states:
             continue
         seen.add(tpl.id)
         rows.append({
@@ -438,10 +444,14 @@ def employer_medical_forms(request):
             st = _CENTRAL
         if st:
             by_state.setdefault(st, []).append(s)
+    mine_states = {st for st, st_sites in by_state.items()
+                   if any(_site_is_mine(s) for s in st_sites)}
     out = []
     for st, st_sites in by_state.items():
         forms_map = {}
         for ft in ("VIII", "IX"):
+            if ft == "IX" and st not in mine_states:
+                continue
             # Adoption is required: only forms the employer has adopted are
             # available to their Medical Officers. The pinned version is used.
             a = adoptions.get((st, ft))
@@ -496,6 +506,15 @@ def employer_medical_exams(request):
     if not worker_id or worker_id not in allowed:
         return Response({"error": "Worker not bound to your sites."}, status=status.HTTP_403_FORBIDDEN)
     site = Site.objects.filter(pk=body.get("siteId"), employer=request.user).first()
+    form_type = "IX" if str(body.get("formType") or "VIII").upper() == "IX" else "VIII"
+    if form_type == "IX":
+        binding = (WorkerContractorBinding.objects
+                   .filter(worker_id=worker_id, site__employer=request.user,
+                           binding_status="ACCEPTED")
+                   .select_related("site").first())
+        if binding is None or not _site_is_mine(binding.site):
+            return Response({"error": "Form-IX mine certificate is only available for workers on a mine site."},
+                            status=status.HTTP_400_BAD_REQUEST)
     exam = MedicalExam(worker_id=worker_id, recorded_by=request.user)
     if site is not None:
         exam.site = site

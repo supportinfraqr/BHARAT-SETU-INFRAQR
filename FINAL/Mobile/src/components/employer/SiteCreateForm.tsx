@@ -44,6 +44,7 @@ export const SECTIONS: SiteSection[] = [
       { name: 'site_type', label: 'Site Type' },
       { name: 'site_category', label: 'Site Category' },
       { name: 'site_nature', label: 'Site Nature (Permanent/Temporary/Project/…)' },
+      { name: 'is_mine_site', label: 'Mine site (Form-IX medical certificate applies)', type: 'checkbox' },
     ],
   },
   {
@@ -460,6 +461,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     payload.state = state.trim() || geo?.state || '';
     payload.startDate = startDate;
     payload.status = status || 'Active';
+    payload.is_mine_site = form.get('is_mine_site') === 'on';
     payload.assign_color = colour;
     if (geo) {
       payload.latitude = String(geo.lat);
@@ -534,6 +536,10 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
             <datalist id="site-city-options">{cityOptions.map(city => <option key={city} value={city} />)}</datalist>
             <label className="text-xs font-semibold text-bss-text-primary">Start date <span className="text-bss-error">*</span><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={fieldCls} /></label>
             <label className="text-xs font-semibold text-bss-text-primary">Status <span className="text-bss-error">*</span><select value={status} onChange={e => setStatus(e.target.value)} className={`${fieldCls} bg-white`}><option>Active</option><option>Planned</option></select></label>
+            <label className="sm:col-span-2 flex items-center gap-2 rounded-lg border border-bss-border bg-bss-bg px-3 py-2.5 text-xs font-semibold text-bss-text-primary">
+              <input name="is_mine_site" type="checkbox" defaultChecked={Boolean(initial?.is_mine_site)} className="w-4 h-4 rounded border-bss-border" />
+              This is a mine site — Form-IX mine medical certificate is required
+            </label>
           </div>
 
           <div className="mt-4 pt-4 border-t border-bss-border">

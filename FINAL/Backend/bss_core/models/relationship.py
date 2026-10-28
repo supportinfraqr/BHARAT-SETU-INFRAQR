@@ -31,6 +31,8 @@ class Site(models.Model):
     pincode = models.CharField(max_length=10, blank=True)
     site_type = models.CharField(max_length=60, blank=True)
     site_category = models.CharField(max_length=60, blank=True)
+    is_mine_site = models.BooleanField(default=False,
+                                      help_text="Mine site: Form-IX mine medical certificate applies")
     shift_model = models.CharField(max_length=40, blank=True)
     working_days = models.CharField(max_length=40, blank=True)
     gate_timing = models.CharField(max_length=40, blank=True)

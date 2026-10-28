@@ -722,7 +722,15 @@ def _record_punch(worker, site, source, method, when, *, lat=None, lng=None,
         attendance.save()
         action = "IN"
     else:
-        action = "OUT" if (attendance.last_punch_type or "IN") == "IN" else "IN"
+        has_punch = str(attendance.last_punch_type or "").upper() in ("IN", "OUT")
+        action = ("IN" if not has_punch or str(attendance.last_punch_type).upper() == "OUT"
+                  else "OUT")
+        if not has_punch:
+            attendance.check_in_time = when
+            attendance.capture_method = source
+            attendance.verification_type = method
+            attendance.status = "PRESENT"
+            attendance.is_verified = True
         attendance.last_punch_type = action
         attendance.last_punch_at = when
         attendance.is_verified = True

@@ -469,6 +469,7 @@ export type EmployerSite = {
   name: string;
   location: string;
   state: string;
+  isMine?: boolean;
   jurisdiction?: 'state' | 'central';
   startDate: string;
   status: 'Active' | 'Planned' | 'Completed';
