@@ -36,7 +36,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.6"
+APP_VERSION = "1.5.7"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 PRESENCE_GAP_SECONDS = 10
@@ -813,74 +813,60 @@ class CameraWorker:
         self._set_face_boxes(boxes)
         return detections
 
-    def capture_manual_frames(self, count=MANUAL_ENROLL_FRAMES):
-        """Capture distinct single-face frames for manual enrollment."""
+    def manual_detections(self):
+        """Return the latest frame and all detected faces for manual enrollment."""
         if not self.rtsp:
             raise ValueError("This camera has no RTSP stream.")
-        if not self.engine.gallery.ready and not self.engine.face_backend:
-            # The face backend can still be initialised below; this guard only
-            # avoids entering a long wait when the model stack is unavailable.
-            self.engine.configure_gpu()
         if not self._running:
             self.start()
-        deadline = time.time() + MANUAL_ENROLL_TIMEOUT
-        captured, hashes = [], set()
-        while len(captured) < count and time.time() < deadline:
-            if not self.engine.gate.acquire():
-                time.sleep(0.1)
-                continue
-            try:
-                frame = self.frame()
-                if frame is None:
-                    time.sleep(0.15)
-                    continue
-                detections = self._recognise(frame)
-                if len(detections) != 1:
-                    time.sleep(0.15)
-                    continue
-                embedding, box = detections[0]
-                x, y, w, h = [int(v) for v in (box or [0, 0, 0, 0])[:4]]
-                if min(w, h) < 60:
-                    time.sleep(0.15)
-                    continue
-                digest = hashlib.sha256(frame.tobytes()).hexdigest()
-                if digest in hashes:
-                    time.sleep(0.15)
-                    continue
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                blur = float(cv2.Laplacian(gray, cv2.CV_64F).var())
-                if blur < 15:
-                    time.sleep(0.15)
-                    continue
-                preview_frame = frame
-                max_width = 420
-                if preview_frame.shape[1] > max_width:
-                    scale = max_width / float(preview_frame.shape[1])
-                    preview_frame = cv2.resize(preview_frame, (max_width, max(1, int(preview_frame.shape[0] * scale))))
-                encoded, buf = cv2.imencode(".jpg", preview_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 82])
-                if not encoded:
-                    time.sleep(0.15)
-                    continue
-                vector = np.asarray(embedding, dtype=np.float32)
-                norm = float(np.linalg.norm(vector))
-                if vector.size != 512 or norm <= 0:
-                    time.sleep(0.15)
-                    continue
-                hashes.add(digest)
-                captured.append({
-                    "vector": vector / norm,
-                    "preview": "data:image/jpeg;base64," + base64.b64encode(buf.tobytes()).decode("ascii"),
-                    "quality": {"width": w, "height": h, "blur": round(blur, 1)},
-                })
-            finally:
-                self.engine.gate.release()
-            time.sleep(MANUAL_ENROLL_INTERVAL)
-        if len(captured) < count:
-            raise ValueError(
-                f"Only {len(captured)} of {count} clear single-face frames were captured. "
-                "Ask the worker to face the camera and try again."
-            )
-        return captured
+        deadline = time.time() + 4.0
+        while time.time() < deadline:
+            frame = self.frame()
+            if frame is not None:
+                break
+            time.sleep(0.15)
+        else:
+            raise ValueError("Waiting for the camera frame. Check the RTSP stream.")
+        if not self.engine.gate.acquire():
+            raise ValueError("The face engine is busy. Try again in a moment.")
+        try:
+            return frame, self._recognise(frame)
+        finally:
+            self.engine.gate.release()
+
+    def capture_manual_single(self):
+        """Capture exactly one face frame; reject zero or multiple faces."""
+        frame, detections = self.manual_detections()
+        count = len(detections)
+        if count == 0:
+            raise ValueError("No face detected. Position the worker inside the frame.")
+        if count > 1:
+            raise ValueError("Multiple people detected. Only one person is allowed in the frame.")
+        embedding, box = detections[0]
+        x, y, w, h = [int(v) for v in (box or [0, 0, 0, 0])[:4]]
+        if min(w, h) < 60:
+            raise ValueError("The face is too small. Move closer to the camera.")
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        blur = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+        if blur < 15:
+            raise ValueError("The face is blurry. Hold still and try again.")
+        preview_frame = frame
+        max_width = 420
+        if preview_frame.shape[1] > max_width:
+            scale = max_width / float(preview_frame.shape[1])
+            preview_frame = cv2.resize(preview_frame, (max_width, max(1, int(preview_frame.shape[0] * scale))))
+        encoded, buf = cv2.imencode(".jpg", preview_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 82])
+        if not encoded:
+            raise ValueError("Could not prepare this camera frame.")
+        vector = np.asarray(embedding, dtype=np.float32)
+        norm = float(np.linalg.norm(vector))
+        if vector.size != 512 or norm <= 0:
+            raise ValueError("Could not generate a valid face embedding. Try again.")
+        return {
+            "vector": vector / norm,
+            "preview": "data:image/jpeg;base64," + base64.b64encode(buf.tobytes()).decode("ascii"),
+            "quality": {"width": w, "height": h, "blur": round(blur, 1)},
+        }
 
 
 class Engine:
@@ -1531,7 +1517,7 @@ class Engine:
                 LOG.warning("Worker gallery sync failed: %s", exc)
         return self.status()
 
-    def capture_manual_enrollment(self, camera_id, bss_worker_id):
+    def _manual_camera_worker(self, camera_id):
         worker = self.workers.get(int(camera_id))
         if worker is None:
             raise ValueError("Camera not found.")
@@ -1540,65 +1526,138 @@ class Engine:
             raise ValueError("This camera is waiting for employer approval.")
         if not camera.get("claimedByThisDevice") or not worker.camera_token:
             raise ValueError("This camera is not synced to this device.")
+        if not worker.rtsp:
+            raise ValueError("This camera has no RTSP stream.")
+        return worker, camera
+
+    def _manual_warning(self, camera, vector, bss_worker_id):
+        try:
+            match = self.gallery.match(vector, camera.get("siteId"))
+            if match is None:
+                return None
+            matched_worker, distance = match
+            if str(matched_worker).upper() == str(bss_worker_id).upper():
+                return None
+            profile = self.gallery.profile(matched_worker)
+            return {
+                "type": "other_worker",
+                "bssWorkerId": str(matched_worker),
+                "name": profile.get("name") or str(matched_worker),
+                "confidence": round(max(0.0, min(100.0, (1.0 - float(distance)) * 100.0)), 1),
+            }
+        except Exception:  # noqa: BLE001 - warning is advisory
+            return None
+
+    def start_manual_enrollment(self, camera_id, bss_worker_id):
+        worker, camera = self._manual_camera_worker(camera_id)
         bss_worker_id = str(bss_worker_id or "").strip().upper()
         if not bss_worker_id:
             raise ValueError("Select a worker.")
-        captured = worker.capture_manual_frames(MANUAL_ENROLL_FRAMES)
-        warning = None
-        try:
-            for item in captured:
-                match = self.gallery.match(item["vector"], camera.get("siteId"))
-                if match is None:
-                    continue
-                matched_worker, distance = match
-                if str(matched_worker).upper() != bss_worker_id:
-                    profile = self.gallery.profile(matched_worker)
-                    warning = {
-                        "type": "other_worker",
-                        "bssWorkerId": str(matched_worker),
-                        "name": profile.get("name") or str(matched_worker),
-                        "confidence": round(max(0.0, min(100.0, (1.0 - float(distance)) * 100.0)), 1),
-                    }
-                    break
-        except Exception:  # noqa: BLE001 - warning is advisory
-            warning = None
         capture_id = uuid.uuid4().hex
         now = _now()
         with self._manual_capture_lock:
-            cutoff = time.time() - 300
-            for key in [key for key, value in self._manual_captures.items() if value.get("createdTs", 0) < cutoff]:
+            cutoff = time.time() - 900
+            for key in [key for key, value in self._manual_captures.items()
+                        if value.get("createdTs", 0) < cutoff]:
                 self._manual_captures.pop(key, None)
             self._manual_captures[capture_id] = {
                 "cameraId": int(camera_id), "bssWorkerId": bss_worker_id,
-                "vectors": [item["vector"] for item in captured],
-                "quality": [item["quality"] for item in captured],
-                "capturedAt": now.isoformat(), "createdTs": time.time(),
+                "slots": [None] * MANUAL_ENROLL_FRAMES,
+                "startedAt": now.isoformat(), "createdTs": time.time(),
             }
+        return {"captureId": capture_id, "bssWorkerId": bss_worker_id,
+                "slots": MANUAL_ENROLL_FRAMES}
+
+    def manual_enrollment_preview(self, camera_id):
+        worker, camera = self._manual_camera_worker(camera_id)
+        frame, detections = worker.manual_detections()
+        count = len(detections)
+        color = (40, 170, 80) if count == 1 else ((40, 40, 220) if count > 1 else (140, 140, 140))
+        label = f"{count} person" + ("" if count == 1 else "s")
+        for _embedding, box in detections:
+            x, y, w, h = [int(v) for v in (box or [0, 0, 0, 0])[:4]]
+            cv2.rectangle(frame, (x, y), (x + w, y + h), color, 3)
+            cv2.putText(frame, label, (max(0, x), max(18, y - 8)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2, cv2.LINE_AA)
+        if count == 0:
+            cv2.putText(frame, "No face detected", (18, 32),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2, cv2.LINE_AA)
+        if count > 1:
+            cv2.putText(frame, "ONLY ONE PERSON ALLOWED", (18, 62),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.75, color, 2, cv2.LINE_AA)
+        preview = frame
+        max_width = 640
+        if preview.shape[1] > max_width:
+            scale = max_width / float(preview.shape[1])
+            preview = cv2.resize(preview, (max_width, max(1, int(preview.shape[0] * scale))))
+        encoded, buf = cv2.imencode(".jpg", preview, [int(cv2.IMWRITE_JPEG_QUALITY), 82])
+        if not encoded:
+            raise ValueError("Could not prepare this camera frame.")
         return {
-            "captureId": capture_id,
-            "previews": [item["preview"] for item in captured],
-            "quality": [item["quality"] for item in captured],
+            "image": "data:image/jpeg;base64," + base64.b64encode(buf.tobytes()).decode("ascii"),
+            "count": count,
+            "ready": count == 1,
+            "faces": [{"box": [int(v) for v in (box or [0, 0, 0, 0])[:4]]} for _e, box in detections],
+        }
+
+    def capture_manual_slot(self, camera_id, capture_id, slot):
+        with self._manual_capture_lock:
+            pending = self._manual_captures.get(str(capture_id))
+            if pending is None or pending.get("cameraId") != int(camera_id):
+                raise ValueError("This enrollment session has expired. Open manual enrollment again.")
+            slots = pending.get("slots") or []
+        try:
+            slot = int(slot)
+        except (TypeError, ValueError):
+            raise ValueError("Photo slot is invalid.")
+        if slot < 1 or slot > MANUAL_ENROLL_FRAMES:
+            raise ValueError("Photo slot is invalid.")
+        worker, camera = self._manual_camera_worker(camera_id)
+        captured = worker.capture_manual_single()
+        pending["slots"][slot - 1] = captured
+        warning = self._manual_warning(camera, captured["vector"], pending["bssWorkerId"])
+        return {
+            "slot": slot,
+            "preview": captured["preview"],
+            "quality": captured["quality"],
+            "filled": sum(1 for item in pending["slots"] if item is not None),
             "warning": warning,
         }
+
+    def retake_manual_slot(self, camera_id, capture_id, slot):
+        try:
+            slot = int(slot)
+        except (TypeError, ValueError):
+            raise ValueError("Photo slot is invalid.")
+        with self._manual_capture_lock:
+            pending = self._manual_captures.get(str(capture_id))
+            if pending is None or pending.get("cameraId") != int(camera_id):
+                raise ValueError("This enrollment session has expired. Open manual enrollment again.")
+            if 1 <= slot <= MANUAL_ENROLL_FRAMES:
+                pending["slots"][slot - 1] = None
+        return {"slot": slot, "filled": sum(1 for item in pending["slots"] if item is not None)}
 
     def confirm_manual_enrollment(self, camera_id, capture_id, confirm_mismatch=False):
         with self._manual_capture_lock:
             pending = self._manual_captures.get(str(capture_id))
             if pending is None or pending.get("cameraId") != int(camera_id):
                 raise ValueError("This capture has expired. Capture the 5 photos again.")
+            slots = list(pending.get("slots") or [])
+        if len(slots) != MANUAL_ENROLL_FRAMES or any(item is None for item in slots):
+            raise ValueError("Take all 5 photos before confirming.")
         worker = self.workers.get(int(camera_id))
         if worker is None or not worker.camera_token:
             raise ValueError("Camera is not available.")
         payload = {
             "bssWorkerId": pending["bssWorkerId"],
-            "embeddings": [base64.b64encode(vector.astype(np.float32).tobytes()).decode("ascii")
-                           for vector in pending["vectors"]],
+            "embeddings": [base64.b64encode(item["vector"].astype(np.float32).tobytes()).decode("ascii")
+                           for item in slots],
             "model": MODEL_NAME,
             "version": MODEL_VERSION,
             "detector": DETECTOR_BACKEND,
             "weightsSha": ARCFACE_SHA,
-            "capturedAt": pending["capturedAt"],
-            "quality": pending["quality"],
+            "capturedAt": _now().isoformat(),
+            "quality": [item["quality"] for item in slots],
             "confirmMismatch": bool(confirm_mismatch),
         }
         try:
@@ -2056,6 +2115,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"data": worker.detection_rows()})
         if path == "/api/test-rtsp":
             return self._json({"data": ENGINE.test_rtsp((self._body() or {}).get("rtsp"))})
+        if path.startswith("/api/cameras/"):
+            parts = path[len("/api/cameras/"):].split("/")
+            if len(parts) >= 3 and parts[1] == "manual-enroll" and parts[2] == "preview":
+                try:
+                    cid = int(parts[0])
+                    return self._json({"data": ENGINE.manual_enrollment_preview(cid)})
+                except (ValueError, BssError) as exc:
+                    return self._json({"error": str(exc)}, 400)
         if path.startswith("/snapshot/"):
             try:
                 cid = int(unquote(path[len("/snapshot/"):]))
@@ -2143,8 +2210,15 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"data": ENGINE.test_rtsp(body.get("rtsp"))})
                 if action == "manual-enroll":
                     operation = parts[2] if len(parts) > 2 else ""
-                    if operation == "capture":
-                        return self._json({"data": ENGINE.capture_manual_enrollment(cid, body.get("bssWorkerId"))})
+                    if operation == "start":
+                        return self._json({"data": ENGINE.start_manual_enrollment(
+                            cid, body.get("bssWorkerId"))}, 201)
+                    if operation == "capture-one":
+                        return self._json({"data": ENGINE.capture_manual_slot(
+                            cid, body.get("captureId"), body.get("slot"))}, 201)
+                    if operation == "retake":
+                        return self._json({"data": ENGINE.retake_manual_slot(
+                            cid, body.get("captureId"), body.get("slot"))})
                     if operation == "confirm":
                         return self._json({"data": ENGINE.confirm_manual_enrollment(
                             cid, body.get("captureId"), bool(body.get("confirmMismatch")))}, 201)

@@ -985,23 +985,35 @@ function openManualEnrollment(workerId) {
   let cameraId = cameras[0].cameraId;
   let captureId = '';
   let previewTimer = null;
-  const close = () => {
+  let busy = false;
+  let faceCount = 0;
+  let faceReady = false;
+  let slots = Array(5).fill(null);
+  const closed = () => {
     if (previewTimer) clearInterval(previewTimer);
+    previewTimer = null;
+  };
+  const close = (cancel = true) => {
+    closed();
+    if (cancel && captureId) {
+      void api(`/api/cameras/${cameraId}/manual-enroll/cancel`, {
+        method: 'POST', body: JSON.stringify({ captureId }),
+      }).catch(() => {});
+    }
     backdrop.remove();
   };
-  backdrop.innerHTML = `<div class="dialog" style="max-width:760px;width:min(760px,94vw);text-align:left">
-    <div class="cam-title"><div><h3>Manual enrollment</h3><p class="muted" style="margin:4px 0 0">${esc(worker.name || worker.bssWorkerId)} · ${esc(worker.bssWorkerId || '')}</p></div><span class="pill warn">5 photos</span></div>
+  backdrop.innerHTML = `<div class="dialog" style="max-width:780px;width:min(780px,94vw);text-align:left">
+    <div class="cam-title"><div><h3>Manual enrollment</h3><p class="muted" style="margin:4px 0 0">${esc(worker.name || worker.bssWorkerId)} · ${esc(worker.bssWorkerId || '')}</p></div><span class="pill warn">5 photos · one by one</span></div>
     <label style="display:block;margin-top:14px">Camera<select id="manualEnrollCamera">${cameras.map(camera => `<option value="${esc(camera.cameraId)}">${esc(camera.label)} · ${esc(camera.siteName || siteNameFor(camera.siteId))}</option>`).join('')}</select></label>
-    <div style="margin-top:12px;background:#0b1220;border-radius:12px;overflow:hidden;min-height:240px;display:grid;place-items:center">
-      <img id="manualEnrollPreview" alt="Selected camera preview" style="width:100%;max-height:320px;object-fit:contain;display:block" />
+    <div style="position:relative;margin-top:12px;background:#0b1220;border-radius:12px;overflow:hidden;min-height:240px;display:grid;place-items:center">
+      <img id="manualEnrollPreview" alt="Selected camera preview" style="width:100%;max-height:360px;object-fit:contain;display:block" />
     </div>
-    <p class="note" id="manualEnrollMsg" style="margin-top:10px">Only this worker should be in front of the camera. The client will take 5 distinct photos and send embeddings only — no images leave this device.</p>
+    <p class="note" id="manualEnrollMsg" style="margin-top:10px;font-weight:600">Starting camera preview…</p>
     <div id="manualEnrollWarning"></div>
-    <div id="manualEnrollPreviews" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px"></div>
+    <div id="manualEnrollSlots" style="display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:10px"></div>
     <div class="row" style="margin-top:14px;justify-content:flex-end">
       <button type="button" class="btn" id="manualEnrollCancel">Cancel</button>
-      <button type="button" class="btn" id="manualEnrollRetake" disabled>Retake</button>
-      <button type="button" class="btn primary" id="manualEnrollCapture">Capture 5 photos</button>
+      <button type="button" class="btn primary" id="manualEnrollCapture" disabled>Take photo 1</button>
       <button type="button" class="btn primary" id="manualEnrollConfirm" disabled>Confirm & sync</button>
     </div>
   </div>`;
@@ -1010,70 +1022,133 @@ function openManualEnrollment(workerId) {
   const cameraSelect = backdrop.querySelector('#manualEnrollCamera');
   const msg = backdrop.querySelector('#manualEnrollMsg');
   const warning = backdrop.querySelector('#manualEnrollWarning');
-  const previews = backdrop.querySelector('#manualEnrollPreviews');
+  const slotBox = backdrop.querySelector('#manualEnrollSlots');
   const captureBtn = backdrop.querySelector('#manualEnrollCapture');
   const confirmBtn = backdrop.querySelector('#manualEnrollConfirm');
-  const retakeBtn = backdrop.querySelector('#manualEnrollRetake');
-  const refreshPreview = () => {
-    const stamp = Date.now();
-    preview.src = `${BASE}/snapshot/${cameraId}?t=${stamp}`;
-    preview.onerror = () => { msg.textContent = 'Waiting for the camera frame…'; };
-    preview.onload = () => { if (!captureId) msg.textContent = 'Ready. Ask the worker to face the camera, then capture 5 photos.'; };
+  const nextSlot = () => slots.findIndex(item => item === null);
+  const filledCount = () => slots.filter(Boolean).length;
+  const renderSlots = () => {
+    slotBox.innerHTML = slots.map((item, index) => {
+      const number = index + 1;
+      if (!item) {
+        return `<div style="border:1px dashed #cbd5e1;border-radius:10px;min-height:82px;display:grid;place-items:center;text-align:center;padding:6px"><span class="muted" style="font-size:11px">Photo ${number}</span></div>`;
+      }
+      return `<div style="position:relative;border:1px solid #86efac;border-radius:10px;overflow:hidden;background:#f8fafc">
+        <img src="${item.preview}" alt="Photo ${number}" style="display:block;width:100%;aspect-ratio:4/3;object-fit:cover" />
+        <button type="button" data-retake="${number}" class="btn" style="position:absolute;left:4px;right:4px;bottom:4px;height:24px;padding:0;font-size:10px">Retake</button>
+      </div>`;
+    }).join('');
+    slotBox.querySelectorAll('[data-retake]').forEach(button => {
+      button.addEventListener('click', () => void retake(Number(button.dataset.retake)));
+    });
+    const slot = nextSlot();
+    captureBtn.textContent = slot >= 0 ? `Take photo ${slot + 1}` : 'All 5 captured';
+    captureBtn.disabled = busy || !faceReady || slot < 0;
+    confirmBtn.disabled = busy || filledCount() < 5;
   };
-  const setBusy = busy => {
-    captureBtn.disabled = busy;
-    confirmBtn.disabled = busy || !captureId;
-    retakeBtn.disabled = busy || !captureId;
-    cameraSelect.disabled = busy;
+  const setBusy = value => {
+    busy = value;
+    cameraSelect.disabled = value;
+    renderSlots();
   };
-  previewTimer = setInterval(refreshPreview, 1000);
-  refreshPreview();
-  cameraSelect.addEventListener('change', () => {
-    cameraId = Number(cameraSelect.value);
-    captureId = '';
-    previews.innerHTML = '';
-    warning.innerHTML = '';
-    confirmBtn.disabled = true;
-    retakeBtn.disabled = true;
-    refreshPreview();
-  });
-  backdrop.querySelector('#manualEnrollCancel').addEventListener('click', close);
-  backdrop.addEventListener('click', event => { if (event.target === backdrop) close(); });
-  retakeBtn.addEventListener('click', () => {
-    captureId = '';
-    previews.innerHTML = '';
-    warning.innerHTML = '';
-    msg.textContent = 'Ready. Ask the worker to face the camera, then capture 5 photos.';
-    confirmBtn.disabled = true;
-    retakeBtn.disabled = true;
-  });
-  captureBtn.addEventListener('click', async () => {
-    setBusy(true);
-    msg.textContent = 'Capturing 5 distinct face frames… Keep the worker facing the camera.';
-    msg.style.color = '';
-    warning.innerHTML = '';
+  const updateFaceStatus = () => {
+    const slot = nextSlot();
+    if (faceCount === 0) {
+      msg.textContent = 'No face detected — position the worker inside the frame.';
+      msg.style.color = '#C2410C';
+    } else if (faceCount > 1) {
+      msg.textContent = `${faceCount} people detected — only one person is allowed. Move others out of the frame.`;
+      msg.style.color = '#C2410C';
+    } else if (slot < 0) {
+      msg.textContent = 'All 5 photos captured — review and confirm, or retake any photo.';
+      msg.style.color = '#14843C';
+    } else {
+      msg.textContent = `1 person detected — ready. Take photo ${slot + 1} of 5.`;
+      msg.style.color = '#14843C';
+    }
+    renderSlots();
+  };
+  const refreshPreview = async () => {
     try {
-      const result = await api(`/api/cameras/${cameraId}/manual-enroll/capture`, {
+      const result = await api(`/api/cameras/${cameraId}/manual-enroll/preview`);
+      preview.src = result.image;
+      faceCount = Number(result.count || 0);
+      faceReady = !!result.ready;
+      updateFaceStatus();
+    } catch (error) {
+      faceReady = false;
+      faceCount = 0;
+      msg.textContent = error.message || String(error);
+      msg.style.color = '#C2410C';
+      renderSlots();
+    }
+  };
+  const startSession = async () => {
+    captureId = '';
+    slots = Array(5).fill(null);
+    warning.innerHTML = '';
+    setBusy(true);
+    try {
+      const result = await api(`/api/cameras/${cameraId}/manual-enroll/start`, {
         method: 'POST', body: JSON.stringify({ bssWorkerId: worker.bssWorkerId }),
       });
       captureId = result.captureId;
-      previews.innerHTML = (result.previews || []).map((src, index) => `<img src="${src}" alt="Manual capture ${index + 1}" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;border:1px solid #d8dee9" />`).join('');
-      if (result.warning) {
-        warning.innerHTML = `<p class="note blocked" style="margin-top:10px">The face looks like <b>${esc(result.warning.name || result.warning.bssWorkerId)}</b> (${esc(String(result.warning.confidence || ''))}% match), not the selected worker. Check carefully before confirming.</p>`;
-      }
-      msg.textContent = '5 photos captured. Review the previews, then confirm to sync embeddings to BSS.';
+      msg.textContent = 'Camera ready. Position one worker inside the frame.';
+      msg.style.color = '';
+    } catch (error) {
+      msg.textContent = error.message || String(error);
+      msg.style.color = '#C2410C';
+    } finally {
+      setBusy(false);
+      await refreshPreview();
+    }
+  };
+  const takePhoto = async () => {
+    const slot = nextSlot();
+    if (!captureId || slot < 0 || !faceReady || busy) return;
+    setBusy(true);
+    try {
+      const result = await api(`/api/cameras/${cameraId}/manual-enroll/capture-one`, {
+        method: 'POST', body: JSON.stringify({ captureId, slot: slot + 1 }),
+      });
+      slots[slot] = {
+        preview: result.preview,
+        quality: result.quality,
+        warning: result.warning || null,
+      };
+      warning.innerHTML = result.warning
+        ? `<p class="note blocked" style="margin-top:10px">The face looks like <b>${esc(result.warning.name || result.warning.bssWorkerId)}</b> (${esc(String(result.warning.confidence || ''))}% match), not the selected worker. Check before confirming.</p>`
+        : '';
+      msg.textContent = `Photo ${slot + 1} captured.`;
       msg.style.color = '#14843C';
-      confirmBtn.disabled = false;
-      retakeBtn.disabled = false;
+      await refreshPreview();
     } catch (error) {
       msg.textContent = error.message || String(error);
       msg.style.color = '#C2410C';
     } finally {
       setBusy(false);
     }
-  });
-  confirmBtn.addEventListener('click', async () => {
-    if (!captureId) return;
+  };
+  const retake = async (slot) => {
+    if (!captureId || busy) return;
+    setBusy(true);
+    try {
+      await api(`/api/cameras/${cameraId}/manual-enroll/retake`, {
+        method: 'POST', body: JSON.stringify({ captureId, slot }),
+      });
+      slots[slot - 1] = null;
+      warning.innerHTML = '';
+      msg.textContent = `Photo ${slot} cleared. Position the worker and capture it again.`;
+      await refreshPreview();
+    } catch (error) {
+      msg.textContent = error.message || String(error);
+      msg.style.color = '#C2410C';
+    } finally {
+      setBusy(false);
+    }
+  };
+  const confirm = async () => {
+    if (!captureId || filledCount() < 5 || busy) return;
     setBusy(true);
     msg.textContent = 'Saving manual embeddings to BSS…';
     try {
@@ -1097,7 +1172,7 @@ function openManualEnrollment(workerId) {
         });
       }
       captureId = '';
-      close();
+      close(false);
       state = await api('/api/status');
       render();
       await showAlert('Manual enrollment saved', `${worker.name || worker.bssWorkerId} now has manual camera embeddings. The manual source is selected for this worker.`);
@@ -1106,7 +1181,25 @@ function openManualEnrollment(workerId) {
       msg.style.color = '#C2410C';
       setBusy(false);
     }
+  };
+  previewTimer = setInterval(() => void refreshPreview(), 1000);
+  captureBtn.addEventListener('click', () => void takePhoto());
+  confirmBtn.addEventListener('click', () => void confirm());
+  backdrop.querySelector('#manualEnrollCancel').addEventListener('click', () => close(true));
+  backdrop.addEventListener('click', event => { if (event.target === backdrop) close(true); });
+  cameraSelect.addEventListener('change', async () => {
+    const previous = cameraId;
+    if (captureId) {
+      await api(`/api/cameras/${previous}/manual-enroll/cancel`, {
+        method: 'POST', body: JSON.stringify({ captureId }),
+      }).catch(() => {});
+    }
+    cameraId = Number(cameraSelect.value);
+    slots = Array(5).fill(null);
+    warning.innerHTML = '';
+    await startSession();
   });
+  void startSession();
 }
 
 function render() {
