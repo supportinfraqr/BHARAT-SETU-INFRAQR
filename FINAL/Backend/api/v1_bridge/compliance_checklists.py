@@ -146,10 +146,12 @@ def _checklist_row(checklist):
     eligibility = payloads._gate_pass_eligibility(checklist.worker)
     pass_type = ("Permanent" if eligibility.get("permanentEligible")
                  else "Temporary" if eligibility.get("temporaryEligible") else "Not eligible")
+    site = checklist.binding.site if checklist.binding_id and checklist.binding.site_id else None
     return {
         "id": checklist.id,
         "worker": payloads._d(wi.name if wi and wi.name else checklist.worker.username),
         "workerId": payloads._d(wi.bss_worker_id if wi else ""),
+        "site": payloads._d(site.site_name) if site else "",
         "template": payloads._d(checklist.template.name if checklist.template_id else ""),
         "fields": fields,
         "done": sum(1 for f in fields if f["status"] == "DONE"),

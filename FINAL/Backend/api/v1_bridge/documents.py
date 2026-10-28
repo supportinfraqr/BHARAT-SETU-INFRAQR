@@ -169,6 +169,35 @@ def worker_document_detail(request, document_id):
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
+def employer_worker_document_token(request, document_id):
+    """Issue a one-use view token for an employer/compliance staff member."""
+    import hashlib
+    import secrets
+    from bss_core.models import DocumentAccessToken, WorkerContractorBinding, WorkerDocument
+
+    if request.user.role != "employer":
+        return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
+    _require_permission(request, "compliance")
+    doc = WorkerDocument.objects.select_related("user").filter(pk=document_id).first()
+    if doc is None or not (doc.file or doc.file_path):
+        return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+    bound = WorkerContractorBinding.objects.filter(
+        worker=doc.user, site__employer=request.user, binding_status="ACCEPTED").exists()
+    if not bound:
+        return Response({"error": "Not authorised for this worker."},
+                        status=status.HTTP_403_FORBIDDEN)
+    raw = secrets.token_urlsafe(32)
+    token = DocumentAccessToken.objects.create(
+        token_type="DOCUMENT_VIEW", document=doc, requester=request.user,
+        token_hash=hashlib.sha256(raw.encode()).hexdigest(),
+        expires_at=timezone.now() + timedelta(minutes=5), max_uses=1)
+    return Response({"token": raw, "expiresAt": payloads._dts(token.expires_at)},
+                    status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def contractor_document_view_token(request, document_id):
     """Issue a single-use, short-lived token to VIEW a worker's stored document
     inline. Enables previewing in a new tab without exposing the contractor to
@@ -294,7 +323,7 @@ def worker_nominee_document(request):
 
 __all__ = [
     "_handle_document_upload",
-    "contractor_document_view_token",
+    "contractor_document_view_token", "employer_worker_document_token",
     "contractor_worker_document_download",
     "document_file_serve",
     "worker_document_detail",

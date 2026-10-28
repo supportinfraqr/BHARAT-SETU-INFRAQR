@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { ChevronDown, ClipboardCheck, FileSpreadsheet, FileText, LayoutDashboard, LifeBuoy, Menu, Network, Settings, ShieldCheck, ScanLine, X, Banknote, Calculator, Stethoscope, HardHat, UserCog } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
@@ -12,6 +12,7 @@ import NotificationBell from '@/components/worker/NotificationBell';
 import MpinSetupGate from '@/components/auth/MpinSetupGate';
 import { useEmployer } from '@/contexts/EmployerContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAdoptionStatus } from '@/components/employer/useAdoptionStatus';
 
 const workforceGroup = { key:'nav.workforce', icon:Network, items:[
   ['nav.workers','/employer/workers'],
@@ -29,10 +30,12 @@ const sitesGroup = { key:'nav.sites', icon:LayoutDashboard, items:[
 ] };
 const complianceGroup = { key:'nav.compliance', icon:ClipboardCheck, items:[
   ['nav.complianceSubmission','/employer/compliance-submission'],
+  ['Worker KYC & Bank','/employer/worker-kyc'],
   ['Onboarding','/employer/onboarding'],
   ['Licences','/employer/licenses'],
   ['Monthly Audit','/employer/audit-reports'],
 ] };
+const SETUP_ALLOWED = new Set(['/employer/setup-adoptions', '/employer/letter-adoption', '/employer/medical-form-adoption', '/employer/clra-registers', '/employer/contact', '/employer/profile']);
 const qrGroup = { key:'nav.qrSystem', icon:Network, items:[
   ['nav.myWorkers','/employer/workers'],
   ['nav.myContractors','/employer/qr/contractors'],
@@ -46,10 +49,19 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
   const [profile, setProfile] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
   const headerRef = useRef<HTMLElement>(null);
   const { employer } = useEmployer();
   const { t } = useLanguage();
   const isStaff = Boolean(employer.isStaff);
+  const { status: adoptionStatus, reload: reloadAdoptionStatus } = useAdoptionStatus(!isStaff && employer.sites.length > 0);
+  const setupLocked = !isStaff && Boolean(adoptionStatus?.required && !adoptionStatus.complete);
+  useEffect(() => {
+    if (!isStaff && employer.sites.length) void reloadAdoptionStatus();
+  }, [pathname, isStaff, employer.sites.length, reloadAdoptionStatus]);
+  useEffect(() => {
+    if (setupLocked && !SETUP_ALLOWED.has(pathname)) router.replace('/employer/setup-adoptions');
+  }, [setupLocked, pathname, router]);
   const staffPerms = employer.staffPermissions ?? [];
   const staffGroups = [
     ...(staffPerms.includes('medical') ? [{ key: 'Medical', href: '/employer/worker-compliance-checklists?tab=medical', icon: Stethoscope }] : []),
@@ -57,11 +69,13 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
     ...(staffPerms.includes('gate_pass') ? [{ key: 'Gate Pass', href: '/employer/gate-pass', icon: ShieldCheck }, { key: 'Gate Scan', href: '/employer/gate-scan', icon: ScanLine }] : []),
     ...(staffPerms.includes('compliance') ? [
       { key: 'Compliance Review', href: '/employer/compliance-submission', icon: ClipboardCheck },
+      { key: 'Worker KYC & Bank', href: '/employer/worker-kyc', icon: ShieldCheck },
       { key: 'Monthly Audit', href: '/employer/audit-reports', icon: FileSpreadsheet },
     ] : []),
   ];
   const groups = isStaff ? staffGroups : [ { key:'nav.dashboard', href:'/employer/dashboard', icon:LayoutDashboard }, workforceGroup, sitesGroup, { key:'nav.payroll', href:'/employer/payroll', icon:Banknote }, complianceGroup, qrGroup ];
-  const mobileItems = groups.reduce<Array<readonly [string,string]>>((items, group) => items.concat('href' in group ? [[group.key, group.href]] : group.items as unknown as readonly [string,string][]), []);
+  const navGroups = setupLocked ? [] : groups;
+  const mobileItems = navGroups.reduce<Array<readonly [string,string]>>((items, group) => items.concat('href' in group ? [[group.key, group.href]] : group.items as unknown as readonly [string,string][]), []);
 
   // Close every popover on navigation (adjust state during render — the
   // documented pattern for reacting to prop/route changes without an effect).
@@ -92,7 +106,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
         </Link>
         <div className="min-w-0 flex items-center justify-center gap-4 mx-4 md:mx-8">
           <nav aria-label={t('nav.primary')} className="bss-desktop-nav items-center gap-1.5">
-          {groups.map(group => 'href' in group
+          {navGroups.map(group => 'href' in group
             ? <Link key={group.key} href={group.href} aria-current={pathname === group.href ? 'page' : undefined} className={`inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-full text-[12.5px] leading-none font-medium ${pathname === group.href ? 'bg-bss-navy text-white' : 'text-bss-text-secondary transition-colors duration-150 hover:bg-bss-bg'}`}>{t(group.key)}</Link>
             : <div key={group.key} className="relative">
                 <button type="button" aria-haspopup="menu" aria-expanded={openMenu === group.key} onClick={() => toggleMenu(group.key)} className={`inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-full text-[12.5px] leading-none font-medium gap-1 ${group.items.some(item => pathname === item[1]) || openMenu === group.key ? 'bg-bss-navy text-white' : 'text-bss-text-secondary transition-colors duration-150 hover:bg-bss-bg'}`}>{t(group.key)}<ChevronDown size={12} className={`transition-transform ${openMenu === group.key ? 'rotate-180' : ''}`}/></button>
@@ -142,7 +156,10 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
         <SignOutButton className="w-full flex items-center gap-2 px-4 py-3 text-bss-error"/>
       </nav>}
     </header>
-    <main key={pathname} className="bss-app-main bss-content-fade flex-1 w-full max-w-[1200px] mx-auto py-6 md:py-10 px-4 md:px-8">{children}</main>
+    <main key={pathname} className="bss-app-main bss-content-fade flex-1 w-full max-w-[1200px] mx-auto py-6 md:py-10 px-4 md:px-8">
+      {setupLocked && pathname !== '/employer/setup-adoptions' && <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#F5C6B2] bg-[#FDF0EA] px-4 py-3 text-xs font-semibold text-[#C94D18]"><span>Employer setup incomplete — complete the required adoptions to unlock the portal.</span><Link href="/employer/setup-adoptions" className="rounded-lg bg-[#E45D24] px-3 py-2 text-white">Complete setup</Link></div>}
+      {children}
+    </main>
     <MpinSetupGate />
   </div>;
 }

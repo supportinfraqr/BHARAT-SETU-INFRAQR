@@ -44,6 +44,8 @@ from .workforce import *  # noqa: F401,F403
 from .worker_onboarding import *  # noqa: F401,F403
 from .medical import *  # noqa: F401,F403
 from .employer_staff import *  # noqa: F401,F403
+from .employer_setup import *  # noqa: F401,F403
+from .employer_kyc import *  # noqa: F401,F403
 from .contact import *  # noqa: F401,F403
 from .audit_jobs import *  # noqa: F401,F403
 from .edge import *  # noqa: F401,F403

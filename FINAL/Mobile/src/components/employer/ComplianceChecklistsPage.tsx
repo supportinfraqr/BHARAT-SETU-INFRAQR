@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Lock } from "lucide-react";
+import { Download, Loader2, Lock } from "lucide-react";
+import { exportMatrixToXlsx } from "@/lib/exportXlsx";
 
 type Field = { id:number; key:string; label:string; category:string; status:string; officer:string; completedAt:string };
-type Checklist = { id:number; worker:string; workerId:string; template:string; fields:Field[]; done:number; total:number; passType?:string; missing?:string[] };
+type Checklist = { id:number; worker:string; workerId:string; site?:string; template:string; fields:Field[]; done:number; total:number; passType?:string; missing?:string[] };
 
 const SOURCE: Record<string, string> = {
   medical: "Captured in the Medical tab",
@@ -33,10 +34,15 @@ export default function WorkerComplianceChecklistsPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
   useEffect(() => { void load(); }, [load]);
 
+  function exportExcel() {
+    const rows = checklists.flatMap(c => c.fields.map(f => [c.worker, c.workerId, c.site ?? "", f.label, f.category.replace(/_/g, " "), f.status, f.officer || "", f.completedAt]));
+    exportMatrixToXlsx({ filename:`worker-compliance-checklists-${new Date().toISOString().slice(0, 10)}`, head:["Worker","BSS ID","Site","Field","Category","Status","Officer","Completed at"], rows, sheetName:"Compliance checklists" });
+  }
+
   return <div className="space-y-6 pb-10">
     <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div><p className="text-xs font-semibold text-bss-text-muted uppercase tracking-[0.12em]">Gate Pass</p><h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-bss-text-primary mt-1">Worker Compliance Checklists</h1><p className="text-sm text-bss-text-muted mt-1">A compliance checklist is auto-created for each onboarded worker. Status updates automatically from the records you capture — it is read-only.</p></div>
-      <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-bss-border bg-bss-bg px-3 py-1.5 text-[11px] font-semibold text-bss-text-muted"><Lock size={12}/>Read-only · auto-derived</span>
+      <div className="flex flex-wrap items-center gap-2 self-start"><span className="inline-flex items-center gap-1.5 rounded-full border border-bss-border bg-bss-bg px-3 py-1.5 text-[11px] font-semibold text-bss-text-muted"><Lock size={12}/>Read-only · auto-derived</span><button type="button" onClick={exportExcel} disabled={!checklists.length} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-bss-border bg-white px-3 text-xs font-bold text-bss-text-primary disabled:opacity-40"><Download size={13}/>Export Excel</button></div>
     </header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
