@@ -611,6 +611,8 @@ export type EmployerContractor = {
   status: 'Active' | 'Pending' | 'Suspended';
   bindingId?: number;
   verified: boolean;
+  /** Full contractor profile, grouped into the same sections as the contractor portal. */
+  profileSections?: Record<string, Array<{ label: string; value: string; note?: string; sensitive?: boolean; type?: string }>>;
 };
 
 export type EmployerWorker = {

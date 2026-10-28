@@ -968,7 +968,8 @@ class ContactMessage(models.Model):
         ("technical", "Technical issue"),
         ("other", "Other"),
     ]
-    STATUS = [("NEW", "New"), ("READ", "Read"), ("RESOLVED", "Resolved")]
+    STATUS = [("NEW", "New"), ("READ", "Read"), ("RESOLVED", "Resolved"),
+              ("CLOSED", "Closed")]
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                              related_name="contact_messages")
@@ -998,3 +999,25 @@ class ContactMessage(models.Model):
 
     def __str__(self):
         return f"{self.reference} {self.role} {self.subject}"
+
+
+class ContactMessageReply(models.Model):
+    """An admin reply in a BSS support-ticket thread."""
+
+    message = models.ForeignKey(ContactMessage, on_delete=models.CASCADE,
+                                related_name="replies")
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name="+")
+    body = models.TextField()
+    emailed = models.BooleanField(default=False)
+    email_error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "contact_message_reply"
+        ordering = ["created_at"]
+        indexes = [models.Index(fields=["message", "created_at"],
+                                name="idx_contact_reply_msg")]
+
+    def __str__(self):
+        return f"{self.message_id} reply {self.id}"

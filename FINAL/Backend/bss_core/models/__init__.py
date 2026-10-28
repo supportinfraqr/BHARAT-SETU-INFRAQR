@@ -82,6 +82,7 @@ from .operations import (
     LetterTemplate,
     EmployerLetterAdoption,
     ContactMessage,
+    ContactMessageReply,
 )
 from .audit import AuditSchedule, AuditJob, AuditJobEvent
 from .edge import EdgeDevice, EdgeCamera, EdgeEvent, EdgeAlert, WorkerFaceEmbedding
@@ -219,11 +220,11 @@ __all__ = [
     "BonusConfig", "SalaryComponent", "SalaryDeduction", "SalaryBenefit",
     "SalaryReimbursement", "FfsConfig", "StaffPortalConfig", "PayrollPeriod",
     "PayrollWorkspaceStore", "BonusStateMinWage",
-    "SupportTicket", "SupportCaseState", "GatePassScan", "GatePassComplianceTemplate", "WorkerComplianceChecklist", "ComplianceChecklistField",
+    "SupportTicket", "SupportCaseState", "ContactMessageReply", "GatePassScan", "GatePassComplianceTemplate", "WorkerComplianceChecklist", "ComplianceChecklistField",
     "CostSheetTemplate", "CostSheetDesignation", "CostSheetMinimumWage",
     "CostSheetStatutoryLine", "CostSheetCustomLine",
     "MedicalFormTemplate", "MedicalFormDispatch", "MedicalFormDispatchSite", "MedicalExam", "SafetyRecord", "SafetyCertificate",
-    "EmployerMedicalFormAdoption", "ContactMessage",
+    "EmployerMedicalFormAdoption", "ContactMessage", "ContactMessageReply",
     "AuditSchedule", "AuditJob", "AuditJobEvent",
     "EdgeDevice", "EdgeCamera", "EdgeEvent", "EdgeAlert", "WorkerFaceEmbedding",
 ]

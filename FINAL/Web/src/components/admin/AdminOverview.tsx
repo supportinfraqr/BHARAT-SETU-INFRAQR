@@ -24,6 +24,7 @@ const MAPPING_LINKS: Array<[string, string, string]> = [
 export default function AdminOverview() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [failed, setFailed] = useState(false);
+  const [openTickets, setOpenTickets] = useState(0);
   const n = (key: string) => counts[key] ?? 0;
 
   useEffect(() => {
@@ -32,6 +33,10 @@ export default function AdminOverview() {
       .then(response => (response.ok ? response.json() : Promise.reject(new Error('failed'))))
       .then((body: { counts?: Record<string, number> }) => { if (active && body.counts) setCounts(body.counts); })
       .catch(() => { if (active) setFailed(true); });
+    void fetch('/api/admin/support-tickets', { cache:'no-store' })
+      .then(response => (response.ok ? response.json() : Promise.reject(new Error('failed'))))
+      .then((body: { openCount?: number }) => { if (active) setOpenTickets(body.openCount ?? 0); })
+      .catch(() => {});
     return () => { active = false; };
   }, []);
 
@@ -88,6 +93,11 @@ export default function AdminOverview() {
             <Link href="/admin/accounts" className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2.5 text-xs hover:bg-gray-50"><span className="font-semibold text-gray-700">Users &amp; Accounts</span><span className="text-gray-400">{n('users')} users</span></Link>
             <Link href="/admin/permissions" className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2.5 text-xs hover:bg-gray-50"><span className="font-semibold text-gray-700">Permission Page</span><span className="text-gray-400">user-wise menus</span></Link>
           </div>
+        </section>
+
+        <section className="bss-card bss-reveal rounded-2xl overflow-hidden">
+          <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between"><h2 className="text-sm font-semibold text-gray-950 flex items-center gap-2"><TicketCheck size={15} className="text-indigo-700"/>Support desk</h2><Link href="/admin/support-tickets" className="text-xs font-semibold text-blue-700">Open</Link></header>
+          <div className="p-5"><Link href="/admin/support-tickets" className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2.5 text-xs hover:bg-gray-50"><span className="font-semibold text-gray-700">Support tickets</span><span className="text-gray-400">{openTickets} open</span></Link></div>
         </section>
 
         <section className="bss-card bss-reveal rounded-2xl overflow-hidden">

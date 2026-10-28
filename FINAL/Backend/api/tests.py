@@ -2,13 +2,13 @@ import uuid
 from datetime import timedelta
 
 from django.db import IntegrityError, transaction
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from api.v1_bridge.edge import _create_camera
 from api.v1_payloads.common import _site_is_mine
-from bss_core.models import (ContractorEmployerBinding, EdgeCamera, Site, User,
-                             WorkerContractorBinding)
+from bss_core.models import (ContactMessage, ContractorEmployerBinding, EdgeCamera, Site,
+                             User, WorkerContractorBinding)
 
 
 class EdgeCameraLabelConstraintTests(TestCase):
@@ -133,3 +133,58 @@ class SiteMineClassificationTests(TestCase):
             site_qr_token=uuid.uuid4().hex, site_name="Factory Site",
             site_type="Mining Contractor Office", mine_type="Open cast")
         self.assertFalse(_site_is_mine(site))
+
+
+class SupportTicketAdminTests(TestCase):
+    def setUp(self):
+        from rest_framework.test import APIClient
+        self.client = APIClient()
+        self.admin = User.objects.create_user(username="ticket-admin", role="bss_admin")
+        self.client.force_authenticate(user=self.admin)
+        self.ticket = ContactMessage.objects.create(
+            reference="BSS-TEST-TICKET", name="Test Worker", role="worker",
+            email="worker@example.com", category="technical",
+            subject="Cannot mark attendance", message="The site QR does not work for me.")
+
+    @override_settings(
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+        EMAIL_HOST="localhost", BSS_CONTACT_TO_EMAIL="support@example.com",
+        DEFAULT_FROM_EMAIL="noreply@example.com")
+    def test_reply_is_saved_and_emailed_then_ticket_can_close(self):
+        from django.core import mail
+        response = self.client.post("/v1/admin/support-tickets", {
+            "action": "reply", "id": self.ticket.id,
+            "message": "We have reset the site QR. Please scan it again.",
+        }, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.status, "READ")
+        self.assertEqual(self.ticket.replies.count(), 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("BSS-TEST-TICKET", mail.outbox[0].subject)
+
+        response = self.client.post("/v1/admin/support-tickets", {
+            "action": "status", "id": self.ticket.id, "status": "CLOSED",
+        }, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.status, "CLOSED")
+
+
+class MySupportTicketsTests(TestCase):
+    def test_user_only_sees_own_tickets(self):
+        from rest_framework.test import APIClient
+        worker = User.objects.create_user(username="ticket-worker", role="worker")
+        other = User.objects.create_user(username="ticket-other", role="worker")
+        ContactMessage.objects.create(
+            user=worker, reference="BSS-OWN", name="Worker", role="worker",
+            email="own@example.com", subject="Own ticket", message="Own message")
+        ContactMessage.objects.create(
+            user=other, reference="BSS-OTHER", name="Other", role="worker",
+            email="other@example.com", subject="Other ticket", message="Other message")
+        client = APIClient()
+        client.force_authenticate(user=worker)
+        response = client.get("/v1/support-tickets")
+        self.assertEqual(response.status_code, 200)
+        rows = response.json()["data"]
+        self.assertEqual([row["reference"] for row in rows], ["BSS-OWN"])

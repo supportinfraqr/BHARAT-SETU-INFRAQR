@@ -43,6 +43,7 @@ from .employer_analytics import *  # noqa: F401,F403
 from .workforce import *  # noqa: F401,F403
 from .worker_onboarding import *  # noqa: F401,F403
 from .medical import *  # noqa: F401,F403
+from .support_tickets import *  # noqa: F401,F403
 from .employer_staff import *  # noqa: F401,F403
 from .employer_setup import *  # noqa: F401,F403
 from .employer_kyc import *  # noqa: F401,F403

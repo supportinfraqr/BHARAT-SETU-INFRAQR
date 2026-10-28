@@ -21,7 +21,7 @@ const workforceGroup = { key:'nav.workforce', icon:Network, items:[
   ['Live Attendance','/employer/live-attendance'],
   ['nav.pastRecords','/employer/history'],
   ['nav.gatePass','/employer/gate-pass'],['Gate Scan','/employer/gate-scan'],['Welfare & Safety','/employer/worker-compliance-checklists'],
-  ['nav.grievanceCentre','/employer/grievances'],['Contact BSS','/employer/contact'],
+  ['nav.grievanceCentre','/employer/grievances'],['My Tickets','/employer/tickets'],['Contact BSS','/employer/contact'],
 ] };
 const sitesGroup = { key:'nav.sites', icon:LayoutDashboard, items:[
   ['nav.mySites','/employer/sites'],

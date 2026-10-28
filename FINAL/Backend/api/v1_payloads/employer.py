@@ -285,6 +285,7 @@ def _employer_contractors(user):
             "status": status,
             "bindingId": binding.id if (binding and accepted_binding) else None,
             "verified": bool(cp and cp.is_verified_badge) or accepted_binding,
+            "profileSections": _contractor_profile_sections(c),
         })
     return rows
 

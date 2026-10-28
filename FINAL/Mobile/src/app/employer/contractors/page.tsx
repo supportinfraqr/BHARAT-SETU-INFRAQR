@@ -66,7 +66,7 @@ export default function EmployerContractorsPage() {
     {/* Contractor full profile — opened from the row's three-dot menu */}
     {profileView && (
       <div className="fixed inset-0 z-[96] bg-bss-navy/40 backdrop-blur-sm grid place-items-center p-4" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setProfileView(null); }}>
-        <section role="dialog" aria-modal="true" aria-label="Contractor profile" className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl">
+        <section role="dialog" aria-modal="true" aria-label="Contractor profile" className="bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl">
           <header className="sticky top-0 bg-white border-b border-bss-border px-5 py-4 flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted">Contractor profile</p>
@@ -96,12 +96,28 @@ export default function EmployerContractorsPage() {
                 {!profileView.sites?.length && profileView.siteIds.length === 0 && <span className="text-xs text-bss-text-muted">No sites allotted</span>}
               </div>
             </div>
+            {profileView.profileSections && Object.entries(profileView.profileSections).map(([section, fields]) => {
+              const rows = fields.filter(field => field.value && field.value.trim());
+              if (!rows.length) return null;
+              return <div key={section} className="rounded-xl border border-bss-border p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-bss-text-muted mb-3">{PROFILE_SECTION_LABELS[section] ?? section}</p>
+                <dl className="grid sm:grid-cols-2 gap-x-4 gap-y-3 text-xs">
+                  {rows.map(field => <Info key={`${section}-${field.label}`} label={field.label} value={field.value}/>)}
+                </dl>
+              </div>;
+            })}
           </div>
         </section>
       </div>
     )}
   </div>;
 }
+
+const PROFILE_SECTION_LABELS: Record<string, string> = {
+  basic: 'Identity & legal', registration: 'Registrations & licences',
+  directors: 'Directors / signatory', contact: 'Contacts', financial: 'Banking & financial',
+  service: 'Registered address', documents: 'Documents', undertaking: 'Operating methods',
+};
 
 function Status({ value }: { value:EmployerContractor['status'] }) { const tone = value === 'Active' ? 'bg-bss-soft-green text-bss-green' : value === 'Pending' ? 'bg-bss-soft-orange text-bss-orange' : 'bg-bss-soft-orange text-bss-error'; return <span className={`px-2 py-1 rounded text-[10px] font-semibold ${tone}`}>{value}</span>; }
 function Metric({ label, value, icon:Icon, tone }: { label:string; value:number; icon:typeof Building2; tone:string }) { return <div className="bg-white border border-bss-border rounded-xl p-4"><span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon size={16}/></span><strong className="block text-2xl mt-2">{value}</strong><p className="text-xs text-bss-text-muted">{label}</p></div>; }
