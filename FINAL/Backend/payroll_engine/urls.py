@@ -13,6 +13,26 @@ from django.urls import path
 
 VIEW_MODULES = [
     "core",
+    "ctc_calculator",
+    "statutory_compliance",
+    "salary_compensation",
+    "staff_portal",
+    "employee_payroll",
+    "full_and_final",
+    "payroll_run",
+    "payroll_schedule",
+    "payroll_reports",
+    "hr_dashboard",
+    "audit_log",
+    "bank_file_generation",
+    "loan_management",
+    "vpf_management",
+    "arrears_management",
+    "salary_revision",
+    "payroll_import",
+    "tds_management",
+    "form16",
+    "claims_declaration",
 ]
 
 urlpatterns = []

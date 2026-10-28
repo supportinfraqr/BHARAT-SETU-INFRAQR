@@ -16,12 +16,10 @@ import uuid
 from datetime import datetime, timezone
 
 from django.db import transaction
-from django.http import JsonResponse
 from django.utils import timezone as dj_tz
-from django.views.decorators.csrf import csrf_exempt
 
 from .. import bss_adapter
-from ..context import PayrollError, file_response, get_employee, payroll_view, send_response
+from ..context import PayrollError, by_method, file_response, get_employee, payroll_view, send_response
 from ..models import (ClaimsDeclaration, PayrollEmployee, PayrollRun, SalaryCompensation,
                       StatutoryCompliance)
 from ..models.base import new_subdoc_id
@@ -370,18 +368,6 @@ def _require_my_employee(ctx):
     if ctx.org is None or ctx.employee is None:
         raise PayrollError("Missing required information", 400)
     return ctx.employee
-
-
-def by_method(**views):
-    """One URL served by several legacy routes that differ only in HTTP method."""
-    @csrf_exempt
-    def dispatch(request, *args, **kwargs):
-        view = views.get(request.method.lower())
-        if view is None:
-            return JsonResponse({"status": False, "success": False,
-                                 "message": f"Cannot {request.method} {request.path}"}, status=404)
-        return view(request, *args, **kwargs)
-    return dispatch
 
 
 def _reimbursement_heads(org):

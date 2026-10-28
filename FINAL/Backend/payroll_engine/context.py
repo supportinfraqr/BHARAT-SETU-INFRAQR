@@ -20,7 +20,8 @@ import functools
 import logging
 from dataclasses import dataclass, field
 
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -196,3 +197,27 @@ def get_employee(ctx, employee_id):
     if emp is None:
         raise PayrollError("Employee not found", 404)
     return emp
+
+
+def by_method(**views):
+    """Serve one URL with several single-method payroll views.
+
+    Express registered e.g. ``router.get(p)`` and ``router.put(p)`` as separate routes;
+    Django matches by path only, so the URL table maps the path to this dispatcher.
+    Keys are HTTP methods (any case). Unlisted methods get a 405 in the legacy envelope.
+    """
+    table = {method.upper(): view for method, view in views.items()}
+
+    @csrf_exempt
+    def dispatch(request, *args, **kwargs):
+        view = table.get(request.method)
+        if view is None:
+            return JsonResponse({"status": False, "success": False,
+                                 "message": f"Method {request.method} not allowed"}, status=405)
+        return view(request, *args, **kwargs)
+
+    # Same introspection surface as a DRF view, so route audits can read allowed methods.
+    names = [m.lower() for m in table] + ["options"]
+    dispatch.cls = type("MethodDispatch", (), {"http_method_names": names,
+                                               **{n: staticmethod(lambda *a, **k: None) for n in names}})
+    return dispatch

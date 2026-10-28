@@ -10,10 +10,8 @@ from datetime import datetime, timezone
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 
-from ..context import PayrollError, get_employee, payroll_view, send_response
+from ..context import PayrollError, by_method, get_employee, payroll_view, send_response
 from ..services.audit_log import log_payroll_action
 from ..services.jsmath import (UNDEFINED, is_nullish, js_or, js_round, js_str, js_truthy,
                                parse_int, to_fixed, to_number)
@@ -26,19 +24,6 @@ from ..services.salary_revision_import_helper import (apply_state_to_employee,
                                                       apply_statutory_flags_to_employee,
                                                       build_revision_arrears)
 from ..services.salary_structure_import_helper import compute_payroll_info_from_salary_input
-
-
-def methods_dispatch(**views):
-    """One URL served by several single-method payroll views (Express ``router.get`` +
-    ``router.delete`` on the same path)."""
-    @csrf_exempt
-    def dispatch(request, *args, **kwargs):
-        view = views.get(request.method)
-        if view is None:
-            return JsonResponse({"status": False, "success": False,
-                                 "message": f"Method {request.method} not allowed"}, status=405)
-        return view(request, *args, **kwargs)
-    return dispatch
 
 
 def map_approval_for_response(approval=UNDEFINED):
@@ -408,7 +393,7 @@ def delete_salary_revision(ctx, revisionId):
     return send_response(200, True, "Salary revision deleted successfully")
 
 
-revision_by_id = methods_dispatch(GET=get_salary_revision_by_id, DELETE=delete_salary_revision)
+revision_by_id = by_method(GET=get_salary_revision_by_id, DELETE=delete_salary_revision)
 
 ROUTES = [
     ("revision/create", create_salary_revision, "revision_create"),
