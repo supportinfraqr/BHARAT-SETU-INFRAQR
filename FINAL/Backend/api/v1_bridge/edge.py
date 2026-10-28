@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import numpy as np
 from django.core import signing
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework.authentication import BaseAuthentication
@@ -254,7 +254,8 @@ def _camera_limit(site):
 
 
 def _create_camera(site, label, channel=None, device=None):
-    existing = EdgeCamera.objects.filter(site=site, label__iexact=label).first()
+    existing = (EdgeCamera.objects.filter(site=site, label__iexact=label)
+                .exclude(approval_status__in=("REMOVED", "REJECTED")).first())
     if existing is not None:
         if existing.device_id is None and device is not None:
             existing.device = device
@@ -505,6 +506,33 @@ def _mark_edge_attendance(worker, site, camera, occurred_at, distance, event_id,
         event.meta = {**(event.meta or {}), "sessionId": session_id,
                       "presencePhase": presence.get("phase") or ""}
         event.save()
+    elif is_qr:
+        # QR is a discrete scan, not a continuous camera presence. Keep one
+        # live-feed row per worker/camera/day and refresh its timestamp.
+        external_id = f"qr:{worker.id}:{camera.id}:{local_date.isoformat()}"[:60]
+        event, _ = AttendanceEvent.objects.get_or_create(
+            worker=worker, source=source, external_id=external_id,
+            defaults={
+                "attendance": attendance, "site": site,
+                "attendance_date": local_date, "method": event_method,
+                "event_type": "SIGHTING", "at": occurred_at,
+                "camera_label": camera.label, "camera_area": camera.label,
+                "confidence": confidence, "remarks": remarks,
+            },
+        )
+        event.attendance = attendance
+        event.site = site
+        event.attendance_date = local_date
+        event.method = event_method
+        event.event_type = "SIGHTING"
+        event.at = occurred_at
+        event.camera_label = camera.label
+        event.camera_area = camera.label
+        event.confidence = confidence
+        event.remarks = remarks
+        event.save(update_fields=["attendance", "site", "attendance_date", "method",
+                                  "event_type", "at", "camera_label", "camera_area",
+                                  "confidence", "remarks"])
     else:
         # Backward-compatible path for 1.5.5 and older clients: one sighting
         # per worker/camera/day, with no duration.
@@ -1311,12 +1339,16 @@ def edge_camera_create(request):
         return Response({"error": f"Camera limit reached for this site ({limit})."},
                         status=status.HTTP_400_BAD_REQUEST)
     channel = body.get("channel")
-    camera = EdgeCamera.objects.create(
-        site=site, device=None, created_by_device=device, label=label,
-        employer_label=label, approval_status="APPROVED", approved_at=timezone.now(),
-        timezone="Asia/Kolkata",
-        channel=int(channel) if str(channel or "").isdigit() else None,
-    )
+    try:
+        camera = EdgeCamera.objects.create(
+            site=site, device=None, created_by_device=device, label=label,
+            employer_label=label, approval_status="APPROVED", approved_at=timezone.now(),
+            timezone="Asia/Kolkata",
+            channel=int(channel) if str(channel or "").isdigit() else None,
+        )
+    except IntegrityError:
+        return Response({"error": "A camera with this label already exists."},
+                        status=status.HTTP_409_CONFLICT)
     return Response({"data": _camera_payload(camera, device)}, status=status.HTTP_201_CREATED)
 
 

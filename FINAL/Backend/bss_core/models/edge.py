@@ -7,6 +7,7 @@ face embeddings and QR events; no video or images are stored here.
 import uuid
 
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from .auth import User
@@ -105,8 +106,15 @@ class EdgeCamera(models.Model):
 
     class Meta:
         db_table = "edge_camera"
-        constraints = [models.UniqueConstraint(fields=["site", "label"],
-                                               name="uq_edge_camera_site_label")]
+        constraints = [
+            # A removed/rejected camera must not block re-adding the same label.
+            # Active labels stay unique per site, case-insensitively.
+            models.UniqueConstraint(
+                Lower("label"), "site",
+                condition=~models.Q(approval_status__in=("REMOVED", "REJECTED")),
+                name="uq_edge_camera_site_active_label",
+            ),
+        ]
         indexes = [
             models.Index(fields=["site"], name="idx_edge_camera_site"),
             models.Index(fields=["device"], name="idx_edge_camera_device"),
