@@ -242,6 +242,7 @@ def cmd_gpu(args):
     rows = [
         ["Detected", "Yes" if gpu.get("detected") else "No" if gpu.get("detected") is False else "Unknown"],
         ["State", gpu.get("state")],
+        ["Lifecycle", gpu.get("gpuState")],
         ["Provider", gpu.get("provider")],
         ["Requested", gpu.get("requestedProvider")],
         ["Providers", ", ".join(gpu.get("availableProviders") or [])],
@@ -252,6 +253,8 @@ def cmd_gpu(args):
         ["Engine memory", f"{gpu.get('engineProcessMemoryMb', '—')} MB"],
         ["Limit", f"{gpu.get('memoryLimitMb', 0)} MB"],
         ["Message", gpu.get("message")],
+        ["Init time", f"{gpu.get('initElapsedSeconds', '—')}s"],
+        ["Retry in", f"{gpu.get('retryInSeconds', 0)}s"],
         ["Provider error", gpu.get("providerError")],
     ]
     _table(["Field", "Value"], rows)

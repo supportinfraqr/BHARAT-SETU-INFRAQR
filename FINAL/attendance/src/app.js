@@ -83,6 +83,8 @@ function cameraState(camera) {
 function statusPill(camera) {
   if (camera.status === 'NO_RTSP') return '<span class="pill warn">No RTSP</span>';
   if (camera.status === 'ONLINE') return '<span class="pill ok">Live</span>';
+  if (camera.status === 'GPU_INITIALIZING') return '<span class="pill warn">GPU initializing</span>';
+  if (camera.status === 'GPU_REQUIRED_UNAVAILABLE') return '<span class="pill bad">GPU unavailable</span>';
   if (camera.status === 'AUTH_FAILED') return '<span class="pill bad">Reconnect needed</span>';
   return `<span class="pill ${camera.status === 'RECONNECTING' ? 'warn' : 'muted'}">${esc(camera.status || 'Unknown')}</span>`;
 }
@@ -546,6 +548,7 @@ function gpuBadge(gpu) {
   const state = gpu.state || (gpu.active ? 'active' : (gpu.detected ? 'detected_unavailable' : 'unknown'));
   const labels = {
     active: 'GPU detected · active',
+    initializing: 'GPU initializing',
     detected_disabled: 'GPU detected · disabled',
     detected_unavailable: 'GPU detected · unavailable',
     not_detected: 'No GPU detected',
@@ -553,8 +556,9 @@ function gpuBadge(gpu) {
     unknown: 'GPU detection unavailable',
   };
   const classes = {
-    active: 'ok', detected_disabled: 'warn', detected_unavailable: 'warn',
-    not_detected: 'muted', required_unavailable: 'bad', unknown: 'muted',
+    active: 'ok', initializing: 'warn', detected_disabled: 'warn',
+    detected_unavailable: 'warn', not_detected: 'muted',
+    required_unavailable: 'bad', unknown: 'muted',
   };
   return `<span class="pill ${classes[state] || 'muted'}">${esc(labels[state] || labels.unknown)}</span>`;
 }
@@ -669,6 +673,8 @@ function resourceLiveHtml(resources) {
       ${gpu.requestedProvider ? `<div class="res-sub">Requested: ${esc(gpu.requestedProvider)}</div>` : ''}
       ${gpu.directmlDll ? `<div class="res-sub">DirectML.dll: ${gpu.directmlDllPresent ? 'found' : 'missing'}</div>` : ''}
       ${gpu.providerError ? `<div class="res-sub res-warn">${esc(gpu.providerError)}</div>` : ''}
+      ${gpu.gpuState === 'initializing' ? '<div class="res-sub">Initializing GPU backend… this can take a few seconds on Windows.</div>' : ''}
+      ${gpu.gpuState === 'failed' ? `<div class="res-sub res-warn">Last GPU initialization took ${esc(String(gpu.initElapsedSeconds ?? 0))}s${gpu.retryInSeconds ? ` · retry in ${esc(String(gpu.retryInSeconds))}s` : ''}</div>` : ''}
       ${gpuDetail && gpuHardware ? `<div class="res-sub">${esc(gpuDetail)}</div>` : ''}
     </div>
     <div class="res-panel">
@@ -966,7 +972,8 @@ function resourceCard(resources) {
       <button id="saveResourcesBtn" class="btn primary" type="button">Save resources</button>
     </div>
     <p id="resourceMsg" class="note"></p>
-    ${resources?.gpu?.state === 'required_unavailable' ? '<button id="useCpuFallbackBtn" class="btn" type="button" style="margin-top:8px">Use CPU fallback</button><span class="note" style="margin-left:8px">GPU is required but unavailable. Switch to Automatic to keep face processing running on CPU.</span>' : ''}
+    ${resources?.gpu?.gpuState === 'failed' ? '<button id="retryGpuBtn" class="btn" type="button" style="margin-top:8px">Retry GPU</button>' : ''}
+    ${resources?.gpu?.state === 'required_unavailable' ? '<button id="useCpuFallbackBtn" class="btn" type="button" style="margin-top:8px;margin-left:8px">Use CPU fallback</button><span class="note" style="margin-left:8px">GPU is required but unavailable. Switch to Automatic to keep face processing running on CPU.</span>' : ''}
   </section>`;
 }
 
@@ -1376,6 +1383,16 @@ function render() {
       render();
       showMessage('resourceMsg', 'Resource settings saved.', true);
     } catch (error) {
+      if (msg) { msg.textContent = error.message; msg.style.color = '#DC2626'; }
+    }
+  });
+
+  qs('retryGpuBtn')?.addEventListener('click', async () => {
+    try {
+      state = await api('/api/gpu/retry', { method: 'POST' });
+      render();
+    } catch (error) {
+      const msg = qs('resourceMsg');
       if (msg) { msg.textContent = error.message; msg.style.color = '#DC2626'; }
     }
   });

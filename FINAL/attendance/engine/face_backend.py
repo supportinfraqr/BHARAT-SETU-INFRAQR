@@ -52,6 +52,27 @@ def _directml_dll_path():
     return str(candidate), candidate.is_file()
 
 
+def runtime_diagnostics():
+    """Provider diagnostics that do not require the model files to load."""
+    try:
+        import onnxruntime as ort
+        dll, present = _directml_dll_path()
+        return {
+            "version": str(ort.__version__),
+            "availableProviders": list(ort.get_available_providers()),
+            "directmlDll": dll,
+            "directmlDllPresent": present,
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "version": "",
+            "availableProviders": [],
+            "directmlDll": "",
+            "directmlDllPresent": False,
+            "providerError": f"{type(exc).__name__}: {exc}",
+        }
+
+
 def _providers_for(ort, mode, memory_limit_mb=0):
     available = set(ort.get_available_providers())
     if mode != "off" and "DmlExecutionProvider" in available:

@@ -36,7 +36,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.12"
+APP_VERSION = "1.5.13"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 PRESENCE_GAP_SECONDS = 10
@@ -816,6 +816,11 @@ class CameraWorker:
                     continue
             if attendance_mode in ("FACE", "BOTH"):
                 self.engine.configure_gpu()
+                if getattr(self.engine, "_gpu_state", "") == "initializing":
+                    if self.status != "GPU_INITIALIZING":
+                        self.status = "GPU_INITIALIZING"
+                    time.sleep(0.2)
+                    continue
                 if (str(self.engine.resource_settings.get("gpuMode") or "auto") == "required"
                         and not self.engine.gpu_status.get("active")):
                     if self.status != "GPU_REQUIRED_UNAVAILABLE":
@@ -874,6 +879,8 @@ class CameraWorker:
     def _recognise(self, frame):
         """Return every quality face in the frame: [(embedding, [x,y,w,h]), ...]."""
         self.engine.configure_gpu()
+        if getattr(self.engine, "_gpu_state", "") == "initializing":
+            return []
         backend = self.engine.face_backend
         if backend is not None and backend.ready:
             detections = backend.recognise(frame)
@@ -999,12 +1006,17 @@ class Engine:
         self._process = psutil.Process() if psutil is not None else None
         self.gate = ResourceGate(2)
         self.resource_settings = self._normalise_resources(self.store.data.get("resources") or {})
-        self._gpu_configured = False
+        self._gpu_lock = threading.Lock()
+        self._gpu_state = "uninitialized"
+        self._gpu_attempts = 0
+        self._gpu_retry_at = 0.0
+        self._gpu_init_started = 0.0
+        self._gpu_init_elapsed = 0.0
         self.face_backend = None
         self._manual_captures = {}
         self._manual_capture_lock = threading.Lock()
         self.gpu_status = {"active": False, "mode": self.resource_settings.get("gpuMode", "auto"),
-                           "devices": [], "message": "Not initialised"}
+                           "devices": [], "message": "GPU not initialised", "state": "uninitialized"}
         self._apply_resources(self.resource_settings, persist=False)
         self.events = LocalEventStore(home)
         self.gallery_path = Path(home) / "face_gallery.json"
@@ -1021,6 +1033,7 @@ class Engine:
         self._heartbeat_thread.start()
         self._config_thread = threading.Thread(target=self._config_loop, daemon=True)
         self._config_thread.start()
+        threading.Thread(target=self.configure_gpu, daemon=True, name="gpu-init").start()
 
     def _load_cameras(self):
         for key, camera in (self.store.data.get("cameras") or {}).items():
@@ -1371,15 +1384,20 @@ class Engine:
         active = bool(base.get("active"))
         mode = str(base.get("mode") or "auto")
         provider = str(base.get("provider") or "CPU")
+        lifecycle = str(getattr(self, "_gpu_state", "uninitialized"))
         detected = telemetry.get("detected")
         if detected is None and (active or provider == "DirectML"):
             detected = True
-        if mode == "off":
+        if lifecycle in ("initializing", "uninitialized"):
+            state = "initializing"
+        elif mode == "off":
             state = "detected_disabled" if detected else ("not_detected" if detected is False else "unknown")
-        elif mode == "required" and not active:
+        elif lifecycle == "failed" and mode == "required":
             state = "required_unavailable"
         elif active:
             state = "active"
+        elif lifecycle == "failed" and detected:
+            state = "detected_unavailable"
         elif detected:
             state = "detected_unavailable"
         elif detected is False:
@@ -1388,10 +1406,13 @@ class Engine:
             state = "unknown"
         messages = {
             "active": f"GPU detected · {provider} active" + ("" if telemetry.get("available") else " · detailed telemetry unavailable"),
+            "initializing": "GPU initializing…" if mode != "off" else "CPU backend initializing…",
             "detected_disabled": "GPU detected · disabled (CPU only)",
             "detected_unavailable": "GPU detected · accelerator unavailable, using CPU",
             "not_detected": "No GPU detected · using CPU",
-            "required_unavailable": "GPU required · unavailable",
+            "required_unavailable": "GPU required · unavailable" + (
+                f" · retrying in {max(0, int(self._gpu_retry_at - time.time()))}s"
+                if lifecycle == "failed" and self._gpu_retry_at else ""),
             "unknown": "GPU detection unavailable · using CPU",
         }
         totals = telemetry.get("totals") or {}
@@ -1401,6 +1422,10 @@ class Engine:
             "state": state,
             "message": messages.get(state, base.get("message") or ""),
             "provider": provider,
+            "gpuState": lifecycle,
+            "initElapsedSeconds": round(float(self._gpu_init_elapsed or 0), 1),
+            "retryInSeconds": (max(0, int(self._gpu_retry_at - time.time()))
+                               if lifecycle == "failed" and self._gpu_retry_at else 0),
             "requestedProvider": base.get("requestedProvider") or provider,
             "availableProviders": list(base.get("availableProviders") or []),
             "directmlDll": base.get("directmlDll") or "",
@@ -1467,60 +1492,129 @@ class Engine:
         return {"detected": detected, "settings": settings, "allocation": allocation,
                 "engine": engine, "workload": workload, "gpu": self._gpu_payload()}
 
-    def configure_gpu(self):
-        if self._gpu_configured:
-            return
-        self._gpu_configured = True
-        mode = str(self.resource_settings.get("gpuMode") or "auto")
-        model_dir = (Path(os.environ.get("DEEPFACE_HOME") or str(Path.home()))
-                     / ".deepface" / "weights")
+    def _gpu_diagnostics(self):
+        try:
+            from face_backend import runtime_diagnostics
+            return runtime_diagnostics()
+        except Exception as exc:  # noqa: BLE001
+            return {"availableProviders": [], "directmlDll": "",
+                    "directmlDllPresent": False,
+                    "providerError": f"{type(exc).__name__}: {exc}"}
+
+    def _cpu_face_backend(self, model_dir, error):
+        """Keep face processing alive on CPU when the GPU backend fails."""
         try:
             from face_backend import OnnxFaceBackend
-            memory_limit_mb = int(self.resource_settings.get("gpuMemoryMb") or 0)
-            backend = OnnxFaceBackend(model_dir, mode, memory_limit_mb).initialize()
-            self.face_backend = backend
-            self.gpu_status = backend.status()
-            LOG.info("Face backend: %s", self.gpu_status)
-            return
+            backend = OnnxFaceBackend(model_dir, "off", 0).initialize()
+            backend.provider_error = error
+            return backend
         except Exception as exc:  # noqa: BLE001
+            LOG.warning("CPU face backend unavailable: %s", exc)
+            return None
+
+    def reset_gpu(self):
+        with self._gpu_lock:
+            self._gpu_state = "uninitialized"
+            self._gpu_attempts = 0
+            self._gpu_retry_at = 0.0
+            self._gpu_init_started = 0.0
+            self._gpu_init_elapsed = 0.0
             self.face_backend = None
-            LOG.warning("ONNX face backend unavailable: %s", exc)
-        if mode == "off":
-            self.gpu_status = {"active": False, "mode": mode, "devices": [],
-                               "message": "CPU only", "backend": "TensorFlow"}
-            return
-        try:
-            import tensorflow as tf
-            devices = tf.config.list_physical_devices("GPU")
-            if not devices:
-                self.gpu_status = {"active": False, "mode": mode, "devices": [],
-                                   "message": "No GPU detected", "backend": "TensorFlow"}
+            self.gpu_status = {
+                "active": False, "mode": self.resource_settings.get("gpuMode", "auto"),
+                "devices": [], "message": "GPU not initialised", "state": "uninitialized",
+            }
+
+    def configure_gpu(self, force=False):
+        """Initialise the face backend once, with retry after transient failure.
+
+        The first DirectML session can take a long time on Windows and can fail
+        transiently after boot/sleep. Never burn the one-shot flag before the
+        backend is actually ready.
+        """
+        mode = str(self.resource_settings.get("gpuMode") or "auto")
+        with self._gpu_lock:
+            if self._gpu_state == "ready":
                 return
-            limit_mb = int(self.resource_settings.get("gpuMemoryMb") or 0)
-            configured = []
-            for device in devices:
-                try:
-                    if limit_mb > 0:
-                        tf.config.set_logical_device_configuration(
-                            device, [tf.config.LogicalDeviceConfiguration(memory_limit=limit_mb)])
-                    else:
-                        tf.config.experimental.set_memory_growth(device, True)
-                    configured.append(str(device.name))
-                except Exception as exc:  # noqa: BLE001
-                    LOG.warning("Could not configure GPU %s: %s", device, exc)
-            self.gpu_status = {"active": bool(configured), "mode": mode, "devices": configured,
-                               "memoryLimitMb": limit_mb, "backend": "TensorFlow",
-                               "message": "GPU enabled" if configured else "GPU configuration failed"}
-            LOG.info("GPU status: %s", self.gpu_status)
-        except Exception as exc:  # noqa: BLE001
-            self.gpu_status = {"active": False, "mode": mode, "devices": [],
-                               "message": f"GPU unavailable: {type(exc).__name__}", "backend": "TensorFlow"}
-            LOG.warning("GPU unavailable: %s", exc)
+            now = time.time()
+            if (not force and self._gpu_state == "failed"
+                    and now < self._gpu_retry_at):
+                return
+            if self._gpu_state == "initializing":
+                return
+            self._gpu_state = "initializing"
+            self._gpu_init_started = now
+            self._gpu_init_elapsed = 0.0
+            diag = self._gpu_diagnostics()
+            available = list(diag.get("availableProviders") or [])
+            requested = ("DirectML" if mode != "off" and "DmlExecutionProvider" in available
+                         else "CUDA" if mode != "off" and "CUDAExecutionProvider" in available
+                         else "CPU")
+            self.gpu_status = {
+                "active": False, "mode": mode, "devices": [],
+                "message": ("GPU initializing…" if mode != "off" else "CPU backend initializing…"),
+                "state": "initializing", "backend": "ONNX Runtime",
+                "provider": "CPU", "requestedProvider": requested,
+                **diag,
+            }
+            model_dir = (Path(os.environ.get("DEEPFACE_HOME") or str(Path.home()))
+                         / ".deepface" / "weights")
+            try:
+                from face_backend import OnnxFaceBackend
+                memory_limit_mb = int(self.resource_settings.get("gpuMemoryMb") or 0)
+                backend = OnnxFaceBackend(model_dir, mode, memory_limit_mb).initialize()
+                self.face_backend = backend
+                self.gpu_status = backend.status()
+                self._gpu_state = "ready"
+                self._gpu_attempts = 0
+                self._gpu_retry_at = 0.0
+                self._gpu_init_elapsed = time.time() - now
+                LOG.info("Face backend ready in %.1fs: %s",
+                         self._gpu_init_elapsed, self.gpu_status)
+                return
+            except Exception as exc:  # noqa: BLE001
+                error = f"{type(exc).__name__}: {exc}"
+                LOG.warning("ONNX face backend unavailable: %s", error)
+            self._gpu_attempts += 1
+            delay = min(60.0, 5.0 * (2 ** min(self._gpu_attempts - 1, 4)))
+            self._gpu_retry_at = time.time() + delay
+            self._gpu_state = "failed"
+            self._gpu_init_elapsed = time.time() - now
+            fallback = None if mode == "off" else self._cpu_face_backend(model_dir, error)
+            self.face_backend = fallback
+            if fallback is not None:
+                status = fallback.status()
+            else:
+                status = {"active": False, "mode": mode, "devices": [],
+                          "message": "ONNX face backend unavailable",
+                          "backend": "ONNX Runtime", "provider": "CPU",
+                          **self._gpu_diagnostics()}
+            status.update({
+                "active": False, "mode": mode, "provider": "CPU",
+                "requestedProvider": requested,
+                "providerError": error, "state": "failed",
+            })
+            self.gpu_status = status
+            LOG.warning("GPU init failed (attempt %s); retrying in %.0fs",
+                        self._gpu_attempts, delay)
 
     def set_resources(self, raw):
+        previous = dict(self.resource_settings)
         settings = self._normalise_resources(raw or {})
         self.resource_settings = settings
         self._apply_resources(settings, persist=True)
+        gpu_changed = (
+            str(previous.get("gpuMode") or "auto") != str(settings.get("gpuMode") or "auto")
+            or int(previous.get("gpuMemoryMb") or 0) != int(settings.get("gpuMemoryMb") or 0)
+        )
+        if gpu_changed:
+            self.retry_gpu()
+        return self.status()
+
+    def retry_gpu(self):
+        self.reset_gpu()
+        threading.Thread(target=self.configure_gpu, kwargs={"force": True},
+                         daemon=True, name="gpu-retry").start()
         return self.status()
 
     def sync_gallery(self):
@@ -2318,6 +2412,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"data": ENGINE.refresh_config()})
             if path == "/api/resources":
                 return self._json({"data": ENGINE.set_resources(body)})
+            if path == "/api/gpu/retry":
+                return self._json({"data": ENGINE.retry_gpu()})
             if path == "/api/test-rtsp":
                 return self._json({"data": ENGINE.test_rtsp(body.get("rtsp"))})
             if path == "/api/cameras":
