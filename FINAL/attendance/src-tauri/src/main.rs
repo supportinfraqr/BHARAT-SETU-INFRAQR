@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 use std::sync::Mutex;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use tauri::menu::{Menu, MenuItem};
@@ -80,10 +80,12 @@ async fn install_update(app: AppHandle, pending: State<'_, PendingUpdate>) -> Re
         return Err("No update is ready to install.".into());
     };
 
+    // Download and verify first. The engine keeps running during the download,
+    // so camera processing continues until the bytes are ready.
     let progress_app = app.clone();
     let mut downloaded: u64 = 0;
-    update
-        .download_and_install(
+    let bytes = update
+        .download(
             move |chunk_length, content_length| {
                 downloaded += chunk_length as u64;
                 let _ = progress_app.emit(
@@ -98,8 +100,42 @@ async fn install_update(app: AppHandle, pending: State<'_, PendingUpdate>) -> Re
             || {},
         )
         .await
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| format!("Update download failed: {error}"))?;
 
+    let _ = app.emit(
+        "update-progress",
+        UpdateProgress {
+            event: "stopping-engine".into(),
+            downloaded,
+            total: None,
+        },
+    );
+    log_engine(&app, "stopping engine before update installation");
+    if let Err(error) = stop_engine_for_update(&app) {
+        log_engine(&app, &format!("update aborted: {error}"));
+        restart_engine(&app);
+        return Err(error);
+    }
+
+    let _ = app.emit(
+        "update-progress",
+        UpdateProgress {
+            event: "installing".into(),
+            downloaded,
+            total: None,
+        },
+    );
+    log_engine(&app, "engine stopped; installing update");
+    if let Err(error) = update.install(&bytes) {
+        log_engine(&app, &format!("update installation failed: {error}"));
+        restart_engine(&app);
+        return Err(format!(
+            "Update could not replace the attendance engine: {error}. The engine was restarted."
+        ));
+    }
+
+    // Windows launches the installer and exits the current process. Linux
+    // returns here, so restart explicitly.
     app.restart();
     Ok(())
 }
@@ -131,6 +167,53 @@ fn stop_engine(app: &AppHandle) {
     // PyInstaller one-file sidecars run as a bootloader parent plus a child.
     // Killing only the tracked parent can leave the real engine running.
     stop_stale_engine();
+}
+
+fn engine_processes_running() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        let output = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-Command",
+                "@(Get-Process | Where-Object { $_.ProcessName -like 'attendance-engine*' }).Count",
+            ])
+            .output();
+        return output
+            .ok()
+            .and_then(|result| String::from_utf8(result.stdout).ok())
+            .and_then(|text| text.trim().parse::<usize>().ok())
+            .map(|count| count > 0)
+            .unwrap_or(false);
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Command::new("pgrep")
+            .args(["-f", "attendance-engine --port 0"])
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false)
+    }
+}
+
+fn wait_for_engine_exit(timeout: Duration) -> bool {
+    let started = Instant::now();
+    while started.elapsed() < timeout {
+        if !engine_processes_running() {
+            return true;
+        }
+        std::thread::sleep(Duration::from_millis(250));
+    }
+    !engine_processes_running()
+}
+
+fn stop_engine_for_update(app: &AppHandle) -> Result<(), String> {
+    stop_engine(app);
+    if wait_for_engine_exit(Duration::from_secs(12)) {
+        Ok(())
+    } else {
+        Err("The attendance engine is still running and could not be stopped. Close the app and retry the update.".into())
+    }
 }
 
 fn home_dir() -> PathBuf {
