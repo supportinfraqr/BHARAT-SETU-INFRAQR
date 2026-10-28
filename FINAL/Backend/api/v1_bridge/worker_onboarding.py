@@ -18,7 +18,7 @@ Every write is scoped to a worker the contractor is actually associated with
 from .common import *  # noqa: F401,F403
 from .aadhaar import (_ensure_id_card_dates, _parse_dob, _sanitize_aadhaar,
                       _send_otp, link_aadhaar_for_worker)
-from .bindings import _contractor_default_site
+from .bindings import _contractor_default_site, _require_employer_letter_ready
 from .misc import _handle_bank_verify
 
 _PAN_RE = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]$")
@@ -265,9 +265,13 @@ def _apply_digilocker_identity(worker):
 def contractor_create_worker(request):
     """Create a worker account on the worker's behalf and bind them.
 
-    Body: {name?, mobile?, aadhaar?, gender?, dob?, siteId?}. No worker OTP is
+    Body: {name?, mobile?, aadhaar?, dob?, siteId?}. No worker OTP is
     required — the contractor attests. The worker is bound to the contractor in
     ACCEPTED state so the desk can immediately capture their details.
+
+    Gender is Aadhaar-owned and is deliberately ignored here: it is populated
+    only when the Aadhaar/DigiLocker record is applied, never from a client-side
+    default before verification.
     """
     user = request.user
     try:
@@ -279,7 +283,6 @@ def contractor_create_worker(request):
     name = str(body.get("name") or "").strip()[:120]
     mobile = _normalize_mobile(body.get("mobile"))
     aadhaar = _sanitize_aadhaar(body.get("aadhaar"))
-    gender = _gender_full(body.get("gender"))
     dob_raw = body.get("dob") or ""
 
     if not (name or mobile or aadhaar):
@@ -295,6 +298,10 @@ def contractor_create_worker(request):
     if site is None:
         return Response({"error": "You have no allotted site yet. Ask the employer to allot a site first."},
                         status=status.HTTP_400_BAD_REQUEST)
+    try:
+        _require_employer_letter_ready(site)
+    except PortalMutationError as exc:
+        return Response({"error": exc.message}, status=exc.status_code)
 
     # Duplicate guards — one account per mobile / Aadhaar.
     if mobile and UserCredential.objects.filter(identity_type="mobile", identity_value=mobile).exists():
@@ -314,7 +321,7 @@ def contractor_create_worker(request):
                                           is_verified=True, is_active=True)
         ident = WorkerIdentity.objects.create(
             user=worker, bss_worker_id=bss_ids.new_bss_worker_id(),
-            name=name, mobile_number=mobile or "", aadhaar=aadhaar or "", gender=gender)
+            name=name, mobile_number=mobile or "", aadhaar=aadhaar or "", gender="")
         dob = _parse_dob(dob_raw) if dob_raw else None
         if dob:
             ident.date_of_birth = dob
@@ -664,7 +671,8 @@ def contractor_worker_aadhaar_apply(request, bss_id):
         return Response({"error": message}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
     upload.seek(0)
     name = str(body.get("name") or "").strip()[:120]
-    gender = _gender_full(body.get("gender"))
+    # Read gender from the Aadhaar text itself; never trust a client default.
+    gender = _gender_full(ocr_client.extract_fields("aadhaar", text).get("gender"))
     dob = _parse_dob(body.get("dob") or "")
     address = str(body.get("address") or "").strip()[:255]
     father = str(body.get("father") or "").strip()[:120]

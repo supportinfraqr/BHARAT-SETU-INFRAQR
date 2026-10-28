@@ -6,6 +6,30 @@ from .aadhaar import *  # noqa: F401,F403
 
 from django.db import IntegrityError
 
+LETTER_TEMPLATE_REQUIRED = (
+    "The principal employer has not adopted an appointment letter template yet. "
+    "Ask the employer to adopt it in Appointment Letter Adoption before binding workers."
+)
+
+
+def _employer_appointment_letter_ready(employer):
+    """True when the employer has an active appointment-letter adoption."""
+    if employer is None:
+        return False
+    from bss_core.models import EmployerLetterAdoption
+    return (EmployerLetterAdoption.objects
+            .filter(employer=employer, letter_type="APPOINTMENT", is_active=True,
+                    base_template__isnull=False, base_template__is_active=True)
+            .exclude(base_template__html="")
+            .exists())
+
+
+def _require_employer_letter_ready(site):
+    """A worker must not be bound until the employer can issue their letter."""
+    employer = getattr(site, "employer", None) if site is not None else None
+    if not _employer_appointment_letter_ready(employer):
+        raise PortalMutationError(LETTER_TEMPLATE_REQUIRED, 409)
+
 
 def _contractor_site_ids(user):
     """Sites a contractor may use: only sites APPROVED on an ACCEPTED
@@ -242,6 +266,7 @@ def _request_worker_binding(worker, contractor, site, **defaults):
         raise PortalMutationError("A binding must connect a worker and a contractor.", 400)
     binding = _active_worker_binding(worker, contractor, site)
     if binding is None:
+        _require_employer_letter_ready(site)
         # A worker may hold only one live binding. Any other live binding must be
         # unbound before the worker can be bound to a different site.
         other = (WorkerContractorBinding.objects
@@ -390,6 +415,7 @@ def _contractor_binds_worker(contractor_user, worker_user, site=None, data=None)
     if str(binding.initiated_by or "").lower() == "worker":
         binding.consent_worker = True
     if binding.consent_worker and binding.consent_contractor:
+        _require_employer_letter_ready(site)
         binding.binding_status = "ACCEPTED"
         binding.accepted_at = timezone.now()
         binding.save()
@@ -755,6 +781,11 @@ def binding_consent(request, binding_id):
     if action == "bind" and b.binding_status == "ACCEPTED":
         return Response({"data": payloads._binding_row(b), "alreadyAccepted": True},
                         status=status.HTTP_200_OK)
+    if action == "bind" and b.binding_status == "PENDING":
+        try:
+            _require_employer_letter_ready(b.site)
+        except PortalMutationError as exc:
+            return Response({"error": exc.message}, status=exc.status_code)
     if action == "decline" and b.binding_status != "PENDING":
         return Response({"error": "Only a pending binding can be declined."},
                         status=status.HTTP_400_BAD_REQUEST)
