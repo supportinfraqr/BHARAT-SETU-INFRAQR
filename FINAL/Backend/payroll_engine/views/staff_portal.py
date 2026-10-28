@@ -5,10 +5,8 @@ and per-employee UI preferences.
 """
 
 from django.db import transaction
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 
-from ..context import PayrollError, get_employee, payroll_view, send_response
+from ..context import PayrollError, by_method, get_employee, payroll_view, send_response
 from ..models import EmployeePreferences, StaffPortal
 from ..models.staff_portal import new_web_tab
 from ..services.audit_log import log_payroll_action
@@ -24,18 +22,6 @@ def _js_date(value):
         # Mongoose would raise a CastError -> legacy handleError (500).
         raise PayrollError(f'Cast to date failed for value "{value}"', 500)
     return inst
-
-
-def by_method(**views):
-    """One URL served by several legacy routes that differ only in HTTP method."""
-    @csrf_exempt
-    def dispatch(request, *args, **kwargs):
-        view = views.get(request.method.lower())
-        if view is None:
-            return JsonResponse({"status": False, "success": False,
-                                 "message": f"Cannot {request.method} {request.path}"}, status=404)
-        return view(request, *args, **kwargs)
-    return dispatch
 
 
 def _audit(ctx, portal, remarks):
