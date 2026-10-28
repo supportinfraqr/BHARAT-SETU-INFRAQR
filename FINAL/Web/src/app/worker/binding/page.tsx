@@ -10,6 +10,7 @@ import RebindAuthModal from '@/components/worker/RebindAuthModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import BindingHistoryDialog, { type BindingHistoryEvent } from '@/components/ui/BindingHistoryDialog';
 import { recordBindingApproval, formatApprovalDate } from '@/lib/workerDocumentWorkflow';
+import { formatISTDateTime } from '@/lib/date';
 
 type BindingRequest = {
   id: number;
@@ -256,7 +257,7 @@ export default function BindingRequestsPage() {
                 <p className="text-xs text-bss-text-muted mt-0.5 font-mono">{req.contractorCode} · {req.lin}</p>
               </div>
             </div>
-            <div className="text-left sm:text-right flex-shrink-0 text-xs text-bss-text-muted"><p>Requested {formatApprovalDate(req.requestedOn) || '—'}</p>{req.startDate && <p className="mt-0.5 font-semibold text-bss-green">Start {formatApprovalDate(req.startDate)}</p>}{req.endDate && <p className="mt-0.5 font-semibold text-bss-text-secondary">End {formatApprovalDate(req.endDate)}</p>}<p className="font-mono text-[11px] text-bss-text-muted mt-0.5">{req.ref}</p><p className="mt-0.5">Initiated by {req.initiatedBy || '—'}{req.acceptedBy ? ` · Accepted by ${req.acceptedBy}` : ''}</p><button onClick={() => setHistoryFor(req)} className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[#01183A] hover:underline"><History size={12}/>History</button></div>
+            <div className="text-left sm:text-right flex-shrink-0 text-xs text-bss-text-muted"><p>Requested (IST) {formatISTDateTime(req.requestedOn) || '—'}</p>{req.startDate && <p className="mt-0.5 font-semibold text-bss-green">Start {formatApprovalDate(req.startDate)}</p>}{req.endDate && <p className="mt-0.5 font-semibold text-bss-text-secondary">End {formatApprovalDate(req.endDate)}</p>}<p className="font-mono text-[11px] text-bss-text-muted mt-0.5">{req.ref}</p><p className="mt-0.5">Initiated by {req.initiatedBy || '—'}{req.acceptedBy ? ` · Accepted by ${req.acceptedBy}` : ''}</p><button onClick={() => setHistoryFor(req)} className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[#01183A] hover:underline"><History size={12}/>History</button></div>
           </div>
 
           <dl className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">

@@ -26,7 +26,7 @@ export default function EmployerLiveAttendancePage() {
   const { employer, refresh } = useEmployer();
   const [siteId, setSiteId] = useState('');
   const [selected, setSelected] = useState<WorkerRow | null>(null);
-  const live = useLiveFeed({ siteId, intervalMs: 30000 });
+  const live = useLiveFeed({ siteId, intervalMs: 10000 });
   const data = live.data;
 
   const eventRows = useMemo(() => data?.recentEvents ?? [], [data?.recentEvents]);
@@ -101,7 +101,7 @@ export default function EmployerLiveAttendancePage() {
           <div className="flex items-center justify-between rounded-xl bg-bss-bg px-3 py-2"><span className="text-xs font-semibold text-bss-text-secondary">Bound workers</span><strong className="text-sm text-bss-text-primary">{data?.boundWorkers ?? workers.length}</strong></div>
           <div className="flex items-center justify-between rounded-xl bg-bss-bg px-3 py-2"><span className="text-xs font-semibold text-bss-text-secondary">On site now</span><strong className="text-sm text-bss-green">{data?.onSiteNow ?? 0}</strong></div>
           <div className="flex items-center justify-between rounded-xl bg-bss-bg px-3 py-2"><span className="text-xs font-semibold text-bss-text-secondary">Not arrived</span><strong className="text-sm text-bss-orange">{data?.today?.notArrived ?? 0}</strong></div>
-          <p className="pt-1 text-[11px] leading-5 text-bss-text-muted">Face and QR events update this page automatically every 30 seconds. Operator toggles for Face / QR / Both are managed in the attendance client.</p>
+          <p className="pt-1 text-[11px] leading-5 text-bss-text-muted">Face and QR events update this page automatically every 10 seconds. Operator toggles for Face / QR / Both are managed in the attendance client.</p>
         </div>
       </section>
     </div>
