@@ -129,7 +129,6 @@ export default function GstVerifyCard({ role, defaultGstin = '', onVerified }: {
           <Field label="Constitution" value={status?.constitution || '—'}/>
           <Field label="GSTN status" value={status?.gstnStatus || 'Active'}/>
           <Field label="GST registered on" value={fmtDate(status?.registrationDate)}/>
-          <Field label="Date of incorporation" value={fmtDate(status?.incorporationDate)}/>
           <Field label="BSS member since" value={fmtDate(status?.memberSince)}/>
           {status?.hasCertificate && (
             <a href={`${base}/certificate`} target="_blank" rel="noreferrer" className="sm:col-span-2 inline-flex items-center gap-1.5 text-[#073B67] text-xs font-semibold hover:underline"><FileText size={14}/>Download GST Registration Certificate (PDF)</a>
