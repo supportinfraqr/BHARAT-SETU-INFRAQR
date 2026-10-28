@@ -988,7 +988,7 @@ function openManualEnrollment(workerId) {
   let busy = false;
   let faceCount = 0;
   let faceReady = false;
-  let slots = Array(5).fill(null);
+  let slots = Array(1).fill(null);
   const closed = () => {
     if (previewTimer) clearInterval(previewTimer);
     previewTimer = null;
@@ -1003,17 +1003,17 @@ function openManualEnrollment(workerId) {
     backdrop.remove();
   };
   backdrop.innerHTML = `<div class="dialog" style="max-width:780px;width:min(780px,94vw);text-align:left">
-    <div class="cam-title"><div><h3>Manual enrollment</h3><p class="muted" style="margin:4px 0 0">${esc(worker.name || worker.bssWorkerId)} · ${esc(worker.bssWorkerId || '')}</p></div><span class="pill warn">5 photos · one by one</span></div>
+    <div class="cam-title"><div><h3>Manual enrollment</h3><p class="muted" style="margin:4px 0 0">${esc(worker.name || worker.bssWorkerId)} · ${esc(worker.bssWorkerId || '')}</p></div><span class="pill warn">1 photo · one person</span></div>
     <label style="display:block;margin-top:14px">Camera<select id="manualEnrollCamera">${cameras.map(camera => `<option value="${esc(camera.cameraId)}">${esc(camera.label)} · ${esc(camera.siteName || siteNameFor(camera.siteId))}</option>`).join('')}</select></label>
     <div style="position:relative;margin-top:12px;background:#0b1220;border-radius:12px;overflow:hidden;min-height:240px;display:grid;place-items:center">
       <img id="manualEnrollPreview" alt="Selected camera preview" style="width:100%;max-height:360px;object-fit:contain;display:block" />
     </div>
     <p class="note" id="manualEnrollMsg" style="margin-top:10px;font-weight:600">Starting camera preview…</p>
     <div id="manualEnrollWarning"></div>
-    <div id="manualEnrollSlots" style="display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:10px"></div>
+    <div id="manualEnrollSlots" style="display:grid;grid-template-columns:minmax(120px,180px);gap:7px;margin-top:10px"></div>
     <div class="row" style="margin-top:14px;justify-content:flex-end">
       <button type="button" class="btn" id="manualEnrollCancel">Cancel</button>
-      <button type="button" class="btn primary" id="manualEnrollCapture" disabled>Take photo 1</button>
+      <button type="button" class="btn primary" id="manualEnrollCapture" disabled>Take photo</button>
       <button type="button" class="btn primary" id="manualEnrollConfirm" disabled>Confirm & sync</button>
     </div>
   </div>`;
@@ -1042,9 +1042,9 @@ function openManualEnrollment(workerId) {
       button.addEventListener('click', () => void retake(Number(button.dataset.retake)));
     });
     const slot = nextSlot();
-    captureBtn.textContent = slot >= 0 ? `Take photo ${slot + 1}` : 'All 5 captured';
+    captureBtn.textContent = slot >= 0 ? 'Take photo' : 'Photo captured';
     captureBtn.disabled = busy || !faceReady || slot < 0;
-    confirmBtn.disabled = busy || filledCount() < 5;
+    confirmBtn.disabled = busy || filledCount() < 1;
   };
   const setBusy = value => {
     busy = value;
@@ -1060,10 +1060,10 @@ function openManualEnrollment(workerId) {
       msg.textContent = `${faceCount} people detected — only one person is allowed. Move others out of the frame.`;
       msg.style.color = '#C2410C';
     } else if (slot < 0) {
-      msg.textContent = 'All 5 photos captured — review and confirm, or retake any photo.';
+      msg.textContent = 'Photo captured — review and confirm, or retake it.';
       msg.style.color = '#14843C';
     } else {
-      msg.textContent = `1 person detected — ready. Take photo ${slot + 1} of 5.`;
+      msg.textContent = '1 person detected — ready. Take photo.';
       msg.style.color = '#14843C';
     }
     renderSlots();
@@ -1085,7 +1085,7 @@ function openManualEnrollment(workerId) {
   };
   const startSession = async () => {
     captureId = '';
-    slots = Array(5).fill(null);
+    slots = Array(1).fill(null);
     warning.innerHTML = '';
     setBusy(true);
     try {
@@ -1119,7 +1119,7 @@ function openManualEnrollment(workerId) {
       warning.innerHTML = result.warning
         ? `<p class="note blocked" style="margin-top:10px">The face looks like <b>${esc(result.warning.name || result.warning.bssWorkerId)}</b> (${esc(String(result.warning.confidence || ''))}% match), not the selected worker. Check before confirming.</p>`
         : '';
-      msg.textContent = `Photo ${slot + 1} captured.`;
+      msg.textContent = 'Photo captured. Review and confirm, or retake it.';
       msg.style.color = '#14843C';
       await refreshPreview();
     } catch (error) {
@@ -1148,7 +1148,7 @@ function openManualEnrollment(workerId) {
     }
   };
   const confirm = async () => {
-    if (!captureId || filledCount() < 5 || busy) return;
+    if (!captureId || filledCount() < 1 || busy) return;
     setBusy(true);
     msg.textContent = 'Saving manual embeddings to BSS…';
     try {
@@ -1195,7 +1195,7 @@ function openManualEnrollment(workerId) {
       }).catch(() => {});
     }
     cameraId = Number(cameraSelect.value);
-    slots = Array(5).fill(null);
+    slots = Array(1).fill(null);
     warning.innerHTML = '';
     await startSession();
   });

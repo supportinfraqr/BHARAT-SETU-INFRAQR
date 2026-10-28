@@ -36,11 +36,11 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.7"
+APP_VERSION = "1.5.8"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 PRESENCE_GAP_SECONDS = 10
-MANUAL_ENROLL_FRAMES = 5
+MANUAL_ENROLL_FRAMES = 1
 MANUAL_ENROLL_INTERVAL = 0.7
 MANUAL_ENROLL_TIMEOUT = 30
 MATCH_CONFIRM_FRAMES = 2

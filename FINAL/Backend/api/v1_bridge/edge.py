@@ -899,8 +899,8 @@ def edge_manual_enroll(request, camera_id):
     raw_embeddings = body.get("embeddings")
     if not bss_worker_id:
         return Response({"error": "Select a worker before enrolling."}, status=status.HTTP_400_BAD_REQUEST)
-    if not isinstance(raw_embeddings, list) or len(raw_embeddings) != 5:
-        return Response({"error": "Exactly 5 face embeddings are required."}, status=status.HTTP_400_BAD_REQUEST)
+    if not isinstance(raw_embeddings, list) or not raw_embeddings or len(raw_embeddings) > 5:
+        return Response({"error": "Between 1 and 5 face embeddings are required."}, status=status.HTTP_400_BAD_REQUEST)
     if str(body.get("model") or EDGE_FACE_MODEL_NAME) != EDGE_FACE_MODEL_NAME:
         return Response({"error": "Client face model does not match BSS."}, status=status.HTTP_400_BAD_REQUEST)
     if str(body.get("version") or EDGE_FACE_MODEL_VERSION) != EDGE_FACE_MODEL_VERSION:
