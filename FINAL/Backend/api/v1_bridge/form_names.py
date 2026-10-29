@@ -96,6 +96,10 @@ def _create(request, *, employer, site=None):
     if not name or (jurisdiction == "state" and not state):
         return Response({"error": "Form name (and State, for a state-level form) are required."},
                         status=status.HTTP_400_BAD_REQUEST)
+    frequency = str(body.get("frequency") or "").strip()[:40]
+    if not frequency:
+        return Response({"error": "Frequency is required."},
+                        status=status.HTTP_400_BAD_REQUEST)
     # Admin (global) forms are always non-mandatory — the employer decides
     # mandatory for its own contractors.
     mandatory = bool(body.get("mandatory", False)) if employer is not None else False
@@ -104,7 +108,7 @@ def _create(request, *, employer, site=None):
         "jurisdiction": jurisdiction,
         "format_variant": format_variant,
         "requires_document": bool(body.get("requiresDocument", True)),
-        "frequency": str(body.get("frequency") or "")[:40],
+        "frequency": frequency,
         "description": str(body.get("description") or "")[:255],
         "ai_checks": _clean_checkpoints(body.get("aiChecks")),
         "sort_order": int(body.get("sortOrder") or 0),
@@ -121,7 +125,7 @@ def _create(request, *, employer, site=None):
         if body.get("aiChecks") is not None:
             obj.ai_checks = _clean_checkpoints(body.get("aiChecks"))
         if body.get("frequency") is not None:
-            obj.frequency = str(body.get("frequency") or "")[:40]
+            obj.frequency = frequency
         if body.get("description") is not None:
             obj.description = str(body.get("description") or "")[:255]
         obj.is_active = True

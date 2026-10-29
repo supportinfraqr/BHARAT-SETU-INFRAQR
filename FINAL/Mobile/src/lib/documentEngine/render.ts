@@ -185,11 +185,13 @@ export function renderDocumentHtml(target: RenderTarget): string {
     ? `<span style="color:${esc(brandColors[0])}">${esc(parts[0])}</span><span style="color:${esc(brandColors[1])}"> ${esc(parts[1])}</span><span style="color:${esc(brandColors[2])}"> ${esc(parts[2])}</span>`
     : `<span style="color:${esc(brandColors[0])}">${esc(brandName)}</span>`;
   const logoUrl = template.styles.brandLogoUrl || '/bss-original-logo.png';
-  const tagline = template.styles.brandTagline || 'One Nation · One Identity · One Future';
+  const tagline = (template.styles.brandTagline === undefined
+    ? 'One Nation · One Identity · One Future'
+    : template.styles.brandTagline).trim();
   const brandTextLogo = template.styles.brandTextLogoUrl;
   const brandInner = brandTextLogo ? `<img src="${esc(brandTextLogo)}" alt="brand" class="doc-brand-text-logo"/>` : brandWordmark;
   const headingMeta = template.styles.showBrandHeader
-    ? `<div class="doc-logo-row">${template.styles.showLogo ? `<img src="${esc(logoUrl)}" alt="logo" class="doc-logo"/>` : ''}<div class="doc-brand"><strong>${brandInner}</strong><span>${esc(tagline)}</span></div></div>`
+    ? `<div class="doc-logo-row">${template.styles.showLogo ? `<img src="${esc(logoUrl)}" alt="logo" class="doc-logo"/>` : ''}<div class="doc-brand"><strong>${brandInner}</strong>${tagline ? `<span>${esc(tagline)}</span>` : ''}</div></div>`
     : '';
 
   const body = visible

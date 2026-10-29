@@ -332,7 +332,7 @@ export default function TemplateEditor({
                     {template.styles.brandTextLogoUrl && <button type="button" onClick={() => setTemplate(current => ({ ...current, styles: { ...current.styles, brandTextLogoUrl: '' } }))} className="text-[11px] text-gray-500 hover:text-red-600">Use text instead</button>}
                   </div>
                 </div>}
-                <label className="block text-xs font-semibold text-gray-600">Brand tagline<input value={template.styles.brandTagline ?? ''} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, brandTagline: event.target.value } }))} className={inputCls + ' text-xs'}/></label>
+                <label className="block text-xs font-semibold text-gray-600">Brand tagline (optional)<input value={template.styles.brandTagline ?? ''} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, brandTagline: event.target.value } }))} placeholder="Leave blank to hide the tagline" className={inputCls + ' text-xs'}/></label>
                 <label className="block text-xs font-semibold text-gray-600">Document footer<textarea rows={2} value={template.styles.footerText} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, footerText: event.target.value } }))} className={textareaCls + ' text-xs'}/></label>
                 <p className="text-[11px] leading-5 text-gray-400">Layout, wording, fields and signatories are fixed in code — only the appearance above can be changed.</p>
               </div>

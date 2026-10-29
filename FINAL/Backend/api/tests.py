@@ -235,3 +235,46 @@ class EdgeDeviceReuseTests(TestCase):
         self.assertFalse(camera.is_claimed)
         self.assertIsNone(camera.device_id)
         self.assertEqual(camera.token_hash, "")
+
+
+class AdditionalFormFrequencyTests(TestCase):
+    def setUp(self):
+        from rest_framework.test import APIClient
+        self.employer = User.objects.create_user(username="form-employer", role="employer")
+        self.admin = User.objects.create_user(username="form-admin", role="bss_admin")
+        self.employer_client = APIClient()
+        self.employer_client.force_authenticate(user=self.employer)
+        self.admin_client = APIClient()
+        self.admin_client.force_authenticate(user=self.admin)
+
+    def test_employer_form_requires_frequency(self):
+        response = self.employer_client.post("/v1/employer/form-names", {
+            "state": "Uttar Pradesh", "name": "Police Verification",
+            "mandatory": True, "frequency": "",
+        }, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Frequency is required", response.json()["error"])
+
+    def test_employer_form_saves_with_frequency(self):
+        response = self.employer_client.post("/v1/employer/form-names", {
+            "state": "Uttar Pradesh", "name": "Police Verification",
+            "mandatory": True, "frequency": "Yearly",
+        }, format="json")
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["data"]["frequency"], "Yearly")
+
+    def test_admin_catalog_form_requires_frequency(self):
+        response = self.admin_client.post("/v1/admin/form-names", {
+            "state": "Uttar Pradesh", "name": "Medical Fitness",
+            "frequency": "",
+        }, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Frequency is required", response.json()["error"])
+
+    def test_admin_catalog_form_saves_with_frequency(self):
+        response = self.admin_client.post("/v1/admin/form-names", {
+            "state": "Uttar Pradesh", "name": "Medical Fitness",
+            "frequency": "Yearly",
+        }, format="json")
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["data"]["frequency"], "Yearly")

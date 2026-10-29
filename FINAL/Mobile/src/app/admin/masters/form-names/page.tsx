@@ -71,7 +71,8 @@ export default function AdminFormNamesPage() {
   }
 
   async function add() {
-    if (!name.trim()) return;
+    if (!name.trim()) { setError('Enter a form name.'); return; }
+    if (!frequency.trim()) { setError('Select a frequency.'); return; }
     setBusy(true); setError(''); setNotice('');
     const formName = name.trim();
     const aiChecks: Checkpoint[] = catalog
@@ -167,7 +168,7 @@ export default function AdminFormNamesPage() {
           <label className="block text-xs font-semibold text-gray-700">Form format *<select value={formatVariant} onChange={e => setFormatVariant(e.target.value as 'new' | 'old')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-2 text-sm bg-white"><option value="new">New format</option><option value="old">Old format</option></select></label>
         </div>
         {jurisdiction === 'central' && <p className="text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">This form is <strong>Central</strong> — it will appear in every state&apos;s catalog; employers still opt in per site.</p>}
-        <label className="block text-xs font-semibold text-gray-700">Frequency<select value={frequency} onChange={e => setFrequency(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-2 text-sm bg-white"><option value="">—</option>{['Monthly', 'Quarterly', 'Half Yearly', 'Yearly', 'One-time'].map(f => <option key={f}>{f}</option>)}</select></label>
+        <label className="block text-xs font-semibold text-gray-700">Frequency *<select value={frequency} onChange={e => setFrequency(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-2 text-sm bg-white"><option value="">Select frequency</option>{['Monthly', 'Quarterly', 'Half Yearly', 'Yearly', 'One-time'].map(f => <option key={f}>{f}</option>)}</select></label>
         <label className="block text-xs font-semibold text-gray-700">Required format<select value={requiresDocument ? 'upload' : 'submission'} onChange={e => setRequiresDocument(e.target.value === 'upload')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-2 text-sm bg-white"><option value="upload">PDF / JPEG / PNG (document upload)</option><option value="submission">Submission only (no file)</option></select></label>
         <label className="block text-xs font-semibold text-gray-700">Note<input value={description} onChange={e => setDescription(e.target.value)} placeholder="Optional guidance shown to contractors" className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm"/></label>
         <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3">
@@ -204,7 +205,7 @@ export default function AdminFormNamesPage() {
         <p className="text-[11px] text-gray-400">Catalog forms are non-mandatory — employers choose which to apply and whether they are mandatory for their contractors.</p>
         {error && <p className="text-xs text-red-700">{error}</p>}
       </div>
-      <footer className="sticky bottom-0 px-5 py-4 border-t border-gray-100 bg-white flex justify-end gap-2"><button type="button" onClick={() => setShowAdd(false)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button><button type="button" onClick={() => void add()} disabled={busy || !name.trim()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Submitting…' : 'Submit'}</button></footer>
+      <footer className="sticky bottom-0 px-5 py-4 border-t border-gray-100 bg-white flex justify-end gap-2"><button type="button" onClick={() => setShowAdd(false)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button><button type="button" onClick={() => void add()} disabled={busy || !name.trim() || !frequency.trim()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Submitting…' : 'Submit'}</button></footer>
     </section></div>}
   </div>;
 }

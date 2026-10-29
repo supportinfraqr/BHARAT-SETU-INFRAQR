@@ -224,7 +224,9 @@ export default function ClraRegistersPage() {
   }
 
   function stageAddExtraForm() {
-    if (!board || !activeState || !efName.trim()) return;
+    if (!board || !activeState) return;
+    if (!efName.trim()) { setError('Enter a form name.'); return; }
+    if (!efFrequency.trim()) { setError('Select a frequency.'); return; }
     const name = efName.trim();
     const draft = stateDraft(board.state);
     const existing = new Set([
@@ -418,7 +420,7 @@ export default function ClraRegistersPage() {
       <header className="px-5 py-4 border-b border-bss-border flex items-center justify-between"><h2 className="text-sm font-semibold">Add form — {board.state}</h2><button onClick={() => setShowAddForm(false)} aria-label="Close"><X size={16}/></button></header>
       <div className="p-5 space-y-3">
         <label className="block text-xs font-semibold text-bss-text-primary">Form name *<input value={efName} onChange={e => setEfName(e.target.value)} autoFocus placeholder="e.g., Police Verification" className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm"/></label>
-        <label className="block text-xs font-semibold text-bss-text-primary">Frequency<select value={efFrequency} onChange={e => setEfFrequency(e.target.value)} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-2 text-sm bg-white"><option value="">—</option>{['Monthly', 'Quarterly', 'Half Yearly', 'Yearly', 'One-time'].map(f => <option key={f}>{f}</option>)}</select></label>
+        <label className="block text-xs font-semibold text-bss-text-primary">Frequency *<select value={efFrequency} onChange={e => setEfFrequency(e.target.value)} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-2 text-sm bg-white"><option value="">Select frequency</option>{['Monthly', 'Quarterly', 'Half Yearly', 'Yearly', 'One-time'].map(f => <option key={f}>{f}</option>)}</select></label>
         <label className="block text-xs font-semibold text-bss-text-primary">Required format<select value={efRequiresDocument ? 'upload' : 'submission'} onChange={e => setEfRequiresDocument(e.target.value === 'upload')} className="mt-1 w-full h-10 border border-bss-border rounded-lg px-2 text-sm bg-white"><option value="upload">PDF / JPEG / PNG (document upload)</option><option value="submission">Submission only (no file)</option></select></label>
         <label className="block text-xs font-semibold text-bss-text-primary">Note<input value={efDescription} onChange={e => setEfDescription(e.target.value)} placeholder="Optional guidance shown to contractors" className="mt-1 w-full h-10 border border-bss-border rounded-lg px-3 text-sm"/></label>
         <label className="flex items-center gap-2 text-xs font-semibold text-bss-text-primary"><input type="checkbox" checked={efMandatory} onChange={e => setEfMandatory(e.target.checked)} className="accent-[#01183A] w-4 h-4"/>Mandatory</label>
@@ -455,7 +457,7 @@ export default function ClraRegistersPage() {
         </div>}
         {error && <p className="text-xs text-bss-error">{error}</p>}
       </div>
-      <footer className="sticky bottom-0 px-5 py-4 border-t border-bss-border bg-white flex justify-end gap-2"><button type="button" onClick={() => setShowAddForm(false)} className="h-10 px-4 rounded-lg border border-bss-border text-xs font-bold text-bss-text-secondary">Cancel</button><button type="button" onClick={() => stageAddExtraForm()} disabled={!efName.trim()} className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-xs font-bold disabled:opacity-60">Add form</button></footer>
+      <footer className="sticky bottom-0 px-5 py-4 border-t border-bss-border bg-white flex justify-end gap-2"><button type="button" onClick={() => setShowAddForm(false)} className="h-10 px-4 rounded-lg border border-bss-border text-xs font-bold text-bss-text-secondary">Cancel</button><button type="button" onClick={() => stageAddExtraForm()} disabled={!efName.trim() || !efFrequency.trim()} className="h-10 px-4 rounded-lg bg-[#01183A] text-white text-xs font-bold disabled:opacity-60">Add form</button></footer>
     </section></div>}
   </div>;
 }

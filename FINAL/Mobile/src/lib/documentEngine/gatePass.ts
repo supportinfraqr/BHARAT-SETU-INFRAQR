@@ -120,7 +120,10 @@ export async function buildGatePassHtml(
   if (branding && (branding.companyName || branding.logoUrl || branding.header)) {
     template.styles.brandHeaderText = branding.companyName || template.styles.brandHeaderText;
     template.styles.brandLogoUrl = branding.logoUrl || template.styles.brandLogoUrl;
-    template.styles.brandTagline = branding.header || template.styles.brandTagline;
+    if (branding.header && (template.styles.brandTagline === undefined
+        || template.styles.brandTagline.trim() !== '')) {
+      template.styles.brandTagline = branding.header;
+    }
     template.styles.showBrandHeader = true;
     if (branding.logoUrl) template.styles.showLogo = true;
   }

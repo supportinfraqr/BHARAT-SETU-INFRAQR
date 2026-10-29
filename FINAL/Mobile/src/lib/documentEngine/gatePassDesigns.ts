@@ -87,7 +87,9 @@ export function renderGatePassDesign(_designId: number | undefined, v: GatePassV
   const nameColor = style.textColor || '#0b2545';
   const font = style.fontFamily || 'Arial,Helvetica,sans-serif';
   const brand = style.brandHeader || 'BHARAT SHRAM SETU';
-  const tagline = style.tagline || `${v.type} Gate Pass · One Nation · One ID · One Platform`;
+  const tagline = (style.tagline === undefined
+    ? `${v.type} Gate Pass · One Nation · One ID · One Platform`
+    : style.tagline).trim();
   const sColor = /expire|revok/i.test(v.status || '') ? '#b91c1c' : '#14843C';
   const fs = 12;
   const pairs = fieldPairs(v);
@@ -99,7 +101,7 @@ export function renderGatePassDesign(_designId: number | undefined, v: GatePassV
     <div style="position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 22px;border-bottom:1px solid #eef2f7">
       <div style="display:flex;align-items:center;gap:12px">
         ${logoBox(style, accent)}
-        <div><div style="font-size:16.5px;font-weight:800;letter-spacing:.4px">${brandWords(brand, style.brandColors, nameColor)}</div><div style="font-size:9px;color:#8494a6;text-transform:uppercase;letter-spacing:.16em;margin-top:2px">${esc(tagline)}</div></div>
+        <div><div style="font-size:16.5px;font-weight:800;letter-spacing:.4px">${brandWords(brand, style.brandColors, nameColor)}</div>${tagline ? `<div style="font-size:9px;color:#8494a6;text-transform:uppercase;letter-spacing:.16em;margin-top:2px">${esc(tagline)}</div>` : ''}</div>
       </div>
       <span style="display:inline-block;background:${accent};color:#fff;font-weight:900;font-size:11.5px;letter-spacing:.16em;padding:5px 13px;border-radius:999px;white-space:nowrap">${esc(v.type.toUpperCase())}</span>
     </div>
