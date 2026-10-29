@@ -39,6 +39,7 @@ export default function SecuritySettings() {
   const [mpinBusy, setMpinBusy] = useState(false);
   const [mpinNotice, setMpinNotice] = useState("");
   const [mpinError, setMpinError] = useState("");
+  const [mpinTerms, setMpinTerms] = useState(false);
 
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
@@ -50,11 +51,12 @@ export default function SecuritySettings() {
 
   const sendMpinOtp = async () => {
     setMpinError(""); setMpinNotice("");
+    if (!mpinTerms) return setMpinError("Accept the Terms & Privacy Policy to continue.");
     if (!/^\d{4,6}$/.test(mpin)) return setMpinError("MPIN must be 4-6 digits.");
     if (mpin !== mpinConfirm) return setMpinError("The two MPIN entries do not match.");
     setMpinBusy(true);
     try {
-      const result = await postJson("/api/auth/mpin", { action: "request-otp" });
+      const result = await postJson("/api/auth/mpin", { action: "request-otp", acceptedTerms: true });
       setMpinOtpSent(true);
       setMpinNotice(`OTP sent to ${result.mobile ?? "your mobile"}. Enter it below to confirm.`);
     } catch (reason) { setMpinError(reason instanceof Error ? reason.message : "OTP could not be sent."); }
@@ -63,12 +65,13 @@ export default function SecuritySettings() {
 
   const saveMpin = async () => {
     setMpinError(""); setMpinNotice("");
+    if (!mpinTerms) return setMpinError("Accept the Terms & Privacy Policy to continue.");
     if (!/^\d{4,6}$/.test(mpin)) return setMpinError("MPIN must be 4-6 digits.");
     if (mpin !== mpinConfirm) return setMpinError("The two MPIN entries do not match.");
     if (mpinOtp.length !== 6) return setMpinError("Enter the six-digit OTP sent to your mobile.");
     setMpinBusy(true);
     try {
-      await postJson("/api/auth/mpin", { action: "set", mpin, otp: mpinOtp });
+      await postJson("/api/auth/mpin", { action: "set", mpin, otp: mpinOtp, acceptedTerms: true });
       setMpinNotice("MPIN updated. Use your BSS ID / mobile with this MPIN to log in.");
       setMpin(""); setMpinConfirm(""); setMpinOtp(""); setMpinOtpSent(false);
     } catch (reason) { setMpinError(reason instanceof Error ? reason.message : "MPIN could not be saved."); }
@@ -122,6 +125,10 @@ export default function SecuritySettings() {
             onChange={(e) => { setMpinConfirm(e.target.value.replace(/\D/g, "").slice(0, 6)); setMpinError(""); }}
             placeholder="Re-enter MPIN" className={`${inputCls} disabled:bg-gray-50`} />
         </Field>
+        <label className="flex items-start gap-2 rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2.5 text-[11px] text-gray-600">
+          <input type="checkbox" checked={mpinTerms} onChange={e => { setMpinTerms(e.target.checked); setMpinError(""); }} className="mt-0.5 h-4 w-4 accent-[#073B67]" />
+          <span className="leading-snug">I agree to the <a href="/policy" target="_blank" rel="noreferrer" className="text-[#1E3A8A] hover:underline">Privacy Policy</a> and <a href="/terms" target="_blank" rel="noreferrer" className="text-[#1E3A8A] hover:underline">Terms &amp; Conditions</a>.</span>
+        </label>
         {mpinOtpSent && (
           <Field label="OTP">
             <input inputMode="numeric" maxLength={6} value={mpinOtp}
@@ -133,8 +140,8 @@ export default function SecuritySettings() {
         {mpinError && <p role="alert" className="text-[11px] text-red-600">{mpinError}</p>}
         {mpinNotice && <p role="status" className="text-[11px] text-green-700">{mpinNotice}</p>}
         {mpinOtpSent
-          ? <button onClick={() => void saveMpin()} disabled={mpinBusy} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-semibold disabled:opacity-60">{mpinBusy ? "Saving…" : "Verify & Set MPIN"}</button>
-          : <button onClick={() => void sendMpinOtp()} disabled={mpinBusy} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-semibold disabled:opacity-60">{mpinBusy ? "Sending…" : "Send OTP to set MPIN"}</button>}
+          ? <button onClick={() => void saveMpin()} disabled={mpinBusy || !mpinTerms} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-semibold disabled:opacity-60">{mpinBusy ? "Saving…" : "Verify & Set MPIN"}</button>
+          : <button onClick={() => void sendMpinOtp()} disabled={mpinBusy || !mpinTerms} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-semibold disabled:opacity-60">{mpinBusy ? "Sending…" : "Send OTP to set MPIN"}</button>}
       </section>
 
       <section className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
