@@ -7,8 +7,8 @@ from django.utils import timezone
 
 from api.v1_bridge.edge import _create_camera
 from api.v1_payloads.common import _site_is_mine
-from bss_core.models import (ContactMessage, ContractorEmployerBinding, EdgeCamera, Site,
-                             User, WorkerContractorBinding)
+from bss_core.models import (ContactMessage, ContractorEmployerBinding, EdgeCamera, EdgeDevice,
+                             Site, User, WorkerContractorBinding)
 
 
 class EdgeCameraLabelConstraintTests(TestCase):
@@ -188,3 +188,50 @@ class MySupportTicketsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         rows = response.json()["data"]
         self.assertEqual([row["reference"] for row in rows], ["BSS-OWN"])
+
+
+class EdgeDeviceReuseTests(TestCase):
+    def setUp(self):
+        from api.v1_bridge.edge import _create_edge_device
+        self.create_device = _create_edge_device
+        self.employer_a = User.objects.create_user(username="edge-a", role="employer")
+        self.employer_b = User.objects.create_user(username="edge-b", role="employer")
+        self.site = Site.objects.create(
+            employer=self.employer_a, bss_site_id="BSS-EDGE-A",
+            site_qr_token=uuid.uuid4().hex, site_name="Edge Site")
+
+    def test_active_device_for_another_employer_blocks_reuse(self):
+        EdgeDevice.objects.create(employer=self.employer_a, device_fingerprint="pc-1",
+                                  is_active=True)
+        with self.assertRaisesRegex(ValueError, "already activated for"):
+            self.create_device(self.employer_b, "9999999999", "pc-1", "PC", "1.5.15", "")
+
+    def test_inactive_device_does_not_block_another_employer(self):
+        EdgeDevice.objects.create(employer=self.employer_a, device_fingerprint="pc-2",
+                                  is_active=False)
+        device, token = self.create_device(
+            self.employer_b, "9999999999", "pc-2", "PC", "1.5.15", "")
+        self.assertEqual(device.employer_id, self.employer_b.id)
+        self.assertTrue(token)
+
+    def test_deactivate_releases_device_and_cameras(self):
+        import hashlib
+        from rest_framework.test import APIClient
+        raw = "edge-token-test"
+        device = EdgeDevice.objects.create(
+            employer=self.employer_a, device_fingerprint="pc-3",
+            token_hash=hashlib.sha256(raw.encode()).hexdigest(), is_active=True)
+        camera = EdgeCamera.objects.create(
+            site=self.site, device=device, label="cam", approval_status="APPROVED",
+            token_hash="camera-hash", is_claimed=True)
+        client = APIClient()
+        response = client.post("/v1/edge/deactivate", HTTP_X_EDGE_TOKEN=raw,
+                               data={}, format="json")
+        self.assertEqual(response.status_code, 200)
+        device.refresh_from_db()
+        camera.refresh_from_db()
+        self.assertFalse(device.is_active)
+        self.assertEqual(device.token_hash, "")
+        self.assertFalse(camera.is_claimed)
+        self.assertIsNone(camera.device_id)
+        self.assertEqual(camera.token_hash, "")

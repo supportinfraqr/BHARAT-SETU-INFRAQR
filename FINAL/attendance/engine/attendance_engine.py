@@ -36,7 +36,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.14"
+APP_VERSION = "1.5.15"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 PRESENCE_GAP_SECONDS = 10
@@ -1113,6 +1113,23 @@ class Engine:
             raise BssError(body.get("error") or "OTP verification failed.", response.status_code, body)
         return body.get("data") or {}
 
+    def deactivate(self):
+        """Release this PC on BSS. A revoked/already-invalid token is a no-op."""
+        if not self.token:
+            return {"ok": True, "alreadyInactive": True}
+        url = f"{self.bss}/v1/edge/deactivate"
+        try:
+            response = requests.post(url, headers=self._headers(), json={}, timeout=20)
+        except requests.RequestException as exc:
+            raise BssError(f"BSS is unreachable: {exc}") from exc
+        body = response.json() if response.content else {}
+        if response.status_code == 401:
+            return {"ok": True, "alreadyInactive": True}
+        if not response.ok:
+            raise BssError(body.get("error") or "Could not release this device.",
+                           response.status_code, body)
+        return body.get("data") or {"ok": True}
+
     def activate(self, activation_token, device_name):
         url = f"{self.bss}/v1/edge/activate/complete"
         payload = {
@@ -2078,7 +2095,9 @@ class Engine:
         except Exception:  # noqa: BLE001
             LOG.exception("Could not flush pending presence events during shutdown")
 
-    def logout(self):
+    def logout(self, force=False):
+        if not force:
+            self.deactivate()
         for worker in list(self.workers.values()):
             worker.stop()
         self._clear_gallery()
@@ -2471,7 +2490,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"data": ENGINE.set_worker_face_source(
                         unquote(parts[0]), body.get("source"))})
             if path == "/api/logout":
-                return self._json({"data": ENGINE.logout()})
+                return self._json({"data": ENGINE.logout(bool(body.get("force")))})
             return self._json({"error": "Not found."}, 404)
         except BssError as exc:
             payload = {"error": str(exc)}

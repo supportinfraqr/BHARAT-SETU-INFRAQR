@@ -569,9 +569,12 @@ def _employer_sites(owner):
 
 
 def _create_edge_device(owner, phone, fingerprint, name, version, ip):
-    existing = EdgeDevice.objects.filter(device_fingerprint=fingerprint).first()
+    existing = (EdgeDevice.objects.filter(device_fingerprint=fingerprint, is_active=True)
+                .select_related("employer").first())
     if existing is not None and existing.employer_id != owner.id:
-        raise ValueError("This device is already activated for another employer.")
+        raise ValueError(
+            f"This PC is already activated for {_employer_name(existing.employer)}. "
+            "Sign out from that client or ask that employer to revoke it first.")
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
     with transaction.atomic():
@@ -589,6 +592,28 @@ def _create_edge_device(owner, phone, fingerprint, name, version, ip):
             },
         )
     return device, raw_token
+
+
+def _deactivate_edge_device(device, status_text="Device signed out"):
+    device.cameras.update(token_hash="", token_prefix="", is_claimed=False,
+                          claimed_at=None, device=None, last_mode="OFFLINE",
+                          last_status=status_text)
+    device.is_active = False
+    device.token_hash = ""
+    device.save(update_fields=["is_active", "token_hash", "updated_at"])
+
+
+@api_view(["POST"])
+@authentication_classes([EdgeTokenAuthentication])
+@permission_classes([IsAuthenticated])
+def edge_deactivate(request):
+    """Release this client so the same PC can be activated by another employer."""
+    device = _edge_device(request)
+    if device is None:
+        return Response({"error": "Invalid edge device."}, status=status.HTTP_401_UNAUTHORIZED)
+    _deactivate_edge_device(device)
+    return Response({"data": {"ok": True, "deviceId": str(device.id)}},
+                    status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
@@ -1695,12 +1720,7 @@ def employer_edge_device_revoke(request, device_id):
     device = EdgeDevice.objects.filter(pk=device_id, employer=request.user).first()
     if device is None:
         return Response({"error": "Device not found."}, status=status.HTTP_404_NOT_FOUND)
-    device.is_active = False
-    device.token_hash = ""
-    device.save(update_fields=["is_active", "token_hash", "updated_at"])
-    device.cameras.update(token_hash="", token_prefix="", is_claimed=False,
-                          claimed_at=None, device=None, last_mode="OFFLINE",
-                          last_status="Device revoked")
+    _deactivate_edge_device(device, "Device revoked")
     return Response({"data": {"deviceId": str(device.id), "active": False}}, status=status.HTTP_200_OK)
 
 
@@ -1710,6 +1730,7 @@ __all__ = [
     "edge_activate_request_otp",
     "edge_activate_verify_otp",
     "edge_activate_complete",
+    "edge_deactivate",
     "edge_activate_verify",
     "edge_config",
     "edge_face_gallery",

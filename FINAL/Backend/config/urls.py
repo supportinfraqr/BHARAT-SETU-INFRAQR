@@ -41,6 +41,7 @@ _v1_patterns = _v1(
     ("edge/activate/verify", v1_bridge.edge_activate_verify, "v1_edge_activate_verify"),
     ("edge/activate/verify-otp", v1_bridge.edge_activate_verify_otp, "v1_edge_activate_verify_otp"),
     ("edge/activate/complete", v1_bridge.edge_activate_complete, "v1_edge_activate_complete"),
+    ("edge/deactivate", v1_bridge.edge_deactivate, "v1_edge_deactivate"),
     ("edge/config", v1_bridge.edge_config, "v1_edge_config"),
     ("edge/face-gallery", v1_bridge.edge_face_gallery, "v1_edge_face_gallery"),
     ("edge/workers/<str:bss_worker_id>/face-source", v1_bridge.edge_worker_face_source, "v1_edge_worker_face_source"),

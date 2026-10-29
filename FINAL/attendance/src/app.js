@@ -1622,14 +1622,30 @@ qs('stopEngineBtn').onclick = async () => {
 };
 qs('logoutBtn').onclick = async () => {
   const confirmed = await showDialog({
-    title: 'Sign out this client?',
-    body: 'Attendance will stop and this device will show offline. Camera setup stays saved locally.',
+    title: 'Sign out and release this PC?',
+    body: 'Attendance will stop, this PC will be released from the current employer, and its camera claims will be removed. You can then activate it with another employer phone.',
     confirmLabel: 'Sign out',
     danger: true,
   });
   if (!confirmed) return;
-  try { state = await api('/api/logout', { method: 'POST', body: '{}' }); renderUpdateBanner(null); render(); }
-  catch (error) { await showAlert('Could not sign out', error.message); }
+  try {
+    state = await api('/api/logout', { method: 'POST', body: JSON.stringify({ force: false }) });
+    renderUpdateBanner(null); render();
+  } catch (error) {
+    const force = await showDialog({
+      title: 'Could not release this PC',
+      body: `${error.message}\n\nClear the local activation anyway? The old employer may still see this PC as active until they revoke it.`,
+      confirmLabel: 'Clear locally',
+      danger: true,
+    });
+    if (!force) return;
+    try {
+      state = await api('/api/logout', { method: 'POST', body: JSON.stringify({ force: true }) });
+      renderUpdateBanner(null); render();
+    } catch (forceError) {
+      await showAlert('Could not clear this PC', forceError.message);
+    }
+  }
 };
 
 void loadAppVersion().then(() => {
