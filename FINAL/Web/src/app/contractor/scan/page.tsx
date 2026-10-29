@@ -106,15 +106,18 @@ export default function ContractorScanPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- reset selection on site change
   useEffect(() => { setCostSheetId(''); }, [selectedSite]);
 
+  // Only an ACCEPTED binding may mark attendance. Pending workers also appear
+  // in contractor.workers, so checking list membership alone is not enough.
+  const acceptedWorker = entity?.kind === 'worker'
+    ? contractor.workers.find(w => w.bssId === entity.bssId && w.status === 'Accepted')
+    : undefined;
   // The already-bound worker's live binding — used to show its cost sheet.
   const boundWorker = entity?.kind === 'worker'
-    ? contractor.bindingRequests.find(b => b.type === 'Worker' && b.bssId === entity.bssId && (b.status === 'Accepted' || b.status === 'Pending'))
+    ? contractor.bindingRequests.find(b => b.type === 'Worker' && b.bssId === entity.bssId && b.status === 'Accepted')
     : undefined;
-  const isBoundWorker = entity?.kind === 'worker'
-    ? contractor.workers.some(w => w.bssId === entity.bssId)
-    : false;
+  const isBoundWorker = Boolean(acceptedWorker);
   const relationshipLabel = entity
-    ? contractor.workers.some(w => w.bssId === entity.bssId)
+    ? acceptedWorker
       ? 'Already bound'
       : alreadyPending
         ? 'Binding request pending'
