@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Banknote, BookOpenCheck, ChevronDown, LifeBuoy, Link2, Menu, Users, X } from 'lucide-react';
+import { Banknote, BookOpenCheck, ChevronDown, Link2, Menu, Users, X } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import BrandText from '@/components/BrandText';
@@ -41,6 +41,7 @@ const accessGroup = { key: 'Users & Access', icon: Users, items: [
   ['Identity Verifications', '/admin/verifications'],
   ['GST Claims', '/admin/gst-claims'],
   ['Users & Accounts', '/admin/accounts'],
+  ['Support Tickets', '/admin/support-tickets'],
 ] as const };
 const auditOpsGroup = { key: 'Audit & Reports', icon: BookOpenCheck, items: [
   ['Courses & Skills', '/admin/courses'],
@@ -49,9 +50,6 @@ const auditOpsGroup = { key: 'Audit & Reports', icon: BookOpenCheck, items: [
   ['Attendance Camera Limits', '/admin/cctv'],
   ['Translation', '/admin/translation-settings'],
 ] as const };
-const supportGroup = { key: 'Support', icon: LifeBuoy, items: [
-  ['Support Tickets', '/admin/support-tickets'],
-] as const };
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -59,7 +57,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const [profile, setProfile] = useState(false);
   const pathname = usePathname();
   const { t } = useLanguage();
-  const groups = [wageCostGroup, clraGroup, partyGroup, mappingsGroup, accessGroup, auditOpsGroup, supportGroup];
+  const groups = [wageCostGroup, clraGroup, partyGroup, mappingsGroup, accessGroup, auditOpsGroup];
   const flat = groups.reduce<Array<readonly [string, string]>>((acc, g) => acc.concat(g.items as unknown as readonly [string, string][]), []);
 
   const itemActive = (href: string) => pathname === href || pathname.startsWith(href + '/');

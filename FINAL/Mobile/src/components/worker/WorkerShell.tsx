@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Briefcase, CheckSquare, ChevronDown, FileText, Handshake, Home, Menu, MessageSquareText, ScanLine, Settings, UserRound, X } from 'lucide-react';
+import { Briefcase, CheckSquare, ChevronDown, FileText, Handshake, Home, Menu, MessageSquareText, ScanLine, Settings, TicketCheck, UserRound, X } from 'lucide-react';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import BrandText from '@/components/BrandText';
 import NotificationBell from '@/components/worker/NotificationBell';
@@ -124,7 +124,7 @@ export default function WorkerShell({ children }: { children:React.ReactNode }) 
                 <UserRound size={18} className="text-bss-text-secondary" />
               )}
             </button>
-            {profile&&<div role="menu" className="absolute top-full right-0 mt-2 w-52 bg-white rounded-xl shadow-xl shadow-gray-900/5 border border-bss-border overflow-hidden z-50"><div className="px-4 py-3 border-b bg-bss-bg/70"><p className="text-sm font-semibold">{worker.identity.name}</p><p className="text-[11px] text-bss-text-muted">{worker.identity.bssId}</p></div><div className="p-1.5"><Link href="/worker/Profile" className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-[13px] rounded-lg hover:bg-bss-bg"><UserRound size={16}/>{t('nav.profile')}</Link><Link href="/worker/Settings" className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-[13px] rounded-lg hover:bg-bss-bg"><Settings size={16}/>{t('nav.settings')}</Link><SignOutButton className="w-full flex items-center gap-2 px-3 py-2.5 text-[13px] text-bss-error rounded-lg hover:bg-bss-soft-orange"/></div></div>}
+            {profile&&<div role="menu" className="absolute top-full right-0 mt-2 w-52 bg-white rounded-xl shadow-xl shadow-gray-900/5 border border-bss-border overflow-hidden z-50"><div className="px-4 py-3 border-b bg-bss-bg/70"><p className="text-sm font-semibold">{worker.identity.name}</p><p className="text-[11px] text-bss-text-muted">{worker.identity.bssId}</p></div><div className="p-1.5"><Link href="/worker/Profile" className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-[13px] rounded-lg hover:bg-bss-bg"><UserRound size={16}/>{t('nav.profile')}</Link><Link href="/worker/tickets" className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-[13px] rounded-lg hover:bg-bss-bg"><TicketCheck size={16}/>My Tickets</Link><Link href="/worker/Settings" className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-[13px] rounded-lg hover:bg-bss-bg"><Settings size={16}/>{t('nav.settings')}</Link><SignOutButton className="w-full flex items-center gap-2 px-3 py-2.5 text-[13px] text-bss-error rounded-lg hover:bg-bss-soft-orange"/></div></div>}
           </div>
           <button type="button" className="cursor-pointer bss-mobile-trigger" aria-label={t('nav.menu')} aria-expanded={mobile} onClick={()=>setMobile(value=>!value)}>{mobile?<X/>:<Menu/>}</button>
         </div>

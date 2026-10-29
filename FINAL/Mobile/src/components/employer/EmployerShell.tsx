@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ClipboardCheck, FileSpreadsheet, FileText, LayoutDashboard, LifeBuoy, Menu, Network, Settings, ShieldCheck, ScanLine, X, Banknote, Calculator, Stethoscope, HardHat, UserCog } from 'lucide-react';
+import { ChevronDown, ClipboardCheck, FileSpreadsheet, FileText, LayoutDashboard, LifeBuoy, Menu, Network, Settings, ShieldCheck, ScanLine, TicketCheck, X, Banknote, Calculator, Stethoscope, HardHat, UserCog } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import BrandText from '@/components/BrandText';
@@ -129,6 +129,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
               <Link href="/employer/templates" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><FileText size={16}/>{t('nav.templates')}</Link>
               <Link href="/employer/settings" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><Settings size={16}/>{t('nav.settings')}</Link>
               </>}
+              <Link href="/employer/tickets" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><TicketCheck size={16}/>My Tickets</Link>
               <Link href="/employer/contact" onClick={() => setProfile(false)} className="flex items-center gap-2 px-3 py-2.5 text-sm rounded-lg hover:bg-bss-bg"><LifeBuoy size={16}/>Contact BSS Support</Link>
               <SignOutButton className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-bss-error rounded-lg hover:bg-bss-soft-orange"/>
             </div>}
@@ -141,6 +142,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
         {!isStaff && <Link href="/employer/profile" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t('nav.profile')}</Link>}
         {!isStaff && <Link href="/employer/templates" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t('nav.templates')}</Link>}
         {!isStaff && <Link href="/employer/settings" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">{t('nav.settings')}</Link>}
+        <Link href="/employer/tickets" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">My Tickets</Link>
         <Link href="/employer/contact" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-bss-bg">Contact BSS Support</Link>
         <SignOutButton className="w-full flex items-center gap-2 px-4 py-3 text-bss-error"/>
       </nav>}

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, ChevronLeft, Clock3, FileText, LifeBuoy, Loader2, Mail, MessageSquareWarning, Phone, Send, ShieldCheck, UserRound } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, Clock3, FileText, LifeBuoy, Loader2, Mail, MessageSquareWarning, Phone, Send, ShieldCheck, TicketCheck, UserRound } from 'lucide-react';
 
 type Role = 'worker' | 'contractor' | 'employer';
 
@@ -36,6 +36,7 @@ const input = 'w-full h-11 rounded-xl border border-bss-border bg-white px-3 tex
 const label = 'block text-[11px] font-bold uppercase tracking-wider text-bss-text-muted mb-1.5';
 
 export default function ContactBssForm({ role, backHref, defaultName = '', defaultBssId = '', defaultEmail = '', defaultPhone = '' }: Props) {
+  const ticketsHref = `/${role}/tickets`;
   const [form, setForm] = useState({
     name: defaultName,
     bssId: defaultBssId,
@@ -91,6 +92,9 @@ export default function ContactBssForm({ role, backHref, defaultName = '', defau
             <button type="button" onClick={() => { setSent(null); setForm({ name: defaultName, bssId: defaultBssId, email: defaultEmail, phone: defaultPhone, category: 'other', subject: '', message: '' }); }} className="h-11 rounded-xl border border-bss-border bg-white px-5 text-sm font-bold text-bss-text-primary hover:bg-bss-bg">
               Raise another message
             </button>
+            <Link href={ticketsHref} className="h-11 inline-flex items-center justify-center gap-1.5 rounded-xl border border-bss-border bg-white px-5 text-sm font-bold text-bss-text-primary hover:bg-bss-bg">
+              <TicketCheck size={15}/>View my tickets
+            </Link>
             <Link href={backHref} className="h-11 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#01183A] px-5 text-sm font-bold text-white hover:bg-[#022B5E]">
               <ChevronLeft size={15}/>Back to dashboard
             </Link>
@@ -113,6 +117,7 @@ export default function ContactBssForm({ role, backHref, defaultName = '', defau
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-bold">Submitting as {ROLE_LABEL[role]}</span>
+            <Link href={ticketsHref} className="inline-flex items-center gap-1 rounded-xl bg-white/10 border border-white/20 px-3.5 py-2 text-xs font-bold text-white hover:bg-white/20"><TicketCheck size={14}/>My Tickets</Link>
             <Link href={backHref} className="inline-flex items-center gap-1 rounded-xl bg-white px-3.5 py-2 text-xs font-bold text-bss-navy hover:bg-white/90"><ChevronLeft size={14}/>Back</Link>
           </div>
         </div>
