@@ -578,6 +578,35 @@ def enroll_status():
     return jsonify(person=person, enrolled=enrolled)
 
 
+@app.get("/enroll/vectors")
+def enroll_vectors():
+    """Export a person's enrolled vectors so BSS can mirror them for edge clients."""
+    if not _authorized():
+        return jsonify(error="unauthorized"), 401
+    import base64
+
+    person = str(request.args.get("person") or "").strip()
+    if not person:
+        return jsonify(error="person is required"), 400
+    cfg = _load_config()
+    face_cfg = cfg.get("face", {}) or {}
+    model = str(face_cfg.get("recognition_model") or "ArcFace")
+    detector = str(face_cfg.get("detector_backend") or "retinaface")
+    db = _db()
+    row = db.get_person_by_name(person)
+    if row is None:
+        return jsonify(error="not_enrolled", person=person, enrolled=0, embeddings=[]), 404
+    vectors = db.load_person_embeddings(row[0], model)
+    return jsonify(
+        person=person,
+        model=model,
+        detector=detector,
+        enrolled=len(vectors),
+        embeddings=[base64.b64encode(v.astype("float32").tobytes()).decode("ascii")
+                    for v in vectors],
+    )
+
+
 def _best_face(engine, frame):
     """Largest detected face in a frame (or None)."""
     observations = engine.recognize_frame(frame)

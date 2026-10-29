@@ -250,6 +250,15 @@ class Database:
             for pid, name, blob in rows
         ]
 
+    def load_person_embeddings(self, person_id: int, model_name: str) -> List[np.ndarray]:
+        """Ordered vectors for one person — used to mirror self-enrolment into BSS."""
+        rows = self.conn.execute(
+            """SELECT embedding FROM face_embeddings
+               WHERE person_id = %s AND model_name = %s ORDER BY id""",
+            (person_id, model_name),
+        ).fetchall()
+        return [np.frombuffer(bytes(blob), dtype=np.float32) for (blob,) in rows]
+
     def count_embeddings(self, person_id: int, model_name: Optional[str] = None) -> int:
         """Number of stored face vectors for a person (all models, or one)."""
         if model_name:

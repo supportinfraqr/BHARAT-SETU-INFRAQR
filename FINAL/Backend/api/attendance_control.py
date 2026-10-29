@@ -156,6 +156,11 @@ def enroll_status(person):
     return _request("GET", "/enroll/status", params={"person": str(person)}, timeout=15)
 
 
+def enroll_vectors(person):
+    """Export a person's enrolled vectors from the controller gallery."""
+    return _request("GET", "/enroll/vectors", params={"person": str(person)}, timeout=30)
+
+
 def recognize_frame(site_key, image):
     """Send one browser-captured frame (base64 jpeg) for recognition."""
     return _request("POST", "/frame", {"site": str(site_key), "image": image}, timeout=30)

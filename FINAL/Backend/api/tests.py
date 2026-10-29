@@ -278,3 +278,47 @@ class AdditionalFormFrequencyTests(TestCase):
         }, format="json")
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()["data"]["frequency"], "Yearly")
+
+
+class FaceVectorSyncTests(TestCase):
+    def setUp(self):
+        import base64
+        import numpy as np
+        from unittest.mock import patch
+        from bss_core.models import WorkerFacePhoto, WorkerIdentity
+        self.worker = User.objects.create_user(username="face-sync-worker", role="worker")
+        self.identity = WorkerIdentity.objects.create(
+            user=self.worker, bss_worker_id="BSSW-SYNC-TEST")
+        self.photos = [
+            WorkerFacePhoto.objects.create(user=self.worker, person="BSSW-SYNC-TEST",
+                                           slot=slot, path="")
+            for slot in range(1, 6)
+        ]
+        vector = np.arange(512, dtype=np.float32)
+        vector /= np.linalg.norm(vector)
+        self.payload = {
+            "model": "ArcFace", "detector": "retinaface",
+            "embeddings": [base64.b64encode(vector.tobytes()).decode("ascii")] * 5,
+        }
+        patcher = patch("api.face_vectors.control.enroll_vectors", return_value=self.payload)
+        self.enroll_vectors = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_self_vectors_are_stored_and_linked_to_photos(self):
+        from api.face_vectors import sync_self_vectors
+        from bss_core.models import WorkerFaceEmbedding
+        count = sync_self_vectors(self.identity, self.photos)
+        self.assertEqual(count, 5)
+        rows = WorkerFaceEmbedding.objects.filter(worker=self.worker, source="WORKER_SELF")
+        self.assertEqual(rows.count(), 5)
+        self.assertEqual({row.slot for row in rows}, {1, 2, 3, 4, 5})
+        self.assertTrue(all(row.photo_id for row in rows))
+        self.assertEqual(self.identity.face_match_source, "SELF")
+
+    def test_manual_preference_is_not_overwritten(self):
+        from api.face_vectors import sync_self_vectors
+        self.identity.face_match_source = "MANUAL"
+        self.identity.save(update_fields=["face_match_source"])
+        sync_self_vectors(self.identity, self.photos)
+        self.identity.refresh_from_db()
+        self.assertEqual(self.identity.face_match_source, "MANUAL")

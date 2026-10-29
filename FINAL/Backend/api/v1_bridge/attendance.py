@@ -507,6 +507,22 @@ def worker_face_enroll(request):
     except control.AttendanceControlError as exc:
         return Response({"error": str(exc), "saved": saved}, status=exc.status_code)
 
+    # Mirror the controller's vectors into BSS so the edge camera client (which
+    # reads WorkerFaceEmbedding, not the controller gallery) can match this worker.
+    try:
+        from ..face_vectors import sync_self_vectors
+        vectors_stored = sync_self_vectors(identity, created_photos)
+    except Exception as exc:  # noqa: BLE001
+        return Response({
+            "error": "Face photos were saved, but the face vectors could not be synced to BSS. Please retry.",
+            "saved": saved,
+        }, status=status.HTTP_502_BAD_GATEWAY)
+    if result.get("added") and not vectors_stored:
+        return Response({
+            "error": "Face photos were saved, but no vectors were returned by the attendance engine. Please retry.",
+            "saved": saved,
+        }, status=status.HTTP_502_BAD_GATEWAY)
+
     # Compute the Aadhaar face match ONCE, here at upload, and store it on each
     # photo — it is final and never recomputed (no refresh-time engine calls).
     matches = []
@@ -534,6 +550,7 @@ def worker_face_enroll(request):
         "person": person,
         "saved": saved,
         "enrolled": result.get("added", 0),
+        "vectorsStored": vectors_stored,
         "results": results,
         "matches": matches,
     }}, status=status.HTTP_200_OK)
