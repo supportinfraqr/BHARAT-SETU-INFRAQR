@@ -36,7 +36,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.15"
+APP_VERSION = "1.5.16"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 PRESENCE_GAP_SECONDS = 10
@@ -176,24 +176,47 @@ class Store:
 
 class ResourceGate:
     def __init__(self, limit=2):
-        self.lock = threading.Lock()
+        self.lock = threading.Condition()
         self.limit = max(1, int(limit))
         self.active = 0
+        self.reserved = 0
 
     def set_limit(self, limit):
         with self.lock:
             self.limit = max(1, int(limit))
+            self.lock.notify_all()
 
-    def acquire(self):
+    def begin_interactive(self):
+        """Reserve capacity for a manual preview/capture request."""
         with self.lock:
-            if self.active >= self.limit:
-                return False
+            self.reserved += 1
+            self.lock.notify_all()
+
+    def end_interactive(self):
+        with self.lock:
+            self.reserved = max(0, self.reserved - 1)
+            self.lock.notify_all()
+
+    def acquire(self, timeout=None, interactive=False):
+        deadline = None if timeout is None else time.monotonic() + max(0.0, float(timeout))
+        capacity = self.limit + (self.reserved if interactive else 0)
+        with self.lock:
+            while self.active >= capacity:
+                if deadline is None:
+                    self.lock.wait()
+                    continue
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return False
+                self.lock.wait(remaining)
+                capacity = self.limit + (self.reserved if interactive else 0)
             self.active += 1
             return True
 
     def release(self):
         with self.lock:
             self.active = max(0, self.active - 1)
+            self.lock.notify_all()
 
 
 class LocalEventStore:
@@ -929,8 +952,21 @@ class CameraWorker:
         self._set_face_boxes(boxes)
         return detections
 
-    def manual_detections(self):
-        """Return the latest frame and all detected faces for manual enrollment."""
+    def _detect_faces_only(self, frame):
+        """Detect quality faces without generating ArcFace embeddings."""
+        self.engine.configure_gpu()
+        if getattr(self.engine, "_gpu_state", "") == "initializing":
+            return []
+        backend = self.engine.face_backend
+        if backend is not None and backend.ready:
+            faces = backend.detect_faces(frame)
+            detections = [(None, list(box)) for _prepared, box in faces]
+            self._set_face_boxes([box for _embedding, box in detections])
+            return detections
+        return self._recognise(frame)
+
+    def manual_detections(self, detect_only=False):
+        """Return the latest frame and detected faces for manual enrollment."""
         if not self.rtsp:
             raise ValueError("This camera has no RTSP stream.")
         if not self._running:
@@ -943,10 +979,11 @@ class CameraWorker:
             time.sleep(0.15)
         else:
             raise ValueError("Waiting for the camera frame. Check the RTSP stream.")
-        if not self.engine.gate.acquire():
-            raise ValueError("The face engine is busy. Try again in a moment.")
+        if not self.engine.gate.acquire(timeout=5.0, interactive=True):
+            raise ValueError("Camera preview is waiting for the face engine. Retrying…")
         try:
-            return frame, self._recognise(frame)
+            detections = self._detect_faces_only(frame) if detect_only else self._recognise(frame)
+            return frame, detections
         finally:
             self.engine.gate.release()
 
@@ -1773,6 +1810,13 @@ class Engine:
         except Exception:  # noqa: BLE001 - warning is advisory
             return None
 
+    def _drop_manual_capture(self, capture_id):
+        with self._manual_capture_lock:
+            pending = self._manual_captures.pop(str(capture_id), None)
+        if pending and pending.get("interactive"):
+            self.gate.end_interactive()
+        return pending
+
     def start_manual_enrollment(self, camera_id, bss_worker_id):
         worker, camera = self._manual_camera_worker(camera_id)
         bss_worker_id = str(bss_worker_id or "").strip().upper()
@@ -1780,22 +1824,29 @@ class Engine:
             raise ValueError("Select a worker.")
         capture_id = uuid.uuid4().hex
         now = _now()
+        expired = []
         with self._manual_capture_lock:
             cutoff = time.time() - 900
-            for key in [key for key, value in self._manual_captures.items()
-                        if value.get("createdTs", 0) < cutoff]:
-                self._manual_captures.pop(key, None)
+            for key, value in list(self._manual_captures.items()):
+                if (value.get("createdTs", 0) < cutoff
+                        or value.get("cameraId") == int(camera_id)):
+                    expired.append(self._manual_captures.pop(key, None))
             self._manual_captures[capture_id] = {
                 "cameraId": int(camera_id), "bssWorkerId": bss_worker_id,
                 "slots": [None] * MANUAL_ENROLL_FRAMES,
                 "startedAt": now.isoformat(), "createdTs": time.time(),
+                "interactive": True,
             }
+        for pending in expired:
+            if pending and pending.get("interactive"):
+                self.gate.end_interactive()
+        self.gate.begin_interactive()
         return {"captureId": capture_id, "bssWorkerId": bss_worker_id,
                 "slots": MANUAL_ENROLL_FRAMES}
 
     def manual_enrollment_preview(self, camera_id):
         worker, camera = self._manual_camera_worker(camera_id)
-        frame, detections = worker.manual_detections()
+        frame, detections = worker.manual_detections(detect_only=True)
         count = len(detections)
         color = (40, 170, 80) if count == 1 else ((40, 40, 220) if count > 1 else (140, 140, 140))
         label = f"{count} person" + ("" if count == 1 else "s")
@@ -1892,8 +1943,7 @@ class Engine:
             if exc.status_code == 409 and exc.body.get("requiresConfirmation"):
                 return {"requiresConfirmation": True, **exc.body}
             raise
-        with self._manual_capture_lock:
-            self._manual_captures.pop(str(capture_id), None)
+        self._drop_manual_capture(capture_id)
         data = body.get("data") or {}
         try:
             self.sync_gallery()
@@ -1904,8 +1954,9 @@ class Engine:
     def cancel_manual_enrollment(self, camera_id, capture_id):
         with self._manual_capture_lock:
             pending = self._manual_captures.get(str(capture_id))
-            if pending is not None and pending.get("cameraId") == int(camera_id):
-                self._manual_captures.pop(str(capture_id), None)
+            if pending is None or pending.get("cameraId") != int(camera_id):
+                return {"cancelled": True}
+        self._drop_manual_capture(capture_id)
         return {"cancelled": True}
 
     def set_worker_face_source(self, bss_worker_id, source):

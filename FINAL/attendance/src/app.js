@@ -999,6 +999,7 @@ function openManualEnrollment(workerId) {
   let captureId = '';
   let previewTimer = null;
   let busy = false;
+  let previewBusy = false;
   let faceCount = 0;
   let faceReady = false;
   let slots = Array(1).fill(null);
@@ -1082,6 +1083,8 @@ function openManualEnrollment(workerId) {
     renderSlots();
   };
   const refreshPreview = async () => {
+    if (previewBusy || busy) return;
+    previewBusy = true;
     try {
       const result = await api(`/api/cameras/${cameraId}/manual-enroll/preview`);
       preview.src = result.image;
@@ -1094,6 +1097,8 @@ function openManualEnrollment(workerId) {
       msg.textContent = error.message || String(error);
       msg.style.color = '#C2410C';
       renderSlots();
+    } finally {
+      previewBusy = false;
     }
   };
   const startSession = async () => {
@@ -1195,7 +1200,7 @@ function openManualEnrollment(workerId) {
       setBusy(false);
     }
   };
-  previewTimer = setInterval(() => void refreshPreview(), 1000);
+  previewTimer = setInterval(() => void refreshPreview(), 1500);
   captureBtn.addEventListener('click', () => void takePhoto());
   confirmBtn.addEventListener('click', () => void confirm());
   backdrop.querySelector('#manualEnrollCancel').addEventListener('click', () => close(true));

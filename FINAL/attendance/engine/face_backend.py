@@ -238,7 +238,8 @@ class OnnxFaceBackend:
             }
         return result
 
-    def recognise(self, frame):
+    def detect_faces(self, frame):
+        """Detect and align faces without running ArcFace embeddings."""
         if not self.ready:
             return []
         from deepface.modules import detection, preprocessing
@@ -281,7 +282,9 @@ class OnnxFaceBackend:
             crop = face.img.astype(np.float32) / 255.0
             prepared = preprocessing.resize_image(crop, (112, 112))
             faces.append((prepared, [x, y, w, h]))
+        return faces
 
+    def embed_faces(self, faces):
         if not faces:
             return []
         batch = np.concatenate([item[0] for item in faces], axis=0).astype(np.float32, copy=False)
@@ -293,6 +296,9 @@ class OnnxFaceBackend:
                 continue
             result.append((embedding, box))
         return result
+
+    def recognise(self, frame):
+        return self.embed_faces(self.detect_faces(frame))
 
     def status(self):
         return {
