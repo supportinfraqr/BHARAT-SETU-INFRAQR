@@ -355,6 +355,8 @@ function openLiveView(camera) {
   let timer = null;
   let objectUrl = '';
   let closed = false;
+  let tickBusy = false;
+  let tickController = null;
   const image = backdrop.querySelector('[data-live-image]');
   const empty = backdrop.querySelector('[data-live-empty]');
   const status = backdrop.querySelector('[data-live-status]');
@@ -363,6 +365,7 @@ function openLiveView(camera) {
     if (closed) return;
     closed = true;
     if (timer) clearTimeout(timer);
+    if (tickController) tickController.abort();
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     document.removeEventListener('keydown', onKey);
     backdrop.remove();
@@ -373,11 +376,18 @@ function openLiveView(camera) {
   document.addEventListener('keydown', onKey);
   document.body.appendChild(backdrop);
   const tick = async () => {
-    if (closed) return;
+    if (closed || tickBusy) return;
+    tickBusy = true;
+    const controller = new AbortController();
+    tickController = controller;
+    const timeout = setTimeout(() => controller.abort(), 5000);
     try {
-      const response = await fetch(`${BASE}/snapshot/${id}?t=${Date.now()}`, { cache: 'no-store' });
-      if (!response.ok) throw new Error(response.status === 503 ? 'Waiting for the first camera frame…' : `Camera preview failed (${response.status}).`);
-      const blob = await response.blob();
+      const [imageResponse, detectionResponse] = await Promise.all([
+        fetch(`${BASE}/snapshot/${id}?t=${Date.now()}&w=960`, { cache: 'no-store', signal: controller.signal }),
+        fetch(`${BASE}/api/detections/${id}?t=${Date.now()}`, { cache: 'no-store', signal: controller.signal }).catch(() => null),
+      ]);
+      if (!imageResponse.ok) throw new Error(imageResponse.status === 503 ? 'Waiting for the first camera frame…' : `Camera preview failed (${imageResponse.status}).`);
+      const blob = await imageResponse.blob();
       if (closed) return;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(blob);
@@ -385,16 +395,20 @@ function openLiveView(camera) {
       image.style.display = 'block';
       empty.style.display = 'none';
       status.textContent = '';
-      try {
-        const detectionResponse = await fetch(`${BASE}/api/detections/${id}?t=${Date.now()}`, { cache: 'no-store' });
-        if (detectionResponse.ok) renderLiveDetections(detections, (await detectionResponse.json()).data || []);
-      } catch { /* keep the image running even if detection metadata fails */ }
+      if (detectionResponse?.ok) {
+        try { renderLiveDetections(detections, (await detectionResponse.json()).data || []); }
+        catch { /* keep the image running if detection metadata is malformed */ }
+      }
     } catch (error) {
+      if (closed) return;
       image.style.display = 'none';
       empty.style.display = 'grid';
-      empty.textContent = error.message;
+      empty.textContent = error.name === 'AbortError' ? 'Camera preview is taking too long…' : error.message;
       status.textContent = 'Retrying automatically…';
     } finally {
+      clearTimeout(timeout);
+      if (tickController === controller) tickController = null;
+      tickBusy = false;
       if (!closed) timer = setTimeout(tick, 800);
     }
   };
@@ -565,6 +579,7 @@ function gpuBadge(gpu) {
 
 function resourceLiveHtml(resources) {
   const detected = resources?.detected || {};
+  const settings = resources?.settings || {};
   const allocation = resources?.allocation || {};
   const engine = resources?.engine || {};
   const workload = resources?.workload || {};
@@ -646,6 +661,7 @@ function resourceLiveHtml(resources) {
       <div class="res-list">
         <div><span>CPU</span><b>${esc(allocatedCores)}</b></div>
         <div><span>AI workers</span><b>${esc(String(allocation.maxCameraWorkers ?? '—'))}</b></div>
+        <div><span>AI frame interval</span><b>${esc(settings.aiInterval == null ? '—' : `${Number(settings.aiInterval).toFixed(1)}s`)}</b></div>
         <div><span>GPU memory target</span><b>${gpuLimit ? esc(resourceMb(gpuLimit)) : 'No target'}</b></div>
         <div><span>RAM</span><b>No cap</b></div>
         <div><span>Disk</span><b>No cap</b></div>
@@ -967,6 +983,7 @@ function resourceCard(resources) {
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;align-items:end">
       <div><label>CPU cores to use<input id="resourceCores" type="number" min="0" max="${cores}" value="${esc(settings.cpuCores ?? 0)}" /><span class="note">0 = Automatic — uses all ${esc(cores)} available cores</span></label></div>
       <div><label>Cameras processed at once<input id="resourceWorkers" type="number" min="1" max="16" value="${esc(settings.maxCameraWorkers ?? 2)}" /></label></div>
+      <div><label>AI frame interval seconds<input id="resourceAiInterval" type="number" min="0.2" max="5" step="0.1" value="${esc(settings.aiInterval ?? 0.5)}" /><span class="note">Lower is faster, higher uses less CPU</span></label></div>
       <div><label>AI acceleration<select id="resourceGpuMode"><option value="auto" ${settings.gpuMode !== 'off' && settings.gpuMode !== 'required' ? 'selected' : ''}>Automatic (GPU if available)</option><option value="off" ${settings.gpuMode === 'off' ? 'selected' : ''}>CPU only</option><option value="required" ${settings.gpuMode === 'required' ? 'selected' : ''}>Require GPU</option></select></label></div>
       <div><label>GPU memory limit MB<input id="resourceGpuMemory" type="number" min="0" max="65536" value="${esc(settings.gpuMemoryMb ?? 0)}" /><span class="note">0 = grow as needed · minimum 1024 MB when set</span></label></div>
       <button id="saveResourcesBtn" class="btn primary" type="button">Save resources</button>
@@ -1382,6 +1399,7 @@ function render() {
       state = await api('/api/resources', { method: 'POST', body: JSON.stringify({
         cpuCores: Number(qs('resourceCores').value || 0),
         maxCameraWorkers: Number(qs('resourceWorkers').value || 1),
+        aiInterval: Number(qs('resourceAiInterval').value || 0.5),
         gpuMode: qs('resourceGpuMode').value,
         gpuMemoryMb: Number(qs('resourceGpuMemory').value || 0),
       }) });

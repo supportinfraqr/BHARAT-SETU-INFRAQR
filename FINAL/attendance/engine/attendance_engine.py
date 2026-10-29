@@ -21,7 +21,7 @@ import uuid
 from datetime import datetime, time as dt_time, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse, unquote, quote
+from urllib.parse import parse_qs, urlparse, unquote, quote
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
@@ -36,12 +36,18 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.16"
+APP_VERSION = "1.5.17"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 PRESENCE_GAP_SECONDS = 10
 QR_COOLDOWN_SECONDS = 60
 QR_SCAN_INTERVAL = 0.6
+PREVIEW_MAX_WIDTH = 1280
+PREVIEW_JPEG_QUALITY = 72
+PREVIEW_CACHE_SECONDS = 0.25
+DEFAULT_AI_INTERVAL = 0.5
+MIN_AI_INTERVAL = 0.2
+MAX_AI_INTERVAL = 5.0
 MANUAL_ENROLL_FRAMES = 1
 MANUAL_ENROLL_INTERVAL = 0.7
 MANUAL_ENROLL_TIMEOUT = 30
@@ -466,11 +472,14 @@ class CameraWorker:
         self.status = "NO_RTSP"
         self.fps = 0.0
         self._frame = None
-        self._jpeg = None
+        self._preview_lock = threading.Lock()
+        self._preview_cache = None
+        self._overlay_seq = 0
         self._running = False
         self._cap = None
         self._thread = None
         self._ai_thread = None
+        self._last_ai_processed = 0.0
         self._match_streaks = {}
         self._presence = {}
         self._qr_detector = cv2.QRCodeDetector()
@@ -592,15 +601,13 @@ class CameraWorker:
                 self.frames_seen += 1
                 self._frame_seq += 1
                 self._frame = frame
-                encoded, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 72])
-                if encoded:
-                    self._jpeg = buf.tobytes()
                 elapsed = max(0.001, time.time() - started)
                 self.fps = 0.85 * self.fps + 0.15 * (1.0 / elapsed) if self.fps else 1.0 / elapsed
                 self.status = "ONLINE"
 
     def _set_face_boxes(self, boxes):
         with self.lock:
+            self._overlay_seq += 1
             self._face_boxes = [tuple(box) for box in boxes]
             self._face_meta = [{
                 "box": list(box), "name": "", "bssWorkerId": "",
@@ -611,6 +618,7 @@ class CameraWorker:
     def _set_face_meta(self, index, name, bss_worker_id, score, matched):
         with self.lock:
             if 0 <= index < len(self._face_meta):
+                self._overlay_seq += 1
                 self._face_meta[index].update({
                     "name": str(name or ""),
                     "bssWorkerId": str(bss_worker_id or ""),
@@ -713,6 +721,7 @@ class CameraWorker:
 
     def _set_qr_meta(self, bss_worker_id, box, seen_at, worker_name=""):
         with self.lock:
+            self._overlay_seq += 1
             self._qr_meta = [{
                 "box": list(box or [0, 0, 0, 0]),
                 "name": worker_name or "QR scan",
@@ -739,67 +748,94 @@ class CameraWorker:
         with self.lock:
             return None if self._frame is None else self._frame.copy()
 
-    def jpeg(self):
-        now_ts = time.time()
-        with self.lock:
-            meta = [dict(item) for item in self._face_meta]
-            qr_meta = [dict(item) for item in self._qr_meta
-                       if now_ts - float(item.get("seenAt") or 0) <= 10.0]
-            boxes = list(self._face_boxes)
-            frame = None if self._frame is None else self._frame.copy()
-            raw = self._jpeg
-        if frame is None:
-            return raw
-        if not meta and boxes:
-            meta = [{"box": list(box), "name": "", "bssWorkerId": "",
-                     "matchScore": None, "matched": False, "pending": True} for box in boxes]
-        if not meta and not qr_meta:
-            return raw
-        for item in meta:
-            box = item.get("box") or [0, 0, 0, 0]
-            x, y, w, h = [int(v) for v in box[:4]]
-            matched = bool(item.get("matched"))
-            color = (60, 190, 100) if matched else (130, 140, 155)
-            cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
-            name = str(item.get("name") or "Checking").strip()
-            bss_id = str(item.get("bssWorkerId") or "").strip()
-            score = item.get("matchScore")
-            label = name
-            if bss_id:
-                label += f" · {bss_id}"
-            if score is not None:
-                label += f" · {float(score):.0f}%"
-            label = label.encode("ascii", "replace").decode("ascii")
-            if len(label) > 48:
-                label = label[:47] + "…"
+    def jpeg(self, max_width=PREVIEW_MAX_WIDTH):
+        try:
+            max_width = int(max_width)
+        except (TypeError, ValueError):
+            max_width = PREVIEW_MAX_WIDTH
+        max_width = max(320, min(max_width, PREVIEW_MAX_WIDTH))
+        with self._preview_lock:
+            now_ts = time.time()
+            with self.lock:
+                frame_seq = self._frame_seq
+                overlay_seq = self._overlay_seq
+                meta = [dict(item) for item in self._face_meta]
+                qr_meta = [dict(item) for item in self._qr_meta
+                           if now_ts - float(item.get("seenAt") or 0) <= 10.0]
+                boxes = list(self._face_boxes)
+                frame = None if self._frame is None else self._frame.copy()
+            if frame is None:
+                return None
+            cached = self._preview_cache
+            if (cached and cached.get("maxWidth") == max_width
+                    and cached.get("frameSeq") == frame_seq
+                    and cached.get("overlaySeq") == overlay_seq
+                    and now_ts - float(cached.get("createdAt") or 0) <= PREVIEW_CACHE_SECONDS):
+                return cached.get("jpeg")
+            if not meta and boxes:
+                meta = [{"box": list(box), "name": "", "bssWorkerId": "",
+                         "matchScore": None, "matched": False, "pending": True} for box in boxes]
+            height, width = frame.shape[:2]
+            scale = min(1.0, max_width / float(width)) if width else 1.0
+            if scale < 1.0:
+                frame = cv2.resize(frame, (max(1, int(width * scale)), max(1, int(height * scale))),
+                                   interpolation=cv2.INTER_AREA)
             font = cv2.FONT_HERSHEY_SIMPLEX
-            scale, thickness = 0.45, 1
-            (text_w, text_h), _ = cv2.getTextSize(label, font, scale, thickness)
-            top = max(0, y - text_h - 8)
-            cv2.rectangle(frame, (x, top), (x + text_w + 6, top + text_h + 6), color, -1)
-            cv2.putText(frame, label, (x + 3, top + text_h + 2), font, scale,
-                        (255, 255, 255), thickness, cv2.LINE_AA)
-        for item in qr_meta:
-            box = item.get("box") or [0, 0, 0, 0]
-            x, y, w, h = [int(v) for v in box[:4]]
-            if w <= 0 or h <= 0:
-                continue
-            color = (0, 165, 255)
-            cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
-            bss_id = str(item.get("bssWorkerId") or "").strip()
-            worker_name = str(item.get("workerName") or "").strip()
-            label = (f"QR | {worker_name}" if worker_name
-                     else (f"QR | {bss_id}" if bss_id else "QR scan"))
-            label = label.encode("ascii", "replace").decode("ascii")
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            scale, thickness = 0.45, 1
-            (text_w, text_h), _ = cv2.getTextSize(label, font, scale, thickness)
-            top = max(0, y - text_h - 8)
-            cv2.rectangle(frame, (x, top), (x + text_w + 6, top + text_h + 6), color, -1)
-            cv2.putText(frame, label, (x + 3, top + text_h + 2), font, scale,
-                        (255, 255, 255), thickness, cv2.LINE_AA)
-        encoded, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 72])
-        return buf.tobytes() if encoded else raw
+            font_scale = 0.45 if frame.shape[1] >= 960 else max(0.32, 0.45 * frame.shape[1] / 960.0)
+            thickness = 1
+
+            def scaled_box(item):
+                box = item.get("box") or [0, 0, 0, 0]
+                x, y, w, h = [int(v) for v in box[:4]]
+                return int(x * scale), int(y * scale), int(w * scale), int(h * scale)
+
+            for item in meta:
+                x, y, w, h = scaled_box(item)
+                matched = bool(item.get("matched"))
+                color = (60, 190, 100) if matched else (130, 140, 155)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
+                name = str(item.get("name") or "Checking").strip()
+                bss_id = str(item.get("bssWorkerId") or "").strip()
+                score = item.get("matchScore")
+                label = name
+                if bss_id:
+                    label += f" · {bss_id}"
+                if score is not None:
+                    label += f" · {float(score):.0f}%"
+                label = label.encode("ascii", "replace").decode("ascii")
+                if len(label) > 48:
+                    label = label[:47] + "…"
+                (text_w, text_h), _ = cv2.getTextSize(label, font, font_scale, thickness)
+                top = max(0, y - text_h - 8)
+                cv2.rectangle(frame, (x, top), (x + text_w + 6, top + text_h + 6), color, -1)
+                cv2.putText(frame, label, (x + 3, top + text_h + 2), font, font_scale,
+                            (255, 255, 255), thickness, cv2.LINE_AA)
+            for item in qr_meta:
+                x, y, w, h = scaled_box(item)
+                if w <= 0 or h <= 0:
+                    continue
+                color = (0, 165, 255)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
+                bss_id = str(item.get("bssWorkerId") or "").strip()
+                worker_name = str(item.get("workerName") or "").strip()
+                label = (f"QR | {worker_name}" if worker_name
+                         else (f"QR | {bss_id}" if bss_id else "QR scan"))
+                label = label.encode("ascii", "replace").decode("ascii")
+                (text_w, text_h), _ = cv2.getTextSize(label, font, font_scale, thickness)
+                top = max(0, y - text_h - 8)
+                cv2.rectangle(frame, (x, top), (x + text_w + 6, top + text_h + 6), color, -1)
+                cv2.putText(frame, label, (x + 3, top + text_h + 2), font, font_scale,
+                            (255, 255, 255), thickness, cv2.LINE_AA)
+            encoded, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY),
+                                                       PREVIEW_JPEG_QUALITY])
+            if not encoded:
+                return None
+            jpeg = buf.tobytes()
+            self._preview_cache = {
+                "createdAt": time.time(), "frameSeq": frame_seq,
+                "overlaySeq": overlay_seq, "maxWidth": max_width, "jpeg": jpeg,
+            }
+            return jpeg
 
     def _ensure_ai(self):
         if self._ai_thread and self._ai_thread.is_alive():
@@ -823,10 +859,16 @@ class CameraWorker:
             if frame is None:
                 time.sleep(0.02)
                 continue
+            ai_interval = float(self.engine.resource_settings.get("aiInterval") or DEFAULT_AI_INTERVAL)
+            wait = ai_interval - (time.monotonic() - self._last_ai_processed)
+            if wait > 0:
+                time.sleep(min(wait, 0.5))
+                continue
             if not self.engine.send_allowed(self):
                 self.close_presence_sessions("not_sendable")
                 time.sleep(2)
                 continue
+            self._last_ai_processed = time.monotonic()
             camera = self.engine.bss_cameras.get(self.camera_id) or {}
             attendance_mode = str(camera.get("attendanceMode") or "FACE").upper()
             if attendance_mode not in ("FACE", "QR", "BOTH"):
@@ -845,7 +887,8 @@ class CameraWorker:
                     time.sleep(1)
                     continue
             if attendance_mode in ("FACE", "BOTH"):
-                self.engine.configure_gpu()
+                if getattr(self.engine, "_gpu_state", "") != "ready":
+                    self.engine.configure_gpu()
                 if getattr(self.engine, "_gpu_state", "") == "initializing":
                     if self.status != "GPU_INITIALIZING":
                         self.status = "GPU_INITIALIZING"
@@ -1393,6 +1436,11 @@ class Engine:
         except (TypeError, ValueError):
             interval = 2.0
         interval = max(1.0, min(interval, 30.0))
+        try:
+            ai_interval = float(raw.get("aiInterval", DEFAULT_AI_INTERVAL))
+        except (TypeError, ValueError):
+            ai_interval = DEFAULT_AI_INTERVAL
+        ai_interval = max(MIN_AI_INTERVAL, min(ai_interval, MAX_AI_INTERVAL))
         gpu_mode = str(raw.get("gpuMode") or "auto").lower()
         if gpu_mode not in ("auto", "off", "required"):
             gpu_mode = "auto"
@@ -1404,7 +1452,7 @@ class Engine:
         if 0 < gpu_memory_mb < MIN_GPU_MEMORY_MB:
             gpu_memory_mb = MIN_GPU_MEMORY_MB
         return {"cpuCores": cores, "maxCameraWorkers": workers, "processInterval": interval,
-                "gpuMode": gpu_mode, "gpuMemoryMb": gpu_memory_mb}
+                "aiInterval": ai_interval, "gpuMode": gpu_mode, "gpuMemoryMb": gpu_memory_mb}
 
     def _apply_resources(self, settings, persist=True):
         detected = self._detected_system()
@@ -2438,7 +2486,12 @@ class Handler(BaseHTTPRequestHandler):
             worker = ENGINE.workers.get(cid)
             if worker is None:
                 return self._json({"error": "Camera not found."}, 404)
-            jpeg = worker.jpeg()
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                max_width = int((query.get("w") or [PREVIEW_MAX_WIDTH])[0])
+            except (TypeError, ValueError):
+                max_width = PREVIEW_MAX_WIDTH
+            jpeg = worker.jpeg(max_width=max_width)
             if not jpeg:
                 return self._json({"error": "Waiting for the first camera frame."}, 503)
             self.send_response(200)
