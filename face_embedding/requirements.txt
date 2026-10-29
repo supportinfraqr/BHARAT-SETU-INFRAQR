@@ -1,0 +1,10 @@
+# Exact ground-truth stack used by the BTP camera pipeline and the client sidecar.
+deepface==0.0.101
+tensorflow==2.21.0
+tf-keras==2.21.0
+keras==3.12.4
+retina-face==0.0.18
+opencv-python==4.14.0.94
+numpy==2.2.6
+psycopg[binary]==3.3.6
+Pillow

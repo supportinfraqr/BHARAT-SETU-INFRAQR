@@ -1,0 +1,395 @@
+#!/usr/bin/env python3
+"""Local command-line control for the BSS attendance engine."""
+import argparse
+import json
+import os
+import sqlite3
+import sys
+import tempfile
+import time
+import urllib.error
+import urllib.request
+import zipfile
+from pathlib import Path
+
+DEFAULT_PORT = int(os.environ.get("BSS_ENGINE_PORT", "8765"))
+DEFAULT_HOME = Path(os.environ.get("BSS_ENGINE_HOME", "/var/lib/bss-attendance"))
+
+
+def _base(args):
+    return f"http://127.0.0.1:{args.port}"
+
+
+def _request(args, method, path, payload=None, timeout=60, raw=False):
+    data = None if payload is None else json.dumps(payload).encode()
+    request = urllib.request.Request(
+        f"{_base(args)}{path}", data=data, method=method,
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            body = response.read()
+            if raw:
+                return body, response.headers.get("Content-Type", "application/octet-stream")
+            try:
+                return json.loads(body or b"{}")
+            except ValueError:
+                return {"raw": body.decode("utf-8", "replace")}
+    except urllib.error.HTTPError as exc:
+        body = exc.read()
+        try:
+            detail = json.loads(body or b"{}")
+        except ValueError:
+            detail = {"error": body.decode("utf-8", "replace")}
+        raise RuntimeError(detail.get("error") or f"HTTP {exc.code}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Engine is not reachable on 127.0.0.1:{args.port}: {exc.reason}") from exc
+
+
+def _data(args, path, **kwargs):
+    body = _request(args, "GET", path, **kwargs)
+    return body.get("data") if isinstance(body, dict) and "data" in body else body
+
+
+def _print(args, value):
+    if args.json:
+        print(json.dumps(value, indent=2, default=str))
+        return
+    if isinstance(value, (dict, list)):
+        print(json.dumps(value, indent=2, default=str))
+    else:
+        print(value)
+
+
+def _table(headers, rows):
+    rows = [[str(cell if cell is not None else "—") for cell in row] for row in rows]
+    widths = [len(header) for header in headers]
+    for row in rows:
+        for index, cell in enumerate(row):
+            widths[index] = max(widths[index], len(cell))
+    print("  ".join(header.ljust(widths[index]) for index, header in enumerate(headers)))
+    print("  ".join("-" * width for width in widths))
+    for row in rows:
+        print("  ".join(cell.ljust(widths[index]) for index, cell in enumerate(row)))
+
+
+def _when(value):
+    if not value:
+        return "Never"
+    try:
+        from datetime import datetime
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone().strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return str(value)
+
+
+def cmd_health(args):
+    _print(args, _request(args, "GET", "/api/health"))
+
+
+def cmd_status(args):
+    status = _data(args, "/api/status")
+    if args.json:
+        return _print(args, status)
+    gallery = status.get("gallery") or {}
+    gpu = (status.get("resources") or {}).get("gpu") or status.get("gpu") or {}
+    rows = [
+        ["Version", status.get("version")],
+        ["Activated", status.get("activated")],
+        ["BSS connected", status.get("bssConnected")],
+        ["Last BSS contact", _when(status.get("lastHeartbeatAt"))],
+        ["Device heartbeat", _when(status.get("lastDeviceHeartbeatAt"))],
+        ["Data folder", status.get("dataDir")],
+        ["Cameras", len(status.get("cameras") or [])],
+        ["Pending events", status.get("outbox")],
+        ["Gallery", f"{gallery.get('workers', 0)} worker(s)"],
+        ["GPU", gpu.get("message") or gpu.get("state")],
+    ]
+    _table(["Field", "Value"], rows)
+
+
+def cmd_sites(args):
+    status = _data(args, "/api/status")
+    rows = [[site.get("name"), site.get("bssId"), site.get("id"), site.get("cameraLimit")] for site in status.get("sites") or []]
+    if args.json:
+        return _print(args, status.get("sites") or [])
+    _table(["Site", "BSS ID", "Internal ID", "Camera limit"], rows or [["No sites", "", "", ""]])
+
+
+def cmd_workers(args):
+    status = _data(args, "/api/status")
+    workers = (status.get("gallery") or {}).get("status") or []
+    sites = {int(site.get("id")): site.get("name") for site in status.get("sites") or [] if str(site.get("id", "")).isdigit()}
+    rows = []
+    for worker in workers:
+        manual = int(worker.get("manualCount") or 0)
+        self_count = int(worker.get("selfCount") or 0)
+        source = str(worker.get("matchSource") or "SELF").upper()
+        state = "Ready" if (manual if source == "MANUAL" else self_count) else f"No {source.lower()} vectors"
+        site_names = ", ".join(str(sites.get(site_id, f"Site {site_id}")) for site_id in worker.get("siteIds") or [])
+        rows.append([worker.get("name") or worker.get("bssWorkerId"), worker.get("bssWorkerId"), site_names, manual, self_count, source, state])
+    if args.json:
+        return _print(args, workers)
+    _table(["Worker", "BSS ID", "Site", "Manual", "Self", "Source", "Status"], rows or [["No bound workers", "", "", "", "", "", ""]])
+
+
+def cmd_cameras(args):
+    status = _data(args, "/api/status")
+    rows = []
+    for camera in status.get("cameras") or []:
+        rows.append([
+            camera.get("cameraId"), camera.get("label"), camera.get("status"),
+            camera.get("attendanceMode") or "FACE", camera.get("sourceDeviceName"),
+            camera.get("allowedIp"), "Yes" if camera.get("rtspConfigured") else "No",
+            "Yes" if camera.get("sendAllowed") else "No",
+        ])
+    if args.json:
+        return _print(args, status.get("cameras") or [])
+    _table(["ID", "Camera", "Status", "Attendance", "Owner", "Allowed IP", "RTSP", "Sending"], rows or [["—", "No cameras", "", "", "", "", "", ""]])
+
+
+def cmd_events(args):
+    events = _data(args, "/api/events")
+    rows = [[event.get("eventId"), event.get("cameraId"), _when(event.get("occurredAt")), event.get("syncStatus"), event.get("lastError")] for event in events or []]
+    if args.json:
+        return _print(args, events)
+    _table(["Event", "Camera", "When", "Status", "Error"], rows or [["No events", "", "", "", ""]])
+
+
+def cmd_detections(args):
+    _print(args, _data(args, f"/api/detections/{args.camera_id}"))
+
+
+def cmd_snapshot(args):
+    body, _ = _request(args, "GET", f"/snapshot/{args.camera_id}", raw=True, timeout=30)
+    Path(args.output).write_bytes(body)
+    print(f"Saved {len(body)} bytes to {args.output}")
+
+
+def cmd_camera_test(args):
+    _print(args, _request(args, "POST", "/api/test-rtsp", {"rtsp": args.rtsp}).get("data"))
+
+
+def cmd_camera_add(args):
+    payload = {"label": args.label, "siteBssId": args.site, "rtsp": args.rtsp}
+    if args.channel is not None:
+        payload["channel"] = args.channel
+    _print(args, _request(args, "POST", "/api/cameras", payload).get("data"))
+
+
+def cmd_camera_mode(args):
+    _print(args, _request(args, "POST", f"/api/cameras/{args.camera_id}/mode", {"mode": args.mode.upper()}).get("data"))
+
+
+def cmd_camera_attendance_mode(args):
+    _print(args, _request(args, "POST", f"/api/cameras/{args.camera_id}/attendance-mode", {"mode": args.mode.upper()}).get("data"))
+
+
+def cmd_worker_source(args):
+    _print(args, _request(args, "POST", f"/api/workers/{args.bss_worker_id}/face-source", {"source": args.source.upper()}).get("data"))
+
+
+def cmd_worker_enroll(args):
+    started = _request(args, "POST", f"/api/cameras/{args.camera_id}/manual-enroll/start",
+                       {"bssWorkerId": args.bss_worker_id}).get("data") or {}
+    capture_id = started.get("captureId")
+    if not capture_id:
+        raise RuntimeError("Manual enrollment could not start.")
+    try:
+        captured = _request(args, "POST", f"/api/cameras/{args.camera_id}/manual-enroll/capture-one",
+                            {"captureId": capture_id, "slot": 1}).get("data") or {}
+        result = _request(args, "POST", f"/api/cameras/{args.camera_id}/manual-enroll/confirm",
+                          {"captureId": capture_id, "confirmMismatch": bool(args.confirm_mismatch)}).get("data") or {}
+        if result.get("requiresConfirmation") and not args.confirm_mismatch:
+            raise RuntimeError("The captured face matches another worker. Re-run with --confirm-mismatch if the worker is correct.")
+        _print(args, {"capture": captured, "result": result})
+    except Exception:
+        _request(args, "POST", f"/api/cameras/{args.camera_id}/manual-enroll/cancel",
+                 {"captureId": capture_id})
+        raise
+
+
+def cmd_camera_claim(args):
+    payload = {"otp": args.otp} if args.otp else {}
+    _print(args, _request(args, "POST", f"/api/cameras/{args.camera_id}/claim", payload).get("data"))
+
+
+def cmd_camera_takeover_otp(args):
+    _print(args, _request(args, "POST", f"/api/cameras/{args.camera_id}/takeover-otp", {}).get("data"))
+
+
+def cmd_resources(args):
+    if args.action == "get":
+        return _print(args, _data(args, "/api/system"))
+    current = _data(args, "/api/system")
+    settings = dict((current or {}).get("settings") or {})
+    if args.cpu_cores is not None:
+        settings["cpuCores"] = args.cpu_cores
+    if args.workers is not None:
+        settings["maxCameraWorkers"] = args.workers
+    if args.gpu_mode is not None:
+        settings["gpuMode"] = args.gpu_mode
+    if args.gpu_memory is not None:
+        settings["gpuMemoryMb"] = args.gpu_memory
+    _print(args, _request(args, "POST", "/api/resources", settings).get("data"))
+
+
+def cmd_gpu(args):
+    system = _data(args, "/api/system")
+    gpu = (system or {}).get("gpu") or {}
+    if args.json:
+        return _print(args, gpu)
+    rows = [
+        ["Detected", "Yes" if gpu.get("detected") else "No" if gpu.get("detected") is False else "Unknown"],
+        ["State", gpu.get("state")],
+        ["Lifecycle", gpu.get("gpuState")],
+        ["Provider", gpu.get("provider")],
+        ["Requested", gpu.get("requestedProvider")],
+        ["Providers", ", ".join(gpu.get("availableProviders") or [])],
+        ["DirectML DLL", gpu.get("directmlDll") or "—"],
+        ["DirectML DLL found", "Yes" if gpu.get("directmlDllPresent") else "No"],
+        ["Driver", gpu.get("driver")],
+        ["Memory", f"{gpu.get('memoryUsedMb', '—')} / {gpu.get('memoryTotalMb', '—')} MB"],
+        ["Engine memory", f"{gpu.get('engineProcessMemoryMb', '—')} MB"],
+        ["Limit", f"{gpu.get('memoryLimitMb', 0)} MB"],
+        ["Message", gpu.get("message")],
+        ["Init time", f"{gpu.get('initElapsedSeconds', '—')}s"],
+        ["Retry in", f"{gpu.get('retryInSeconds', 0)}s"],
+        ["Provider error", gpu.get("providerError")],
+    ]
+    _table(["Field", "Value"], rows)
+
+
+def cmd_activate_request(args):
+    _print(args, _request(args, "POST", "/api/activate/request-otp", {"phone": args.phone}).get("data"))
+
+
+def cmd_activate_verify(args):
+    _print(args, _request(args, "POST", "/api/activate/verify-otp", {"phone": args.phone, "otp": args.otp}).get("data"))
+
+
+def cmd_activate_complete(args):
+    _print(args, _request(args, "POST", "/api/activate/complete", {"activationToken": args.token, "deviceName": args.name}).get("data"))
+
+
+def cmd_config_refresh(args):
+    _print(args, _request(args, "POST", "/api/config/refresh", {}).get("data"))
+
+
+def cmd_logs(args):
+    path = args.home / "engine.log"
+    if not path.is_file():
+        raise SystemExit(f"No log found at {path}")
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    print("\n".join(lines[-args.lines:]))
+
+
+def cmd_backup(args):
+    home = args.home
+    target = Path(args.output)
+    if target.is_dir() or not target.suffix:
+        target.mkdir(parents=True, exist_ok=True)
+        target = target / f"bss-attendance-backup-{time.strftime('%Y%m%d-%H%M%S')}.zip"
+    else:
+        target.parent.mkdir(parents=True, exist_ok=True)
+    events = home / "events.db"
+    with zipfile.ZipFile(target, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for name in ("client.json", "face_gallery.json"):
+            source = home / name
+            if source.is_file():
+                archive.write(source, name)
+        if events.is_file():
+            with tempfile.TemporaryDirectory() as temporary:
+                copy = Path(temporary) / "events.db"
+                source_conn = sqlite3.connect(f"file:{events}?mode=ro", uri=True)
+                try:
+                    dest_conn = sqlite3.connect(str(copy))
+                    try:
+                        source_conn.backup(dest_conn)
+                    finally:
+                        dest_conn.close()
+                finally:
+                    source_conn.close()
+                archive.write(copy, "events.db")
+    print(f"Backup written to {target}")
+
+
+def cmd_doctor(args):
+    checks = []
+    try:
+        health = _request(args, "GET", "/api/health", timeout=5)
+        checks.append(("Engine health", "OK" if health.get("ok") else "FAIL"))
+    except Exception as error:
+        checks.append(("Engine health", f"FAIL: {error}"))
+    try:
+        status = _data(args, "/api/status")
+        checks.append(("Activation", "OK" if status.get("activated") else "Not activated"))
+        checks.append(("BSS", "OK" if status.get("bssConnected") else "Not connected"))
+        workers = (status.get("gallery") or {}).get("status") or []
+        ready = sum(1 for worker in workers if int(worker.get("embeddingCount") or 0) > 0)
+        checks.append(("Workers", f"{ready}/{len(workers)} with face data"))
+        checks.append(("Sending cameras", str(sum(1 for camera in status.get("cameras") or [] if camera.get("sendAllowed")))))
+        gpu = (status.get("resources") or {}).get("gpu") or {}
+        checks.append(("GPU", gpu.get("state") or "unknown"))
+    except Exception as error:
+        checks.append(("Status", f"FAIL: {error}"))
+    _table(["Check", "Result"], checks)
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(prog="bss-attendancectl", description="Control a local BSS attendance engine")
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="local engine port (default: 8765)")
+    parser.add_argument("--home", type=Path, default=DEFAULT_HOME, help="engine data folder")
+    parser.add_argument("--json", action="store_true", help="print raw JSON")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    sub.add_parser("health").set_defaults(func=cmd_health)
+    sub.add_parser("status").set_defaults(func=cmd_status)
+    sub.add_parser("sites").set_defaults(func=cmd_sites)
+    sub.add_parser("workers").set_defaults(func=cmd_workers)
+    sub.add_parser("cameras").set_defaults(func=cmd_cameras)
+    sub.add_parser("events").set_defaults(func=cmd_events)
+    sub.add_parser("doctor").set_defaults(func=cmd_doctor)
+    sub.add_parser("gpu").set_defaults(func=cmd_gpu)
+    sub.add_parser("logs").add_argument("--lines", type=int, default=100); sub.choices["logs"].set_defaults(func=cmd_logs)
+    sub.add_parser("config-refresh").set_defaults(func=cmd_config_refresh)
+
+    activation = sub.add_parser("activate", help="activate this device").add_subparsers(dest="action", required=True)
+    req = activation.add_parser("request"); req.add_argument("--phone", required=True); req.set_defaults(func=cmd_activate_request)
+    ver = activation.add_parser("verify"); ver.add_argument("--phone", required=True); ver.add_argument("--otp", required=True); ver.set_defaults(func=cmd_activate_verify)
+    comp = activation.add_parser("complete"); comp.add_argument("--token", required=True); comp.add_argument("--name", default=""); comp.set_defaults(func=cmd_activate_complete)
+
+    camera = sub.add_parser("camera").add_subparsers(dest="action", required=True)
+    add = camera.add_parser("add"); add.add_argument("--label", required=True); add.add_argument("--site", required=True); add.add_argument("--rtsp", required=True); add.add_argument("--channel", type=int); add.set_defaults(func=cmd_camera_add)
+    test = camera.add_parser("test"); test.add_argument("--rtsp", required=True); test.set_defaults(func=cmd_camera_test)
+    mode = camera.add_parser("mode"); mode.add_argument("camera_id", type=int); mode.add_argument("mode", choices=["LIVE", "SENDING"]); mode.set_defaults(func=cmd_camera_mode)
+    attendance_mode = camera.add_parser("attendance-mode"); attendance_mode.add_argument("camera_id", type=int); attendance_mode.add_argument("mode", choices=["FACE", "QR", "BOTH"]); attendance_mode.set_defaults(func=cmd_camera_attendance_mode)
+    claim = camera.add_parser("claim"); claim.add_argument("camera_id", type=int); claim.add_argument("--otp"); claim.set_defaults(func=cmd_camera_claim)
+    takeover = camera.add_parser("takeover-otp"); takeover.add_argument("camera_id", type=int); takeover.set_defaults(func=cmd_camera_takeover_otp)
+    detections = camera.add_parser("detections"); detections.add_argument("camera_id", type=int); detections.set_defaults(func=cmd_detections)
+    snapshot = camera.add_parser("snapshot"); snapshot.add_argument("camera_id", type=int); snapshot.add_argument("--output", required=True); snapshot.set_defaults(func=cmd_snapshot)
+
+    worker = sub.add_parser("worker").add_subparsers(dest="action", required=True)
+    source = worker.add_parser("source"); source.add_argument("bss_worker_id"); source.add_argument("source", choices=["MANUAL", "SELF"]); source.set_defaults(func=cmd_worker_source)
+    enroll = worker.add_parser("enroll"); enroll.add_argument("bss_worker_id"); enroll.add_argument("--camera", dest="camera_id", type=int, required=True); enroll.add_argument("--confirm-mismatch", action="store_true"); enroll.set_defaults(func=cmd_worker_enroll)
+
+    resources = sub.add_parser("resources").add_subparsers(dest="action", required=True)
+    resources.add_parser("get").set_defaults(func=cmd_resources)
+    setter = resources.add_parser("set"); setter.add_argument("--cpu-cores", type=int); setter.add_argument("--workers", type=int); setter.add_argument("--gpu-mode", choices=["auto", "off", "required"]); setter.add_argument("--gpu-memory", type=int); setter.set_defaults(func=cmd_resources)
+
+    backup = sub.add_parser("backup"); backup.add_argument("--output", required=True); backup.set_defaults(func=cmd_backup)
+    return parser
+
+
+def main():
+    args = build_parser().parse_args()
+    try:
+        args.func(args)
+    except (RuntimeError, OSError, sqlite3.Error) as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

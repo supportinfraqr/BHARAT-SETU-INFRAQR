@@ -1,0 +1,21 @@
+[Unit]
+Description=BSS Attendance Engine
+Documentation=https://login.bharatshramsetu.com/download/attendance/headless
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bss
+Group=bss
+WorkingDirectory=/var/lib/bss-attendance
+EnvironmentFile=-/etc/bss-attendance.env
+ExecStart=/opt/bss-attendance/attendance-engine --home /var/lib/bss-attendance --port 8765 --log-level INFO
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=30
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
