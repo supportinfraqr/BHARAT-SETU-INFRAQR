@@ -54,7 +54,7 @@ async function discoverEngine() {
   return false;
 }
 
-async function api(path, options = {}) {
+async function apiRequest(path, options = {}) {
   const response = await fetch(`${BASE}${path}`, { headers: { 'Content-Type': 'application/json' }, ...options });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -64,6 +64,27 @@ async function api(path, options = {}) {
     throw error;
   }
   return body.data;
+}
+
+async function api(path, options = {}) {
+  try {
+    return await apiRequest(path, options);
+  } catch (error) {
+    const networkFailure = error instanceof TypeError
+      || /Failed to fetch|NetworkError|Load failed/i.test(String(error?.message || ''));
+    if (!networkFailure || !(await discoverEngine())) throw error;
+    try {
+      return await apiRequest(path, options);
+    } catch (retryError) {
+      if (retryError instanceof TypeError
+          || /Failed to fetch|NetworkError|Load failed/i.test(String(retryError?.message || ''))) {
+        const unavailable = new Error('Local engine is restarting. Retrying…');
+        unavailable.network = true;
+        throw unavailable;
+      }
+      throw retryError;
+    }
+  }
 }
 
 function esc(value) {
@@ -1118,7 +1139,8 @@ function openManualEnrollment(workerId) {
     } catch (error) {
       faceReady = false;
       faceCount = 0;
-      msg.textContent = error.message || String(error);
+      const transient = error.network || /Failed to fetch|NetworkError|Load failed/i.test(String(error?.message || ''));
+      msg.textContent = transient ? 'Local engine is restarting. Retrying…' : (error.message || String(error));
       msg.style.color = '#C2410C';
       renderSlots();
     } finally {

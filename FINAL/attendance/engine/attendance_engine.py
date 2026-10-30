@@ -485,6 +485,8 @@ class CameraWorker:
         self._thread = None
         self._ai_thread = None
         self._last_ai_processed = 0.0
+        self._manual_hold = False
+        self._manual_hold_until = 0.0
         self._match_streaks = {}
         self._presence = {}
         self._qr_detector = cv2.QRCodeDetector()
@@ -518,6 +520,16 @@ class CameraWorker:
                 "framesProcessed": self.frames_processed,
                 "facesDetected": self.faces_detected,
             }
+
+    def set_manual_hold(self, hold, seconds=900):
+        hold = bool(hold)
+        with self.lock:
+            self._manual_hold = hold
+            self._manual_hold_until = time.monotonic() + max(0, int(seconds)) if hold else 0.0
+        if hold:
+            self.close_presence_sessions("manual_enrollment")
+        else:
+            self._match_streaks.clear()
 
     def set_paused(self, paused, paused_at=""):
         paused = bool(paused)
@@ -872,6 +884,12 @@ class CameraWorker:
                 self.close_presence_sessions("paused")
                 time.sleep(1)
                 continue
+            if self._manual_hold:
+                if time.monotonic() < self._manual_hold_until:
+                    self.close_presence_sessions("manual_enrollment")
+                    time.sleep(0.2)
+                    continue
+                self.set_manual_hold(False)
             with self.lock:
                 seq = self._frame_seq
                 if seq == self._last_ai_seq:
@@ -927,7 +945,7 @@ class CameraWorker:
                 time.sleep(0.05)
                 continue
             try:
-                if self.paused:
+                if self.paused or self._manual_hold:
                     continue
                 with self.lock:
                     self.frames_processed += 1
@@ -1906,6 +1924,10 @@ class Engine:
             pending = self._manual_captures.pop(str(capture_id), None)
         if pending and pending.get("interactive"):
             self.gate.end_interactive()
+        if pending:
+            worker = self.workers.get(int(pending.get("cameraId") or 0))
+            if worker is not None:
+                worker.set_manual_hold(False)
         return pending
 
     def start_manual_enrollment(self, camera_id, bss_worker_id):
@@ -1931,7 +1953,12 @@ class Engine:
         for pending in expired:
             if pending and pending.get("interactive"):
                 self.gate.end_interactive()
+            if pending:
+                expired_worker = self.workers.get(int(pending.get("cameraId") or 0))
+                if expired_worker is not None:
+                    expired_worker.set_manual_hold(False)
         self.gate.begin_interactive()
+        worker.set_manual_hold(True)
         return {"captureId": capture_id, "bssWorkerId": bss_worker_id,
                 "slots": MANUAL_ENROLL_FRAMES}
 
@@ -2063,7 +2090,7 @@ class Engine:
         return body.get("data") or {}
 
     def send_qr_event(self, worker, bss_worker_id, when):
-        if worker.paused:
+        if worker.paused or worker._manual_hold:
             return
         event = {
             "eventId": str(uuid.uuid4()), "cameraId": worker.camera_id,
@@ -2100,7 +2127,7 @@ class Engine:
                     and schedule_active(camera) and worker.camera_token)
 
     def send_event(self, worker, matched_worker, when, distance, face_box=None, presence=None):
-        if worker.paused:
+        if worker.paused or worker._manual_hold:
             return
         event = {
             "eventId": str(uuid.uuid4()), "cameraId": worker.camera_id,
