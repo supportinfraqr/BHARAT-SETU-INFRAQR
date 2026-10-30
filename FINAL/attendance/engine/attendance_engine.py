@@ -36,7 +36,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.18"
+APP_VERSION = "1.5.19"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 PRESENCE_GAP_SECONDS = 10
@@ -48,6 +48,9 @@ PREVIEW_CACHE_SECONDS = 0.25
 DEFAULT_AI_INTERVAL = 0.5
 MIN_AI_INTERVAL = 0.2
 MAX_AI_INTERVAL = 5.0
+DEFAULT_MATCH_THRESHOLD = 52.0
+MIN_MATCH_THRESHOLD = 30.0
+MAX_MATCH_THRESHOLD = 95.0
 MANUAL_ENROLL_FRAMES = 1
 MANUAL_ENROLL_INTERVAL = 0.7
 MANUAL_ENROLL_TIMEOUT = 30
@@ -1130,6 +1133,7 @@ class Engine:
         self.events = LocalEventStore(home)
         self.gallery_path = Path(home) / "face_gallery.json"
         self.gallery = _load_gallery(self.gallery_path)
+        self._apply_face_threshold()
         for legacy in list(self.store.data.get("outbox") or []):
             if isinstance(legacy, dict):
                 self.events.add(legacy)
@@ -1465,6 +1469,11 @@ class Engine:
         except (TypeError, ValueError):
             ai_interval = DEFAULT_AI_INTERVAL
         ai_interval = max(MIN_AI_INTERVAL, min(ai_interval, MAX_AI_INTERVAL))
+        try:
+            match_threshold = float(raw.get("matchThreshold", DEFAULT_MATCH_THRESHOLD))
+        except (TypeError, ValueError):
+            match_threshold = DEFAULT_MATCH_THRESHOLD
+        match_threshold = max(MIN_MATCH_THRESHOLD, min(match_threshold, MAX_MATCH_THRESHOLD))
         gpu_mode = str(raw.get("gpuMode") or "auto").lower()
         if gpu_mode not in ("auto", "off", "required"):
             gpu_mode = "auto"
@@ -1476,7 +1485,8 @@ class Engine:
         if 0 < gpu_memory_mb < MIN_GPU_MEMORY_MB:
             gpu_memory_mb = MIN_GPU_MEMORY_MB
         return {"cpuCores": cores, "maxCameraWorkers": workers, "processInterval": interval,
-                "aiInterval": ai_interval, "gpuMode": gpu_mode, "gpuMemoryMb": gpu_memory_mb}
+                "aiInterval": ai_interval, "matchThreshold": match_threshold,
+                "gpuMode": gpu_mode, "gpuMemoryMb": gpu_memory_mb}
 
     def _apply_resources(self, settings, persist=True):
         detected = self._detected_system()
@@ -1731,11 +1741,17 @@ class Engine:
             LOG.warning("GPU init failed (attempt %s); retrying in %.0fs",
                         self._gpu_attempts, delay)
 
+    def _apply_face_threshold(self):
+        percent = float(self.resource_settings.get("matchThreshold") or DEFAULT_MATCH_THRESHOLD)
+        percent = max(MIN_MATCH_THRESHOLD, min(percent, MAX_MATCH_THRESHOLD))
+        self.gallery.threshold = 1.0 - (percent / 100.0)
+
     def set_resources(self, raw):
         previous = dict(self.resource_settings)
         settings = self._normalise_resources(raw or {})
         self.resource_settings = settings
         self._apply_resources(settings, persist=True)
+        self._apply_face_threshold()
         gpu_changed = (
             str(previous.get("gpuMode") or "auto") != str(settings.get("gpuMode") or "auto")
             or int(previous.get("gpuMemoryMb") or 0) != int(settings.get("gpuMemoryMb") or 0)
@@ -1762,6 +1778,7 @@ class Engine:
         tmp.write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")
         os.replace(tmp, self.gallery_path)
         self.gallery = FaceGallery(data)
+        self._apply_face_threshold()
         LOG.info("Worker gallery synced: %s workers, version %s",
                  len({e[1] for e in self.gallery.entries}), self.gallery.version[:12])
         return True
@@ -2454,7 +2471,8 @@ class Engine:
             "lastDeviceHeartbeatAt": _iso(self.last_device_heartbeat),
             "lastDeviceHeartbeatError": self.last_device_heartbeat_error,
             "dataDir": str(self.home_dir),
-            "faceModel": {"model": MODEL_NAME, "version": MODEL_VERSION, "detector": DETECTOR_BACKEND},
+            "faceModel": {"model": MODEL_NAME, "version": MODEL_VERSION, "detector": DETECTOR_BACKEND,
+                          "threshold": self.gallery.threshold},
             "gallery": {"ready": self.gallery.ready, "version": self.gallery.version,
                         "workers": len({e[1] for e in self.gallery.entries}),
                         "status": self.gallery.worker_status},

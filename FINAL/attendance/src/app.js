@@ -667,6 +667,7 @@ function resourceLiveHtml(resources) {
         <div><span>CPU</span><b>${esc(allocatedCores)}</b></div>
         <div><span>AI workers</span><b>${esc(String(allocation.maxCameraWorkers ?? '—'))}</b></div>
         <div><span>AI frame interval</span><b>${esc(settings.aiInterval == null ? '—' : `${Number(settings.aiInterval).toFixed(1)}s`)}</b></div>
+        <div><span>Face match threshold</span><b>${esc(settings.matchThreshold == null ? '—' : `${Number(settings.matchThreshold).toFixed(0)}%`)}</b></div>
         <div><span>GPU memory target</span><b>${gpuLimit ? esc(resourceMb(gpuLimit)) : 'No target'}</b></div>
         <div><span>RAM</span><b>No cap</b></div>
         <div><span>Disk</span><b>No cap</b></div>
@@ -989,6 +990,7 @@ function resourceCard(resources) {
       <div><label>CPU cores to use<input id="resourceCores" type="number" min="0" max="${cores}" value="${esc(settings.cpuCores ?? 0)}" /><span class="note">0 = Automatic — uses all ${esc(cores)} available cores</span></label></div>
       <div><label>Cameras processed at once<input id="resourceWorkers" type="number" min="1" max="16" value="${esc(settings.maxCameraWorkers ?? 2)}" /></label></div>
       <div><label>AI frame interval seconds<input id="resourceAiInterval" type="number" min="0.2" max="5" step="0.1" value="${esc(settings.aiInterval ?? 0.5)}" /><span class="note">Lower is faster, higher uses less CPU</span></label></div>
+      <div><label>Face match threshold %<input id="resourceMatchThreshold" type="number" min="30" max="95" step="1" value="${esc(settings.matchThreshold ?? 52)}" /><span class="note">Higher is stricter · default 52%</span></label></div>
       <div><label>AI acceleration<select id="resourceGpuMode"><option value="auto" ${settings.gpuMode !== 'off' && settings.gpuMode !== 'required' ? 'selected' : ''}>Automatic (GPU if available)</option><option value="off" ${settings.gpuMode === 'off' ? 'selected' : ''}>CPU only</option><option value="required" ${settings.gpuMode === 'required' ? 'selected' : ''}>Require GPU</option></select></label></div>
       <div><label>GPU memory limit MB<input id="resourceGpuMemory" type="number" min="0" max="65536" value="${esc(settings.gpuMemoryMb ?? 0)}" /><span class="note">0 = grow as needed · minimum 1024 MB when set</span></label></div>
       <button id="saveResourcesBtn" class="btn primary" type="button">Save resources</button>
@@ -1405,6 +1407,7 @@ function render() {
         cpuCores: Number(qs('resourceCores').value || 0),
         maxCameraWorkers: Number(qs('resourceWorkers').value || 1),
         aiInterval: Number(qs('resourceAiInterval').value || 0.5),
+        matchThreshold: Number(qs('resourceMatchThreshold').value || 52),
         gpuMode: qs('resourceGpuMode').value,
         gpuMemoryMb: Number(qs('resourceGpuMemory').value || 0),
       }) });
