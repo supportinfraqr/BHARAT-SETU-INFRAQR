@@ -36,7 +36,7 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.17"
+APP_VERSION = "1.5.18"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 PRESENCE_GAP_SECONDS = 10
@@ -470,6 +470,8 @@ class CameraWorker:
         self.rtsp = ""
         self.camera_token = ""
         self.status = "NO_RTSP"
+        self.paused = False
+        self.paused_at = ""
         self.fps = 0.0
         self._frame = None
         self._preview_lock = threading.Lock()
@@ -503,6 +505,8 @@ class CameraWorker:
                 "rtspConfigured": bool(self.rtsp),
                 "mode": self.mode,
                 "status": self.status,
+                "paused": bool(self.paused),
+                "pausedAt": self.paused_at,
                 "fps": round(self.fps, 1),
                 "tokenConfigured": bool(self.camera_token),
                 "lastEventAt": _iso(self.engine.last_event_at.get(self.camera_id)),
@@ -511,6 +515,18 @@ class CameraWorker:
                 "framesProcessed": self.frames_processed,
                 "facesDetected": self.faces_detected,
             }
+
+    def set_paused(self, paused, paused_at=""):
+        paused = bool(paused)
+        with self.lock:
+            self.paused = paused
+            self.paused_at = str(paused_at or "") if paused else ""
+        if paused:
+            self.close_presence_sessions("paused")
+        else:
+            self._match_streaks.clear()
+            if self.mode == "SENDING" and self.camera_token:
+                self._ensure_ai()
 
     def set_rtsp(self, rtsp):
         rtsp = str(rtsp or "").strip()
@@ -849,6 +865,10 @@ class CameraWorker:
             if self.mode != "SENDING" or not self.camera_token:
                 time.sleep(1)
                 continue
+            if self.paused:
+                self.close_presence_sessions("paused")
+                time.sleep(1)
+                continue
             with self.lock:
                 seq = self._frame_seq
                 if seq == self._last_ai_seq:
@@ -904,6 +924,8 @@ class CameraWorker:
                 time.sleep(0.05)
                 continue
             try:
+                if self.paused:
+                    continue
                 with self.lock:
                     self.frames_processed += 1
                 camera = self.engine.bss_cameras.get(self.camera_id) or {}
@@ -1132,12 +1154,14 @@ class Engine:
             worker.rtsp = str(camera.get("rtsp") or "")
             worker.mode = str(camera.get("mode") or "LIVE").upper()
             worker.camera_token = str(camera.get("cameraToken") or "")
+            worker.paused = bool(camera.get("paused"))
+            worker.paused_at = str(camera.get("pausedAt") or "") if worker.paused else ""
             if worker.mode not in ("LIVE", "SENDING"):
                 worker.mode = "LIVE"
             self.workers[cid] = worker
             if worker.rtsp:
                 worker.start()
-            if worker.mode == "SENDING" and worker.camera_token:
+            if worker.mode == "SENDING" and worker.camera_token and not worker.paused:
                 worker._ensure_ai()
 
     def local_camera(self, camera_id):
@@ -1782,9 +1806,11 @@ class Engine:
                         worker.mode = "SENDING"
                         local["mode"] = "SENDING"
                     worker.camera_token = str(local.get("cameraToken") or "")
+                    worker.paused = bool(local.get("paused"))
+                    worker.paused_at = str(local.get("pausedAt") or "") if worker.paused else ""
                     if worker.rtsp and not worker._running:
                         worker.start()
-                    if worker.mode == "SENDING" and worker.camera_token:
+                    if worker.mode == "SENDING" and worker.camera_token and not worker.paused:
                         worker._ensure_ai()
             for cid in list(self.workers):
                 if cid not in incoming:
@@ -2020,6 +2046,8 @@ class Engine:
         return body.get("data") or {}
 
     def send_qr_event(self, worker, bss_worker_id, when):
+        if worker.paused:
+            return
         event = {
             "eventId": str(uuid.uuid4()), "cameraId": worker.camera_id,
             "occurredAt": when.isoformat(), "type": "QR",
@@ -2049,11 +2077,14 @@ class Engine:
 
     def send_allowed(self, worker):
         camera = self.bss_cameras.get(worker.camera_id) or {}
-        return bool(camera.get("approvalStatus") == "APPROVED"
+        return bool(not worker.paused
+                    and camera.get("approvalStatus") == "APPROVED"
                     and camera.get("allowedIp") and camera.get("claimedByThisDevice")
                     and schedule_active(camera) and worker.camera_token)
 
     def send_event(self, worker, matched_worker, when, distance, face_box=None, presence=None):
+        if worker.paused:
+            return
         event = {
             "eventId": str(uuid.uuid4()), "cameraId": worker.camera_id,
             "occurredAt": when.isoformat(), "type": "FACE",
@@ -2157,6 +2188,24 @@ class Engine:
                 worker.set_rtsp(rtsp)
         return self.status()
 
+    def set_camera_paused(self, camera_id, paused):
+        worker = self.workers.get(int(camera_id))
+        if worker is None:
+            raise ValueError("Camera not found.")
+        paused = bool(paused)
+        local = self.local_camera(camera_id)
+        if paused:
+            paused_at = _iso(_now())
+            worker.set_paused(True, paused_at)
+            local["paused"] = True
+            local["pausedAt"] = paused_at
+        else:
+            worker.set_paused(False)
+            local["paused"] = False
+            local.pop("pausedAt", None)
+        self.store.save()
+        return self.status()
+
     def remove_camera(self, camera_id):
         worker = self.workers.get(camera_id)
         try:
@@ -2212,6 +2261,8 @@ class Engine:
                                 "deviceName": "", "employerName": ""})
         for local in self.store.data.get("cameras", {}).values():
             local["cameraToken"] = ""
+            local["paused"] = False
+            local.pop("pausedAt", None)
         self.store.save()
         return self.status()
 
@@ -2288,6 +2339,8 @@ class Engine:
                                 "deviceName": "", "employerName": ""})
         for local in self.store.data.get("cameras", {}).values():
             local["cameraToken"] = ""
+            local["paused"] = False
+            local.pop("pausedAt", None)
         self.store.save()
 
     def _config_loop(self):
@@ -2318,8 +2371,10 @@ class Engine:
                         continue
                     try:
                         self.bss_call("POST", "/v1/edge/heartbeat", {
-                            "version": APP_VERSION, "mode": worker.mode,
-                            "status": worker.status, "fps": round(worker.fps, 1),
+                            "version": APP_VERSION,
+                            "mode": "LIVE" if worker.paused else worker.mode,
+                            "status": "PAUSED" if worker.paused else worker.status,
+                            "fps": round(worker.fps, 1),
                         }, timeout=10, camera_token=worker.camera_token)
                     except BssError as exc:
                         if exc.status_code == 401:
@@ -2349,6 +2404,8 @@ class Engine:
                 reason = "Waiting for BSS sync"
             elif bss.get("approvalStatus") != "APPROVED":
                 reason = "Camera was removed by the employer"
+            elif worker.paused:
+                reason = "Events paused on this client"
             elif not bss.get("allowedIp"):
                 reason = "Waiting for employer IP whitelisting"
             elif not worker.camera_token:
@@ -2376,7 +2433,8 @@ class Engine:
                 "canRemove": bool(bss.get("claimedByThisDevice") or bss.get("createdByDeviceId") == self.device_id),
                 "timezoneLabel": "IST (UTC+05:30)",
                 "canClaim": False,
-                "sendAllowed": bool(bss.get("approvalStatus") == "APPROVED"
+                "sendAllowed": bool(not worker.paused
+                                    and bss.get("approvalStatus") == "APPROVED"
                                     and bss.get("allowedIp") and bss.get("claimedByThisDevice")
                                     and allowed and worker.camera_token),
                 "sendBlockedReason": reason,
@@ -2561,6 +2619,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"data": ENGINE.set_mode(cid, body.get("mode"))})
                 if action == "attendance-mode":
                     return self._json({"data": ENGINE.set_camera_attendance_mode(cid, body.get("mode"))})
+                if action == "pause":
+                    return self._json({"data": ENGINE.set_camera_paused(cid, body.get("paused"))})
                 if action == "claim":
                     try:
                         return self._json({"data": ENGINE.claim(cid, body.get("otp"))})

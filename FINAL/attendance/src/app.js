@@ -76,12 +76,14 @@ function when(value) {
 }
 function cameraState(camera) {
   if (camera.approvalStatus !== 'APPROVED') return { label: 'Removed by employer', cls: 'muted' };
+  if (camera.paused) return { label: 'Events paused locally', cls: 'warn' };
   if (!camera.ipWhitelisted) return { label: 'IP whitelisting pending', cls: 'warn' };
   if (camera.cameraOnline) return { label: 'Active · online', cls: 'ok' };
   return { label: 'Active · offline', cls: 'muted' };
 }
 function statusPill(camera) {
   if (camera.status === 'NO_RTSP') return '<span class="pill warn">No RTSP</span>';
+  if (camera.paused) return '<span class="pill warn">Events paused</span>';
   if (camera.status === 'ONLINE') return '<span class="pill ok">Live</span>';
   if (camera.status === 'GPU_INITIALIZING') return '<span class="pill warn">GPU initializing</span>';
   if (camera.status === 'GPU_REQUIRED_UNAVAILABLE') return '<span class="pill bad">GPU unavailable</span>';
@@ -473,6 +475,9 @@ function cameraRow(camera) {
     <td>${esc(when(camera.lastEventAt))}</td>
     <td><div class="table-actions">
       <button id="live-${id}" class="btn primary" type="button" ${canPreview ? '' : 'disabled'}>See live</button>
+      ${camera.canRemove && canPreview
+        ? `<button id="pause-${id}" class="btn" type="button">${camera.paused ? 'Resume events' : 'Pause events'}</button>`
+        : ''}
       ${camera.canRemove
         ? `<button id="remove-${id}" class="btn danger" type="button">Remove</button>`
         : `<span class="note">Owned by ${esc(camera.sourceDeviceName || 'another device')}</span>`}
@@ -1432,6 +1437,17 @@ function render() {
   for (const camera of cameras) {
     const id = camera.cameraId;
     qs(`live-${id}`)?.addEventListener('click', () => openLiveView(camera));
+    qs(`pause-${id}`)?.addEventListener('click', async () => {
+      const next = !camera.paused;
+      try {
+        state = await api(`/api/cameras/${id}/pause`, {
+          method: 'POST', body: JSON.stringify({ paused: next }),
+        });
+        render();
+      } catch (error) {
+        await showAlert(next ? 'Could not pause events' : 'Could not resume events', error.message || String(error));
+      }
+    });
     const modeSelect = document.querySelector(`[data-attendance-mode="${id}"]`);
     modeSelect?.addEventListener('change', async () => {
       const previous = camera.attendanceMode || 'FACE';
