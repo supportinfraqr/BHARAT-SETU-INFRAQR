@@ -1,6 +1,6 @@
 [package]
 name = "bss-attendance"
-version = "1.5.15"
+version = "1.5.19"
 description = "BSS attendance client"
 edition = "2021"
 rust-version = "1.90"

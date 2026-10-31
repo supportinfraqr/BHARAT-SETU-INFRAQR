@@ -21,7 +21,7 @@ import uuid
 from datetime import datetime, time as dt_time, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse, unquote, quote
+from urllib.parse import parse_qs, urlparse, unquote, quote
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
@@ -36,12 +36,21 @@ except Exception:  # pragma: no cover - detection degrades gracefully
     psutil = None
 
 LOG = logging.getLogger("attendance-engine")
-APP_VERSION = "1.5.15"
+APP_VERSION = "1.5.19"
 MODEL_NAME = "ArcFace"
 MIN_GPU_MEMORY_MB = 1024
 PRESENCE_GAP_SECONDS = 10
 QR_COOLDOWN_SECONDS = 60
 QR_SCAN_INTERVAL = 0.6
+PREVIEW_MAX_WIDTH = 1280
+PREVIEW_JPEG_QUALITY = 72
+PREVIEW_CACHE_SECONDS = 0.25
+DEFAULT_AI_INTERVAL = 0.5
+MIN_AI_INTERVAL = 0.2
+MAX_AI_INTERVAL = 5.0
+DEFAULT_MATCH_THRESHOLD = 52.0
+MIN_MATCH_THRESHOLD = 30.0
+MAX_MATCH_THRESHOLD = 95.0
 MANUAL_ENROLL_FRAMES = 1
 MANUAL_ENROLL_INTERVAL = 0.7
 MANUAL_ENROLL_TIMEOUT = 30
@@ -176,24 +185,47 @@ class Store:
 
 class ResourceGate:
     def __init__(self, limit=2):
-        self.lock = threading.Lock()
+        self.lock = threading.Condition()
         self.limit = max(1, int(limit))
         self.active = 0
+        self.reserved = 0
 
     def set_limit(self, limit):
         with self.lock:
             self.limit = max(1, int(limit))
+            self.lock.notify_all()
 
-    def acquire(self):
+    def begin_interactive(self):
+        """Reserve capacity for a manual preview/capture request."""
         with self.lock:
-            if self.active >= self.limit:
-                return False
+            self.reserved += 1
+            self.lock.notify_all()
+
+    def end_interactive(self):
+        with self.lock:
+            self.reserved = max(0, self.reserved - 1)
+            self.lock.notify_all()
+
+    def acquire(self, timeout=None, interactive=False):
+        deadline = None if timeout is None else time.monotonic() + max(0.0, float(timeout))
+        capacity = self.limit + (self.reserved if interactive else 0)
+        with self.lock:
+            while self.active >= capacity:
+                if deadline is None:
+                    self.lock.wait()
+                    continue
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return False
+                self.lock.wait(remaining)
+                capacity = self.limit + (self.reserved if interactive else 0)
             self.active += 1
             return True
 
     def release(self):
         with self.lock:
             self.active = max(0, self.active - 1)
+            self.lock.notify_all()
 
 
 class LocalEventStore:
@@ -441,13 +473,20 @@ class CameraWorker:
         self.rtsp = ""
         self.camera_token = ""
         self.status = "NO_RTSP"
+        self.paused = False
+        self.paused_at = ""
         self.fps = 0.0
         self._frame = None
-        self._jpeg = None
+        self._preview_lock = threading.Lock()
+        self._preview_cache = None
+        self._overlay_seq = 0
         self._running = False
         self._cap = None
         self._thread = None
         self._ai_thread = None
+        self._last_ai_processed = 0.0
+        self._manual_hold = False
+        self._manual_hold_until = 0.0
         self._match_streaks = {}
         self._presence = {}
         self._qr_detector = cv2.QRCodeDetector()
@@ -471,6 +510,8 @@ class CameraWorker:
                 "rtspConfigured": bool(self.rtsp),
                 "mode": self.mode,
                 "status": self.status,
+                "paused": bool(self.paused),
+                "pausedAt": self.paused_at,
                 "fps": round(self.fps, 1),
                 "tokenConfigured": bool(self.camera_token),
                 "lastEventAt": _iso(self.engine.last_event_at.get(self.camera_id)),
@@ -479,6 +520,28 @@ class CameraWorker:
                 "framesProcessed": self.frames_processed,
                 "facesDetected": self.faces_detected,
             }
+
+    def set_manual_hold(self, hold, seconds=900):
+        hold = bool(hold)
+        with self.lock:
+            self._manual_hold = hold
+            self._manual_hold_until = time.monotonic() + max(0, int(seconds)) if hold else 0.0
+        if hold:
+            self.close_presence_sessions("manual_enrollment")
+        else:
+            self._match_streaks.clear()
+
+    def set_paused(self, paused, paused_at=""):
+        paused = bool(paused)
+        with self.lock:
+            self.paused = paused
+            self.paused_at = str(paused_at or "") if paused else ""
+        if paused:
+            self.close_presence_sessions("paused")
+        else:
+            self._match_streaks.clear()
+            if self.mode == "SENDING" and self.camera_token:
+                self._ensure_ai()
 
     def set_rtsp(self, rtsp):
         rtsp = str(rtsp or "").strip()
@@ -569,15 +632,13 @@ class CameraWorker:
                 self.frames_seen += 1
                 self._frame_seq += 1
                 self._frame = frame
-                encoded, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 72])
-                if encoded:
-                    self._jpeg = buf.tobytes()
                 elapsed = max(0.001, time.time() - started)
                 self.fps = 0.85 * self.fps + 0.15 * (1.0 / elapsed) if self.fps else 1.0 / elapsed
                 self.status = "ONLINE"
 
     def _set_face_boxes(self, boxes):
         with self.lock:
+            self._overlay_seq += 1
             self._face_boxes = [tuple(box) for box in boxes]
             self._face_meta = [{
                 "box": list(box), "name": "", "bssWorkerId": "",
@@ -588,6 +649,7 @@ class CameraWorker:
     def _set_face_meta(self, index, name, bss_worker_id, score, matched):
         with self.lock:
             if 0 <= index < len(self._face_meta):
+                self._overlay_seq += 1
                 self._face_meta[index].update({
                     "name": str(name or ""),
                     "bssWorkerId": str(bss_worker_id or ""),
@@ -690,6 +752,7 @@ class CameraWorker:
 
     def _set_qr_meta(self, bss_worker_id, box, seen_at, worker_name=""):
         with self.lock:
+            self._overlay_seq += 1
             self._qr_meta = [{
                 "box": list(box or [0, 0, 0, 0]),
                 "name": worker_name or "QR scan",
@@ -716,67 +779,94 @@ class CameraWorker:
         with self.lock:
             return None if self._frame is None else self._frame.copy()
 
-    def jpeg(self):
-        now_ts = time.time()
-        with self.lock:
-            meta = [dict(item) for item in self._face_meta]
-            qr_meta = [dict(item) for item in self._qr_meta
-                       if now_ts - float(item.get("seenAt") or 0) <= 10.0]
-            boxes = list(self._face_boxes)
-            frame = None if self._frame is None else self._frame.copy()
-            raw = self._jpeg
-        if frame is None:
-            return raw
-        if not meta and boxes:
-            meta = [{"box": list(box), "name": "", "bssWorkerId": "",
-                     "matchScore": None, "matched": False, "pending": True} for box in boxes]
-        if not meta and not qr_meta:
-            return raw
-        for item in meta:
-            box = item.get("box") or [0, 0, 0, 0]
-            x, y, w, h = [int(v) for v in box[:4]]
-            matched = bool(item.get("matched"))
-            color = (60, 190, 100) if matched else (130, 140, 155)
-            cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
-            name = str(item.get("name") or "Checking").strip()
-            bss_id = str(item.get("bssWorkerId") or "").strip()
-            score = item.get("matchScore")
-            label = name
-            if bss_id:
-                label += f" · {bss_id}"
-            if score is not None:
-                label += f" · {float(score):.0f}%"
-            label = label.encode("ascii", "replace").decode("ascii")
-            if len(label) > 48:
-                label = label[:47] + "…"
+    def jpeg(self, max_width=PREVIEW_MAX_WIDTH):
+        try:
+            max_width = int(max_width)
+        except (TypeError, ValueError):
+            max_width = PREVIEW_MAX_WIDTH
+        max_width = max(320, min(max_width, PREVIEW_MAX_WIDTH))
+        with self._preview_lock:
+            now_ts = time.time()
+            with self.lock:
+                frame_seq = self._frame_seq
+                overlay_seq = self._overlay_seq
+                meta = [dict(item) for item in self._face_meta]
+                qr_meta = [dict(item) for item in self._qr_meta
+                           if now_ts - float(item.get("seenAt") or 0) <= 10.0]
+                boxes = list(self._face_boxes)
+                frame = None if self._frame is None else self._frame.copy()
+            if frame is None:
+                return None
+            cached = self._preview_cache
+            if (cached and cached.get("maxWidth") == max_width
+                    and cached.get("frameSeq") == frame_seq
+                    and cached.get("overlaySeq") == overlay_seq
+                    and now_ts - float(cached.get("createdAt") or 0) <= PREVIEW_CACHE_SECONDS):
+                return cached.get("jpeg")
+            if not meta and boxes:
+                meta = [{"box": list(box), "name": "", "bssWorkerId": "",
+                         "matchScore": None, "matched": False, "pending": True} for box in boxes]
+            height, width = frame.shape[:2]
+            scale = min(1.0, max_width / float(width)) if width else 1.0
+            if scale < 1.0:
+                frame = cv2.resize(frame, (max(1, int(width * scale)), max(1, int(height * scale))),
+                                   interpolation=cv2.INTER_AREA)
             font = cv2.FONT_HERSHEY_SIMPLEX
-            scale, thickness = 0.45, 1
-            (text_w, text_h), _ = cv2.getTextSize(label, font, scale, thickness)
-            top = max(0, y - text_h - 8)
-            cv2.rectangle(frame, (x, top), (x + text_w + 6, top + text_h + 6), color, -1)
-            cv2.putText(frame, label, (x + 3, top + text_h + 2), font, scale,
-                        (255, 255, 255), thickness, cv2.LINE_AA)
-        for item in qr_meta:
-            box = item.get("box") or [0, 0, 0, 0]
-            x, y, w, h = [int(v) for v in box[:4]]
-            if w <= 0 or h <= 0:
-                continue
-            color = (0, 165, 255)
-            cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
-            bss_id = str(item.get("bssWorkerId") or "").strip()
-            worker_name = str(item.get("workerName") or "").strip()
-            label = (f"QR | {worker_name}" if worker_name
-                     else (f"QR | {bss_id}" if bss_id else "QR scan"))
-            label = label.encode("ascii", "replace").decode("ascii")
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            scale, thickness = 0.45, 1
-            (text_w, text_h), _ = cv2.getTextSize(label, font, scale, thickness)
-            top = max(0, y - text_h - 8)
-            cv2.rectangle(frame, (x, top), (x + text_w + 6, top + text_h + 6), color, -1)
-            cv2.putText(frame, label, (x + 3, top + text_h + 2), font, scale,
-                        (255, 255, 255), thickness, cv2.LINE_AA)
-        encoded, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 72])
-        return buf.tobytes() if encoded else raw
+            font_scale = 0.45 if frame.shape[1] >= 960 else max(0.32, 0.45 * frame.shape[1] / 960.0)
+            thickness = 1
+
+            def scaled_box(item):
+                box = item.get("box") or [0, 0, 0, 0]
+                x, y, w, h = [int(v) for v in box[:4]]
+                return int(x * scale), int(y * scale), int(w * scale), int(h * scale)
+
+            for item in meta:
+                x, y, w, h = scaled_box(item)
+                matched = bool(item.get("matched"))
+                color = (60, 190, 100) if matched else (130, 140, 155)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
+                name = str(item.get("name") or "Checking").strip()
+                bss_id = str(item.get("bssWorkerId") or "").strip()
+                score = item.get("matchScore")
+                label = name
+                if bss_id:
+                    label += f" · {bss_id}"
+                if score is not None:
+                    label += f" · {float(score):.0f}%"
+                label = label.encode("ascii", "replace").decode("ascii")
+                if len(label) > 48:
+                    label = label[:47] + "…"
+                (text_w, text_h), _ = cv2.getTextSize(label, font, font_scale, thickness)
+                top = max(0, y - text_h - 8)
+                cv2.rectangle(frame, (x, top), (x + text_w + 6, top + text_h + 6), color, -1)
+                cv2.putText(frame, label, (x + 3, top + text_h + 2), font, font_scale,
+                            (255, 255, 255), thickness, cv2.LINE_AA)
+            for item in qr_meta:
+                x, y, w, h = scaled_box(item)
+                if w <= 0 or h <= 0:
+                    continue
+                color = (0, 165, 255)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
+                bss_id = str(item.get("bssWorkerId") or "").strip()
+                worker_name = str(item.get("workerName") or "").strip()
+                label = (f"QR | {worker_name}" if worker_name
+                         else (f"QR | {bss_id}" if bss_id else "QR scan"))
+                label = label.encode("ascii", "replace").decode("ascii")
+                (text_w, text_h), _ = cv2.getTextSize(label, font, font_scale, thickness)
+                top = max(0, y - text_h - 8)
+                cv2.rectangle(frame, (x, top), (x + text_w + 6, top + text_h + 6), color, -1)
+                cv2.putText(frame, label, (x + 3, top + text_h + 2), font, font_scale,
+                            (255, 255, 255), thickness, cv2.LINE_AA)
+            encoded, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY),
+                                                       PREVIEW_JPEG_QUALITY])
+            if not encoded:
+                return None
+            jpeg = buf.tobytes()
+            self._preview_cache = {
+                "createdAt": time.time(), "frameSeq": frame_seq,
+                "overlaySeq": overlay_seq, "maxWidth": max_width, "jpeg": jpeg,
+            }
+            return jpeg
 
     def _ensure_ai(self):
         if self._ai_thread and self._ai_thread.is_alive():
@@ -790,6 +880,16 @@ class CameraWorker:
             if self.mode != "SENDING" or not self.camera_token:
                 time.sleep(1)
                 continue
+            if self.paused:
+                self.close_presence_sessions("paused")
+                time.sleep(1)
+                continue
+            if self._manual_hold:
+                if time.monotonic() < self._manual_hold_until:
+                    self.close_presence_sessions("manual_enrollment")
+                    time.sleep(0.2)
+                    continue
+                self.set_manual_hold(False)
             with self.lock:
                 seq = self._frame_seq
                 if seq == self._last_ai_seq:
@@ -800,10 +900,16 @@ class CameraWorker:
             if frame is None:
                 time.sleep(0.02)
                 continue
+            ai_interval = float(self.engine.resource_settings.get("aiInterval") or DEFAULT_AI_INTERVAL)
+            wait = ai_interval - (time.monotonic() - self._last_ai_processed)
+            if wait > 0:
+                time.sleep(min(wait, 0.5))
+                continue
             if not self.engine.send_allowed(self):
                 self.close_presence_sessions("not_sendable")
                 time.sleep(2)
                 continue
+            self._last_ai_processed = time.monotonic()
             camera = self.engine.bss_cameras.get(self.camera_id) or {}
             attendance_mode = str(camera.get("attendanceMode") or "FACE").upper()
             if attendance_mode not in ("FACE", "QR", "BOTH"):
@@ -822,7 +928,8 @@ class CameraWorker:
                     time.sleep(1)
                     continue
             if attendance_mode in ("FACE", "BOTH"):
-                self.engine.configure_gpu()
+                if getattr(self.engine, "_gpu_state", "") != "ready":
+                    self.engine.configure_gpu()
                 if getattr(self.engine, "_gpu_state", "") == "initializing":
                     if self.status != "GPU_INITIALIZING":
                         self.status = "GPU_INITIALIZING"
@@ -838,6 +945,8 @@ class CameraWorker:
                 time.sleep(0.05)
                 continue
             try:
+                if self.paused or self._manual_hold:
+                    continue
                 with self.lock:
                     self.frames_processed += 1
                 camera = self.engine.bss_cameras.get(self.camera_id) or {}
@@ -929,8 +1038,21 @@ class CameraWorker:
         self._set_face_boxes(boxes)
         return detections
 
-    def manual_detections(self):
-        """Return the latest frame and all detected faces for manual enrollment."""
+    def _detect_faces_only(self, frame):
+        """Detect quality faces without generating ArcFace embeddings."""
+        self.engine.configure_gpu()
+        if getattr(self.engine, "_gpu_state", "") == "initializing":
+            return []
+        backend = self.engine.face_backend
+        if backend is not None and backend.ready:
+            faces = backend.detect_faces(frame)
+            detections = [(None, list(box)) for _prepared, box in faces]
+            self._set_face_boxes([box for _embedding, box in detections])
+            return detections
+        return self._recognise(frame)
+
+    def manual_detections(self, detect_only=False):
+        """Return the latest frame and detected faces for manual enrollment."""
         if not self.rtsp:
             raise ValueError("This camera has no RTSP stream.")
         if not self._running:
@@ -943,10 +1065,11 @@ class CameraWorker:
             time.sleep(0.15)
         else:
             raise ValueError("Waiting for the camera frame. Check the RTSP stream.")
-        if not self.engine.gate.acquire():
-            raise ValueError("The face engine is busy. Try again in a moment.")
+        if not self.engine.gate.acquire(timeout=5.0, interactive=True):
+            raise ValueError("Camera preview is waiting for the face engine. Retrying…")
         try:
-            return frame, self._recognise(frame)
+            detections = self._detect_faces_only(frame) if detect_only else self._recognise(frame)
+            return frame, detections
         finally:
             self.engine.gate.release()
 
@@ -1028,6 +1151,7 @@ class Engine:
         self.events = LocalEventStore(home)
         self.gallery_path = Path(home) / "face_gallery.json"
         self.gallery = _load_gallery(self.gallery_path)
+        self._apply_face_threshold()
         for legacy in list(self.store.data.get("outbox") or []):
             if isinstance(legacy, dict):
                 self.events.add(legacy)
@@ -1052,12 +1176,14 @@ class Engine:
             worker.rtsp = str(camera.get("rtsp") or "")
             worker.mode = str(camera.get("mode") or "LIVE").upper()
             worker.camera_token = str(camera.get("cameraToken") or "")
+            worker.paused = bool(camera.get("paused"))
+            worker.paused_at = str(camera.get("pausedAt") or "") if worker.paused else ""
             if worker.mode not in ("LIVE", "SENDING"):
                 worker.mode = "LIVE"
             self.workers[cid] = worker
             if worker.rtsp:
                 worker.start()
-            if worker.mode == "SENDING" and worker.camera_token:
+            if worker.mode == "SENDING" and worker.camera_token and not worker.paused:
                 worker._ensure_ai()
 
     def local_camera(self, camera_id):
@@ -1356,6 +1482,16 @@ class Engine:
         except (TypeError, ValueError):
             interval = 2.0
         interval = max(1.0, min(interval, 30.0))
+        try:
+            ai_interval = float(raw.get("aiInterval", DEFAULT_AI_INTERVAL))
+        except (TypeError, ValueError):
+            ai_interval = DEFAULT_AI_INTERVAL
+        ai_interval = max(MIN_AI_INTERVAL, min(ai_interval, MAX_AI_INTERVAL))
+        try:
+            match_threshold = float(raw.get("matchThreshold", DEFAULT_MATCH_THRESHOLD))
+        except (TypeError, ValueError):
+            match_threshold = DEFAULT_MATCH_THRESHOLD
+        match_threshold = max(MIN_MATCH_THRESHOLD, min(match_threshold, MAX_MATCH_THRESHOLD))
         gpu_mode = str(raw.get("gpuMode") or "auto").lower()
         if gpu_mode not in ("auto", "off", "required"):
             gpu_mode = "auto"
@@ -1367,6 +1503,7 @@ class Engine:
         if 0 < gpu_memory_mb < MIN_GPU_MEMORY_MB:
             gpu_memory_mb = MIN_GPU_MEMORY_MB
         return {"cpuCores": cores, "maxCameraWorkers": workers, "processInterval": interval,
+                "aiInterval": ai_interval, "matchThreshold": match_threshold,
                 "gpuMode": gpu_mode, "gpuMemoryMb": gpu_memory_mb}
 
     def _apply_resources(self, settings, persist=True):
@@ -1622,11 +1759,17 @@ class Engine:
             LOG.warning("GPU init failed (attempt %s); retrying in %.0fs",
                         self._gpu_attempts, delay)
 
+    def _apply_face_threshold(self):
+        percent = float(self.resource_settings.get("matchThreshold") or DEFAULT_MATCH_THRESHOLD)
+        percent = max(MIN_MATCH_THRESHOLD, min(percent, MAX_MATCH_THRESHOLD))
+        self.gallery.threshold = 1.0 - (percent / 100.0)
+
     def set_resources(self, raw):
         previous = dict(self.resource_settings)
         settings = self._normalise_resources(raw or {})
         self.resource_settings = settings
         self._apply_resources(settings, persist=True)
+        self._apply_face_threshold()
         gpu_changed = (
             str(previous.get("gpuMode") or "auto") != str(settings.get("gpuMode") or "auto")
             or int(previous.get("gpuMemoryMb") or 0) != int(settings.get("gpuMemoryMb") or 0)
@@ -1653,6 +1796,7 @@ class Engine:
         tmp.write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")
         os.replace(tmp, self.gallery_path)
         self.gallery = FaceGallery(data)
+        self._apply_face_threshold()
         LOG.info("Worker gallery synced: %s workers, version %s",
                  len({e[1] for e in self.gallery.entries}), self.gallery.version[:12])
         return True
@@ -1697,9 +1841,11 @@ class Engine:
                         worker.mode = "SENDING"
                         local["mode"] = "SENDING"
                     worker.camera_token = str(local.get("cameraToken") or "")
+                    worker.paused = bool(local.get("paused"))
+                    worker.paused_at = str(local.get("pausedAt") or "") if worker.paused else ""
                     if worker.rtsp and not worker._running:
                         worker.start()
-                    if worker.mode == "SENDING" and worker.camera_token:
+                    if worker.mode == "SENDING" and worker.camera_token and not worker.paused:
                         worker._ensure_ai()
             for cid in list(self.workers):
                 if cid not in incoming:
@@ -1773,6 +1919,17 @@ class Engine:
         except Exception:  # noqa: BLE001 - warning is advisory
             return None
 
+    def _drop_manual_capture(self, capture_id):
+        with self._manual_capture_lock:
+            pending = self._manual_captures.pop(str(capture_id), None)
+        if pending and pending.get("interactive"):
+            self.gate.end_interactive()
+        if pending:
+            worker = self.workers.get(int(pending.get("cameraId") or 0))
+            if worker is not None:
+                worker.set_manual_hold(False)
+        return pending
+
     def start_manual_enrollment(self, camera_id, bss_worker_id):
         worker, camera = self._manual_camera_worker(camera_id)
         bss_worker_id = str(bss_worker_id or "").strip().upper()
@@ -1780,22 +1937,34 @@ class Engine:
             raise ValueError("Select a worker.")
         capture_id = uuid.uuid4().hex
         now = _now()
+        expired = []
         with self._manual_capture_lock:
             cutoff = time.time() - 900
-            for key in [key for key, value in self._manual_captures.items()
-                        if value.get("createdTs", 0) < cutoff]:
-                self._manual_captures.pop(key, None)
+            for key, value in list(self._manual_captures.items()):
+                if (value.get("createdTs", 0) < cutoff
+                        or value.get("cameraId") == int(camera_id)):
+                    expired.append(self._manual_captures.pop(key, None))
             self._manual_captures[capture_id] = {
                 "cameraId": int(camera_id), "bssWorkerId": bss_worker_id,
                 "slots": [None] * MANUAL_ENROLL_FRAMES,
                 "startedAt": now.isoformat(), "createdTs": time.time(),
+                "interactive": True,
             }
+        for pending in expired:
+            if pending and pending.get("interactive"):
+                self.gate.end_interactive()
+            if pending:
+                expired_worker = self.workers.get(int(pending.get("cameraId") or 0))
+                if expired_worker is not None:
+                    expired_worker.set_manual_hold(False)
+        self.gate.begin_interactive()
+        worker.set_manual_hold(True)
         return {"captureId": capture_id, "bssWorkerId": bss_worker_id,
                 "slots": MANUAL_ENROLL_FRAMES}
 
     def manual_enrollment_preview(self, camera_id):
         worker, camera = self._manual_camera_worker(camera_id)
-        frame, detections = worker.manual_detections()
+        frame, detections = worker.manual_detections(detect_only=True)
         count = len(detections)
         color = (40, 170, 80) if count == 1 else ((40, 40, 220) if count > 1 else (140, 140, 140))
         label = f"{count} person" + ("" if count == 1 else "s")
@@ -1892,8 +2061,7 @@ class Engine:
             if exc.status_code == 409 and exc.body.get("requiresConfirmation"):
                 return {"requiresConfirmation": True, **exc.body}
             raise
-        with self._manual_capture_lock:
-            self._manual_captures.pop(str(capture_id), None)
+        self._drop_manual_capture(capture_id)
         data = body.get("data") or {}
         try:
             self.sync_gallery()
@@ -1904,8 +2072,9 @@ class Engine:
     def cancel_manual_enrollment(self, camera_id, capture_id):
         with self._manual_capture_lock:
             pending = self._manual_captures.get(str(capture_id))
-            if pending is not None and pending.get("cameraId") == int(camera_id):
-                self._manual_captures.pop(str(capture_id), None)
+            if pending is None or pending.get("cameraId") != int(camera_id):
+                return {"cancelled": True}
+        self._drop_manual_capture(capture_id)
         return {"cancelled": True}
 
     def set_worker_face_source(self, bss_worker_id, source):
@@ -1921,6 +2090,8 @@ class Engine:
         return body.get("data") or {}
 
     def send_qr_event(self, worker, bss_worker_id, when):
+        if worker.paused or worker._manual_hold:
+            return
         event = {
             "eventId": str(uuid.uuid4()), "cameraId": worker.camera_id,
             "occurredAt": when.isoformat(), "type": "QR",
@@ -1950,11 +2121,14 @@ class Engine:
 
     def send_allowed(self, worker):
         camera = self.bss_cameras.get(worker.camera_id) or {}
-        return bool(camera.get("approvalStatus") == "APPROVED"
+        return bool(not worker.paused
+                    and camera.get("approvalStatus") == "APPROVED"
                     and camera.get("allowedIp") and camera.get("claimedByThisDevice")
                     and schedule_active(camera) and worker.camera_token)
 
     def send_event(self, worker, matched_worker, when, distance, face_box=None, presence=None):
+        if worker.paused or worker._manual_hold:
+            return
         event = {
             "eventId": str(uuid.uuid4()), "cameraId": worker.camera_id,
             "occurredAt": when.isoformat(), "type": "FACE",
@@ -2058,6 +2232,24 @@ class Engine:
                 worker.set_rtsp(rtsp)
         return self.status()
 
+    def set_camera_paused(self, camera_id, paused):
+        worker = self.workers.get(int(camera_id))
+        if worker is None:
+            raise ValueError("Camera not found.")
+        paused = bool(paused)
+        local = self.local_camera(camera_id)
+        if paused:
+            paused_at = _iso(_now())
+            worker.set_paused(True, paused_at)
+            local["paused"] = True
+            local["pausedAt"] = paused_at
+        else:
+            worker.set_paused(False)
+            local["paused"] = False
+            local.pop("pausedAt", None)
+        self.store.save()
+        return self.status()
+
     def remove_camera(self, camera_id):
         worker = self.workers.get(camera_id)
         try:
@@ -2113,6 +2305,8 @@ class Engine:
                                 "deviceName": "", "employerName": ""})
         for local in self.store.data.get("cameras", {}).values():
             local["cameraToken"] = ""
+            local["paused"] = False
+            local.pop("pausedAt", None)
         self.store.save()
         return self.status()
 
@@ -2189,6 +2383,8 @@ class Engine:
                                 "deviceName": "", "employerName": ""})
         for local in self.store.data.get("cameras", {}).values():
             local["cameraToken"] = ""
+            local["paused"] = False
+            local.pop("pausedAt", None)
         self.store.save()
 
     def _config_loop(self):
@@ -2219,8 +2415,10 @@ class Engine:
                         continue
                     try:
                         self.bss_call("POST", "/v1/edge/heartbeat", {
-                            "version": APP_VERSION, "mode": worker.mode,
-                            "status": worker.status, "fps": round(worker.fps, 1),
+                            "version": APP_VERSION,
+                            "mode": "LIVE" if worker.paused else worker.mode,
+                            "status": "PAUSED" if worker.paused else worker.status,
+                            "fps": round(worker.fps, 1),
                         }, timeout=10, camera_token=worker.camera_token)
                     except BssError as exc:
                         if exc.status_code == 401:
@@ -2250,6 +2448,8 @@ class Engine:
                 reason = "Waiting for BSS sync"
             elif bss.get("approvalStatus") != "APPROVED":
                 reason = "Camera was removed by the employer"
+            elif worker.paused:
+                reason = "Events paused on this client"
             elif not bss.get("allowedIp"):
                 reason = "Waiting for employer IP whitelisting"
             elif not worker.camera_token:
@@ -2277,7 +2477,8 @@ class Engine:
                 "canRemove": bool(bss.get("claimedByThisDevice") or bss.get("createdByDeviceId") == self.device_id),
                 "timezoneLabel": "IST (UTC+05:30)",
                 "canClaim": False,
-                "sendAllowed": bool(bss.get("approvalStatus") == "APPROVED"
+                "sendAllowed": bool(not worker.paused
+                                    and bss.get("approvalStatus") == "APPROVED"
                                     and bss.get("allowedIp") and bss.get("claimedByThisDevice")
                                     and allowed and worker.camera_token),
                 "sendBlockedReason": reason,
@@ -2297,7 +2498,8 @@ class Engine:
             "lastDeviceHeartbeatAt": _iso(self.last_device_heartbeat),
             "lastDeviceHeartbeatError": self.last_device_heartbeat_error,
             "dataDir": str(self.home_dir),
-            "faceModel": {"model": MODEL_NAME, "version": MODEL_VERSION, "detector": DETECTOR_BACKEND},
+            "faceModel": {"model": MODEL_NAME, "version": MODEL_VERSION, "detector": DETECTOR_BACKEND,
+                          "threshold": self.gallery.threshold},
             "gallery": {"ready": self.gallery.ready, "version": self.gallery.version,
                         "workers": len({e[1] for e in self.gallery.entries}),
                         "status": self.gallery.worker_status},
@@ -2387,7 +2589,12 @@ class Handler(BaseHTTPRequestHandler):
             worker = ENGINE.workers.get(cid)
             if worker is None:
                 return self._json({"error": "Camera not found."}, 404)
-            jpeg = worker.jpeg()
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                max_width = int((query.get("w") or [PREVIEW_MAX_WIDTH])[0])
+            except (TypeError, ValueError):
+                max_width = PREVIEW_MAX_WIDTH
+            jpeg = worker.jpeg(max_width=max_width)
             if not jpeg:
                 return self._json({"error": "Waiting for the first camera frame."}, 503)
             self.send_response(200)
@@ -2457,6 +2664,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"data": ENGINE.set_mode(cid, body.get("mode"))})
                 if action == "attendance-mode":
                     return self._json({"data": ENGINE.set_camera_attendance_mode(cid, body.get("mode"))})
+                if action == "pause":
+                    return self._json({"data": ENGINE.set_camera_paused(cid, body.get("paused"))})
                 if action == "claim":
                     try:
                         return self._json({"data": ENGINE.claim(cid, body.get("otp"))})
