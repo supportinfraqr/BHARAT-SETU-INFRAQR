@@ -1416,7 +1416,7 @@ export default function WorkerProfilePage() {
                    <input name="socialSecurity.epfoUan" type="text" defaultValue={worker.socialSecurity.epfoUan} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                  </div>
                  <div>
-                   <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">ESIC IP Number</label>
+                   <label className="block text-[12px] font-semibold text-bss-text-muted uppercase tracking-wider mb-2">ESIC IP Number <span className={`ml-1 inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${worker.socialSecurity.esicVerified ? 'text-bss-green bg-bss-soft-green' : 'text-bss-orange bg-bss-soft-orange'}`}>{worker.socialSecurity.esicVerified ? 'Verified' : 'Not verified'}</span></label>
                    <input name="socialSecurity.esicIp" type="text" defaultValue={worker.socialSecurity.esicIp} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-bss-text-primary focus:outline-none focus:border-[#1E3A8A]" />
                  </div>
                  <div>

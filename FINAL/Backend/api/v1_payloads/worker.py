@@ -283,6 +283,7 @@ def _worker_social_security_section(user):
     return {
         "epfoUan": _d(ss.epfo_uan) if ss else "",
         "esicIp": _d(ss.esic_ip_number) if ss else "",
+        "esicVerified": bool(ss and ss.esic_verified),
         "lwfNo": _d(ss.lwf_no) if ss else "",
         "wcPolicyNo": _d(ss.wc_policy_no) if ss else "",
         "eShramNo": _d(ss.e_shram_no) if ss else "",
@@ -1100,6 +1101,30 @@ def _worker_documents_display(user):
             "locked": bool(d.auto_generated),
             "source": _doc_source_label(_d(d.document.code if d.document else ""), bool(d.auto_generated)),
         })
+
+    # ESIC is contractor/API-verified even when no file was uploaded. Surface
+    # that verification in the worker's document register as a Verified row.
+    social = WorkerSocialSecurity.objects.filter(user=user).first()
+    if social and social.esic_verified and (social.esic_ip_number or "").strip():
+        esic_row = next((row for row in rows
+                         if (row.get("code") or "").strip().upper() == "ESIC"
+                         or "esic" in (row.get("name") or "").lower()), None)
+        if esic_row is None:
+            rows.append({
+                "id": None, "name": "ESIC Card", "code": "ESIC",
+                "mandatory": False, "owner": "Contractor", "status": "VERIFIED",
+                "date": _dts(social.updated_at), "expiry": None,
+                "fileName": "", "downloadUrl": "", "locked": True,
+                "source": "contractor",
+            })
+        else:
+            esic_row.update({
+                "status": "VERIFIED",
+                "owner": "Contractor",
+                "date": esic_row.get("date") or _dts(social.updated_at),
+                "source": "contractor",
+                "locked": True,
+            })
 
     # Collapse duplicate names, keeping the best row in its original position.
     best = {}

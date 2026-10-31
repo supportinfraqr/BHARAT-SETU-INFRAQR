@@ -187,7 +187,9 @@ export default function DocumentsModule() {
           {locked ? (
             d.source === 'digilocker'
               ? <span className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-100 px-2 py-1 rounded" title="Fetched from DigiLocker — upload and delete disabled">DigiLocker</span>
-              : <span className="text-[10px] font-bold text-[#01183A] bg-[#01183A]/10 px-2 py-1 rounded" title="System-generated credential — upload and delete disabled">System</span>
+              : d.source === 'contractor'
+                ? <span className="text-[10px] font-bold text-bss-green bg-bss-soft-green px-2 py-1 rounded" title="Verified by the contractor — upload and delete disabled">Contractor verified</span>
+                : <span className="text-[10px] font-bold text-[#01183A] bg-[#01183A]/10 px-2 py-1 rounded" title="System-generated credential — upload and delete disabled">System</span>
           ) : (
             <>
               {d.owner !== 'System' && !d.id && <button onClick={() => chooseFile(d)} disabled={busy === d.code} className="bg-[#01183A] text-white px-2.5 py-1 rounded font-bold text-[10px] whitespace-nowrap flex items-center gap-1 disabled:opacity-60"><Upload size={12} />{busy === d.code ? 'Uploading…' : 'Upload'}</button>}
