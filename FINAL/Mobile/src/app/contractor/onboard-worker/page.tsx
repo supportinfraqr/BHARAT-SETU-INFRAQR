@@ -20,6 +20,7 @@ type Src = 'ekyc' | 'pdf' | 'capture' | 'penny' | 'upload' | 'manual';
 type DocDef = {
   id: DocId; title: string; source: string; accent: string; iconTag: string; steps: string[];
   integration: boolean; extractable: boolean; src: Src; srcTag: string;
+  apiIntegration?: boolean;
   portal?: { label: string; url: string };
 };
 
@@ -40,7 +41,7 @@ const DOC_DEFS: DocDef[] = [
     steps: ['Open EPFO and view the UAN', 'Upload the UAN card (image or PDF)', 'OCR reads the UAN for you to confirm']
   },
   {
-    id: 'esic', title: 'ESIC', source: 'ESIC · IP number', accent: '#7C3AED', iconTag: 'ESI', src: 'upload', srcTag: 'PDF', integration: false, extractable: true,
+    id: 'esic', title: 'ESIC', source: 'ESIC · IP number', accent: '#7C3AED', iconTag: 'ESI', src: 'upload', srcTag: 'PDF', integration: false, extractable: true, apiIntegration: true,
     portal: { label: 'Open UMANG', url: 'https://web.umang.gov.in/' },
     steps: ['Open UMANG / ESIC and view the IP number', 'Upload the ESIC card (image or PDF)', 'OCR reads the IP number for you to confirm']
   },
@@ -111,7 +112,7 @@ export default function OnboardWorkerPage() {
   const [notice, setNotice] = useState('');
   const [audit, setAudit] = useState<string[]>([]);
 
-  const [panel, setPanel] = useState<{ doc: DocId; mode: 'integrate' | 'upload' } | null>(null);
+  const [panel, setPanel] = useState<{ doc: DocId; mode: 'integrate' | 'upload' | 'api' } | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [lastText, setLastText] = useState('');
   const [photoPreview, setPhotoPreview] = useState('');
@@ -149,7 +150,7 @@ export default function OnboardWorkerPage() {
     });
   }
 
-  function startPanel(doc: DocId, mode: 'integrate' | 'upload') {
+  function startPanel(doc: DocId, mode: 'integrate' | 'upload' | 'api') {
     setPanel({ doc, mode });
     setPanelError('');
     if (mode === 'upload') setFields(Object.fromEntries(FIELD_KEYS[doc].map(k => [k, ''])));
@@ -418,6 +419,11 @@ export default function OnboardWorkerPage() {
                       {def.portal && (
                         <a className="act" href={def.portal.url} target="_blank" rel="noopener noreferrer">↗ {def.portal.label}</a>
                       )}
+                      {def.apiIntegration && (
+                        <button className="act open" type="button" onClick={() => startPanel(def.id, 'api')} disabled={busy}>
+                          ③ API Integration
+                        </button>
+                      )}
                     </div>
                   </>
                 )}
@@ -442,6 +448,15 @@ export default function OnboardWorkerPage() {
                           onClick={verifyBank} disabled={busy || !accountNumber || ifsc.length !== 11}>
                           ₹1 Penny Drop Verify
                         </button>
+                      </>
+                    )}
+
+                    {panel?.mode === 'api' && def.id === 'esic' && (
+                      <>
+                        <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+                          Surepass ESIC API integration will be available once the ESIC API contract is configured.
+                          Use <strong>Upload &amp; extract</strong> or <strong>Open UMANG</strong> for now.
+                        </p>
                       </>
                     )}
 
